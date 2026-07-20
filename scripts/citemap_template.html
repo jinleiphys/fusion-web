@@ -80,9 +80,10 @@
 </header>
 
 <div class="bar">
-  <input type="search" id="q" placeholder="搜索标题 / 作者 / arXiv ID" autocomplete="off">
-  <select id="hl"><option value="">不高亮任何主题</option></select>
-  <button id="reset">重置</button>
+  <input type="search" id="q" autocomplete="off">
+  <select id="hl"><option value=""></option></select>
+  <button id="reset"></button>
+  <button id="lang"></button>
   <div class="legend" id="legend"></div>
 </div>
 
@@ -97,6 +98,63 @@
 <script>
 const D = /*__DATA__*/null;
 const N = D.meta.n, G = D.meta.grid;
+
+/* ---------- i18n: shares the fusion-lang key with the FUSION site ---------- */
+const I18N = {
+  zh: {
+    title: 'FUSION 语料地图',
+    search: '搜索标题 / 作者 / arXiv ID',
+    nohl: '不高亮任何主题',
+    reset: '重置',
+    btn: 'EN',
+    inferred: '（由邻近论文推断）',
+    notag: '未匹配 PhySH 词表',
+    kv: (id, topic, d) => `${id} · 主题 ${topic} · 语料内被引 ${d}`,
+    matches: (n, m) => `匹配 ${n} 篇（标题只覆盖被引最高的 ${m} 篇）`,
+    sub: (n, l) => `<b>${n}</b> 篇论文 · <b>${l}</b> 个主题区域 · 位置由引用关系决定`,
+    foot: (a, b, c) =>
+      '每个点是一篇论文，大小 ∝ 语料内被引次数；位置来自引用网络的 t-SNE 投影。'
+      + '底色是 5 个大区，由主题质心聚类自动划分，不是人工指定。'
+      + '地名标注空间上真正聚集的主题；quantum-chromodynamics、spin 这类横跨全图的不作标注，它们是通用语言而非地点。'
+      + ` 主题标签中 ${a} 篇来自 PhySH 词表匹配，${b} 篇由引用近邻推断（悬停会注明），${c} 篇无标签。`
+  },
+  en: {
+    title: 'FUSION Corpus Map',
+    search: 'Search title / author / arXiv ID',
+    nohl: 'No topic highlighted',
+    reset: 'Reset',
+    btn: '中文',
+    inferred: ' (inferred from citation neighbours)',
+    notag: 'no PhySH match',
+    kv: (id, topic, d) => `${id} · topic: ${topic} · ${d} in-corpus citations`,
+    matches: (n, m) => `${n} matches (titles cover only the ${m} most-cited papers)`,
+    sub: (n, l) => `<b>${n}</b> papers · <b>${l}</b> named regions · positions set by citations`,
+    foot: (a, b, c) =>
+      'Each dot is one paper, area ∝ in-corpus citations; positions come from a t-SNE projection of the citation network. '
+      + 'The five background regions are automatic topic-centroid clusters, not hand-drawn. '
+      + 'Place names mark topics that genuinely cluster in space; vocabularies like quantum-chromodynamics or spin span the whole map and stay unlabeled. '
+      + `Of the topic tags, ${a} papers matched the PhySH vocabulary, ${b} were inferred from citation neighbours (noted on hover), ${c} carry no tag.`
+  }
+};
+let LANG = localStorage.getItem('fusion-lang');
+if (LANG !== 'zh' && LANG !== 'en')
+  LANG = (navigator.language || 'zh').toLowerCase().startsWith('zh') ? 'zh' : 'en';
+const S = () => I18N[LANG];
+function applyLang() {
+  document.documentElement.lang = LANG;
+  document.title = S().title;
+  document.querySelector('h1').textContent = S().title;
+  document.getElementById('q').placeholder = S().search;
+  document.querySelector('#hl option[value=""]').textContent = S().nohl;
+  document.getElementById('reset').textContent = S().reset;
+  document.getElementById('lang').textContent = S().btn;
+  document.getElementById('sub').innerHTML =
+    S().sub(N.toLocaleString(), D.labels.length);
+  document.getElementById('foot').textContent =
+    S().foot(D.meta.tagged_real.toLocaleString(),
+             D.meta.tagged_inferred.toLocaleString(),
+             D.meta.untagged.toLocaleString());
+}
 
 // Five region hues. Colour is carried by AREAS, never by individual marks:
 // per-point colour at 55k points is confetti, and no palette with enough
@@ -220,12 +278,12 @@ function showTip(i, mx, my) {
   // neighbourhood, not from the paper's own text, and must not be passed off
   // as an authoritative PhySH classification.
   const topic = D.t[i] >= 0
-    ? D.topics[D.t[i]] + (D.inf[i] ? '（由邻近论文推断）' : '')
-    : '未匹配 PhySH 词表';
+    ? D.topics[D.t[i]] + (D.inf[i] ? S().inferred : '')
+    : S().notag;
   tip.innerHTML = '<div class="ti"></div><div class="me"></div><div class="kv"></div>';
   tip.querySelector('.ti').textContent = t ? t[0] : D.ids[i];
   tip.querySelector('.me').textContent = t && t[1] ? t[1].split(';').slice(0,3).join('; ') : '';
-  tip.querySelector('.kv').textContent = `${D.ids[i]} · 主题 ${topic} · 语料内被引 ${D.d[i]}`;
+  tip.querySelector('.kv').textContent = S().kv(D.ids[i], topic, D.d[i]);
   tip.style.opacity = 1;
   const r = tip.getBoundingClientRect();
   let L = mx + 14, T = my + 14;
@@ -263,7 +321,7 @@ document.getElementById('q').addEventListener('input', e => {
     if (D.ids[i].toLowerCase().includes(q) ||
         (t && (t[0].toLowerCase().includes(q) || (t[1]||'').toLowerCase().includes(q)))) matches.add(i);
   }
-  statusEl.textContent = `匹配 ${matches.size} 篇（标题只覆盖被引最高的 ${Object.keys(D.titles).length} 篇）`;
+  statusEl.textContent = S().matches(matches.size, Object.keys(D.titles).length);
   draw();
 });
 const hl = document.getElementById('hl');
@@ -291,18 +349,16 @@ document.getElementById('reset').onclick = () => {
   paintTerrain(); buildLegend(); draw();
 };
 
-document.getElementById('sub').innerHTML =
-  `<b>${N.toLocaleString()}</b> 篇论文 · <b>${D.labels.length}</b> 个主题区域 · 位置由引用关系决定`;
-document.getElementById('foot').textContent =
-  '每个点是一篇论文，大小 ∝ 语料内被引次数；位置来自引用网络的 t-SNE 投影。'
-  + '底色是 5 个大区，由主题质心聚类自动划分，不是人工指定。'
-  + '地名标注空间上真正聚集的主题；quantum-chromodynamics、spin 这类横跨全图的不作标注，它们是通用语言而非地点。'
-  + ` 主题标签中 ${D.meta.tagged_real.toLocaleString()} 篇来自 PhySH 词表匹配，`
-  + `${D.meta.tagged_inferred.toLocaleString()} 篇由引用近邻推断（悬停会注明），`
-  + `${D.meta.untagged.toLocaleString()} 篇无标签。`;
+document.getElementById('lang').onclick = () => {
+  LANG = LANG === 'zh' ? 'en' : 'zh';
+  localStorage.setItem('fusion-lang', LANG);
+  applyLang();
+  if (matches !== null)
+    statusEl.textContent = S().matches(matches.size, Object.keys(D.titles).length);
+};
 
 new ResizeObserver(() => { resize(); draw(); }).observe(document.getElementById('stage'));
-buildLegend(); resize(); draw();
+applyLang(); buildLegend(); resize(); draw();
 </script>
 </body>
 </html>
