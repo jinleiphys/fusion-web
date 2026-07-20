@@ -1,0 +1,308 @@
+<!doctype html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FUSION 语料地图</title>
+<style>
+  :root {
+    --paper:    #fbfaf7;
+    --ink:      #16150f;
+    --ink-2:    #55534a;
+    --muted:    #8d8a7e;
+    --hairline: #e2e0d6;
+    --mark:     #2f2d25;
+    --accent:   #b4472e;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    background: var(--paper); color: var(--ink);
+    font: 14px/1.55 system-ui, -apple-system, "Segoe UI", sans-serif;
+    display: flex; flex-direction: column;
+  }
+  header {
+    padding: 15px 22px 13px; border-bottom: 1px solid var(--hairline);
+    display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 18px;
+  }
+  h1 { margin: 0; font-size: 15px; font-weight: 600; letter-spacing: .14em; text-transform: uppercase; }
+  .sub { color: var(--ink-2); font-size: 13px; }
+  .sub b { color: var(--ink); font-variant-numeric: tabular-nums; }
+
+  .bar {
+    display: flex; flex-wrap: wrap; gap: 8px 10px; align-items: center;
+    padding: 9px 22px; border-bottom: 1px solid var(--hairline);
+  }
+  input[type=search], select {
+    font: inherit; padding: 5px 9px; color: var(--ink);
+    background: var(--paper); border: 1px solid var(--hairline); border-radius: 5px;
+  }
+  input[type=search] { min-width: 220px; }
+  button {
+    font: inherit; padding: 5px 11px; cursor: pointer; color: var(--ink);
+    background: var(--paper); border: 1px solid var(--hairline); border-radius: 5px;
+  }
+  button:hover, select:hover { border-color: var(--muted); }
+
+  .legend { display: flex; flex-wrap: wrap; gap: 5px; margin-left: auto; }
+  .rg {
+    display: inline-flex; align-items: center; gap: 6px; padding: 3px 9px;
+    border: 1px solid var(--hairline); border-radius: 999px; cursor: pointer;
+    background: var(--paper); color: var(--ink-2); font-size: 12px;
+  }
+  .rg:hover { border-color: var(--muted); }
+  .rg[aria-pressed="true"] { border-color: var(--ink-2); color: var(--ink); font-weight: 600; }
+  .rg .sw { width: 22px; height: 9px; border-radius: 2px; }
+
+  #stage { position: relative; flex: 1; min-height: 340px; }
+  canvas { display: block; width: 100%; height: 100%; }
+
+  #tip {
+    position: absolute; pointer-events: none; opacity: 0; max-width: 330px;
+    padding: 9px 11px; background: var(--paper); border: 1px solid var(--hairline);
+    border-radius: 7px; box-shadow: 0 8px 26px rgba(0,0,0,.13);
+    font-size: 12.5px; line-height: 1.45; transition: opacity .1s;
+  }
+  #tip .ti { font-weight: 600; }
+  #tip .me { color: var(--ink-2); margin-top: 2px; }
+  #tip .kv { color: var(--muted); margin-top: 5px; font-variant-numeric: tabular-nums; }
+  #status {
+    position: absolute; left: 16px; bottom: 12px;
+    color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums;
+  }
+  footer { padding: 8px 22px; border-top: 1px solid var(--hairline); color: var(--muted); font-size: 12px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>FUSION 语料地图</h1>
+  <span class="sub" id="sub"></span>
+</header>
+
+<div class="bar">
+  <input type="search" id="q" placeholder="搜索标题 / 作者 / arXiv ID" autocomplete="off">
+  <select id="hl"><option value="">不高亮任何主题</option></select>
+  <button id="reset">重置</button>
+  <div class="legend" id="legend"></div>
+</div>
+
+<div id="stage">
+  <canvas id="cv"></canvas>
+  <div id="tip" role="tooltip"></div>
+  <div id="status"></div>
+</div>
+
+<footer id="foot"></footer>
+
+<script>
+const D = /*__DATA__*/null;
+const N = D.meta.n, G = D.meta.grid;
+
+// Five region hues. Colour is carried by AREAS, never by individual marks:
+// per-point colour at 55k points is confetti, and no palette with enough
+// entries for 39 topics clears the contrast gates. Five is the largest set
+// that passes the all-pairs colour checks on this paper surface.
+const REGION = ['#2a78d6', '#008300', '#e87ba4', '#eda100', '#4a3aa7'];
+
+const cssVar = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const cv = document.getElementById('cv'), ctx = cv.getContext('2d');
+const tip = document.getElementById('tip'), statusEl = document.getElementById('status');
+let W = 0, H = 0, dpr = 1;
+const view = {x: 0, y: 0, k: 1, s: 1};
+let hover = -1, matches = null, highlight = -1, soloRegion = null;
+
+const hexToRgb = h => [parseInt(h.slice(1,3),16), parseInt(h.slice(3,5),16), parseInt(h.slice(5,7),16)];
+const RGB = REGION.map(hexToRgb);
+const PAPER = hexToRgb('#fbfaf7');
+
+/* ---------- terrain: painted once, then only the camera moves ---------- */
+const terrain = document.createElement('canvas');
+terrain.width = terrain.height = G;
+function paintTerrain() {
+  const tc = terrain.getContext('2d');
+  const img = tc.createImageData(G, G);
+  for (let i = 0; i < G * G; i++) {
+    const rid = D.region[i];
+    // gamma < 1 lifts the low end so the thin outskirts still read as land
+    const v = Math.pow(D.density[i], 0.42);
+    let rgb = rid >= 0 ? RGB[rid] : [140, 138, 130];
+    if (soloRegion !== null && rid !== soloRegion) rgb = [150, 148, 140];
+    // A contested cell (regionW near 1/K) is washed toward paper, so the
+    // colour blocks fade at their borders instead of ending in a hard seam.
+    const w = D.regionW[i], conf = Math.max(0, (w - 0.34) / 0.66);
+    const mix = 0.35 + 0.65 * conf;
+    img.data[i*4]     = Math.round(rgb[0] * mix + PAPER[0] * (1 - mix));
+    img.data[i*4 + 1] = Math.round(rgb[1] * mix + PAPER[1] * (1 - mix));
+    img.data[i*4 + 2] = Math.round(rgb[2] * mix + PAPER[2] * (1 - mix));
+    img.data[i*4 + 3] = Math.min(255, v * 190);
+  }
+  tc.putImageData(img, 0, 0);
+}
+paintTerrain();
+
+function resize() {
+  const r = document.getElementById('stage').getBoundingClientRect();
+  dpr = Math.min(devicePixelRatio || 1, 2);
+  W = r.width; H = r.height;
+  cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr);
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  fit();
+}
+function fit() { view.s = Math.min(W, H) * 0.485; view.k = 1; view.x = 0; view.y = 0; }
+const sx = i => D.x[i] * view.s * view.k + view.x + W / 2;
+const sy = i => D.y[i] * view.s * view.k + view.y + H / 2;
+
+function draw() {
+  ctx.clearRect(0, 0, W, H);
+
+  const side = 2 * view.s * view.k;
+  ctx.imageSmoothingEnabled = true;
+  ctx.drawImage(terrain, -view.s * view.k + view.x + W/2, -view.s * view.k + view.y + H/2, side, side);
+
+  const ink = cssVar('--mark'), accent = cssVar('--accent');
+  const dim = matches !== null || highlight >= 0;
+  for (let i = 0; i < N; i++) {
+    const on = matches ? matches.has(i) : (highlight >= 0 ? D.t[i] === highlight : true);
+    if (dim && !on) continue;
+    const px = sx(i), py = sy(i);
+    if (px < -4 || py < -4 || px > W + 4 || py > H + 4) continue;
+    ctx.globalAlpha = dim ? 0.95 : 0.34;
+    ctx.fillStyle = dim ? accent : ink;
+    const r = Math.max(0.5, Math.sqrt(D.d[i]) * 0.15 * Math.sqrt(view.k));
+    ctx.beginPath(); ctx.arc(px, py, r, 0, 6.2832); ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+
+  // Place names -- identity lives here, not in the colour: a named region
+  // survives greyscale printing and colour-vision deficiency.
+  const placed = [];
+  for (const L of D.labels) {
+    if (soloRegion !== null && L.region !== soloRegion) continue;
+    const px = L.x * view.s * view.k + view.x + W/2;
+    const py = L.y * view.s * view.k + view.y + H/2;
+    if (px < 55 || py < 16 || px > W - 55 || py > H - 8) continue;
+    if (view.k < 1.7 && L.n < 190) continue;      // semantic zoom
+    if (view.k < 3.0 && L.n < 105) continue;
+    const size = Math.min(15, 8.6 + Math.log10(L.n) * 2.1 + (view.k - 1) * 1.1);
+    ctx.font = `600 ${size.toFixed(1)}px system-ui, -apple-system, sans-serif`;
+    ctx.textAlign = 'center';
+    // Measure the actual string: a fixed keep-out box lets a long name like
+    // generalized-parton-distributions collide with its neighbour.
+    const halfW = ctx.measureText(L.slug).width / 2 + 6;
+    if (placed.some(p => Math.abs(p[0]-px) < p[2] + halfW &&
+                         Math.abs(p[1]-py) < (p[3] + size) / 2 + 11)) continue;
+    placed.push([px, py, halfW, size]);
+    ctx.lineWidth = 3.4; ctx.strokeStyle = 'rgba(251,250,247,0.94)';
+    ctx.strokeText(L.slug, px, py);
+    ctx.fillStyle = cssVar('--ink');
+    ctx.fillText(L.slug, px, py);
+  }
+
+  if (hover >= 0) {
+    ctx.beginPath(); ctx.arc(sx(hover), sy(hover), 5.5, 0, 6.2832);
+    ctx.lineWidth = 1.6; ctx.strokeStyle = cssVar('--accent'); ctx.stroke();
+  }
+}
+
+function pick(mx, my) {
+  let best = -1, bd = 9;
+  for (let i = 0; i < N; i++) {
+    const dx = sx(i) - mx, dy = sy(i) - my;
+    if (Math.abs(dx) > bd || Math.abs(dy) > bd) continue;
+    const d = Math.hypot(dx, dy);
+    if (d < bd) { bd = d; best = i; }
+  }
+  return best;
+}
+function showTip(i, mx, my) {
+  const t = D.titles[String(i)];
+  // An inferred tag is marked as such: it comes from the citation
+  // neighbourhood, not from the paper's own text, and must not be passed off
+  // as an authoritative PhySH classification.
+  const topic = D.t[i] >= 0
+    ? D.topics[D.t[i]] + (D.inf[i] ? '（由邻近论文推断）' : '')
+    : '未匹配 PhySH 词表';
+  tip.innerHTML = '<div class="ti"></div><div class="me"></div><div class="kv"></div>';
+  tip.querySelector('.ti').textContent = t ? t[0] : D.ids[i];
+  tip.querySelector('.me').textContent = t && t[1] ? t[1].split(';').slice(0,3).join('; ') : '';
+  tip.querySelector('.kv').textContent = `${D.ids[i]} · 主题 ${topic} · 语料内被引 ${D.d[i]}`;
+  tip.style.opacity = 1;
+  const r = tip.getBoundingClientRect();
+  let L = mx + 14, T = my + 14;
+  if (L + r.width > W) L = mx - r.width - 14;
+  if (T + r.height > H) T = my - r.height - 14;
+  tip.style.left = Math.max(4, L) + 'px'; tip.style.top = Math.max(4, T) + 'px';
+}
+
+let drag = false, lx = 0, ly = 0;
+cv.addEventListener('pointerdown', e => { drag = true; lx = e.offsetX; ly = e.offsetY; cv.setPointerCapture(e.pointerId); });
+cv.addEventListener('pointerup', () => drag = false);
+cv.addEventListener('pointerleave', () => { hover = -1; tip.style.opacity = 0; draw(); });
+cv.addEventListener('pointermove', e => {
+  if (drag) { view.x += e.offsetX - lx; view.y += e.offsetY - ly; lx = e.offsetX; ly = e.offsetY; tip.style.opacity = 0; draw(); return; }
+  const i = pick(e.offsetX, e.offsetY);
+  if (i !== hover) { hover = i; draw(); }
+  cv.style.cursor = i >= 0 ? 'pointer' : 'grab';
+  if (i >= 0) showTip(i, e.offsetX, e.offsetY); else tip.style.opacity = 0;
+});
+cv.addEventListener('wheel', e => {
+  e.preventDefault();
+  const f = Math.exp(-e.deltaY * 0.0017);
+  const mx = e.offsetX - W/2 - view.x, my = e.offsetY - H/2 - view.y;
+  const nk = Math.min(30, Math.max(0.6, view.k * f));
+  view.x -= mx * (nk / view.k - 1); view.y -= my * (nk / view.k - 1);
+  view.k = nk; draw();
+}, {passive: false});
+
+document.getElementById('q').addEventListener('input', e => {
+  const q = e.target.value.trim().toLowerCase();
+  if (!q) { matches = null; statusEl.textContent = ''; draw(); return; }
+  matches = new Set();
+  for (let i = 0; i < N; i++) {
+    const t = D.titles[String(i)];
+    if (D.ids[i].toLowerCase().includes(q) ||
+        (t && (t[0].toLowerCase().includes(q) || (t[1]||'').toLowerCase().includes(q)))) matches.add(i);
+  }
+  statusEl.textContent = `匹配 ${matches.size} 篇（标题只覆盖被引最高的 ${Object.keys(D.titles).length} 篇）`;
+  draw();
+});
+const hl = document.getElementById('hl');
+D.topics.forEach((t, i) => { const o = document.createElement('option'); o.value = i; o.textContent = t; hl.appendChild(o); });
+hl.onchange = () => { highlight = hl.value === '' ? -1 : +hl.value; draw(); };
+
+const legend = document.getElementById('legend');
+function buildLegend() {
+  legend.innerHTML = '';
+  D.regionNames.forEach((names, j) => {
+    const b = document.createElement('button');
+    b.className = 'rg'; b.type = 'button';
+    b.setAttribute('aria-pressed', String(soloRegion === j));
+    b.innerHTML = '<span class="sw"></span><span class="lb"></span>';
+    b.querySelector('.sw').style.background = REGION[j];
+    b.querySelector('.lb').textContent = names[0];
+    b.title = names.join(' · ');
+    b.onclick = () => { soloRegion = soloRegion === j ? null : j; paintTerrain(); buildLegend(); draw(); };
+    legend.appendChild(b);
+  });
+}
+document.getElementById('reset').onclick = () => {
+  fit(); matches = null; highlight = -1; soloRegion = null;
+  document.getElementById('q').value = ''; hl.value = ''; statusEl.textContent = '';
+  paintTerrain(); buildLegend(); draw();
+};
+
+document.getElementById('sub').innerHTML =
+  `<b>${N.toLocaleString()}</b> 篇论文 · <b>${D.labels.length}</b> 个主题区域 · 位置由引用关系决定`;
+document.getElementById('foot').textContent =
+  '每个点是一篇论文，大小 ∝ 语料内被引次数；位置来自引用网络的 t-SNE 投影。'
+  + '底色是 5 个大区，由主题质心聚类自动划分，不是人工指定。'
+  + '地名标注空间上真正聚集的主题；quantum-chromodynamics、spin 这类横跨全图的不作标注，它们是通用语言而非地点。'
+  + ` 主题标签中 ${D.meta.tagged_real.toLocaleString()} 篇来自 PhySH 词表匹配，`
+  + `${D.meta.tagged_inferred.toLocaleString()} 篇由引用近邻推断（悬停会注明），`
+  + `${D.meta.untagged.toLocaleString()} 篇无标签。`;
+
+new ResizeObserver(() => { resize(); draw(); }).observe(document.getElementById('stage'));
+buildLegend(); resize(); draw();
+</script>
+</body>
+</html>

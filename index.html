@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FUSION 知识库图谱</title>
+<style>
+  :root {
+    color-scheme: light dark;
+    --surface: #fcfcfb; --plane: #f9f9f7;
+    --ink: #0b0b0b; --ink-2: #52514e; --muted: #898781;
+    --hairline: #e1e0d9; --accent: #2a78d6;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:where(:not([data-theme="light"])) {
+      --surface: #1a1a19; --plane: #0d0d0d;
+      --ink: #ffffff; --ink-2: #c3c2b7; --muted: #898781;
+      --hairline: #2c2c2a; --accent: #3987e5;
+    }
+  }
+  :root[data-theme="dark"] {
+    --surface: #1a1a19; --plane: #0d0d0d;
+    --ink: #ffffff; --ink-2: #c3c2b7; --muted: #898781;
+    --hairline: #2c2c2a; --accent: #3987e5;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 0 24px 64px;
+    background: var(--plane); color: var(--ink);
+    font: 15px/1.6 system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  .wrap { max-width: 860px; margin: 0 auto; }
+  header { padding: 56px 0 32px; border-bottom: 1px solid var(--hairline); }
+  h1 { margin: 0 0 8px; font-size: 30px; letter-spacing: -0.02em; }
+  .lede { margin: 0; color: var(--ink-2); max-width: 62ch; }
+
+  .stats { display: flex; flex-wrap: wrap; gap: 28px; padding: 24px 0 8px; }
+  .stat .v {
+    font-size: 26px; font-weight: 600; letter-spacing: -0.02em;
+    font-variant-numeric: tabular-nums; display: block;
+  }
+  .stat .l { color: var(--muted); font-size: 13px; }
+
+  h2 { font-size: 13px; text-transform: uppercase; letter-spacing: 0.07em;
+       color: var(--muted); font-weight: 600; margin: 40px 0 14px; }
+
+  .cards { display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); }
+  .card {
+    display: block; padding: 20px; text-decoration: none; color: inherit;
+    background: var(--surface); border: 1px solid var(--hairline); border-radius: 12px;
+    transition: border-color .12s, transform .12s;
+  }
+  .card:hover { border-color: var(--accent); transform: translateY(-1px); }
+  .card h3 { margin: 0 0 6px; font-size: 17px; }
+  .card p { margin: 0 0 12px; color: var(--ink-2); font-size: 14px; }
+  .card .meta { color: var(--muted); font-size: 12.5px; font-variant-numeric: tabular-nums; }
+  .card .go { color: var(--accent); font-size: 13px; font-weight: 600; margin-top: 12px; display: block; }
+
+  footer { margin-top: 48px; padding-top: 20px; border-top: 1px solid var(--hairline);
+           color: var(--muted); font-size: 13px; }
+  code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12.5px;
+         background: var(--surface); border: 1px solid var(--hairline);
+         border-radius: 4px; padding: 1px 5px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <h1>FUSION 知识库图谱</h1>
+  <p class="lede">
+    FUSION 的自建知识库覆盖 arXiv nucl-th 全文语料。下面的图谱把语料内部的引用关系
+    画出来：谁在引谁，哪些工作构成了一个方向的骨架。
+  </p>
+  <div class="stats">
+    <div class="stat"><span class="v">61,171</span><span class="l">语料论文</span></div>
+    <div class="stat"><span class="v">727,841</span><span class="l">语料内引用边</span></div>
+    <div class="stat"><span class="v">38,824</span><span class="l">已 PhySH 分类</span></div>
+    <div class="stat"><span class="v">122</span><span class="l">主题标签</span></div>
+  </div>
+</header>
+
+<h2>可视化</h2>
+<div class="cards">
+  <a class="card" href="map.html">
+    <h3>语料地图</h3>
+    <p>55,850 篇论文按引用关系投影到平面。地形是论文密度，地名是空间上真正聚集的主题。
+       引用图只作布局约束，不画边。</p>
+    <span class="meta">55,850 节点 · 41 个主题区域</span>
+    <span class="go">打开地图 →</span>
+  </a>
+</div>
+
+<footer>
+  地图由 <code>scripts/kb_citemap.py</code> + <code>scripts/kb_citemap_render.py</code> 生成，数据来自 FUSION 语料库。生成步骤见 README。
+</footer>
+
+</div>
+</body>
+</html>
