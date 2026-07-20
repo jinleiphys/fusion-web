@@ -1,6 +1,6 @@
 # fusion-web
 
-FUSION 知识库的网页可视化。自包含单文件，无 CDN、无外部请求、无构建步骤，直接静态托管。
+FUSION 项目官网 + 知识库可视化。自包含静态页面，无 CDN、无外部请求、无构建步骤，直接静态托管。
 
 ![语料地图](docs/map.png)
 
@@ -8,8 +8,9 @@ FUSION 知识库的网页可视化。自包含单文件，无 CDN、无外部请
 
 | 文件 | 说明 |
 |---|---|
+| `index.html` | 项目主页：中英双语，介绍 FUSION 是什么/为什么/基准/路线；首屏星空是真实语料坐标（`assets/stars.js`，从 `data/coords.json` 抽样 4,500 点） |
 | `map.html` | 语料地图，55,850 篇论文的引用投影（数据已内联，双击即可打开） |
-| `index.html` | 入口页 |
+| `assets/` | 品牌 logo（源文件在 FUSION 仓库 `assets/brand/`）、地图预览图、首屏点云数据 |
 | `scripts/kb_citemap.py` | 离线布局：引用邻接 → SVD → t-SNE → 2D 坐标 |
 | `scripts/kb_citemap_render.py` | 渲染数据：密度场、区域划分、地名标注、标题 |
 | `scripts/citemap_template.html` | 页面模板（数据以 JSON 注入） |
