@@ -401,6 +401,7 @@ footer { border-top: 1px solid var(--hairline); padding: 44px 0 60px; }
       <a href="#what"><span class="zh">是什么</span><span class="en">What</span></a>
       <a href="#why"><span class="zh">为什么</span><span class="en">Why</span></a>
       <a href="#bench"><span class="zh">基准</span><span class="en">Benchmarks</span></a>
+      <a href="#cases"><span class="zh">案例</span><span class="en">Cases</span></a>
       <a href="#map"><span class="zh">语料地图</span><span class="en">Corpus map</span></a>
       <a href="#roadmap"><span class="zh">路线</span><span class="en">Roadmap</span></a>
     </div>
@@ -637,6 +638,11 @@ footer { border-top: 1px solid var(--hairline); padding: 44px 0 60px; }
             <td class="result"><span class="zh">与参考计算 4–5 位有效数字</span><span class="en">4–5 sig figs vs reference</span></td>
           </tr>
           <tr>
+            <td class="code-name">FRESCO × COLOSS</td>
+            <td class="case"><span class="zh">n+⁹⁰Zr 弹性散射 50 MeV，KD02 全局光学势；两个独立求解器互检（Numerov 耦合道 vs 复标度 Lagrange-Laguerre）</span><span class="en">n+⁹⁰Zr elastic at 50 MeV, KD02 global OMP; two independent solvers cross-checked (Numerov coupled-channels vs complex-scaled Lagrange-Laguerre)</span></td>
+            <td class="result"><span class="zh">σ<sub>R</sub> 一致到 6 位；步长收敛 9 位</span><span class="en">σ<sub>R</sub> agrees to 6 sig figs; converged to 9</span></td>
+          </tr>
+          <tr>
             <td class="code-name">literature</td>
             <td class="case"><span class="zh">论文写作引文验证 · 精确文献检索（Typel–Baur 2003 BibTeX）</span><span class="en">citation verification for manuscript writing · exact retrieval (Typel–Baur 2003 BibTeX)</span></td>
             <td class="result"><span class="zh">10/10 引文可验证，零幻觉</span><span class="en">10/10 citations verified, zero hallucination</span></td>
@@ -648,6 +654,70 @@ footer { border-top: 1px solid var(--hairline); padding: 44px 0 60px; }
       <span class="zh">质量流程：干净环境构建 + 复现程序自带参考值 + Codex 对抗审查 + 引文在线核验，全部通过才发布。技能目录持续扩充中（KSHELL、GEMINI++、GEF、AZURE2、SkyNet 在路线图上）。</span>
       <span class="en">Quality pipeline: clean-room build + reproduce the code's own reference values + adversarial cross-review + live citation verification, all required before release. The catalog keeps growing (KSHELL, GEMINI++, GEF, AZURE2, SkyNet are on the roadmap).</span>
     </p>
+  </div>
+</section>
+
+<!-- ================= CASES ================= -->
+<section id="cases">
+  <div class="wrap">
+    <div class="rv">
+      <p class="eyebrow"><span class="zh">两次实测 · Case studies</span><span class="en">Two real runs</span></p>
+      <h2>
+        <span class="zh">两个真实案例，连同它们的否定结果</span>
+        <span class="en">Two real cases, negative results included</span>
+      </h2>
+      <p class="sec-lede">
+        <span class="zh">下面两次是完整跑完的真实任务，不是演示脚本。数字可以核对，边界也照实写：第二个案例最有价值的产出，恰恰是"这个能量点没有实验数据"。</span>
+        <span class="en">Both of these ran end to end on real tasks, not demo scripts. The numbers are checkable and the limits are stated: in the second case, the most useful output turned out to be "no experimental data exists at that energy".</span>
+      </p>
+    </div>
+    <div class="why-grid">
+
+      <div class="why rv">
+        <span class="no"><svg width="26" height="26" viewBox="0 0 26 26" fill="none" stroke="url(#bg1)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3.5h9l5 5v14H6z"/><path d="M15 3.5V9h5"/><circle cx="12" cy="15" r="3"/><path d="M14.2 17.2L17 20"/></svg>CORPUS</span>
+        <h3><span class="zh">一篇 PDF 到一张相关工作地图</span><span class="en">One PDF to a related-work map</span></h3>
+        <p>
+          <span class="zh">输入只有一篇 PDF（Abu-Ibrahim 等，<i>PRC</i> <b>77</b>, 034607，碳同位素在质子靶上的反应截面）。全程离线，零次外部 API 调用。</span>
+          <span class="en">The input was a single PDF (Abu-Ibrahim <i>et al.</i>, <i>PRC</i> <b>77</b>, 034607, reaction cross sections of carbon isotopes on a proton target). Fully offline, zero external API calls.</span>
+        </p>
+        <p style="margin-top:12px">
+          <span class="zh">语料库把它定位到 <code>0710.4193</code>，引用图给出它引的 <b>8 篇</b>与引它的 <b>5 篇</b>（含同组前作 <code>nucl-th/0612029</code>、²²C 双中子晕 <code>nucl-th/0605055</code>、黑球近似 <code>nucl-th/0410032</code>），词法近邻再补上方法相同而体系不同的工作（氧同位素 Glauber、相对论碰撞近似）。预生成摘要直接给出可核对的数字：p+¹²C 40 MeV 的 σ<sub>R</sub> = 432 mb、²²C 的 r<sub>m</sub> = 3.6 fm、经验公式 R(C) = 0.96 ± 0.05 覆盖 153 个数据点。</span>
+          <span class="en">The corpus resolved it to <code>0710.4193</code>; the citation graph returned the <b>8 papers</b> it cites and the <b>5</b> citing it (including the group's own predecessor <code>nucl-th/0612029</code>, the ²²C two-neutron halo <code>nucl-th/0605055</code>, and the black-sphere approximation <code>nucl-th/0410032</code>), and lexical neighbours added same-method, different-system work. The pre-generated digest supplied checkable numbers: σ<sub>R</sub> = 432 mb for p+¹²C at 40 MeV, r<sub>m</sub> = 3.6 fm for ²²C, and the empirical R(C) = 0.96 ± 0.05 across 153 data points.</span>
+        </p>
+        <p style="margin-top:12px">
+          <span class="zh"><b>边界照实说：</b>引用边只在语料内部统计，RIKEN 的实验测量不属于 nucl-th 语料，所以"被引 5 次"低估真实引用量，要权威引用数仍需回到 INSPIRE。</span>
+          <span class="en"><b>Stated limit:</b> citation edges are counted only inside the corpus, and the RIKEN measurements are not nucl-th papers, so "cited by 5" understates the real count. An authoritative citation count still needs INSPIRE.</span>
+        </p>
+      </div>
+
+      <div class="why rv">
+        <span class="no"><svg width="26" height="26" viewBox="0 0 26 26" fill="none" stroke="url(#bg1)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M13 3v20"/><path d="M6 7.5h14"/><path d="M6.5 7.5L3.5 15h6z"/><path d="M19.5 7.5L16.5 15h6z"/><path d="M9 22.5h8"/></svg>VERIFY</span>
+        <h3><span class="zh">一次不肯轻信自己的光学模型计算</span><span class="en">An optical-model run that refused to trust itself</span></h3>
+        <p>
+          <span class="zh">n+⁹⁰Zr 弹性散射，50 MeV，KD02 全局光学势。参数不是凭记忆重写公式，而是复用本地已有的 Koning 原始 <code>kd02.f</code>，两套独立实现一致到 <b>8 位有效数字</b>。</span>
+          <span class="en">n+⁹⁰Zr elastic scattering at 50 MeV with the KD02 global optical potential. The parameters were not rewritten from memory: the run reused Koning's own <code>kd02.f</code> already on disk, and the two independent implementations agreed to <b>8 significant figures</b>.</span>
+        </p>
+        <p style="margin-top:12px">
+          <span class="zh">过程中抓到一个会静默出错的陷阱：FRESCO 的半径约定是 R = r₀(Aₚ<sup>1/3</sup> + A<sub>t</sub><sup>1/3</sup>)，而 KD02 定义在 R = r₀A<sub>t</sub><sup>1/3</sup> 上。不设 <code>ap=0</code>，所有半径大 <b>22%</b>，算出来的截面看着完全合理。最终 σ<sub>R</sub> = <b>1301.640 mb</b>：积分步长减半两次稳定到 <b>9 位有效数字</b>，匹配半径与分波数加倍完全不变；再用第二个独立求解器复核，COLOSS（复标度 Lagrange-Laguerre）给 1299.188 mb，FRESCO（Numerov 耦合道）给 1299.191 mb，<b>6 位有效数字</b>。W = 0 时吸收精确归零，通量守恒成立。</span>
+          <span class="en">It caught a trap that fails silently: FRESCO builds radii as R = r₀(Aₚ<sup>1/3</sup> + A<sub>t</sub><sup>1/3</sup>) while KD02 is defined on R = r₀A<sub>t</sub><sup>1/3</sup>. Without <code>ap=0</code> every radius is <b>22% too large</b> and the resulting cross section still looks entirely plausible. Final σ<sub>R</sub> = <b>1301.640 mb</b>: stable to <b>9 significant figures</b> under two halvings of the radial step and unchanged when the matching radius and partial-wave limit were doubled. A second, structurally unrelated solver then checked it: COLOSS (complex-scaled Lagrange-Laguerre) gave 1299.188 mb against FRESCO's 1299.191 mb, <b>6 significant figures</b>. With W = 0 the absorption vanished exactly and flux conservation held.</span>
+        </p>
+        <p style="margin-top:12px">
+          <span class="zh"><b>然后是那个否定结果：</b>去 EXFOR 找实验数据，50 MeV 上<b>根本没有</b> n+⁹⁰Zr 弹性散射测量。改为在两个真有数据的能量上各算一遍：24 MeV 中位比 0.89，55 MeV 的 χ²/N = 0.75，全部零自由参数。<b>下图是这次的实际产出。</b></span>
+          <span class="en"><b>Then the negative result:</b> EXFOR holds <b>no</b> n+⁹⁰Zr elastic measurement at 50 MeV at all. The run instead computed both energies where data really exist: median ratio 0.89 at 24 MeV, χ²/N = 0.75 at 55 MeV, all with zero free parameters. <b>The figure below is what came out.</b></span>
+        </p>
+      </div>
+
+    </div>
+
+    <figure class="rv" style="margin:34px 0 0">
+      <div class="map-frame">
+        <img src="assets/case-kd02-exfor.png" alt="KD02 global optical potential versus EXFOR measurements for neutron elastic scattering on zirconium, at 24 MeV and 55 MeV">
+      </div>
+      <figcaption style="margin-top:16px;font-size:13.5px;color:var(--faint);line-height:1.75">
+        <span class="zh">案例二的实际产出。绿线是 KD02 全局光学势的<b style="color:var(--ink);font-weight:600">零自由参数</b>预测，粉点是 EXFOR 实测，两边各自在其被测能量上计算，没有拿一条曲线跨能量硬拉。左：24 MeV，富集 ⁹⁰Zr，全角度（Wang &amp; Rapaport，EXFOR 13160.004）。右：55 MeV，天然 Zr，仅前角（Ibaraki TIARA，EXFOR 22480.005）。<b style="color:var(--ink);font-weight:600">50 MeV 不在图上，因为那个能量根本没有测量</b>，而这正是这次任务最该报出来的结论。</span>
+        <span class="en">The actual output of case two. Green is the <b style="color:var(--ink);font-weight:600">zero-free-parameter</b> prediction of the KD02 global optical potential; pink points are EXFOR measurements. Each panel is computed at its own measured energy rather than stretching one curve across the gap. Left: 24 MeV, enriched ⁹⁰Zr, full angular range (Wang &amp; Rapaport, EXFOR 13160.004). Right: 55 MeV, natural Zr, forward angles only (Ibaraki TIARA, EXFOR 22480.005). <b style="color:var(--ink);font-weight:600">50 MeV does not appear because no measurement exists there</b>, which was the most important thing the run had to report.</span>
+      </figcaption>
+    </figure>
   </div>
 </section>
 
