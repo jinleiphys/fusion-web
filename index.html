@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>FUSION — 核物理科研智能体平台 · Nuclear-Physics Research Agent Platform</title>
-<meta name="description" content="FUSION: Framework for Unified Scientific Intelligence in Open Nuclear physics. 懂每一个开源核物理程序，自带 6 万篇 arXiv 全文语料的科研 agent 平台。">
+<title>FUSION · 核物理科研智能体平台 · Nuclear-Physics Research Agent Platform</title>
+<meta name="description" content="FUSION: Framework for Unified Scientific Intelligence in Open Nuclear physics. 17 个经过实测的核物理程序技能，62,714 篇 arXiv nucl-th 论文，覆盖反应、结构、裂变、核天体与重离子输运。">
 <link rel="icon" href="assets/logo-nav.png">
 <style>
 /* ================= tokens ================= */
@@ -303,6 +303,46 @@ h2 {
 .bench-note { margin-top: 22px; font-size: 13.5px; color: var(--faint); }
 .bench-scroll { overflow-x: auto; }
 @media (max-width: 700px) { .bench-table { font-size: 12px; } .bench-table td, .bench-table th { padding: 12px 10px; } }
+.coverage-grid {
+  display: grid; grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 12px; margin: 0 0 42px;
+}
+.coverage {
+  min-height: 180px; padding: 20px;
+  border: 1px solid var(--hairline-2); border-radius: 12px;
+  background: linear-gradient(160deg, rgba(13,21,36,.92), rgba(7,12,22,.92));
+}
+.coverage .count {
+  display: flex; align-items: baseline; justify-content: space-between; gap: 10px;
+  padding-bottom: 12px; margin-bottom: 13px; border-bottom: 1px solid var(--hairline);
+}
+.coverage .count b { font: 700 25px/1 var(--mono); color: var(--core); }
+.coverage .count span { color: var(--dim); font-size: 12px; text-align: right; line-height: 1.4; }
+.code-list { display: flex; flex-wrap: wrap; gap: 7px; }
+.code-pill {
+  font: 11px/1.2 var(--mono); color: var(--plasma);
+  padding: 5px 7px; border-radius: 5px; background: var(--plasma-soft);
+}
+.tier {
+  display: inline-block; margin-left: 7px; padding: 3px 6px; border-radius: 4px;
+  font: 700 9.5px/1 var(--mono); letter-spacing: .04em; vertical-align: 1px;
+}
+.tier-1 { color: #07160e; background: #55d98b; }
+.tier-2 { color: #1e1303; background: #f0b458; }
+.latest-note {
+  display: grid; grid-template-columns: auto 1fr; gap: 16px; align-items: start;
+  margin: 28px 0 34px; padding: 18px 20px; border-radius: 10px;
+  border: 1px solid rgba(255,160,40,.28); background: var(--core-soft);
+}
+.latest-note .signal { font: 700 11px/1 var(--mono); color: var(--core); letter-spacing: .1em; }
+.latest-note p { margin: 0; color: var(--dim); font-size: 13.5px; }
+.latest-note b { color: var(--ink); }
+@media (max-width: 1000px) { .coverage-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 620px) {
+  .coverage-grid { grid-template-columns: 1fr; }
+  .coverage { min-height: 0; }
+  .latest-note { grid-template-columns: 1fr; }
+}
 
 /* ================= map showcase ================= */
 .map-frame {
@@ -400,7 +440,7 @@ footer { border-top: 1px solid var(--hairline); padding: 44px 0 60px; }
     <div class="nav-links">
       <a href="#what"><span class="zh">是什么</span><span class="en">What</span></a>
       <a href="#why"><span class="zh">为什么</span><span class="en">Why</span></a>
-      <a href="#bench"><span class="zh">基准</span><span class="en">Benchmarks</span></a>
+      <a href="#bench"><span class="zh">技能</span><span class="en">Skills</span></a>
       <a href="#cases"><span class="zh">案例</span><span class="en">Cases</span></a>
       <a href="#map"><span class="zh">语料地图</span><span class="en">Corpus map</span></a>
       <a href="#roadmap"><span class="zh">路线</span><span class="en">Roadmap</span></a>
@@ -419,20 +459,22 @@ footer { border-top: 1px solid var(--hairline); padding: 44px 0 60px; }
         <p class="acronym"><b>F</b>ramework for <b>U</b>nified <b>S</b>cientific <b>I</b>ntelligence in <b>O</b>pen <b>N</b>uclear physics</p>
         <h1>
           <span class="zh">把整个核物理领域，<br>装进<span class="hl">一个终端</span></span>
-          <span class="en">The whole of nuclear theory,<br>in <span class="hl">one terminal</span></span>
+          <span class="en">The whole of nuclear physics,<br>in <span class="hl">one terminal</span></span>
         </h1>
         <p class="lede">
-          <span class="zh">FUSION 是一个开箱即用的核物理科研智能体：<strong>懂每一个开源核物理程序</strong>，自带
-            <strong>62,714 篇 arXiv nucl-th 全文语料</strong>，跑在你能用的任何大模型上，包括国产模型。
+          <span class="zh">FUSION 正在把核物理领域做成一个可验证的科研智能体平台：已经交付
+            <strong>17 个公开可获得核物理程序的专家技能</strong>，自带 <strong>62,714 篇 arXiv nucl-th 论文</strong>，
+            其中 61,357 篇有全文，并且能跑在包括国产模型在内的多种大模型上。
             你身后的每一个光点，都是语料库里一篇真实的论文。</span>
-          <span class="en">FUSION is a research agent for nuclear physics that works out of the box:
-            <strong>an expert skill for every open-source nuclear code</strong>, a self-contained corpus of
-            <strong>62,714 arXiv nucl-th papers</strong>, running on whatever LLM you can actually access.
+          <span class="en">FUSION is building nuclear physics into a verifiable research-agent platform:
+            <strong>17 expert skills for publicly obtainable nuclear codes</strong>, a self-contained corpus of
+            <strong>62,714 arXiv nucl-th papers</strong>, including 61,357 with full text, and support for domestic
+            as well as international LLMs.
             Every point of light behind this text is a real paper in the corpus.</span>
         </p>
         <div class="cta-row">
-          <a class="cta cta-primary" href="map.html">
-            <span class="zh">打开语料地图</span><span class="en">Open the corpus map</span> →
+          <a class="cta cta-primary" href="#bench">
+            <span class="zh">查看 17 个技能</span><span class="en">Explore 17 skills</span> →
           </a>
           <a class="cta cta-ghost" href="https://github.com/jinleiphys/FUSION" target="_blank" rel="noopener">
             <span class="zh">查看源码</span><span class="en">View source</span>
@@ -447,10 +489,10 @@ footer { border-top: 1px solid var(--hairline); padding: 44px 0 60px; }
 </header>
 
 <div class="hero-stats">
-  <div class="hs"><span class="v" data-count="62714" data-fmt="comma">62,714</span><span class="l"><span class="zh">arXiv nucl-th 全文论文 · 1992–2026</span><span class="en">arXiv nucl-th full-text papers · 1992–2026</span></span></div>
+  <div class="hs"><span class="v" data-count="62714" data-fmt="comma">62,714</span><span class="l"><span class="zh">arXiv nucl-th 论文，其中 61,357 篇有全文</span><span class="en">arXiv nucl-th papers, 61,357 with full text</span></span></div>
+  <div class="hs"><span class="v" data-count="61171" data-fmt="comma">61,171</span><span class="l"><span class="zh">离线 Markdown 知识库页面</span><span class="en">offline Markdown knowledge-base pages</span></span></div>
   <div class="hs"><span class="v" data-count="727841" data-fmt="comma">727,841</span><span class="l"><span class="zh">语料内引用边</span><span class="en">in-corpus citation edges</span></span></div>
-  <div class="hs"><span class="v" data-count="176">176</span><span class="l"><span class="zh">PhySH 核物理概念页</span><span class="en">PhySH nuclear-physics concepts</span></span></div>
-  <div class="hs"><span class="v"><em>5</em></span><span class="l"><span class="zh">程序技能已通过发表值基准验证</span><span class="en">code skills benchmarked against published values</span></span></div>
+  <div class="hs"><span class="v"><em data-count="17">17</em></span><span class="l"><span class="zh">程序技能已构建、运行并通过分级验证</span><span class="en">code skills built, run, and tier-validated</span></span></div>
 </div>
 
 <!-- ================= WHAT ================= -->
@@ -471,12 +513,12 @@ footer { border-top: 1px solid var(--hairline); padding: 44px 0 60px; }
     </div>
     <div class="def-grid">
       <div class="acro-stack rv">
-        <div class="acro-row"><span class="letter">F</span><span class="word"><b>Framework</b> — <span class="zh">不是单个工具，是可生长的骨架</span><span class="en">not a tool, a skeleton that grows</span></span></div>
-        <div class="acro-row"><span class="letter">U</span><span class="word"><b>Unified</b> — <span class="zh">程序、文献、算力，一个入口</span><span class="en">codes, literature, compute: one entrance</span></span></div>
-        <div class="acro-row"><span class="letter">S</span><span class="word"><b>Scientific</b> — <span class="zh">每个能力都锚定发表过的数值</span><span class="en">every capability anchored to published values</span></span></div>
-        <div class="acro-row"><span class="letter">I</span><span class="word"><b>Intelligence</b> — <span class="zh">agent 会装程序、写输入卡、跑计算、读结果</span><span class="en">the agent installs, writes decks, runs, parses</span></span></div>
-        <div class="acro-row"><span class="letter">O</span><span class="word"><b>Open</b> — <span class="zh">只收录公开发布的开源程序，平台本身也开源</span><span class="en">only publicly released open codes; the platform itself is open</span></span></div>
-        <div class="acro-row"><span class="letter">N</span><span class="word"><b>Nuclear physics</b> — <span class="zh">从反应到结构到天体，整个学科</span><span class="en">reactions, structure, astro: the whole discipline</span></span></div>
+        <div class="acro-row"><span class="letter">F</span><span class="word"><b>Framework</b>: <span class="zh">不是单个工具，是可生长的骨架</span><span class="en">not a tool, a skeleton that grows</span></span></div>
+        <div class="acro-row"><span class="letter">U</span><span class="word"><b>Unified</b>: <span class="zh">程序、文献、算力，一个入口</span><span class="en">codes, literature, compute: one entrance</span></span></div>
+        <div class="acro-row"><span class="letter">S</span><span class="word"><b>Scientific</b>: <span class="zh">每个能力都锚定可复核的数值</span><span class="en">every capability anchored to checkable numbers</span></span></div>
+        <div class="acro-row"><span class="letter">I</span><span class="word"><b>Intelligence</b>: <span class="zh">agent 会装程序、写输入卡、跑计算、读结果</span><span class="en">the agent installs, writes decks, runs, parses</span></span></div>
+        <div class="acro-row"><span class="letter">O</span><span class="word"><b>Open</b>: <span class="zh">程序必须公开可获得、可构建，许可边界如实标明</span><span class="en">codes must be publicly obtainable and buildable, with licence limits stated</span></span></div>
+        <div class="acro-row"><span class="letter">N</span><span class="word"><b>Nuclear physics</b>: <span class="zh">从反应、结构到天体与重离子输运</span><span class="en">reactions, structure, astro, and heavy-ion transport</span></span></div>
       </div>
       <div class="layers rv">
         <div class="layer layer-private">
@@ -487,7 +529,7 @@ footer { border-top: 1px solid var(--hairline); padding: 44px 0 60px; }
         <div class="layer layer-core">
           <span class="tag"><span class="zh">定制层 · 本体</span><span class="en">Customization layer · the product</span></span>
           <h3><span class="zh">程序技能 + 领域知识库 + 科研工作流</span><span class="en">Code skills + domain knowledge base + research workflows</span></h3>
-          <p><span class="zh">每个开源核物理程序一个专家技能；62k 论文离线全文检索；写作、审稿、文献调研等 ~30 个科研技能。</span><span class="en">One expert skill per open-source nuclear code; 62k papers searchable offline; ~30 research skills for writing, refereeing, literature work.</span></p>
+          <p><span class="zh">17 个程序技能已经交付；61,171 页知识库可离线浏览；EXFOR 数据技能已嵌入，约 29 个写作、审稿与文献技能正在迁移。</span><span class="en">Seventeen code skills are shipped; 61,171 knowledge-base pages browse offline; the EXFOR data skill is embedded, with about 29 writing, review, and literature skills being ported.</span></p>
         </div>
         <div class="layer">
           <span class="tag"><span class="zh">引擎 · opencode 品牌分叉</span><span class="en">Engine · opencode rebrand fork</span></span>
@@ -518,10 +560,10 @@ footer { border-top: 1px solid var(--hairline); padding: 44px 0 60px; }
     </div>
     <div class="term-wrap rv">
       <div class="term">
-        <div class="term-bar"><i></i><i></i><i></i><span>fusion — deepseek-chat — ~/work</span></div>
+        <div class="term-bar"><i></i><i></i><i></i><span>fusion · deepseek-chat · ~/work</span></div>
         <div class="term-body">
 <div class="ln" style="--i:0"><span class="t-prompt">❯</span> <span class="t-user"><span class="zh">帮我算 n+90Zr 弹性散射，10 MeV，用 KD03 全局光学势，给我 FRESCO 输入卡</span><span class="en">compute n+90Zr elastic scattering at 10 MeV with the KD03 global optical potential, give me a FRESCO deck</span></span></div>
-<div class="ln" style="--i:1"><span class="t-sys">◆ skill</span> <span class="t-plasma">fresco</span> <span class="t-sys">loaded — install verified, benchmark current</span></div>
+<div class="ln" style="--i:1"><span class="t-sys">◆ skill</span> <span class="t-plasma">fresco</span> <span class="t-sys">loaded · install verified · benchmark current</span></div>
 <div class="ln" style="--i:2"><span class="t-sys">◆ corpus</span> <span class="t-dim">61,357 fulltext · FTS5/BM25</span> <span class="t-sys">→ Koning &amp; Delaroche, NPA 713 (2003) 231</span></div>
 <div class="ln" style="--i:3"><span class="t-ok">✓</span> <span class="t-dim">deck written → n90zr_kd.in   (potential terms: V, W_d, V_so + Coulomb)</span></div>
 <div class="ln" style="--i:4"><span class="t-ok">✓</span> <span class="t-dim">fresco n90zr_kd.in → fort.16 parsed</span></div>
@@ -561,8 +603,8 @@ footer { border-top: 1px solid var(--hairline); padding: 44px 0 60px; }
         <span class="no"><svg width="26" height="26" viewBox="0 0 26 26" fill="none" stroke="url(#bg1)" stroke-width="1.6" stroke-linecap="round"><ellipse cx="13" cy="13" rx="10" ry="4.5"/><ellipse cx="13" cy="13" rx="10" ry="4.5" transform="rotate(60 13 13)"/><circle cx="13" cy="13" r="1.8" fill="url(#bg1)" stroke="none"/></svg>SKILLS</span>
         <h3><span class="zh">每个程序，一个专家技能</span><span class="en">One expert skill per code</span></h3>
         <p>
-          <span class="zh">反应（<code>FRESCO</code> <code>TALYS</code> <code>CCFULL</code>）、结构（<code>GSM</code> <code>KSHELL</code>）、R 矩阵、天体网络……每个技能教会 agent 安装、写输入、运行、解析该程序，并且<b>必须复现一个发表过的基准值才能上线</b>。连"TALYS 出错也返回 0"这种坑都写在技能里。</span>
-          <span class="en">Reactions (<code>FRESCO</code> <code>TALYS</code> <code>CCFULL</code>), structure (<code>GSM</code> <code>KSHELL</code>), R-matrix, astro networks… each skill teaches the agent to install, write inputs for, run, and parse one code, and <b>must reproduce a published benchmark before it ships</b>. Even traps like "TALYS exits 0 on fatal errors" are baked in.</span>
+          <span class="zh">17 个技能已经覆盖反应、裂变统计、R 矩阵与核天体、结构与从头算、TDHF 和重离子输运。每个技能教会 agent 安装、写输入、运行、解析，并且<b>必须通过清洁构建和分级数值验证才能上线</b>。连“TALYS 出错也返回 0”这种坑都写在技能里。</span>
+          <span class="en">Seventeen shipped skills now cover reactions, fission and statistical decay, R-matrix and nuclear astrophysics, structure and ab initio theory, TDHF, and heavy-ion transport. Each teaches installation, input authoring, execution, and parsing, and <b>must pass a clean build and tiered numerical validation before release</b>. Even traps such as “TALYS exits 0 on fatal errors” are encoded.</span>
         </p>
       </div>
       <div class="why rv">
@@ -603,9 +645,39 @@ footer { border-top: 1px solid var(--hairline); padding: 44px 0 60px; }
         <span class="en">Physicists read significant figures, not adjectives</span>
       </h2>
       <p class="sec-lede">
-        <span class="zh">每个技能上线前都要在干净环境里从公开源码装起，复现该程序自己文档中的参考值。以下全部为实测：</span>
-        <span class="en">Before any skill ships, it must build from public source in a clean room and reproduce the code's own documented reference values. All of the following are measured:</span>
+        <span class="zh">主项目已经从 5 个程序技能推进到 17 个，反应、结构、裂变统计、核天体四个论文门槛分区全部打通，随后又进入重离子输运。每个数字都来自实际构建和运行，不是能力清单里的计划项。</span>
+        <span class="en">The main project has grown from 5 code skills to 17. The paper gate now covers reactions, structure, fission and statistical decay, and nuclear astrophysics, with heavy-ion transport added next. Every number below comes from an actual build and run, not a planned capability.</span>
       </p>
+    </div>
+    <div class="coverage-grid rv" aria-label="Shipped code skills by domain">
+      <div class="coverage">
+        <div class="count"><b>8</b><span><span class="zh">反应</span><span class="en">Reactions</span></span></div>
+        <div class="code-list">
+          <span class="code-pill">FRESCO</span><span class="code-pill">CCFULL</span>
+          <span class="code-pill">COLOSS</span><span class="code-pill">pikoe</span>
+          <span class="code-pill">NLAT</span><span class="code-pill">CNOK</span>
+          <span class="code-pill">SIDES</span><span class="code-pill">SWANLOP</span>
+        </div>
+      </div>
+      <div class="coverage">
+        <div class="count"><b>2</b><span><span class="zh">裂变与统计衰变</span><span class="en">Fission and statistical decay</span></span></div>
+        <div class="code-list"><span class="code-pill">TALYS</span><span class="code-pill">CGMF</span></div>
+      </div>
+      <div class="coverage">
+        <div class="count"><b>2</b><span><span class="zh">R 矩阵与核天体</span><span class="en">R-matrix and nuclear astro</span></span></div>
+        <div class="code-list"><span class="code-pill">AZURE2</span><span class="code-pill">SkyNet</span></div>
+      </div>
+      <div class="coverage">
+        <div class="count"><b>4</b><span><span class="zh">结构、从头算与 TDHF</span><span class="en">Structure, ab initio, and TDHF</span></span></div>
+        <div class="code-list">
+          <span class="code-pill">GSM</span><span class="code-pill">KSHELL</span>
+          <span class="code-pill">NuclearToolkit.jl</span><span class="code-pill">Sky3D</span>
+        </div>
+      </div>
+      <div class="coverage">
+        <div class="count"><b>1</b><span><span class="zh">重离子输运</span><span class="en">Heavy-ion transport</span></span></div>
+        <div class="code-list"><span class="code-pill">SMASH</span></div>
+      </div>
     </div>
     <div class="bench-scroll rv">
       <table class="bench-table">
@@ -618,41 +690,58 @@ footer { border-top: 1px solid var(--hairline); padding: 44px 0 60px; }
         </thead>
         <tbody>
           <tr>
-            <td class="code-name">TALYS</td>
+            <td class="code-name">TALYS <span class="tier tier-1">T1</span></td>
             <td class="case"><span class="zh">发行版自带 1,438 个参考输出文件</span><span class="en">the 1,438 reference output files shipped with the distribution</span></td>
             <td class="result"><span class="zh">1,415 个逐字节一致，其余 ~6 位有效数字</span><span class="en">1,415 byte-for-byte, rest to ~6 sig figs</span></td>
           </tr>
           <tr>
-            <td class="code-name">GSM</td>
-            <td class="case"><span class="zh">Berggren 基共振能量 · ¹⁸O 多体谱 2,539 个观测量</span><span class="en">Berggren-basis resonance energy · ¹⁸O many-body spectrum, 2,539 observables</span></td>
-            <td class="result"><span class="zh">11 位有效数字 · 8 位有效数字</span><span class="en">11 sig figs · 8 sig figs</span></td>
+            <td class="code-name">NuclearToolkit.jl <span class="tier tier-1">T1</span></td>
+            <td class="case"><span class="zh">完整 30 项测试：手征 EFT、HFMBPT、IMSRG、壳模型</span><span class="en">full 30-test chain: chiral EFT, HFMBPT, IMSRG, and shell model</span></td>
+            <td class="result"><span class="zh">30/30；⁴He 基态能到 10⁻⁶</span><span class="en">30/30; ⁴He ground-state energy to 10⁻⁶</span></td>
           </tr>
           <tr>
-            <td class="code-name">CCFULL</td>
-            <td class="case"><span class="zh">¹⁶O+¹⁴⁴Sm 熔合垒与垒下激发函数</span><span class="en">¹⁶O+¹⁴⁴Sm fusion barrier and sub-barrier excitation function</span></td>
-            <td class="result"><span class="zh">势垒精确复现，尾部 4–5 位</span><span class="en">barrier exact, tail to 4–5 sig figs</span></td>
+            <td class="code-name">Sky3D <span class="tier tier-1">T1</span></td>
+            <td class="case"><span class="zh">¹⁶O 静态 TDHF：3,268 个能量、单粒子与多极矩量</span><span class="en">¹⁶O static TDHF: 3,268 energy, single-particle, and moment values</span></td>
+            <td class="result"><span class="zh">macOS/Linux 印出精度全部一致，迭代同为 370 步</span><span class="en">all printed values match on macOS/Linux, with the same 370 iterations</span></td>
           </tr>
           <tr>
-            <td class="code-name">FRESCO</td>
-            <td class="case"><span class="zh">n+⁹⁰Zr 弹性散射，KD03 全局光学势（deepseek-chat 独立成卡）</span><span class="en">n+⁹⁰Zr elastic scattering, KD03 global OMP (deck authored independently on deepseek-chat)</span></td>
-            <td class="result"><span class="zh">与参考计算 4–5 位有效数字</span><span class="en">4–5 sig figs vs reference</span></td>
+            <td class="code-name">SkyNet <span class="tier tier-1">T1</span></td>
+            <td class="case"><span class="zh">核合成网络自带比较套件与 NSE 物理锚点</span><span class="en">nucleosynthesis network comparison suite plus an NSE physics anchor</span></td>
+            <td class="result"><span class="zh">Linux 19/19；macOS 17/19，两个平台差异明确标注</span><span class="en">19/19 on Linux; 17/19 on macOS, with both platform limits stated</span></td>
+          </tr>
+          <tr>
+            <td class="code-name">CGMF <span class="tier tier-1">T1</span></td>
+            <td class="case"><span class="zh">²⁵²Cf 自发裂变与热中子诱发 ²³⁵U 的 40 事件历史</span><span class="en">40-event histories for ²⁵²Cf spontaneous fission and thermal-neutron-induced ²³⁵U</span></td>
+            <td class="result"><span class="zh">与 LANL 发行版参考逐字节一致</span><span class="en">byte-for-byte identical to the LANL-shipped references</span></td>
+          </tr>
+          <tr>
+            <td class="code-name">SMASH <span class="tier tier-1">T1</span></td>
+            <td class="case"><span class="zh">104 项测试与 Au+Au 输运守恒律</span><span class="en">104-test suite and conservation laws in Au+Au transport</span></td>
+            <td class="result"><span class="zh">Linux 104/104；两平台 B = 788、Q = 316 精确守恒</span><span class="en">104/104 on Linux; exact B = 788 and Q = 316 on both platforms</span></td>
+          </tr>
+          <tr>
+            <td class="code-name">AZURE2 <span class="tier tier-2">T2</span></td>
+            <td class="case"><span class="zh">¹⁶O(p,γ)¹⁷F，按论文表格重建 9 个参数，不做拟合</span><span class="en">¹⁶O(p,γ)¹⁷F, nine parameters reconstructed from the paper, with no fit</span></td>
+            <td class="result"><span class="zh">S(90 keV) 偏差 -5.7%；对实测数据 χ²/N = 1.53</span><span class="en">S(90 keV) differs by -5.7%; χ²/N = 1.53 against measured data</span></td>
           </tr>
           <tr>
             <td class="code-name">FRESCO × COLOSS</td>
             <td class="case"><span class="zh">n+⁹⁰Zr 弹性散射 50 MeV，KD02 全局光学势；两个独立求解器互检（Numerov 耦合道 vs 复标度 Lagrange-Laguerre）</span><span class="en">n+⁹⁰Zr elastic at 50 MeV, KD02 global OMP; two independent solvers cross-checked (Numerov coupled-channels vs complex-scaled Lagrange-Laguerre)</span></td>
             <td class="result"><span class="zh">σ<sub>R</sub> 一致到 6 位；步长收敛 9 位</span><span class="en">σ<sub>R</sub> agrees to 6 sig figs; converged to 9</span></td>
           </tr>
-          <tr>
-            <td class="code-name">literature</td>
-            <td class="case"><span class="zh">论文写作引文验证 · 精确文献检索（Typel–Baur 2003 BibTeX）</span><span class="en">citation verification for manuscript writing · exact retrieval (Typel–Baur 2003 BibTeX)</span></td>
-            <td class="result"><span class="zh">10/10 引文可验证，零幻觉</span><span class="en">10/10 citations verified, zero hallucination</span></td>
-          </tr>
         </tbody>
       </table>
     </div>
+    <div class="latest-note rv">
+      <span class="signal"><span class="zh">最新发现</span><span class="en">LATEST FINDING</span></span>
+      <p>
+        <span class="zh">SMASH 在相同源码、输入和随机种子下，macOS 与 Linux 的部分粒子多重性最多相差 <b>25%</b>，但重子数 788 与电荷 316 在两边都是精确整数。于是验证器锚定守恒律，不把平台相关的多重性当作“标准答案”。这次检查还抓到了轻核 PDG 编码会被旧规则误判为重子数 0 的错误。</span>
+        <span class="en">With identical source, input, and seed, some SMASH multiplicities differ by up to <b>25%</b> between macOS and Linux, while baryon number 788 and charge 316 remain exact integers on both. The verifier therefore anchors on conservation laws instead of treating platform-sensitive multiplicities as ground truth. The same check caught an old rule that assigned baryon number zero to light-nucleus PDG codes.</span>
+      </p>
+    </div>
     <p class="bench-note">
-      <span class="zh">质量流程：干净环境构建 + 复现程序自带参考值 + Codex 对抗审查 + 引文在线核验，全部通过才发布。技能目录持续扩充中（KSHELL、GEMINI++、GEF、AZURE2、SkyNet 在路线图上）。</span>
-      <span class="en">Quality pipeline: clean-room build + reproduce the code's own reference values + adversarial cross-review + live citation verification, all required before release. The catalog keeps growing (KSHELL, GEMINI++, GEF, AZURE2, SkyNet are on the roadmap).</span>
+      <span class="zh">T1 表示复现程序自己发行的参考输出或测试套件；T2 表示程序没有可复现的发行版参考值，因此使用跨平台构建、物理恒等式与实验数据组成证据链。每个技能都必须声明等级、适用范围和已知失败模式，再经过对抗审查与引文核验。</span>
+      <span class="en">T1 reproduces references or a test suite shipped by the code itself. T2 is used when no distributable reference exists, so cross-platform builds, physics identities, and measured data form the evidence chain instead. Every skill declares its tier, scope, and failure modes before adversarial review and citation verification.</span>
     </p>
   </div>
 </section>
@@ -727,12 +816,12 @@ footer { border-top: 1px solid var(--hairline); padding: 44px 0 60px; }
     <div class="rv">
       <p class="eyebrow"><span class="zh">语料地图 · Corpus map</span><span class="en">The corpus map</span></p>
       <h2>
-        <span class="zh">55,850 篇论文的引用星图</span>
-        <span class="en">55,850 papers, laid out by citation</span>
+        <span class="zh">当前地图快照中的 55,850 篇论文</span>
+        <span class="en">55,850 papers in the current map snapshot</span>
       </h2>
       <p class="sec-lede">
-        <span class="zh">知识库不只是一个数据库，它有形状。每篇论文的位置由它引用谁、被谁引用决定；地形是论文密度，地名是空间上真正聚集的 PhySH 主题。<strong>引用关系只做布局约束，一条边都不画</strong>：这是全语料可视化在这个量级上唯一不退化成毛线团的做法。</span>
-        <span class="en">The knowledge base is not just a database; it has a shape. Each paper sits where its citations put it; terrain is paper density, place names are PhySH topics that genuinely cluster. <strong>Citations constrain the layout, but not a single edge is drawn</strong>: at this scale it is the only way a full-corpus visualization avoids collapsing into a hairball.</span>
+        <span class="zh">知识库不只是一个数据库，它有形状。当前交互地图是 61,171 篇旧语料版本中满足引用度数门槛的 55,850 篇论文，完整知识库现已增长到 62,714 篇。每篇论文的位置由引用关系决定；地形是论文密度，地名是空间上真正聚集的 PhySH 主题。<strong>引用关系只做布局约束，一条边都不画</strong>：这是全语料可视化在这个量级上唯一不退化成毛线团的做法。</span>
+        <span class="en">The knowledge base is not just a database; it has a shape. The interactive map is the 55,850-paper, degree-filtered view of the earlier 61,171-paper corpus, while the full corpus has now grown to 62,714 papers. Each position comes from citation structure; terrain is paper density and place names are PhySH topics that genuinely cluster. <strong>Citations constrain the layout, but not a single edge is drawn</strong>: at this scale it is the only way a full-corpus visualization avoids collapsing into a hairball.</span>
       </p>
     </div>
     <a class="map-frame rv" href="map.html">
@@ -782,12 +871,12 @@ footer { border-top: 1px solid var(--hairline); padding: 44px 0 60px; }
       <div class="phase now">
         <span class="ph">Phase 2 · <span class="zh">进行中</span><span class="en">in progress</span></span>
         <h3><span class="zh">技能包</span><span class="en">Skill pack</span></h3>
-        <p><span class="zh">5 个程序技能已验收（FRESCO、TALYS、CCFULL、GSM、COLOSS），社区光学势程序波次推进中。</span><span class="en">5 code skills shipped (FRESCO, TALYS, CCFULL, GSM, COLOSS); the community optical-potential wave is underway.</span></p>
+        <p><span class="zh">17 个程序技能已交付，四个论文门槛分区全部打通；EXFOR 是第一个迁入的科研技能。</span><span class="en">Seventeen code skills shipped and all four paper-gate domains covered; EXFOR is the first research skill ported in.</span></p>
       </div>
       <div class="phase now">
         <span class="ph">Phase 3 · <span class="zh">进行中</span><span class="en">in progress</span></span>
         <h3><span class="zh">知识库</span><span class="en">Knowledge base</span></h3>
-        <p><span class="zh">kb-wiki 已上线 19,000+ 页；PhySH 概念层、引用图谱、语义关系持续生成。</span><span class="en">kb-wiki live with 19,000+ pages; PhySH concept layer, citation graph, and semantic relations in production.</span></p>
+        <p><span class="zh">kb-wiki 已生成 61,171 页，含 61,059 篇论文页与 108 个主题页；引用图谱和语义关系继续更新。</span><span class="en">kb-wiki now contains 61,171 pages, including 61,059 paper pages and 108 topic pages; citation and semantic layers keep evolving.</span></p>
       </div>
       <div class="phase">
         <span class="ph">Phase 4 · <span class="zh">计划中</span><span class="en">planned</span></span>
@@ -808,8 +897,8 @@ footer { border-top: 1px solid var(--hairline); padding: 44px 0 60px; }
       <span class="en">The platform is itself a paper</span>
     </h2>
     <p class="sec-lede">
-      <span class="zh">FUSION 的每个设计决策都有可测量的验证：技能有基准精度，检索有查全对照，布局参数有聚集度扫描。方法与结果将整理成文发表；这个页面上的每一个数字，都会出现在论文里。</span>
-      <span class="en">Every design decision in FUSION carries a measurable validation: skills have benchmark precisions, retrieval has recall baselines, layout parameters have coherence scans. The methods and results are being written up for publication; every number on this page will appear in the paper.</span>
+      <span class="zh">FUSION 论文需要的四个分区证据已经齐全：反应、结构、裂变统计、核天体都有至少一个完整技能，重离子输运是额外扩展。技能有分级基准，检索有查全对照，布局参数有聚集度扫描。现在缺的不是能力清单，而是把这些可复核结果写成论文。</span>
+      <span class="en">The four evidence rows required for the FUSION paper are now complete: reactions, structure, fission and statistical decay, and nuclear astrophysics each have at least one finished skill, with heavy-ion transport as an additional extension. Skills have tiered benchmarks, retrieval has recall baselines, and layout parameters have coherence scans. The remaining job is to turn these checkable results into the paper.</span>
     </p>
     <div class="cta-row" style="justify-content:center">
       <a class="cta cta-primary" href="https://github.com/jinleiphys/FUSION" target="_blank" rel="noopener">
