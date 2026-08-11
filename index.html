@@ -406,6 +406,23 @@ h2 {
 .phase p { margin: 0; font-size: 13px; color: var(--dim); line-height: 1.65; }
 
 
+
+/* ================= beta ================= */
+.beta-bar { background:var(--core-soft); border-bottom:1px solid var(--hairline);
+            padding:9px 20px; text-align:center; font-size:13.5px; color:var(--ink); }
+.beta-bar b { color:var(--core); }
+.beta-bar a { color:var(--plasma); text-decoration:none; border-bottom:1px solid transparent; }
+.beta-bar a:hover { border-bottom-color:var(--plasma); }
+.beta-box { border:1px solid var(--hairline-2); border-radius:14px; padding:26px 28px;
+            background:var(--chamber); margin-top:36px; }
+.beta-box h3 { font-size:17px; margin-bottom:14px; color:var(--core); }
+.beta-box p { color:var(--dim); font-size:14.5px; line-height:1.8; margin-bottom:14px; }
+.beta-box ol { margin:0 0 4px 20px; color:var(--dim); font-size:14.5px; line-height:1.8; }
+.beta-box li { margin-bottom:9px; }
+.beta-box li b { color:var(--ink); font-weight:600; }
+.beta-box code { background:var(--chamber-2); padding:2px 6px; border-radius:5px;
+                 font:12.5px var(--mono); color:var(--plasma); }
+
 /* ================= get started ================= */
 .gs-grid { display:grid; gap:18px; margin-top:32px; }
 .gs-step { border:1px solid var(--hairline); border-radius:14px; padding:22px 24px; background:var(--chamber); }
@@ -452,6 +469,9 @@ footer { border-top: 1px solid var(--hairline); padding: 44px 0 60px; }
 </head>
 <body>
 
+<div class="beta-bar">
+  <span class="zh"><b>测试版 v0.1.0</b> · 第一个公开构建,除作者外还没有人用过。坏在哪里正是我们要的 · <a href="https://github.com/jinleiphys/FUSION/issues" target="_blank" rel="noopener">提反馈</a></span><span class="en"><b>Beta v0.1.0</b> · first public build, used by nobody but its author so far. What breaks for you is the point · <a href="https://github.com/jinleiphys/FUSION/issues" target="_blank" rel="noopener">Report it</a></span>
+</div>
 <nav>
   <div class="nav-in">
     <a class="brand" href="#top" aria-label="FUSION">
@@ -927,6 +947,22 @@ footer { border-top: 1px solid var(--hairline); padding: 44px 0 60px; }
         <b><span class="zh">出问题了找谁</span><span class="en">Something broke</span></b>
         <span class="a"><span class="zh">去仓库开一个 issue,尤其是两种情况:某个程序在你机器上装不起来,或者它给了一个看起来合理其实是错的结果。第二种对我们最有价值。</span><span class="en">Open an issue, especially for two cases: a code that will not install on your machine, or a result that looked plausible and was wrong. The second is the most valuable thing you can send us.</span></span>
       </div>
+    </div>
+
+
+    <div class="beta-box rv">
+      <h3><span class="zh">这是测试版,我们最想收到什么</span><span class="en">This is a beta. What we most want to hear</span></h3>
+      <p><span class="zh">v0.1.0 能用,作者每天在用,但没有第二个人用过。下面按价值排序。</span><span class="en">v0.1.0 works and its author uses it daily, but nobody else has. In order of value:</span></p>
+      <ol>
+        <li><b><span class="zh">看起来对、其实错的结果。</span><span class="en">A result that looked right and was wrong.</span></b>
+          <span class="zh">这个项目存在的理由就是:通用 agent 会写出一份半径约定错了的 FRESCO 输入卡,跑得通,截面错 20%,没有提示。如果 FUSION 也干了这种事,请把输入卡、算出的数、以及正确的数发给我们。这是我们最怕的失败,也是用户最不会主动报的一种。</span><span class="en">This project exists because a general agent will write a plausible FRESCO deck with the wrong radius convention: it runs, the cross section is 20% off, nothing warns you. If FUSION does that, send the deck, the number, and what it should have been. It is the failure we fear most and the one users report least.</span></li>
+        <li><b><span class="zh">装不上的程序。</span><span class="en">A code that will not install.</span></b>
+          <span class="zh">二十个程序里只有 FRESCO 真正从空缓存装过,所以这块最脆。附上报错、系统和编译器版本。</span><span class="en">Only FRESCO has ever been installed from a genuinely empty cache, so this is the weakest part. Send the error, your OS and your compiler.</span></li>
+        <li><b><span class="zh">任何让你觉得傻的地方。</span><span class="en">Anything that felt stupid.</span></b>
+          <span class="zh">首次配置流程里那些别扭的设计,全是一个人真的去用、然后直说「这太傻了」找出来的。这个办法有效。</span><span class="en">Every awkward thing in the first-run flow was found by one person trying it and saying so plainly. It works.</span></li>
+        <li><b><span class="zh">你希望哪个程序有技能。</span><span class="en">Which code you wish had a skill.</span></b></li>
+      </ol>
+      <p><span class="zh">两个提醒:别一上来就试 TALYS,它要下约 11 GB;macOS 第一次运行会被拦,执行 <code>xattr -d com.apple.quarantine fusion</code> 即可。</span><span class="en">Two warnings: do not begin with TALYS, it downloads about 11 GB; and macOS blocks the first run until you run <code>xattr -d com.apple.quarantine fusion</code>.</span></p>
     </div>
 
     <div class="cta-row rv" style="justify-content:center;margin-top:36px">
