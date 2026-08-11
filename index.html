@@ -405,6 +405,26 @@ h2 {
 .phase h3 { margin: 0 0 8px; font-size: 15.5px; font-weight: 650; }
 .phase p { margin: 0; font-size: 13px; color: var(--dim); line-height: 1.65; }
 
+
+/* ================= get started ================= */
+.gs-grid { display:grid; gap:18px; margin-top:32px; }
+.gs-step { border:1px solid var(--hairline); border-radius:14px; padding:22px 24px; background:var(--chamber); }
+.gs-step h3 { font-size:17px; margin-bottom:10px; display:flex; align-items:baseline; gap:10px; }
+.gs-num { display:inline-flex; align-items:center; justify-content:center; min-width:26px; height:26px;
+          border-radius:8px; background:var(--core-soft); color:var(--core); font:600 13px/1 var(--mono); }
+.gs-step p { color:var(--dim); font-size:14.5px; line-height:1.75; margin-bottom:12px; }
+.gs-code { background:var(--void); border:1px solid var(--hairline); border-radius:10px;
+           padding:14px 16px; overflow-x:auto; font:13px/1.85 var(--mono); color:var(--ink); }
+.gs-code .c { color:var(--faint); }
+.gs-code .p { color:var(--plasma); }
+.gs-note { margin-top:12px; font-size:13.5px; color:var(--faint); line-height:1.7; }
+.gs-trouble { margin-top:36px; border-top:1px solid var(--hairline); padding-top:28px; }
+.gs-trouble h3 { font-size:16px; margin-bottom:16px; }
+.gs-q { margin-bottom:18px; }
+.gs-q b { color:var(--ink); font-weight:600; display:block; margin-bottom:5px; font-size:14.5px; }
+.gs-q span.a { color:var(--dim); font-size:14px; line-height:1.7; }
+.gs-q code { background:var(--chamber-2); padding:2px 6px; border-radius:5px; font:12.5px var(--mono); color:var(--plasma); }
+
 /* ================= paper / footer ================= */
 .paper {
   background:
@@ -443,6 +463,7 @@ footer { border-top: 1px solid var(--hairline); padding: 44px 0 60px; }
       <a href="#bench"><span class="zh">技能</span><span class="en">Skills</span></a>
       <a href="#cases"><span class="zh">案例</span><span class="en">Cases</span></a>
       <a href="#map"><span class="zh">语料地图</span><span class="en">Corpus map</span></a>
+      <a href="#start"><span class="zh">开始使用</span><span class="en">Get started</span></a>
       <a href="#roadmap"><span class="zh">路线</span><span class="en">Roadmap</span></a>
     </div>
     <button class="lang-btn" id="langBtn" aria-label="Switch language">EN</button>
@@ -844,6 +865,81 @@ footer { border-top: 1px solid var(--hairline); padding: 44px 0 60px; }
 <hr class="divider">
 
 <!-- ================= ROADMAP ================= -->
+<section id="start">
+  <div class="wrap">
+    <div class="rv" style="text-align:center">
+      <p class="eyebrow"><span class="zh">开始使用 · Get started</span><span class="en">Get started</span></p>
+      <h2>
+        <span class="zh">三步,大约五分钟</span>
+        <span class="en">Three steps, about five minutes</span>
+      </h2>
+      <p class="sec-lede" style="margin-left:auto;margin-right:auto">
+        <span class="zh">不需要先懂 agent,也不需要先装任何核物理程序。程序是 FUSION 在你第一次用到时自己去装、自己编译的。下面每条命令都在 macOS 和 Linux 上真实跑过。</span>
+        <span class="en">You do not need to understand agents first, and you do not need to install any nuclear-physics code first. FUSION fetches and builds those itself the first time you need one. Every command below has been run on both macOS and Linux.</span>
+      </p>
+    </div>
+
+    <div class="gs-grid rv">
+      <div class="gs-step">
+        <h3><span class="gs-num">1</span><span class="zh">把 FUSION 下载到本地</span><span class="en">Clone FUSION</span></h3>
+        <p><span class="zh">大约 229 MB,绝大部分是那 6 万页离线文献库。第一次会慢一点。</span><span class="en">About 229 MB, nearly all of it the 61,167-page offline literature base. The first time is slow.</span></p>
+        <div class="gs-code">git clone https://github.com/jinleiphys/FUSION.git<br><span class="p">cd</span> FUSION</div>
+      </div>
+
+      <div class="gs-step">
+        <h3><span class="gs-num">2</span><span class="zh">下载 fusion 命令行程序</span><span class="en">Download the fusion CLI</span></h3>
+        <p><span class="zh">直接下到刚才这个目录里。下面是 Apple 芯片 Mac 的包;Intel Mac 用 <code>darwin-x64</code>,Linux 用 <code>linux-x64</code>,完整列表在 releases 页。</span><span class="en">Into that same directory. The command below is for Apple-silicon Macs; use <code>darwin-x64</code> on Intel Macs and <code>linux-x64</code> on Linux. Full list on the releases page.</span></p>
+        <div class="gs-code">curl -fsSL https://github.com/jinleiphys/FUSION/releases/latest/download/fusion-darwin-arm64.tar.gz | tar -xz<br><span class="c"># macOS <span class="zh">才需要这一行</span><span class="en">only</span></span><br>xattr -d com.apple.quarantine fusion</div>
+        <p class="gs-note"><span class="zh">最后那行是因为这个程序没有花钱买苹果签名,macOS 默认会拦。清掉标记就能运行。</span><span class="en">That last line exists because the binary is not signed with a paid Apple certificate, so macOS blocks it by default. Clearing the flag is enough.</span></p>
+      </div>
+
+      <div class="gs-step">
+        <h3><span class="gs-num">3</span><span class="zh">打开它</span><span class="en">Open it</span></h3>
+        <div class="gs-code">./fusion</div>
+        <p class="gs-note"><span class="zh">第一次打开,它会主动问要不要帮你配置:选模型、选你的研究方向,然后用你自己的论文建一个私人档案(你的课题词、合作者、语料里谁引用了你)。配置过一次以后就不再问。想直接干活就说「跳过」。</span><span class="en">On the first run it offers to set itself up: your model, your research areas, and a private profile built from your own papers (the topics your work carries, your co-authors, who cites you inside the corpus). It never asks again once done. Say skip to get straight to work.</span></p>
+      </div>
+    </div>
+
+    <div class="gs-trouble rv">
+      <h3><span class="zh">大概率会遇到的几个问题</span><span class="en">What you are most likely to hit</span></h3>
+
+      <div class="gs-q">
+        <b><span class="zh">我需要 API key 吗?哪来的?</span><span class="en">Do I need an API key, and where from?</span></b>
+        <span class="a"><span class="zh">需要一个大模型的 key,FUSION 自己不含模型。国内用 DeepSeek 最省事,注册后在控制台建一个 key 即可,几块钱能用很久。第一次配置时它会带你走 <code>fusion auth login</code>,把 key 粘进去就行。Qwen、GLM、Claude、GPT 同样支持。</span><span class="en">Yes, one from a model provider; FUSION ships no model. DeepSeek is the cheapest way in: register, create a key in its console, and setup walks you through <code>fusion auth login</code> to paste it. Qwen, GLM, Claude and GPT work too.</span></span>
+      </div>
+
+      <div class="gs-q">
+        <b><span class="zh">提示 command not found: fusion</span><span class="en">command not found: fusion</span></b>
+        <span class="a"><span class="zh">要用 <code>./fusion</code>,前面那个点和斜杠不能省,它表示「运行当前目录里的这个程序」。想在任何目录都能直接敲 <code>fusion</code>,就把它移到 PATH 上:<code>mkdir -p ~/.local/bin && mv fusion ~/.local/bin/</code>,如果还是找不到,再执行 <code>echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.zshrc</code> 然后重开终端。</span><span class="en">Use <code>./fusion</code>; the leading dot-slash means "the program in this directory" and cannot be dropped. To type <code>fusion</code> from anywhere, move it onto your PATH with <code>mkdir -p ~/.local/bin &amp;&amp; mv fusion ~/.local/bin/</code>, and if it is still not found, run <code>echo 'export PATH="$HOME/.local/bin:$PATH"' &gt;&gt; ~/.zshrc</code> and open a new terminal.</span></span>
+      </div>
+
+      <div class="gs-q">
+        <b><span class="zh">它要装 FRESCO / TALYS,会不会弄乱我的系统?</span><span class="en">It wants to install FRESCO or TALYS. Will that mess up my system?</span></b>
+        <span class="a"><span class="zh">不会。每个程序都装在 <code>~/.cache/fusion/</code> 下面,和系统目录无关,删掉这个目录就等于全部卸载。需要编译器(<code>gfortran</code> 和 C++),缺了它会告诉你装什么。TALYS 例外:它要约 11 GB 磁盘,其中 8.6 GB 是核结构数据库,装之前先看看空间。</span><span class="en">No. Each code installs under <code>~/.cache/fusion/</code>, nowhere near system directories, and deleting that directory uninstalls everything. You need compilers (<code>gfortran</code> and a C++ one) and it tells you what is missing. TALYS is the exception: about 11 GB of disk, 8.6 GB of it a structure database. Check your free space first.</span></span>
+      </div>
+
+      <div class="gs-q">
+        <b><span class="zh">算出来的数,能直接信吗?</span><span class="en">Can I trust the numbers?</span></b>
+        <span class="a"><span class="zh">不能不看就信,这一点我们写在最显眼的地方:基准测试证明的是「这个程序被正确安装并复现了已知结果」,不是「你这次的物理是对的」。技能会告诉你它复现到了几位有效数字,以及它没验证什么。物理判断仍然是你的。</span><span class="en">Not without looking, and we say so in the most visible place we have: a benchmark certifies that a build was installed correctly and reproduces a known result, not that your physics is right. A skill tells you how many significant figures it reproduced and what it did not verify. The judgement stays yours.</span></span>
+      </div>
+
+      <div class="gs-q">
+        <b><span class="zh">出问题了找谁</span><span class="en">Something broke</span></b>
+        <span class="a"><span class="zh">去仓库开一个 issue,尤其是两种情况:某个程序在你机器上装不起来,或者它给了一个看起来合理其实是错的结果。第二种对我们最有价值。</span><span class="en">Open an issue, especially for two cases: a code that will not install on your machine, or a result that looked plausible and was wrong. The second is the most valuable thing you can send us.</span></span>
+      </div>
+    </div>
+
+    <div class="cta-row rv" style="justify-content:center;margin-top:36px">
+      <a class="cta cta-primary" href="https://github.com/jinleiphys/FUSION" target="_blank" rel="noopener">
+        <span class="zh">打开仓库</span><span class="en">Open the repository</span> →
+      </a>
+      <a class="cta cta-ghost" href="https://github.com/jinleiphys/FUSION/releases/latest" target="_blank" rel="noopener">
+        <span class="zh">下载页</span><span class="en">Downloads</span> →
+      </a>
+    </div>
+  </div>
+</section>
+
 <section id="roadmap">
   <div class="wrap">
     <div class="rv">
