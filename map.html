@@ -139,20 +139,20 @@ const N = D.meta.n, G = D.meta.grid;
 const I18N = {
   zh: {
     title: 'FUSION 语料地图',
-    search: '搜索标题 / 作者 / arXiv ID',
-    nohl: '不高亮任何主题',
+    search: '搜索标题、作者或 arXiv ID',
+    nohl: '不高亮主题',
     reset: '重置',
     btn: 'EN',
-    inferred: '（由邻近论文推断）',
-    notag: '未匹配 PhySH 词表',
-    kv: (id, topic, d) => `${id} · 主题 ${topic} · 语料内被引 ${d}`,
-    matches: (n, m) => `匹配 ${n} 篇（标题只覆盖被引最高的 ${m} 篇）`,
-    sub: (n, l) => `<b>${n}</b> 篇论文 · <b>${l}</b> 个主题区域 · 位置由引用关系决定`,
+    inferred: '（根据相邻论文推断）',
+    notag: '未匹配到 PhySH 主题',
+    kv: (id, topic, d) => `${id} · 主题 ${topic} · 语料内被引 ${d} 次`,
+    matches: (n, m) => `找到 ${n} 篇（标题仅覆盖被引最多的 ${m} 篇）`,
+    sub: (n, l) => `<b>${n}</b> 篇论文 · <b>${l}</b> 个主题区域 · 引用关系决定位置`,
     foot: (a, b, c) =>
-      '每个点是一篇论文，大小 ∝ 语料内被引次数；位置来自引用网络的 t-SNE 投影。'
-      + '底色是 5 个大区，由主题质心聚类自动划分，不是人工指定。'
-      + '地名标注空间上真正聚集的主题；quantum-chromodynamics、spin 这类横跨全图的不作标注，它们是通用语言而非地点。'
-      + ` 主题标签中 ${a} 篇来自 PhySH 词表匹配，${b} 篇由引用近邻推断（悬停会注明），${c} 篇无标签。`
+      '每个点对应一篇论文，点的大小与语料内被引次数成正比；位置来自引用网络的 t-SNE 投影。'
+      + '底色分成 5 个区域，由主题质心聚类自动生成，并非人工划界。'
+      + '只有在图上明显聚集的主题才会标地名。quantum-chromodynamics、spin 等主题遍布全图，所以不标。'
+      + ` 其中 ${a} 篇由 PhySH 词表匹配主题，${b} 篇根据引用近邻推断（悬停时会注明），${c} 篇没有标签。`
   },
   en: {
     title: 'FUSION Corpus Map',

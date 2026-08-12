@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>FUSION · 核物理科研智能体平台 · Nuclear-Physics Research Agent Platform</title>
-<meta name="description" content="FUSION: Framework for Unified Scientific Intelligence in Open Nuclear physics. 20 个经过实测的核物理程序技能，62,714 篇 arXiv nucl-th 论文，覆盖反应、结构、裂变、核天体与重离子输运。">
+<meta name="description" content="FUSION: Framework for Unified Scientific Intelligence in Open Nuclear physics. 内置 26 个技能和 61,167 页离线核物理文献知识库，覆盖反应、结构、裂变、核天体与重离子输运。">
 <link rel="icon" href="assets/logo-nav.png">
 <style>
 /* ================= tokens ================= */
@@ -470,7 +470,7 @@ footer { border-top: 1px solid var(--hairline); padding: 44px 0 60px; }
 <body>
 
 <div class="beta-bar">
-  <span class="zh"><b>测试版 v0.1.0</b> · 作者已在日常研究中使用，尚未经过外部用户测试 · <a href="https://github.com/jinleiphys/FUSION/issues" target="_blank" rel="noopener">报告问题</a></span><span class="en"><b>Beta v0.1.0</b> · used daily by its author, but not yet tested by other users · <a href="https://github.com/jinleiphys/FUSION/issues" target="_blank" rel="noopener">Report an issue</a></span>
+  <span class="zh"><b>测试版 v0.1.0</b> · 作者已用于日常研究，尚无外部用户完成测试 · <a href="https://github.com/jinleiphys/FUSION/issues" target="_blank" rel="noopener">报告问题</a></span><span class="en"><b>Beta v0.1.0</b> · used daily by its author, but not yet tested by other users · <a href="https://github.com/jinleiphys/FUSION/issues" target="_blank" rel="noopener">Report an issue</a></span>
 </div>
 <nav>
   <div class="nav-in">
@@ -484,7 +484,7 @@ footer { border-top: 1px solid var(--hairline); padding: 44px 0 60px; }
       <a href="#cases"><span class="zh">案例</span><span class="en">Cases</span></a>
       <a href="#map"><span class="zh">语料地图</span><span class="en">Corpus map</span></a>
       <a href="#start"><span class="zh">开始使用</span><span class="en">Get started</span></a>
-      <a href="#roadmap"><span class="zh">路线</span><span class="en">Roadmap</span></a>
+      <a href="#roadmap"><span class="zh">进度</span><span class="en">Roadmap</span></a>
     </div>
     <button class="lang-btn" id="langBtn" aria-label="Switch language">EN</button>
     <a class="gh-link" href="https://github.com/jinleiphys/FUSION" target="_blank" rel="noopener">GitHub</a>
@@ -503,19 +503,19 @@ footer { border-top: 1px solid var(--hairline); padding: 44px 0 60px; }
           <span class="en">Nuclear codes and papers<br>in <span class="hl">one terminal</span></span>
         </h1>
         <p class="lede">
-          <span class="zh">FUSION 把核物理程序、文献检索和科研工作流接到同一个 agent 上。当前版本包含
-            <strong>20 个公开可获得核物理程序的专家技能</strong>和 <strong>62,714 篇 arXiv nucl-th 论文</strong>，
-            其中 61,357 篇有全文。DeepSeek、Qwen、GLM、Claude 和 GPT 均可驱动。
-            背景中的每个光点对应语料库里的一篇论文。</span>
+          <span class="zh">FUSION 把核物理程序、文献检索和日常科研工具接到同一个 agent 上。当前版本内置
+            <strong>26 个技能，其中 20 个负责具体程序</strong>，另带 <strong>61,167 页离线文献知识库</strong>，
+            包括 61,059 个论文页和 108 个主题页。DeepSeek、Qwen、GLM、Claude 和 GPT 都能用。
+            背景中的每个光点来自语料库里的一篇论文。</span>
           <span class="en">FUSION connects nuclear codes, literature search, and research workflows to one agent.
-            The current release contains <strong>20 expert skills for publicly obtainable nuclear-physics codes</strong> and
-            <strong>62,714 arXiv nucl-th papers</strong>, including 61,357 with full text.
+            The current release contains <strong>26 skills, including 20 for nuclear-physics codes</strong>, and
+            <strong>61,167 offline knowledge-base pages</strong>: 61,059 paper pages and 108 topic pages.
             It runs with DeepSeek, Qwen, GLM, Claude, and GPT.
             Each point of light in the background represents one paper in the corpus.</span>
         </p>
         <div class="cta-row">
           <a class="cta cta-primary" href="#bench">
-            <span class="zh">查看 20 个技能</span><span class="en">Explore 20 skills</span> →
+            <span class="zh">查看 26 个技能</span><span class="en">Explore 26 skills</span> →
           </a>
           <a class="cta cta-ghost" href="https://github.com/jinleiphys/FUSION" target="_blank" rel="noopener">
             <span class="zh">查看源码</span><span class="en">View source</span>
@@ -530,10 +530,10 @@ footer { border-top: 1px solid var(--hairline); padding: 44px 0 60px; }
 </header>
 
 <div class="hero-stats">
-  <div class="hs"><span class="v" data-count="62714" data-fmt="comma">62,714</span><span class="l"><span class="zh">arXiv nucl-th 论文，其中 61,357 篇有全文</span><span class="en">arXiv nucl-th papers, 61,357 with full text</span></span></div>
-  <div class="hs"><span class="v" data-count="61171" data-fmt="comma">61,171</span><span class="l"><span class="zh">离线 Markdown 知识库页面</span><span class="en">offline Markdown knowledge-base pages</span></span></div>
+  <div class="hs"><span class="v" data-count="61059" data-fmt="comma">61,059</span><span class="l"><span class="zh">arXiv nucl-th 论文页</span><span class="en">arXiv nucl-th paper pages</span></span></div>
+  <div class="hs"><span class="v" data-count="61167" data-fmt="comma">61,167</span><span class="l"><span class="zh">离线 Markdown 知识库页面</span><span class="en">offline Markdown knowledge-base pages</span></span></div>
   <div class="hs"><span class="v" data-count="727841" data-fmt="comma">727,841</span><span class="l"><span class="zh">语料内引用边</span><span class="en">in-corpus citation edges</span></span></div>
-  <div class="hs"><span class="v"><em data-count="20">20</em></span><span class="l"><span class="zh">程序技能已构建、运行并通过分级验证</span><span class="en">code skills built, run, and tier-validated</span></span></div>
+  <div class="hs"><span class="v"><em data-count="26">26</em></span><span class="l"><span class="zh">技能随仓库发布，其中 20 个负责具体程序</span><span class="en">shipped skills, including 20 for specific codes</span></span></div>
 </div>
 
 <!-- ================= WHAT ================= -->
@@ -542,11 +542,11 @@ footer { border-top: 1px solid var(--hairline); padding: 44px 0 60px; }
     <div class="rv">
       <p class="eyebrow"><span class="zh">是什么 · What</span><span class="en">What it is</span></p>
       <h2>
-        <span class="zh">一个平台，三层结构</span>
+        <span class="zh">FUSION 分成三层</span>
         <span class="en">One platform, three layers</span>
       </h2>
       <p class="sec-lede">
-        <span class="zh">底层是 <a href="https://github.com/anomalyco/opencode" target="_blank" rel="noopener">opencode</a> 的品牌分叉（MIT，每周 CI 重基上游），中间是核物理技能和知识库，最上层挂载用户自己的文献笔记、研究档案与密钥。</span>
+        <span class="zh">底层是 <a href="https://github.com/anomalyco/opencode" target="_blank" rel="noopener">opencode</a> 的品牌分叉（MIT，每周由 CI 重基上游），中间放核物理技能和知识库，最上层挂载用户自己的文献笔记、研究档案与密钥。</span>
         <span class="en">The base is a rebrand fork of <a href="https://github.com/anomalyco/opencode" target="_blank" rel="noopener">opencode</a> (MIT, rebased onto upstream by weekly CI). Nuclear-physics skills and the corpus form the middle layer. Users mount their own notes, research profiles, and credentials on top.</span>
       </p>
     </div>
@@ -554,28 +554,28 @@ footer { border-top: 1px solid var(--hairline); padding: 44px 0 60px; }
       <div class="acro-stack rv">
         <div class="acro-row"><span class="letter">F</span><span class="word"><b>Framework</b>: <span class="zh">技能和知识库可以继续增加</span><span class="en">skills and corpus modules can be added</span></span></div>
         <div class="acro-row"><span class="letter">U</span><span class="word"><b>Unified</b>: <span class="zh">程序、文献和算力共用一个入口</span><span class="en">one interface for codes, literature, and compute</span></span></div>
-        <div class="acro-row"><span class="letter">S</span><span class="word"><b>Scientific</b>: <span class="zh">用可复核的数值验收每项能力</span><span class="en">each capability is checked against numerical references</span></span></div>
-        <div class="acro-row"><span class="letter">I</span><span class="word"><b>Intelligence</b>: <span class="zh">agent 负责安装、写输入、运行和解析</span><span class="en">the agent installs, writes inputs, runs, and parses</span></span></div>
+        <div class="acro-row"><span class="letter">S</span><span class="word"><b>Scientific</b>: <span class="zh">每项能力都用可复核的数值检验</span><span class="en">each capability is checked against numerical references</span></span></div>
+        <div class="acro-row"><span class="letter">I</span><span class="word"><b>Intelligence</b>: <span class="zh">agent 负责安装程序、编写输入、运行计算并解析结果</span><span class="en">the agent installs, writes inputs, runs, and parses</span></span></div>
         <div class="acro-row"><span class="letter">O</span><span class="word"><b>Open</b>: <span class="zh">只接入公开可获得、可构建的程序，并注明许可限制</span><span class="en">codes must be public and buildable, with licence limits stated</span></span></div>
         <div class="acro-row"><span class="letter">N</span><span class="word"><b>Nuclear physics</b>: <span class="zh">覆盖反应、结构、核天体与重离子输运</span><span class="en">reactions, structure, nuclear astrophysics, and heavy-ion transport</span></span></div>
       </div>
       <div class="layers rv">
         <div class="layer layer-private">
-          <span class="tag"><span class="zh">私人层 · 永不随发行版分发</span><span class="en">Private layer · never shipped</span></span>
+          <span class="tag"><span class="zh">私人层 · 不进入公开发行版</span><span class="en">Private layer · never shipped</span></span>
           <h3><span class="zh">你的文献 wiki、研究档案、密钥</span><span class="en">Your literature wiki, research profile, credentials</span></h3>
-          <p><span class="zh">FUSION 只定义挂载接口，私人数据留在用户自己的机器上。</span><span class="en">FUSION defines the mount interface; private data stay on the user's machine.</span></p>
+          <p><span class="zh">FUSION 只定义挂载接口，私人数据始终留在用户自己的机器上。</span><span class="en">FUSION defines the mount interface; private data stay on the user's machine.</span></p>
         </div>
         <div class="layer layer-core">
           <span class="tag"><span class="zh">核物理定制层</span><span class="en">Nuclear-physics layer</span></span>
           <h3><span class="zh">程序技能 + 领域知识库 + 科研工作流</span><span class="en">Code skills + domain knowledge base + research workflows</span></h3>
-          <p><span class="zh">20 个程序技能已经交付，加上 SFRESCO 拟合伴生技能与 EXFOR 实验数据技能共 22 个；61,167 页知识库可离线浏览；约 29 个写作、审稿与文献技能正在迁移。</span><span class="en">Twenty code skills are shipped, 22 counting the SFRESCO fitting companion and the EXFOR data skill; 61,167 knowledge-base pages browse offline; about 29 writing, review, and literature skills are being ported.</span></p>
+          <p><span class="zh">仓库内共有 26 个技能：20 个负责具体程序，SFRESCO 用于拟合，EXFOR 获取实验数据，<code>kb-search</code> 检索离线知识库，<code>literature-wiki</code> 和 <code>research-profile</code> 维护个人研究 wiki，<code>fusion-setup</code> 负责首次配置。知识库的 61,167 个页面都能离线浏览。</span><span class="en">The repository ships 26 skills: 20 for specific codes, plus SFRESCO fitting, EXFOR data retrieval, offline knowledge-base search, two personal research-wiki tools, and first-run setup. All 61,167 knowledge-base pages can be browsed offline.</span></p>
         </div>
         <div class="layer">
           <span class="tag"><span class="zh">引擎 · opencode 品牌分叉</span><span class="en">Engine · opencode rebrand fork</span></span>
           <h3><span class="zh">只改品牌，不碰功能代码</span><span class="en">Brand patch only, functional code untouched</span></h3>
-          <p><span class="zh">每周 CI 自动重基上游。可接入 DeepSeek、Qwen、GLM、Claude 和 GPT。</span><span class="en">Weekly CI rebases the fork onto upstream. DeepSeek, Qwen, GLM, Claude, and GPT are supported.</span></p>
+          <p><span class="zh">CI 每周自动重基上游，可接入 DeepSeek、Qwen、GLM、Claude 和 GPT。</span><span class="en">Weekly CI rebases the fork onto upstream. DeepSeek, Qwen, GLM, Claude, and GPT are supported.</span></p>
         </div>
-        <p class="layer-note">↑ <span class="zh">上层依赖下层，私密性自上而下递增</span><span class="en">each layer builds on the one below; privacy increases upward</span></p>
+        <p class="layer-note">↑ <span class="zh">上层依赖下层，越往上越私密</span><span class="en">each layer builds on the one below; privacy increases upward</span></p>
       </div>
     </div>
   </div>
@@ -587,13 +587,13 @@ footer { border-top: 1px solid var(--hairline); padding: 44px 0 60px; }
 <section id="demo">
   <div class="wrap">
     <div class="rv" style="text-align:center">
-      <p class="eyebrow"><span class="zh">实际长什么样 · In action</span><span class="en">In action</span></p>
+      <p class="eyebrow"><span class="zh">实际使用 · In action</span><span class="en">In action</span></p>
       <h2>
         <span class="zh">一次真实的对话</span>
         <span class="en">A real session</span>
       </h2>
       <p class="sec-lede" style="margin-left:auto;margin-right:auto">
-        <span class="zh">Phase 0 质量验收的真实用例之一：在 deepseek-chat 上独立写出 n+⁹⁰Zr 弹性散射的 FRESCO 输入卡，与参考计算 4–5 位有效数字一致。</span>
+        <span class="zh">这是 Phase 0 的一个真实测试：deepseek-chat 独立写出 n+⁹⁰Zr 弹性散射的 FRESCO 输入卡，计算结果与参考值一致到 4–5 位有效数字。</span>
         <span class="en">One of the actual Phase-0 acceptance cases: on deepseek-chat, independently author a FRESCO deck for n+⁹⁰Zr elastic scattering, agreeing with the reference calculation to 4–5 significant figures.</span>
       </p>
     </div>
@@ -603,7 +603,7 @@ footer { border-top: 1px solid var(--hairline); padding: 44px 0 60px; }
         <div class="term-body">
 <div class="ln" style="--i:0"><span class="t-prompt">❯</span> <span class="t-user"><span class="zh">帮我算 n+90Zr 弹性散射，10 MeV，用 KD03 全局光学势，给我 FRESCO 输入卡</span><span class="en">compute n+90Zr elastic scattering at 10 MeV with the KD03 global optical potential, give me a FRESCO deck</span></span></div>
 <div class="ln" style="--i:1"><span class="t-sys">◆ skill</span> <span class="t-plasma">fresco</span> <span class="t-sys">loaded · install verified · benchmark current</span></div>
-<div class="ln" style="--i:2"><span class="t-sys">◆ corpus</span> <span class="t-dim">61,357 fulltext · FTS5/BM25</span> <span class="t-sys">→ Koning &amp; Delaroche, NPA 713 (2003) 231</span></div>
+<div class="ln" style="--i:2"><span class="t-sys">◆ corpus</span> <span class="t-dim">61,059 paper pages · offline grep</span> <span class="t-sys">→ Koning &amp; Delaroche, NPA 713 (2003) 231</span></div>
 <div class="ln" style="--i:3"><span class="t-ok">✓</span> <span class="t-dim">deck written → n90zr_kd.in   (potential terms: V, W_d, V_so + Coulomb)</span></div>
 <div class="ln" style="--i:4"><span class="t-ok">✓</span> <span class="t-dim">fresco n90zr_kd.in → fort.16 parsed</span></div>
 <div class="ln" style="--i:5"><span class="t-ok">✓</span> <span class="t-dim">σ(θ) <span class="zh">与参考计算一致到</span><span class="en">agrees with reference to</span> <b style="color:var(--core)">4–5 sig figs</b></span></div>
@@ -622,11 +622,11 @@ footer { border-top: 1px solid var(--hairline); padding: 44px 0 60px; }
     <div class="rv">
       <p class="eyebrow"><span class="zh">为什么 · Why</span><span class="en">Why FUSION</span></p>
       <h2>
-        <span class="zh">通用 agent 不熟悉核物理程序的这些细节</span>
+        <span class="zh">通用 agent 容易漏掉这些核物理细节</span>
         <span class="en">Generic agents miss code-specific details</span>
       </h2>
       <p class="sec-lede">
-        <span class="zh">FRESCO 的 namelist、TALYS 不可靠的退出码、1990 年代的 nucl-th 预印本，都需要专门处理。FUSION 把这些信息写进技能和离线语料库。</span>
+        <span class="zh">FRESCO 的 namelist 怎么写，TALYS 为什么报错仍返回 0，1990 年代的 nucl-th 预印本去哪里找，这些都需要专门知识。FUSION 把答案写进技能和离线语料库。</span>
         <span class="en">FRESCO namelists, unreliable TALYS exit codes, and nucl-th preprints from the 1990s all need code-specific handling. FUSION records that knowledge in skills and an offline corpus.</span>
       </p>
     </div>
@@ -642,23 +642,23 @@ footer { border-top: 1px solid var(--hairline); padding: 44px 0 60px; }
         <span class="no"><svg width="26" height="26" viewBox="0 0 26 26" fill="none" stroke="url(#bg1)" stroke-width="1.6" stroke-linecap="round"><ellipse cx="13" cy="13" rx="10" ry="4.5"/><ellipse cx="13" cy="13" rx="10" ry="4.5" transform="rotate(60 13 13)"/><circle cx="13" cy="13" r="1.8" fill="url(#bg1)" stroke="none"/></svg>SKILLS</span>
         <h3><span class="zh">每个程序，一个专家技能</span><span class="en">One expert skill per code</span></h3>
         <p>
-          <span class="zh">20 个技能已经覆盖反应、裂变统计、R 矩阵与核天体、结构与从头算、TDHF 和重离子输运。每个技能教会 agent 安装、写输入、运行、解析，并且<b>必须通过清洁构建和分级数值验证才能上线</b>。连“TALYS 出错也返回 0”这种坑都写在技能里。</span>
-          <span class="en">Twenty shipped skills now cover reactions, fission and statistical decay, R-matrix and nuclear astrophysics, structure and ab initio theory, TDHF, and heavy-ion transport. Each teaches installation, input authoring, execution, and parsing, and <b>must pass a clean build and tiered numerical validation before release</b>. Even traps such as “TALYS exits 0 on fatal errors” are encoded.</span>
+          <span class="zh">20 个程序技能已经覆盖反应、裂变统计、R 矩阵与核天体、结构与从头算、TDHF、重离子输运和状态方程。每个技能都包含安装、输入、运行和结果解析，并且<b>必须写明验证等级，复现论文结果或程序自带的参考值</b>。连“TALYS 出错也返回 0”这种坑都写在里面。</span>
+          <span class="en">Twenty code skills cover reactions, fission and statistical decay, R-matrix and nuclear astrophysics, structure and ab initio theory, TDHF, heavy-ion transport, and equations of state. Each teaches installation, input authoring, execution, and parsing, and <b>must declare its validation tier and reproduce a published or code-shipped reference</b>. Even traps such as “TALYS exits 0 on fatal errors” are encoded.</span>
         </p>
       </div>
       <div class="why rv">
         <span class="no"><svg width="26" height="26" viewBox="0 0 26 26" fill="none" stroke="url(#bg1)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6.5c3-1.8 6-1.8 9 0v14c-3-1.8-6-1.8-9 0z"/><path d="M22 6.5c-3-1.8-6-1.8-9 0v14c3-1.8 6-1.8 9 0z"/></svg>KNOWLEDGE</span>
         <h3><span class="zh">离线检索 nucl-th 语料</span><span class="en">Offline search across the nucl-th corpus</span></h3>
         <p>
-          <span class="zh">62,714 篇 arXiv nucl-th 论文（61,357 篇全文，1992–2026），SQLite FTS5 + BM25 <b>离线检索</b>；预生成 markdown 知识库：每篇论文一页（摘要 + 全文摘要 + 引用链接），每个 PhySH 概念一页。agent 用 grep 就能浏览，<b>不需要任何外部 API</b>。</span>
-          <span class="en">62,714 arXiv nucl-th papers (61,357 fulltext, 1992–2026), searched <b>offline</b> via SQLite FTS5 + BM25; plus a pre-generated markdown wiki: one page per paper (abstract + digest + citation links), one page per PhySH concept. The agent browses it with plain grep. <b>No external API required.</b></span>
+          <span class="zh">离线知识库共有 61,167 页，其中 61,059 个论文页收录元数据、arXiv 摘要、机器生成的内容摘要和引用链接，另有 108 个主题页。agent 用 grep 就能查，<b>不需要服务、API key 或网络</b>。这些页面可能有错，写论文时仍要引用原文。</span>
+          <span class="en">The offline knowledge base contains 61,167 pages: 61,059 paper pages with metadata, arXiv abstracts, generated digests, and citation links, plus 108 topic pages. The agent searches them with grep, with <b>no service, API key, or network required</b>. These generated pages can be wrong; cite the original paper.</span>
         </p>
       </div>
       <div class="why rv">
         <span class="no"><svg width="26" height="26" viewBox="0 0 26 26" fill="none" stroke="url(#bg1)" stroke-width="1.6" stroke-linecap="round"><rect x="7" y="7" width="12" height="12" rx="2"/><path d="M11 7V3.5M15 7V3.5M11 22.5V19M15 22.5V19M7 11H3.5M7 15H3.5M22.5 11H19M22.5 15H19"/></svg>MODELS</span>
         <h3><span class="zh">支持多种模型</span><span class="en">Runs with several model providers</span></h3>
         <p>
-          <span class="zh">DeepSeek、Qwen、GLM、Claude 和 GPT 都能驱动。Phase 0 的质量验收使用 deepseek-chat 完成，<b>不依赖国外 API</b>。</span>
+          <span class="zh">DeepSeek、Qwen、GLM、Claude 和 GPT 都可以用。Phase 0 全程使用 deepseek-chat，<b>没有调用国外 API</b>。</span>
           <span class="en">DeepSeek, Qwen, GLM, Claude, and GPT are supported. The Phase 0 quality gate ran on deepseek-chat, so <b>it did not depend on access to an overseas API</b>.</span>
         </p>
       </div>
@@ -666,7 +666,7 @@ footer { border-top: 1px solid var(--hairline); padding: 44px 0 60px; }
         <span class="no"><svg width="26" height="26" viewBox="0 0 26 26" fill="none" stroke="url(#bg1)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M13 3l8 3v6c0 5-3.2 8.6-8 10.5C8.2 20.6 5 17 5 12V6z"/><path d="M9.5 12.5l2.5 2.5 4.5-4.5"/></svg>PRIVACY</span>
         <h3><span class="zh">私人数据留在本机</span><span class="en">Private data stay on your machine</span></h3>
         <p>
-          <span class="zh">你的精读文献 wiki、研究档案、集群密钥挂载在私人层，<b>FUSION 只定义接口，从不打包分发任何人的私人数据</b>。平台开源，知识私有。</span>
+          <span class="zh">精读文献 wiki、研究档案和集群密钥都挂载在私人层。<b>FUSION 只定义接口，不会打包或分发这些文件</b>。</span>
           <span class="en">Your read-literature wiki, research profile, and cluster credentials mount into the private layer. <b>FUSION defines the interface and never ships anyone's personal data.</b> The platform is open; your knowledge is private.</span>
         </p>
       </div>
@@ -678,14 +678,14 @@ footer { border-top: 1px solid var(--hairline); padding: 44px 0 60px; }
 <section id="bench" class="bench">
   <div class="wrap">
     <div class="rv">
-      <p class="eyebrow"><span class="zh">已经跑过的基准 · Benchmarks</span><span class="en">Benchmarks already run</span></p>
+      <p class="eyebrow"><span class="zh">实测基准 · Benchmarks</span><span class="en">Benchmarks already run</span></p>
       <h2>
-        <span class="zh">每个技能都要复现一个参考结果</span>
+        <span class="zh">每个技能都要先跑通参考算例</span>
         <span class="en">Every skill must reproduce a reference result</span>
       </h2>
       <p class="sec-lede">
-        <span class="zh">当前 20 个程序技能覆盖反应、结构、裂变统计、核天体与重离子输运。下表只列实际构建和运行得到的结果，不列计划中的功能。</span>
-        <span class="en">The 20 current code skills cover reactions, structure, fission and statistical decay, nuclear astrophysics, and heavy-ion transport. The table reports completed builds and runs, not planned features.</span>
+        <span class="zh">当前 20 个程序技能覆盖反应、结构、裂变统计、核天体、重离子输运和状态方程。下表只写已经构建并跑出的结果，计划中的功能不算。</span>
+        <span class="en">The 20 current code skills cover reactions, structure, fission and statistical decay, nuclear astrophysics, heavy-ion transport, and equations of state. The table reports completed builds and runs, not planned features.</span>
       </p>
     </div>
     <div class="coverage-grid rv" aria-label="Shipped code skills by domain">
@@ -714,8 +714,11 @@ footer { border-top: 1px solid var(--hairline); padding: 44px 0 60px; }
         </div>
       </div>
       <div class="coverage">
-        <div class="count"><b>1</b><span><span class="zh">重离子输运</span><span class="en">Heavy-ion transport</span></span></div>
-        <div class="code-list"><span class="code-pill">SMASH</span></div>
+        <div class="count"><b>4</b><span><span class="zh">重离子输运与状态方程</span><span class="en">Heavy-ion transport and EOS</span></span></div>
+        <div class="code-list">
+          <span class="code-pill">SMASH</span><span class="code-pill">GiBUU</span>
+          <span class="code-pill">Thermal-FIST</span><span class="code-pill">vHLLE</span>
+        </div>
       </div>
     </div>
     <div class="bench-scroll rv">
@@ -731,7 +734,7 @@ footer { border-top: 1px solid var(--hairline); padding: 44px 0 60px; }
           <tr>
             <td class="code-name">TALYS <span class="tier tier-1">T1</span></td>
             <td class="case"><span class="zh">发行版自带 1,438 个参考输出文件</span><span class="en">the 1,438 reference output files shipped with the distribution</span></td>
-            <td class="result"><span class="zh">1,415 个逐字节一致，其余 ~6 位有效数字</span><span class="en">1,415 byte-for-byte, rest to ~6 sig figs</span></td>
+            <td class="result"><span class="zh">1,419 个逐字节一致，其余 18 个数据文件约 6 位有效数字</span><span class="en">1,419 byte-for-byte; the remaining 18 data files to ~6 sig figs</span></td>
           </tr>
           <tr>
             <td class="code-name">NuclearToolkit.jl <span class="tier tier-1">T1</span></td>
@@ -741,7 +744,7 @@ footer { border-top: 1px solid var(--hairline); padding: 44px 0 60px; }
           <tr>
             <td class="code-name">Sky3D <span class="tier tier-1">T1</span></td>
             <td class="case"><span class="zh">¹⁶O 静态 TDHF：3,268 个能量、单粒子与多极矩量</span><span class="en">¹⁶O static TDHF: 3,268 energy, single-particle, and moment values</span></td>
-            <td class="result"><span class="zh">macOS/Linux 印出精度全部一致，迭代同为 370 步</span><span class="en">all printed values match on macOS/Linux, with the same 370 iterations</span></td>
+            <td class="result"><span class="zh">macOS/Linux 的输出在打印精度内全部一致，均迭代 370 步</span><span class="en">all printed values match on macOS/Linux, with the same 370 iterations</span></td>
           </tr>
           <tr>
             <td class="code-name">SkyNet <span class="tier tier-1">T1</span></td>
@@ -774,12 +777,12 @@ footer { border-top: 1px solid var(--hairline); padding: 44px 0 60px; }
     <div class="latest-note rv">
       <span class="signal"><span class="zh">最新发现</span><span class="en">LATEST FINDING</span></span>
       <p>
-        <span class="zh">SMASH 在相同源码、输入和随机种子下，macOS 与 Linux 的部分粒子多重性最多相差 <b>25%</b>，但重子数 788 与电荷 316 在两边都是精确整数。于是验证器锚定守恒律，不把平台相关的多重性当作“标准答案”。这次检查还抓到了轻核 PDG 编码会被旧规则误判为重子数 0 的错误。</span>
+        <span class="zh">使用相同的源码、输入和随机种子，SMASH 在 macOS 与 Linux 上得到的部分粒子多重性最多相差 <b>25%</b>，但两边的重子数 788 和电荷 316 都精确守恒。验证器据此检查守恒律，不再把依赖平台的多重性当作“标准答案”。这次测试还发现，旧规则会把轻核的 PDG 编码误判成重子数 0。</span>
         <span class="en">With identical source, input, and seed, some SMASH multiplicities differ by up to <b>25%</b> between macOS and Linux, while baryon number 788 and charge 316 remain exact integers on both. The verifier therefore anchors on conservation laws instead of treating platform-sensitive multiplicities as ground truth. The same check caught an old rule that assigned baryon number zero to light-nucleus PDG codes.</span>
       </p>
     </div>
     <p class="bench-note">
-      <span class="zh">T1 表示复现程序自己发行的参考输出或测试套件；T2 用于没有可复现发行版参考值的程序，证据来自跨平台构建、物理恒等式与实验数据。每个技能都必须声明等级、适用范围和已知失败模式，再经过对抗审查与引文核验。</span>
+      <span class="zh">T1 要求复现程序随发行版提供的参考输出或测试套件。没有这类参考值时使用 T2，改用跨平台构建、物理恒等式和实验数据检验。每个技能都会写明等级、适用范围和已知失败模式，并接受对抗检查和引文核验。</span>
       <span class="en">T1 reproduces references or a test suite shipped by the code itself. T2 is used when no distributable reference exists, so cross-platform builds, physics identities, and measured data form the evidence chain instead. Every skill declares its tier, scope, and failure modes before adversarial review and citation verification.</span>
     </p>
   </div>
@@ -789,13 +792,13 @@ footer { border-top: 1px solid var(--hairline); padding: 44px 0 60px; }
 <section id="cases">
   <div class="wrap">
     <div class="rv">
-      <p class="eyebrow"><span class="zh">两次实测 · Case studies</span><span class="en">Two real runs</span></p>
+      <p class="eyebrow"><span class="zh">真实任务 · Case studies</span><span class="en">Two real runs</span></p>
       <h2>
-        <span class="zh">两个完整任务，也记录没有得到的结果</span>
+        <span class="zh">两个跑完的任务，有结果，也有空缺</span>
         <span class="en">Two complete tasks, including what they did not find</span>
       </h2>
       <p class="sec-lede">
-        <span class="zh">下面是两个实际跑完的任务，不是预先写好的演示。第二个任务在目标能量上没有找到实验数据，这个空缺也作为结果保留下来。</span>
+        <span class="zh">这两个任务都实际跑过，不是预先写好的演示。第二个任务没有找到目标能量下的实验数据，页面也如实写明了这个空缺。</span>
         <span class="en">These are completed research tasks, not scripted demos. The second task found no measurement at the requested energy, and reports that absence as part of the result.</span>
       </p>
     </div>
@@ -805,32 +808,32 @@ footer { border-top: 1px solid var(--hairline); padding: 44px 0 60px; }
         <span class="no"><svg width="26" height="26" viewBox="0 0 26 26" fill="none" stroke="url(#bg1)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3.5h9l5 5v14H6z"/><path d="M15 3.5V9h5"/><circle cx="12" cy="15" r="3"/><path d="M14.2 17.2L17 20"/></svg>CORPUS</span>
         <h3><span class="zh">从一篇 PDF 找到相关工作</span><span class="en">Finding related work from one PDF</span></h3>
         <p>
-          <span class="zh">输入只有一篇 PDF（Abu-Ibrahim 等，<i>PRC</i> <b>77</b>, 034607，碳同位素在质子靶上的反应截面）。全程离线，零次外部 API 调用。</span>
+          <span class="zh">输入只有一篇 PDF（Abu-Ibrahim 等，<i>PRC</i> <b>77</b>, 034607，碳同位素在质子靶上的反应截面）。整个任务离线完成，没有调用外部 API。</span>
           <span class="en">The input was a single PDF (Abu-Ibrahim <i>et al.</i>, <i>PRC</i> <b>77</b>, 034607, reaction cross sections of carbon isotopes on a proton target). Fully offline, zero external API calls.</span>
         </p>
         <p style="margin-top:12px">
-          <span class="zh">语料库把它定位到 <code>0710.4193</code>，引用图给出它引的 <b>8 篇</b>与引它的 <b>5 篇</b>（含同组前作 <code>nucl-th/0612029</code>、²²C 双中子晕 <code>nucl-th/0605055</code>、黑球近似 <code>nucl-th/0410032</code>），词法近邻再补上方法相同而体系不同的工作（氧同位素 Glauber、相对论碰撞近似）。预生成摘要直接给出可核对的数字：p+¹²C 40 MeV 的 σ<sub>R</sub> = 432 mb、²²C 的 r<sub>m</sub> = 3.6 fm、经验公式 R(C) = 0.96 ± 0.05 覆盖 153 个数据点。</span>
+          <span class="zh">语料库先把论文定位到 <code>0710.4193</code>。引用网络找到它引用的 <b>8 篇</b>论文和引用它的 <b>5 篇</b>论文，其中包括同组前作 <code>nucl-th/0612029</code>、²²C 双中子晕工作 <code>nucl-th/0605055</code>和黑球近似 <code>nucl-th/0410032</code>。词法检索又补出方法相近、研究体系不同的工作，如氧同位素 Glauber 计算和相对论碰撞近似。现成摘要里还有可直接核对的数字：p+¹²C 40 MeV 的 σ<sub>R</sub> = 432 mb，²²C 的 r<sub>m</sub> = 3.6 fm，经验公式 R(C) = 0.96 ± 0.05 覆盖 153 个数据点。</span>
           <span class="en">The corpus resolved it to <code>0710.4193</code>; the citation graph returned the <b>8 papers</b> it cites and the <b>5</b> citing it (including the group's own predecessor <code>nucl-th/0612029</code>, the ²²C two-neutron halo <code>nucl-th/0605055</code>, and the black-sphere approximation <code>nucl-th/0410032</code>), and lexical neighbours added same-method, different-system work. The pre-generated digest supplied checkable numbers: σ<sub>R</sub> = 432 mb for p+¹²C at 40 MeV, r<sub>m</sub> = 3.6 fm for ²²C, and the empirical R(C) = 0.96 ± 0.05 across 153 data points.</span>
         </p>
         <p style="margin-top:12px">
-          <span class="zh"><b>限制：</b>引用边只在语料内部统计。RIKEN 的实验论文不属于 nucl-th 语料，所以“被引 5 次”低估了真实引用量，权威引用数仍需查询 INSPIRE。</span>
+          <span class="zh"><b>限制：</b>引用关系只在这批语料内统计。RIKEN 的实验论文不属于 nucl-th，所以“被引 5 次”低估了实际引用量。完整引用数仍要到 INSPIRE 查询。</span>
           <span class="en"><b>Limit:</b> citation edges are counted only inside this corpus. The RIKEN measurements are not nucl-th papers, so “cited by 5” understates the true count. An authoritative count still requires INSPIRE.</span>
         </p>
       </div>
 
       <div class="why rv">
         <span class="no"><svg width="26" height="26" viewBox="0 0 26 26" fill="none" stroke="url(#bg1)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M13 3v20"/><path d="M6 7.5h14"/><path d="M6.5 7.5L3.5 15h6z"/><path d="M19.5 7.5L16.5 15h6z"/><path d="M9 22.5h8"/></svg>VERIFY</span>
-        <h3><span class="zh">交叉检查一次光学模型计算</span><span class="en">Cross-checking an optical-model calculation</span></h3>
+        <h3><span class="zh">复核一组光学模型计算</span><span class="en">Cross-checking an optical-model calculation</span></h3>
         <p>
-          <span class="zh">n+⁹⁰Zr 弹性散射，50 MeV，KD02 全局光学势。参数不是凭记忆重写公式，而是复用本地已有的 Koning 原始 <code>kd02.f</code>，两套独立实现一致到 <b>8 位有效数字</b>。</span>
+          <span class="zh">任务是计算 50 MeV 的 n+⁹⁰Zr 弹性散射，使用 KD02 全局光学势。参数直接取自本地保存的 Koning 原始 <code>kd02.f</code>，没有凭记忆重写公式。两套独立实现一致到 <b>8 位有效数字</b>。</span>
           <span class="en">n+⁹⁰Zr elastic scattering at 50 MeV with the KD02 global optical potential. The parameters were not rewritten from memory: the run reused Koning's own <code>kd02.f</code> already on disk, and the two independent implementations agreed to <b>8 significant figures</b>.</span>
         </p>
         <p style="margin-top:12px">
-          <span class="zh">过程中抓到一个会静默出错的陷阱：FRESCO 的半径约定是 R = r₀(Aₚ<sup>1/3</sup> + A<sub>t</sub><sup>1/3</sup>)，而 KD02 定义在 R = r₀A<sub>t</sub><sup>1/3</sup> 上。不设 <code>ap=0</code>，所有半径大 <b>22%</b>，算出来的截面看着完全合理。最终 σ<sub>R</sub> = <b>1301.640 mb</b>：积分步长减半两次稳定到 <b>9 位有效数字</b>，匹配半径与分波数加倍完全不变；再用第二个独立求解器复核，COLOSS（复标度 Lagrange-Laguerre）给 1299.188 mb，FRESCO（Numerov 耦合道）给 1299.191 mb，<b>6 位有效数字</b>。W = 0 时吸收精确归零，通量守恒成立。</span>
+          <span class="zh">这里有个很隐蔽的坑。FRESCO 使用 R = r₀(Aₚ<sup>1/3</sup> + A<sub>t</sub><sup>1/3</sup>)，KD02 则把半径定义为 R = r₀A<sub>t</sub><sup>1/3</sup>。如果没有设置 <code>ap=0</code>，所有半径都会大 <b>22%</b>，程序照样运行，截面看上去也很合理。最终得到 σ<sub>R</sub> = <b>1301.640 mb</b>。积分步长连续减半两次后稳定到 <b>9 位有效数字</b>，匹配半径和分波数加倍也不改变结果。再用独立求解器互检，COLOSS（复标度 Lagrange-Laguerre）给出 1299.188 mb，FRESCO（Numerov 耦合道）给出 1299.191 mb，两者一致到 <b>6 位有效数字</b>。设 W = 0 后吸收精确归零，通量守恒。</span>
           <span class="en">It caught a trap that fails silently: FRESCO builds radii as R = r₀(Aₚ<sup>1/3</sup> + A<sub>t</sub><sup>1/3</sup>) while KD02 is defined on R = r₀A<sub>t</sub><sup>1/3</sup>. Without <code>ap=0</code> every radius is <b>22% too large</b> and the resulting cross section still looks entirely plausible. Final σ<sub>R</sub> = <b>1301.640 mb</b>: stable to <b>9 significant figures</b> under two halvings of the radial step and unchanged when the matching radius and partial-wave limit were doubled. A second, structurally unrelated solver then checked it: COLOSS (complex-scaled Lagrange-Laguerre) gave 1299.188 mb against FRESCO's 1299.191 mb, <b>6 significant figures</b>. With W = 0 the absorption vanished exactly and flux conservation held.</span>
         </p>
         <p style="margin-top:12px">
-          <span class="zh"><b>实验数据：</b>EXFOR 中没有 50 MeV 的 n+⁹⁰Zr 弹性散射测量。计算随后改到两个有数据的能量：24 MeV 的中位比为 0.89，55 MeV 的 χ²/N = 0.75，均没有自由参数。下图给出计算与数据的比较。</span>
+          <span class="zh"><b>实验数据：</b>EXFOR 没有 50 MeV 的 n+⁹⁰Zr 弹性散射测量。于是换到两个有数据的能量重新计算：24 MeV 的中位比为 0.89，55 MeV 的 χ²/N = 0.75，两次计算都没有自由参数。下图是计算与数据的直接比较。</span>
           <span class="en"><b>Experimental data:</b> EXFOR contains no n+⁹⁰Zr elastic-scattering measurement at 50 MeV. The calculation was repeated at the two measured energies: a median ratio of 0.89 at 24 MeV and χ²/N = 0.75 at 55 MeV, with no free parameters. The figure compares those calculations with the data.</span>
         </p>
       </div>
@@ -842,7 +845,7 @@ footer { border-top: 1px solid var(--hairline); padding: 44px 0 60px; }
         <img src="assets/case-kd02-exfor.png" alt="KD02 global optical potential versus EXFOR measurements for neutron elastic scattering on zirconium, at 24 MeV and 55 MeV">
       </div>
       <figcaption style="margin-top:16px;font-size:13.5px;color:var(--faint);line-height:1.75">
-        <span class="zh">绿线是 KD02 全局光学势的<b style="color:var(--ink);font-weight:600">零自由参数</b>预测，粉点是 EXFOR 实测。每个面板都在对应的实验能量上重新计算。左：24 MeV，富集 ⁹⁰Zr，全角度（Wang &amp; Rapaport，EXFOR 13160.004）。右：55 MeV，天然 Zr，仅前角（Ibaraki TIARA，EXFOR 22480.005）。<b style="color:var(--ink);font-weight:600">图中没有 50 MeV，因为该能量没有测量。</b></span>
+        <span class="zh">绿线是 KD02 全局光学势的<b style="color:var(--ink);font-weight:600">零自由参数</b>预测，粉点是 EXFOR 数据。两个面板都按各自的实验能量重新计算。左图为 24 MeV 的富集 ⁹⁰Zr 全角度数据（Wang &amp; Rapaport，EXFOR 13160.004），右图为 55 MeV 的天然 Zr 前角数据（Ibaraki TIARA，EXFOR 22480.005）。<b style="color:var(--ink);font-weight:600">50 MeV 没有测量，所以不在图中。</b></span>
         <span class="en">Green shows the <b style="color:var(--ink);font-weight:600">zero-free-parameter</b> prediction of the KD02 global optical potential; pink points are EXFOR measurements. Each panel was computed at its measured energy. Left: 24 MeV, enriched ⁹⁰Zr, full angular range (Wang &amp; Rapaport, EXFOR 13160.004). Right: 55 MeV, natural Zr, forward angles only (Ibaraki TIARA, EXFOR 22480.005). <b style="color:var(--ink);font-weight:600">There is no 50 MeV panel because no measurement exists at that energy.</b></span>
       </figcaption>
     </figure>
@@ -859,23 +862,23 @@ footer { border-top: 1px solid var(--hairline); padding: 44px 0 60px; }
         <span class="en">A citation projection of 55,850 papers</span>
       </h2>
       <p class="sec-lede">
-        <span class="zh">这张交互地图取自上一版 61,171 篇论文的语料，其中 55,850 篇满足引用度数门槛。完整语料现已增至 62,714 篇。论文位置由引用关系决定，地形表示论文密度，地名对应空间上确实聚集的 PhySH 主题。<strong>引用边只用于计算布局，不直接绘制</strong>，以免图面被大量连线盖住。</span>
-        <span class="en">This interactive map uses the previous 61,171-paper corpus; 55,850 papers pass the citation-degree threshold. The full corpus has since grown to 62,714 papers. Citation structure sets each position, terrain shows paper density, and place names mark PhySH topics that cluster in the projection. <strong>Citation edges constrain the layout but are not drawn</strong>, because the lines would obscure the map at this scale.</span>
+        <span class="zh">这张交互地图是 61,171 篇论文语料的静态快照，其中 55,850 篇达到引用度数门槛。当前公开仓库附带 61,059 个论文页，两批数据的生成时间和筛选范围不同。引用关系决定论文的位置，地形高低表示论文密度，地名只标在明显聚集的 PhySH 主题上。<strong>引用边参与布局计算，但不画在图上</strong>，否则大量连线会盖住地图。</span>
+        <span class="en">This interactive map is a static snapshot of a 61,171-paper corpus; 55,850 papers pass the citation-degree threshold. The public repository currently ships 61,059 paper pages, produced at a different time and with different selection rules. Citation structure sets each position, terrain shows paper density, and place names mark PhySH topics that cluster in the projection. <strong>Citation edges constrain the layout but are not drawn</strong>, because the lines would obscure the map at this scale.</span>
       </p>
     </div>
     <a class="map-frame rv" href="map.html">
       <img src="assets/map-preview.png" alt="FUSION corpus citation map">
       <span class="veil">
-        <span class="open"><i>→</i><span class="zh">进入交互地图 · 悬停查看每一篇论文</span><span class="en">Enter the interactive map · hover any paper</span></span>
+        <span class="open"><i>→</i><span class="zh">打开交互地图 · 悬停查看论文</span><span class="en">Enter the interactive map · hover any paper</span></span>
       </span>
     </a>
     <div class="map-points rv">
       <div class="mp"><b><span class="zh">坐标来自引用关系</span><span class="en">Coordinates come from citations</span></b>
-        <span><span class="zh">流程为引用邻接 → SVD → t-SNE。同主题论文的空间离散度中位数为全局的 0.66，聚集最明显的主题低至 0.34。</span><span class="en">The layout uses citation adjacency → SVD → t-SNE. Median same-topic dispersion is 0.66 of the global value; the tightest topic reaches 0.34.</span></span></div>
+        <span><span class="zh">坐标按引用邻接 → SVD → t-SNE 的流程计算。同主题论文的空间离散度中位数为全局的 0.66，最集中的主题低至 0.34。</span><span class="en">The layout uses citation adjacency → SVD → t-SNE. Median same-topic dispersion is 0.66 of the global value; the tightest topic reaches 0.34.</span></span></div>
       <div class="mp"><b><span class="zh">只标注聚集的主题</span><span class="en">Labels require spatial clustering</span></b>
-        <span><span class="zh">未形成空间聚集的通用主题不标地名。地图在黑白打印和常见色觉缺陷下仍可辨认。</span><span class="en">Broad topics without a spatial cluster are not labeled. The map remains legible in grayscale and under common forms of color-vision deficiency.</span></span></div>
-      <div class="mp"><b><span class="zh">网页为单文件</span><span class="en">The map is one file</span></b>
-        <span><span class="zh">数据全部内联，不使用 CDN，也没有外部请求或构建步骤。</span><span class="en">All data are inlined. The page uses no CDN, external requests, or build step.</span></span></div>
+        <span><span class="zh">没有明显空间聚集的通用主题不标地名。地图黑白打印仍然清楚，常见色觉缺陷的读者也能分辨。</span><span class="en">Broad topics without a spatial cluster are not labeled. The map remains legible in grayscale and under common forms of color-vision deficiency.</span></span></div>
+      <div class="mp"><b><span class="zh">整张地图只有一个文件</span><span class="en">The map is one file</span></b>
+        <span><span class="zh">所有数据都内嵌在页面中，不用 CDN，也不会发起外部请求。打开文件即可浏览，无须构建。</span><span class="en">All data are inlined. The page uses no CDN, external requests, or build step.</span></span></div>
     </div>
   </div>
 </section>
@@ -892,29 +895,29 @@ footer { border-top: 1px solid var(--hairline); padding: 44px 0 60px; }
         <span class="en">Three steps, about five minutes</span>
       </h2>
       <p class="sec-lede" style="margin-left:auto;margin-right:auto">
-        <span class="zh">不用预装核物理程序。第一次调用某个程序时，FUSION 会下载并编译它。下面的命令已在 macOS 和 Linux 上运行过。</span>
+        <span class="zh">不用提前安装核物理程序。第一次调用时，FUSION 会自行下载并编译。下面的命令已经在 macOS 和 Linux 上跑过。</span>
         <span class="en">No nuclear-physics code needs to be installed in advance. FUSION downloads and builds a code when it is first used. The commands below have been run on macOS and Linux.</span>
       </p>
     </div>
 
     <div class="gs-grid rv">
       <div class="gs-step">
-        <h3><span class="gs-num">1</span><span class="zh">把 FUSION 下载到本地</span><span class="en">Clone FUSION</span></h3>
-        <p><span class="zh">仓库约 229 MB，其中大部分是 61,167 页离线文献库。</span><span class="en">The repository is about 229 MB, mostly the 61,167-page offline literature base.</span></p>
+        <h3><span class="gs-num">1</span><span class="zh">下载 FUSION 仓库</span><span class="en">Clone FUSION</span></h3>
+        <p><span class="zh">仓库约 229 MB，主要内容是 61,167 页离线文献库。</span><span class="en">The repository is about 229 MB, mostly the 61,167-page offline literature base.</span></p>
         <div class="gs-code">git clone https://github.com/jinleiphys/FUSION.git<br><span class="p">cd</span> FUSION</div>
       </div>
 
       <div class="gs-step">
         <h3><span class="gs-num">2</span><span class="zh">下载 fusion 命令行程序</span><span class="en">Download the fusion CLI</span></h3>
-        <p><span class="zh">把命令行程序下载到刚才的目录。下面使用 Apple 芯片 Mac 的安装包；Intel Mac 改用 <code>darwin-x64</code>，Linux 改用 <code>linux-x64</code>。其他平台见 releases 页。</span><span class="en">Download the command-line program into the same directory. The command below uses the Apple-silicon package; use <code>darwin-x64</code> for Intel Macs and <code>linux-x64</code> for Linux. Other builds are listed on the releases page.</span></p>
+        <p><span class="zh">把命令行程序放进刚才的目录。下面下载的是 Apple 芯片 Mac 版本；Intel Mac 请改用 <code>darwin-x64</code>，Linux 请改用 <code>linux-x64</code>。其他平台可在 releases 页找到。</span><span class="en">Download the command-line program into the same directory. The command below uses the Apple-silicon package; use <code>darwin-x64</code> for Intel Macs and <code>linux-x64</code> for Linux. Other builds are listed on the releases page.</span></p>
         <div class="gs-code">curl -fsSL https://github.com/jinleiphys/FUSION/releases/latest/download/fusion-darwin-arm64.tar.gz | tar -xz<br><span class="c"># macOS <span class="zh">才需要这一行</span><span class="en">only</span></span><br>xattr -d com.apple.quarantine fusion</div>
-        <p class="gs-note"><span class="zh">当前二进制文件没有 Apple 开发者签名，macOS 会默认拦截。第二条命令用于清除隔离标记。</span><span class="en">The current binary has no Apple developer signature, so macOS blocks it by default. The second command clears the quarantine flag.</span></p>
+        <p class="gs-note"><span class="zh">当前二进制文件没有 Apple 开发者签名，macOS 默认会拦截。第二条命令用来清除隔离标记。</span><span class="en">The current binary has no Apple developer signature, so macOS blocks it by default. The second command clears the quarantine flag.</span></p>
       </div>
 
       <div class="gs-step">
-        <h3><span class="gs-num">3</span><span class="zh">打开它</span><span class="en">Open it</span></h3>
+        <h3><span class="gs-num">3</span><span class="zh">运行 FUSION</span><span class="en">Open it</span></h3>
         <div class="gs-code">./fusion</div>
-        <p class="gs-note"><span class="zh">输入第一条消息后，FUSION 会询问是否配置模型、研究方向和私人研究档案。档案从你的论文中提取课题词、合作者以及语料内引用关系。配置不影响当前任务，完成一次后不再询问；输入“跳过”可直接关闭。</span><span class="en">After the first message, FUSION offers to configure a model, research areas, and a private research profile. The profile extracts topics, co-authors, and in-corpus citations from your papers. Setup does not block the current task and appears only once; enter “skip” to decline.</span></p>
+        <p class="gs-note"><span class="zh">发出第一条消息后，FUSION 会询问是否配置模型、研究方向、配色和私人研究档案。研究档案会从你的论文中提取课题词、合作者和语料内引用关系。这一步不会打断当前任务，也只会出现一次；输入“跳过”即可关闭。</span><span class="en">After the first message, FUSION offers to configure a model, research areas, colours, and a private research profile. The profile extracts topics, co-authors, and in-corpus citations from your papers. Setup does not block the current task and appears only once; enter “skip” to decline.</span></p>
       </div>
     </div>
 
@@ -922,45 +925,45 @@ footer { border-top: 1px solid var(--hairline); padding: 44px 0 60px; }
       <h3><span class="zh">常见问题</span><span class="en">Common questions</span></h3>
 
       <div class="gs-q">
-        <b><span class="zh">我需要 API key 吗？从哪里获取？</span><span class="en">Do I need an API key, and where from?</span></b>
-        <span class="a"><span class="zh">需要。FUSION 不包含大模型，请从 DeepSeek、Qwen、GLM、Claude 或 GPT 的服务商处申请 key。首次配置会运行 <code>fusion auth login</code>，按提示粘贴即可。</span><span class="en">Yes. FUSION does not include a model. Obtain a key from DeepSeek, Qwen, GLM, Claude, or GPT, then paste it when setup runs <code>fusion auth login</code>.</span></span>
+        <b><span class="zh">需要 API key 吗？去哪里申请？</span><span class="en">Do I need an API key, and where from?</span></b>
+        <span class="a"><span class="zh">需要。FUSION 本身不包含大模型，请向 DeepSeek、Qwen、GLM、Claude 或 GPT 的服务商申请 key。首次配置会运行 <code>fusion auth login</code>，按提示粘贴即可。</span><span class="en">Yes. FUSION does not include a model. Obtain a key from DeepSeek, Qwen, GLM, Claude, or GPT, then paste it when setup runs <code>fusion auth login</code>.</span></span>
       </div>
 
       <div class="gs-q">
         <b><span class="zh">提示 command not found: fusion</span><span class="en">command not found: fusion</span></b>
-        <span class="a"><span class="zh">请用 <code>./fusion</code>，开头的点和斜杠表示运行当前目录中的程序。若要在任意目录直接输入 <code>fusion</code>，可执行 <code>mkdir -p ~/.local/bin && mv fusion ~/.local/bin/</code>。仍找不到时，再执行 <code>echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.zshrc</code> 并重新打开终端。</span><span class="en">Use <code>./fusion</code>; the leading dot-slash selects the program in the current directory. To run <code>fusion</code> from any directory, use <code>mkdir -p ~/.local/bin &amp;&amp; mv fusion ~/.local/bin/</code>. If the command is still unavailable, run <code>echo 'export PATH="$HOME/.local/bin:$PATH"' &gt;&gt; ~/.zshrc</code> and open a new terminal.</span></span>
+        <span class="a"><span class="zh">请使用 <code>./fusion</code>。开头的点和斜杠表示运行当前目录中的程序。如果希望在任意目录直接输入 <code>fusion</code>，可执行 <code>mkdir -p ~/.local/bin && mv fusion ~/.local/bin/</code>。仍然找不到时，再执行 <code>echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.zshrc</code>，然后重新打开终端。</span><span class="en">Use <code>./fusion</code>; the leading dot-slash selects the program in the current directory. To run <code>fusion</code> from any directory, use <code>mkdir -p ~/.local/bin &amp;&amp; mv fusion ~/.local/bin/</code>. If the command is still unavailable, run <code>echo 'export PATH="$HOME/.local/bin:$PATH"' &gt;&gt; ~/.zshrc</code> and open a new terminal.</span></span>
       </div>
 
       <div class="gs-q">
         <b><span class="zh">安装 FRESCO 或 TALYS 会改动系统目录吗？</span><span class="en">Does installing FRESCO or TALYS modify system directories?</span></b>
-        <span class="a"><span class="zh">程序安装在 <code>~/.cache/fusion/</code> 下，不写入系统目录。删除该目录即可移除这些程序。编译需要 <code>gfortran</code> 和 C++ 编译器，缺少时 FUSION 会提示。TALYS 约占 11 GB，其中 8.6 GB 是核结构数据库，安装前请检查磁盘空间。</span><span class="en">Programs are installed under <code>~/.cache/fusion/</code>, not in system directories. Removing that directory uninstalls them. Compilation requires <code>gfortran</code> and a C++ compiler; FUSION reports missing tools. TALYS needs about 11 GB, including an 8.6 GB nuclear-structure database, so check disk space before installing it.</span></span>
+        <span class="a"><span class="zh">不会。程序都装在 <code>~/.cache/fusion/</code> 下，不写系统目录；删除这个目录即可移除。编译需要 <code>gfortran</code> 和 C++ 编译器，缺少时 FUSION 会给出提示。TALYS 约占 11 GB，其中 8.6 GB 是核结构数据库，安装前请留意磁盘空间。</span><span class="en">Programs are installed under <code>~/.cache/fusion/</code>, not in system directories. Removing that directory uninstalls them. Compilation requires <code>gfortran</code> and a C++ compiler; FUSION reports missing tools. TALYS needs about 11 GB, including an 8.6 GB nuclear-structure database, so check disk space before installing it.</span></span>
       </div>
 
       <div class="gs-q">
         <b><span class="zh">计算结果可以直接使用吗？</span><span class="en">Can I use a result without checking it?</span></b>
-        <span class="a"><span class="zh">不可以。基准测试只证明程序安装正确并复现了已知结果，不能证明当前任务中的物理设定正确。每个技能会报告复现精度和未验证的部分，物理判断仍由用户负责。</span><span class="en">No. A benchmark shows that the code was installed correctly and reproduced a known result; it does not validate the physics choices in a new task. Each skill reports its agreement and what remains untested. The user remains responsible for the physics.</span></span>
+        <span class="a"><span class="zh">不可以。基准测试只能证明程序安装正确，并且复现过已知结果，无法替你检查新任务的物理设定。每个技能都会报告复现精度和未验证的部分，物理判断仍由用户负责。</span><span class="en">No. A benchmark shows that the code was installed correctly and reproduced a known result; it does not validate the physics choices in a new task. Each skill reports its agreement and what remains untested. The user remains responsible for the physics.</span></span>
       </div>
 
       <div class="gs-q">
-        <b><span class="zh">出问题了找谁</span><span class="en">Something broke</span></b>
-        <span class="a"><span class="zh">请到仓库提交 issue。程序无法安装，或结果看似合理但实际错误，都请附上输入、输出、系统与编译器版本。</span><span class="en">Open a repository issue. For a failed installation or a plausible but incorrect result, include the input, output, operating system, and compiler version.</span></span>
+        <b><span class="zh">出问题去哪里反馈？</span><span class="en">Something broke</span></b>
+        <span class="a"><span class="zh">请到仓库提交 issue。无论是程序装不上，还是结果看着合理却实际有错，都请附上输入、输出、操作系统和编译器版本。</span><span class="en">Open a repository issue. For a failed installation or a plausible but incorrect result, include the input, output, operating system, and compiler version.</span></span>
       </div>
     </div>
 
 
     <div class="beta-box rv">
-      <h3><span class="zh">测试版需要这些反馈</span><span class="en">Feedback needed for the beta</span></h3>
-      <p><span class="zh">作者每天使用 v0.1.0，但还没有外部用户完成过测试。请优先报告以下问题。</span><span class="en">The author uses v0.1.0 daily, but no external user has completed a test. Please report these issues first.</span></p>
+      <h3><span class="zh">测试版最需要哪些反馈</span><span class="en">Feedback needed for the beta</span></h3>
+      <p><span class="zh">作者每天都在使用 v0.1.0，但还没有外部用户完成测试。目前最想知道下面这些问题。</span><span class="en">The author uses v0.1.0 daily, but no external user has completed a test. Please report these issues first.</span></p>
       <ol>
         <li><b><span class="zh">看起来对、其实错的结果。</span><span class="en">A result that looked right and was wrong.</span></b>
-          <span class="zh">例如，半径约定错误的 FRESCO 输入卡仍能正常运行，但截面可能偏差 20% 且没有报错。如果 FUSION 给出这类结果，请提供输入卡、计算值和参考值。</span><span class="en">For example, a FRESCO deck with the wrong radius convention can run without an error while shifting the cross section by 20%. If FUSION produces such a result, send the deck, the calculated value, and the reference value.</span></li>
+          <span class="zh">例如，半径约定写错的 FRESCO 输入卡仍能正常运行，截面却可能偏差 20%，而且不会报错。如果遇到这类结果，请提供输入卡、计算值和参考值。</span><span class="en">For example, a FRESCO deck with the wrong radius convention can run without an error while shifting the cross section by 20%. If FUSION produces such a result, send the deck, the calculated value, and the reference value.</span></li>
         <li><b><span class="zh">装不上的程序。</span><span class="en">A code that will not install.</span></b>
-          <span class="zh">20 个程序中，只有 FRESCO 完成过从空缓存开始的安装测试。请附上报错、系统和编译器版本。</span><span class="en">Of the 20 programs, only FRESCO has been installed in a test that began with an empty cache. Include the error, operating system, and compiler version.</span></li>
-        <li><b><span class="zh">任何让你觉得傻的地方。</span><span class="en">Anything that felt stupid.</span></b>
-          <span class="zh">首次配置流程仍由作者单人测试。多余的步骤、难懂的提示和不合习惯的默认值都请指出。</span><span class="en">The first-run flow has only been tested by its author. Report unnecessary steps, unclear prompts, and poor defaults.</span></li>
-        <li><b><span class="zh">你希望哪个程序有技能。</span><span class="en">Which code you wish had a skill.</span></b></li>
+          <span class="zh">20 个程序中，目前只有 FRESCO 从空缓存开始完整测试过安装流程。请附上报错、操作系统和编译器版本。</span><span class="en">Of the 20 programs, only FRESCO has been installed in a test that began with an empty cache. Include the error, operating system, and compiler version.</span></li>
+        <li><b><span class="zh">任何用着别扭的地方。</span><span class="en">Anything that felt stupid.</span></b>
+          <span class="zh">首次配置目前只有作者测试过。步骤多余、提示难懂、默认值不合习惯，都请直接指出。</span><span class="en">The first-run flow has only been tested by its author. Report unnecessary steps, unclear prompts, and poor defaults.</span></li>
+        <li><b><span class="zh">你还希望支持哪个程序。</span><span class="en">Which code you wish had a skill.</span></b></li>
       </ol>
-      <p><span class="zh">TALYS 需要下载约 11 GB，不适合作为第一次测试。macOS 首次运行若被拦截，请执行 <code>xattr -d com.apple.quarantine fusion</code>。</span><span class="en">TALYS downloads about 11 GB, so it is not a good first test. If macOS blocks the first run, use <code>xattr -d com.apple.quarantine fusion</code>.</span></p>
+      <p><span class="zh">TALYS 需要下载约 11 GB，不建议拿它做第一次测试。macOS 首次运行若被拦截，请执行 <code>xattr -d com.apple.quarantine fusion</code>。</span><span class="en">TALYS downloads about 11 GB, so it is not a good first test. If macOS blocks the first run, use <code>xattr -d com.apple.quarantine fusion</code>.</span></p>
     </div>
 
     <div class="cta-row rv" style="justify-content:center;margin-top:36px">
@@ -977,41 +980,41 @@ footer { border-top: 1px solid var(--hairline); padding: 44px 0 60px; }
 <section id="roadmap">
   <div class="wrap">
     <div class="rv">
-      <p class="eyebrow"><span class="zh">路线 · Roadmap</span><span class="en">Roadmap</span></p>
+      <p class="eyebrow"><span class="zh">项目进度 · Roadmap</span><span class="en">Roadmap</span></p>
       <h2>
-        <span class="zh">现在做到哪一步</span>
+        <span class="zh">现在做到这里</span>
         <span class="en">Current project status</span>
       </h2>
       <p class="sec-lede">
-        <span class="zh">Phase 0 用 deepseek-chat 检查了文献检索、FRESCO 输入卡和引文准确性。当前工作集中在开源发行、安装流程和学生文档。</span>
-        <span class="en">Phase 0 tested literature retrieval, FRESCO input generation, and citation accuracy with deepseek-chat. Current work focuses on the open-source release, installation, and student documentation.</span>
+        <span class="zh">v0.1.0 已经公开，20 个程序技能和离线知识库都已随仓库发布。现在主要补全新机器上的安装测试，并根据外部用户的实际反馈修问题。</span>
+        <span class="en">v0.1.0 is public, with 20 code skills and the offline knowledge base shipped in the repository. Current work focuses on cold-start installation tests and fixes driven by external-user feedback.</span>
       </p>
     </div>
     <div class="phases rv">
       <div class="phase done">
         <span class="ph">Phase 0 · <span class="zh">已通过</span><span class="en">passed</span></span>
         <h3><span class="zh">质量验收</span><span class="en">Quality gate</span></h3>
-        <p><span class="zh">对照参考结果验收：精确检索指定文献；独立生成 FRESCO 输入卡并复现 4–5 位有效数字；10 条引文全部核实。</span><span class="en">Checked against references: exact retrieval of a specified paper; an independently generated FRESCO deck agreeing to 4–5 significant figures; 10 citations verified.</span></p>
+        <p><span class="zh">三项测试都通过：精确找到指定文献；独立生成 FRESCO 输入卡，结果一致到 4–5 位有效数字；10 条引文逐条核实无误。</span><span class="en">Checked against references: exact retrieval of a specified paper; an independently generated FRESCO deck agreeing to 4–5 significant figures; 10 citations verified.</span></p>
       </div>
       <div class="phase now">
-        <span class="ph">Phase 1 · <span class="zh">进行中</span><span class="en">in progress</span></span>
+        <span class="ph">Phase 1 · <span class="zh">核心已完成</span><span class="en">core complete</span></span>
         <h3><span class="zh">品牌分叉 + CI</span><span class="en">Rebrand fork + CI</span></h3>
-        <p><span class="zh">fusion-core 引擎仓库，每周自动重基上游 opencode，只带品牌补丁。</span><span class="en">The fusion-core engine repo, weekly auto-rebase onto upstream opencode, brand patch only.</span></p>
+        <p><span class="zh">fusion-core 只保留品牌补丁，每周自动重基上游 opencode。桌面图标和完整发行流水线还在补。</span><span class="en">fusion-core keeps only the brand patch and rebases onto upstream opencode each week. Desktop icons and the complete release pipeline remain in progress.</span></p>
       </div>
       <div class="phase now">
-        <span class="ph">Phase 2 · <span class="zh">进行中</span><span class="en">in progress</span></span>
+        <span class="ph">Phase 2 · <span class="zh">核心已完成</span><span class="en">core complete</span></span>
         <h3><span class="zh">技能包</span><span class="en">Skill pack</span></h3>
-        <p><span class="zh">已交付 20 个程序技能。加上 SFRESCO 拟合技能和 EXFOR 实验数据技能，当前共有 22 个。</span><span class="en">Twenty code skills are available. The SFRESCO fitting skill and EXFOR data skill bring the current total to 22.</span></p>
+        <p><span class="zh">仓库已有 26 个技能，其中 20 个负责具体程序。程序技能暂停扩张，下一步先看真实用户会用什么。</span><span class="en">The repository ships 26 skills, including 20 for specific codes. Code-skill expansion is paused until real usage shows what people need next.</span></p>
       </div>
       <div class="phase now">
         <span class="ph">Phase 3 · <span class="zh">核心已完成</span><span class="en">core complete</span></span>
         <h3><span class="zh">知识库</span><span class="en">Knowledge base</span></h3>
-        <p><span class="zh">kb-wiki 已生成 61,167 页内容，包括 61,059 篇论文页和 108 个主题页。引用与语义关系已经写入，后续按新增论文更新。</span><span class="en">kb-wiki contains 61,167 pages: 61,059 paper pages and 108 topic pages. Citation and semantic links are included; later releases will update them as papers are added.</span></p>
+        <p><span class="zh">kb-wiki 现有 61,167 页，包括 61,059 个论文页和 108 个主题页。引用和语义关系已经写入，今后随新增论文更新。</span><span class="en">kb-wiki contains 61,167 pages: 61,059 paper pages and 108 topic pages. Citation and semantic links are included; later releases will update them as papers are added.</span></p>
       </div>
       <div class="phase now">
-        <span class="ph">Phase 4 · <span class="zh">进行中</span><span class="en">in progress</span></span>
-        <h3><span class="zh">开源发行</span><span class="en">Open-source release</span></h3>
-        <p><span class="zh">当前的重点。技能与知识库已经可以手动接入，一键安装脚本、默认模型配置和学生文档还没写完。</span><span class="en">The current focus. Skills and the knowledge base can already be wired up by hand; the one-command installer, the default model configuration, and the student documentation are not finished yet.</span></p>
+        <span class="ph">Phase 4 · <span class="zh">正在做</span><span class="en">in progress</span></span>
+        <h3><span class="zh">公开测试</span><span class="en">Public beta</span></h3>
+        <p><span class="zh">v0.1.0 已经发布。全新机器上的安装测试还不够，目前只有 FRESCO 真正从空缓存完整跑过安装流程。</span><span class="en">v0.1.0 is released. Cold-start installation coverage is still thin; only FRESCO has completed the full install path from an empty cache.</span></p>
       </div>
     </div>
   </div>
@@ -1023,12 +1026,12 @@ footer { border-top: 1px solid var(--hairline); padding: 44px 0 60px; }
     <img class="paper-wordmark" src="assets/wordmark.png" alt="FUSION">
     <p class="eyebrow"><span class="zh">开源 · Open source</span><span class="en">Open source</span></p>
     <h2>
-      <span class="zh">目前可以直接试用</span>
+      <span class="zh">现在就能试</span>
       <span class="en">Available for testing now</span>
     </h2>
     <p class="sec-lede">
-      <span class="zh">作者已在日常研究中使用这个版本，外部测试刚刚开始。安装脚本和学生文档尚未完成，技能与知识库可以按仓库中的命令手动接入。请优先报告安装失败和看似合理但实际错误的结果。</span>
-      <span class="en">The author uses this version in daily research; external testing has just begun. The installer and student documentation are not finished, but the skills and corpus can be connected manually with the commands in the repository. Installation failures and plausible but incorrect results are the highest-priority reports.</span>
+      <span class="zh">作者已经在日常研究中使用这个版本，外部测试才刚开始。克隆仓库并下载命令行程序后，26 个技能和离线知识库会自动加载。最需要反馈的是安装失败，以及那些看着合理却实际有错的结果。</span>
+      <span class="en">The author uses this version in daily research; external testing has just begun. After cloning the repository and downloading the CLI, all 26 skills and the offline knowledge base load automatically. Installation failures and plausible but incorrect results are the highest-priority reports.</span>
     </p>
     <div class="cta-row" style="justify-content:center">
       <a class="cta cta-primary" href="https://github.com/jinleiphys/FUSION" target="_blank" rel="noopener">
@@ -1050,9 +1053,9 @@ footer { border-top: 1px solid var(--hairline); padding: 44px 0 60px; }
       </div>
     </div>
     <div class="foot-meta">
-      <span class="zh">基于 <a href="https://github.com/anomalyco/opencode" target="_blank" rel="noopener">opencode</a>（MIT）的品牌分叉，与 opencode 项目无隶属关系。</span>
-      <span class="en">A rebrand fork of <a href="https://github.com/anomalyco/opencode" target="_blank" rel="noopener">opencode</a> (MIT). Not affiliated with the opencode project.</span><br>
-      <span class="zh">语料版权归各论文作者与 arXiv 所有；公开产物不再分发 arXiv 全文。</span>
+      <span class="zh">FUSION 使用 MIT 许可；引擎基于 <a href="https://github.com/anomalyco/opencode" target="_blank" rel="noopener">opencode</a>（MIT）的品牌分叉，与 opencode 项目无隶属关系。</span>
+      <span class="en">FUSION is MIT-licensed. Its engine is a rebrand fork of <a href="https://github.com/anomalyco/opencode" target="_blank" rel="noopener">opencode</a> (MIT), with no affiliation to the opencode project.</span><br>
+      <span class="zh">论文版权归原作者；公开产物不再分发 arXiv 全文。</span>
       <span class="en">Papers remain © their authors and arXiv; public artifacts do not redistribute arXiv full text.</span><br>
       <a href="map.html"><span class="zh">语料地图</span><span class="en">Corpus map</span></a> ·
       <a href="https://github.com/jinleiphys/FUSION" target="_blank" rel="noopener">jinleiphys/FUSION</a> ·
