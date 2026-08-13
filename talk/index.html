@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FUSION 报告 · Talk</title>
+<meta name="description" content="FUSION：让 agent 正确驱动核物理程序。中英双版报告幻灯片。">
+<link rel="icon" href="../assets/logo-nav.png">
+<style>
+:root {
+  --void: #05080f;
+  --chamber: #0a101d;
+  --chamber-2: #0d1524;
+  --ink: #e9eef8;
+  --dim: #8fa0b8;
+  --faint: #5b6a80;
+  --plasma: #52b7ff;
+  --core: #ffa028;
+  --hairline: rgba(140, 170, 215, 0.13);
+  --hairline-2: rgba(140, 170, 215, 0.22);
+  --disp: "Avenir Next", "Futura", "Helvetica Neue", "PingFang SC", "Noto Sans SC", system-ui, sans-serif;
+  --body: system-ui, -apple-system, "PingFang SC", "Noto Sans SC", "Segoe UI", sans-serif;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+body {
+  min-height: 100vh;
+  background: var(--void);
+  color: var(--ink);
+  font-family: var(--body);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 24px;
+}
+.wrap { width: 100%; max-width: 760px; }
+.mark {
+  font-family: var(--disp);
+  font-size: clamp(28px, 6vw, 42px);
+  letter-spacing: 0.2em;
+  text-align: center;
+  margin: 0 0 14px;
+}
+.mark .l { color: var(--plasma); }
+.mark .r { color: var(--core); }
+h1 {
+  font-family: var(--disp);
+  font-weight: 500;
+  font-size: clamp(19px, 3.4vw, 25px);
+  line-height: 1.5;
+  text-align: center;
+  margin: 0 0 10px;
+}
+.sub {
+  text-align: center;
+  color: var(--dim);
+  font-size: 14.5px;
+  line-height: 1.8;
+  margin: 0 auto 42px;
+  max-width: 500px;
+}
+.cards { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+@media (max-width: 620px) { .cards { grid-template-columns: 1fr; } }
+a.card {
+  display: block;
+  background: var(--chamber);
+  border: 1px solid var(--hairline);
+  border-radius: 12px;
+  padding: 26px 24px;
+  text-decoration: none;
+  color: inherit;
+  transition: border-color .18s ease, background .18s ease, transform .18s ease;
+}
+a.card:hover {
+  border-color: var(--hairline-2);
+  background: var(--chamber-2);
+  transform: translateY(-2px);
+}
+.lang {
+  font-family: var(--disp);
+  font-size: 11.5px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--plasma);
+  margin-bottom: 12px;
+}
+.title { font-size: 17px; line-height: 1.55; margin-bottom: 10px; }
+.desc { color: var(--faint); font-size: 13px; line-height: 1.75; }
+.cta { margin-top: 16px; font-size: 13px; color: var(--dim); }
+.foot {
+  margin-top: 44px;
+  text-align: center;
+  color: var(--faint);
+  font-size: 12.5px;
+  line-height: 1.9;
+}
+.foot a { color: var(--dim); text-decoration: none; border-bottom: 1px solid var(--hairline); }
+.foot a:hover { color: var(--plasma); border-bottom-color: var(--plasma); }
+.hint { margin-top: 6px; }
+kbd {
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  font-size: 11.5px;
+  background: var(--chamber-2);
+  border: 1px solid var(--hairline);
+  border-radius: 4px;
+  padding: 1px 5px;
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="mark">FU <span class="l">&#9656;</span><span class="r">&#9666;</span> SION</div>
+
+  <h1>让 agent 正确驱动核物理程序</h1>
+  <p class="sub">通用 agent 会写出一份能跑、但半径约定错误的 FRESCO 输入卡。截面错 20%，没有任何东西警告你。这份报告讲这个问题，以及一种解法。</p>
+
+  <div class="cards">
+
+    <a class="card" href="zh/">
+      <div class="lang">中文</div>
+      <div class="title">让 agent 正确驱动核物理程序</div>
+      <div class="desc">45 分钟，29 张正文加 5 张备用。含现场演示与可信度分级。</div>
+      <div class="cta">打开幻灯片 &rarr;</div>
+    </a>
+
+    <a class="card" href="en/">
+      <div class="lang">English</div>
+      <div class="title">Getting an agent to drive nuclear-physics codes</div>
+      <div class="desc">45 minutes, 29 main slides plus 5 backup. Live demo and the evidence tiers.</div>
+      <div class="cta">Open slides &rarr;</div>
+    </a>
+
+  </div>
+
+  <div class="foot">
+    <a href="../">vibeinscience.com</a>　·　<a href="https://github.com/jinleiphys/FUSION">github.com/jinleiphys/FUSION</a>　·　金磊 Jin Lei
+    <div class="hint">幻灯片里按 <kbd>f</kbd> 全屏，<kbd>o</kbd> 看总览，<kbd>&larr;</kbd> <kbd>&rarr;</kbd> 翻页</div>
+  </div>
+
+</div>
+</body>
+</html>

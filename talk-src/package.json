@@ -1,0 +1,21 @@
+{
+  "name": "fusion-talk",
+  "private": true,
+  "scripts": {
+    "dev": "slidev slides-zh.md --open",
+    "dev:en": "slidev slides-en.md --open",
+    "present": "slidev slides-zh.md --presenter",
+    "present:en": "slidev slides-en.md --presenter",
+    "build": "npm run build:zh && npm run build:en",
+    "build:zh": "slidev build slides-zh.md --base /talk/zh/ --out dist/zh && rm -rf ../talk/zh && mkdir -p ../talk && cp -r dist/zh ../talk/zh",
+    "build:en": "slidev build slides-en.md --base /talk/en/ --out dist/en && rm -rf ../talk/en && mkdir -p ../talk && cp -r dist/en ../talk/en",
+    "pdf": "slidev export slides-zh.md --output fusion-talk-zh.pdf && slidev export slides-en.md --output fusion-talk-en.pdf"
+  },
+  "dependencies": {
+    "@slidev/cli": "^51.8.2",
+    "@slidev/theme-seriph": "^0.25.0"
+  },
+  "devDependencies": {
+    "playwright-chromium": "^1.62.1"
+  }
+}

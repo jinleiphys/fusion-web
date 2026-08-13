@@ -1,0 +1,1 @@
+import{o as s,e as t,g as o,i as a}from"../modules/vue-Bf8_Q_ty.js";import{u as c}from"./context-COVlDTRl.js";const r={class:"slidev-layout fact"},_={class:"my-auto"},m={__name:"fact",setup(l){return c(),(e,n)=>(s(),t("div",r,[o("div",_,[a(e.$slots,"default")])]))}};export{m as _};

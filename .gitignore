@@ -1,3 +1,6 @@
 __pycache__/
 *.pyc
 .DS_Store
+talk-src/node_modules/
+talk-src/dist/
+talk-src/*.pdf

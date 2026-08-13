@@ -1,0 +1,391 @@
+@import './fonts.css';
+
+/* =============================================================
+   Kami Style — warm parchment canvas, ink-blue accent, serif-led
+   Adapted from the Kami print design system for Slidev decks.
+   Principles: parchment not white, single accent, warm grays only,
+   serif carries hierarchy, no italic, no hard drop shadows.
+   ============================================================= */
+
+:root {
+  /* Surface — parchment, never pure white */
+  --paper-base:    #f5f4ed;   /* page background */
+  --paper-ivory:   #faf9f5;   /* lifted card */
+  --paper-sand:    #e8e6dc;   /* interactive surface */
+
+  /* Single chromatic accent (≤5% of surface area) */
+  --ink-blue:      #1B365D;
+  --ink-blue-light:#2D5A8A;
+  --ink-tint:      #E4ECF5;   /* solid, not rgba — matches Kami tag bg */
+
+  /* Warm neutral text stack (R ≥ G > B) */
+  --near-black:    #141413;
+  --dark-warm:     #3d3d3a;
+  --charcoal:      #4d4c48;
+  --olive:         #5e5d59;
+  --stone:         #87867f;
+
+  /* Warm borders */
+  --border-cream:  #e8e5da;
+  --border-warm:   #e0ddd2;
+  --border-soft:   #e5e3d8;
+
+  /* Ring / whisper shadow — no hard drops */
+  --ring-warm:     #d1cfc5;
+  --ring-deep:     #c2c0b6;
+
+  /* Narrative semantics — warm-restrained, no cool grays */
+  --color-gap:        #b53333;   /* deep warm red */
+  --color-gap-bg:     #f3e6e0;   /* warm rose parchment */
+  --color-idea:       var(--ink-blue);
+  --color-idea-bg:    var(--ink-tint);
+  --color-evidence:   #4a6b3a;   /* moss olive-green, warm */
+  --color-evidence-bg:#e9ead9;   /* warm mint-sand */
+}
+
+/* ====== SLIDE SURFACE ====== */
+.slidev-layout {
+  background: var(--paper-base) !important;
+  color: var(--near-black);
+  font-family: "Newsreader", "Source Serif 4", "Source Serif Pro",
+               "TsangerJinKai02", "Source Han Serif SC", "Noto Serif CJK SC",
+               "Songti SC", Georgia, "Times New Roman", serif;
+  font-weight: 400;
+  letter-spacing: 0;
+  overflow-y: auto !important;
+}
+
+/* Kill Seriph theme dark overlays on cover / intro / section layouts */
+.slidev-layout::before,
+.slidev-layout::after {
+  background: none !important;
+  background-image: none !important;
+  display: none !important;
+}
+
+/* No italic anywhere — Kami invariant */
+.slidev-layout em,
+.slidev-layout i,
+.slidev-layout cite {
+  font-style: normal;
+  color: var(--dark-warm);
+}
+
+/* ====== TYPOGRAPHY ====== */
+.slidev-layout h1,
+.slidev-layout h2,
+.slidev-layout h3,
+.slidev-layout h4 {
+  color: var(--near-black);
+  font-weight: 500;      /* serif weight locked at 500, no synthetic bold */
+  letter-spacing: 0;
+  font-style: normal;
+}
+
+.slidev-layout h1 {
+  line-height: 1.15;
+  border-left: 3px solid var(--ink-blue);
+  padding-left: 0.7em;
+}
+
+.slidev-layout h2 {
+  line-height: 1.22;
+  color: var(--dark-warm);
+}
+
+.slidev-layout h3 {
+  line-height: 1.30;
+  color: var(--charcoal);
+}
+
+.slidev-layout p,
+.slidev-layout li {
+  line-height: 1.52;    /* reading body 1.5-1.55 */
+  color: var(--near-black);
+}
+
+.slidev-layout strong {
+  font-weight: 500;
+  color: var(--ink-blue);
+}
+
+.slidev-layout a {
+  color: var(--ink-blue);
+  border-bottom: 1px solid var(--ink-blue-light);
+  text-decoration: none;
+}
+
+.slidev-layout code {
+  font-family: "JetBrains Mono", "SF Mono", Consolas, Monaco,
+               "TsangerJinKai02", "Source Han Serif SC", monospace;
+  background: var(--paper-sand);
+  color: var(--near-black);
+  padding: 0.1em 0.35em;
+  border-radius: 3px;
+  font-size: 0.92em;
+}
+
+.slidev-layout pre {
+  background: var(--paper-ivory);
+  border: 1px solid var(--border-cream);
+  border-left: 3px solid var(--ink-blue);
+  border-radius: 4px;
+  padding: 0.9rem 1.1rem;
+  box-shadow: 0 0 0 1px var(--ring-warm) inset;
+}
+
+/* ====== UI / LABEL CLASSES — sans for small labels, overlines ====== */
+.ui-label,
+.eyebrow,
+.meta {
+  font-family: "Inter", -apple-system, BlinkMacSystemFont,
+               "Helvetica Neue", "PingFang SC", "Microsoft YaHei", sans-serif;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-size: 0.72rem;
+  color: var(--olive);
+}
+
+/* ====== COVER / TITLE LAYOUT ====== */
+.slidev-layout.cover,
+.slidev-layout.intro {
+  background: var(--paper-base);
+}
+
+.slidev-layout.cover h1 {
+  font-size: 3.2rem;
+  font-weight: 500;
+  line-height: 1.12;
+  border-left: none;
+  padding-left: 0;
+  color: var(--near-black);
+  position: relative;
+}
+
+.slidev-layout.cover h1::after {
+  content: "";
+  display: block;
+  width: 3.5rem;
+  height: 2px;
+  background: var(--ink-blue);
+  margin: 1.1rem auto 0;   /* auto horiz margins so the accent centers under a text-center cover */
+}
+
+.slidev-layout.cover p {
+  color: var(--olive);
+  font-size: 1.05rem;
+}
+
+/* ====== SECTION DIVIDER ====== */
+.slidev-layout.section {
+  background: var(--paper-ivory);
+}
+.slidev-layout.section h1 {
+  color: var(--ink-blue);
+  border-left: 3px solid var(--ink-blue);
+}
+
+/* ====== FACT / CENTER LAYOUT ====== */
+.slidev-layout.fact h1,
+.slidev-layout.center h1 {
+  color: var(--ink-blue);
+  border-left: none;
+  padding-left: 0;
+}
+
+/* ====== CARDS — ivory on parchment, ring shadow not drop shadow ====== */
+.kami-card {
+  background: var(--paper-ivory);
+  border: 1px solid var(--border-cream);
+  border-radius: 4px;
+  padding: 1.1rem 1.3rem;
+  box-shadow: 0 0 0 1px var(--ring-warm);
+  color: var(--near-black);
+}
+
+.kami-card-accent {
+  background: var(--paper-ivory);
+  border: 1px solid var(--border-warm);
+  border-left: 3px solid var(--ink-blue);
+  border-radius: 3px;
+  padding: 1.1rem 1.3rem;
+  box-shadow: 0 0 0 1px var(--ring-warm);
+}
+
+/* ====== SEMANTIC CALLOUT BOXES (Gap / Idea / Evidence) ======
+   Same restrained vocabulary as Kami: warm backgrounds, thin colored
+   left bar, no glow, no rgba, no gradient. */
+
+.box-gap {
+  background: var(--color-gap-bg);
+  border: 1px solid var(--border-warm);
+  border-left: 3px solid var(--color-gap);
+  border-radius: 3px;
+  padding: 0.9rem 1.2rem;
+  color: var(--near-black);
+}
+
+.box-idea {
+  background: var(--color-idea-bg);
+  border: 1px solid var(--border-warm);
+  border-left: 3px solid var(--color-idea);
+  border-radius: 3px;
+  padding: 0.9rem 1.2rem;
+  color: var(--near-black);
+}
+
+.box-evidence {
+  background: var(--color-evidence-bg);
+  border: 1px solid var(--border-warm);
+  border-left: 3px solid var(--color-evidence);
+  border-radius: 3px;
+  padding: 0.9rem 1.2rem;
+  color: var(--near-black);
+}
+
+/* ====== TAKEAWAY — editorial underline, no color block ====== */
+.takeaway {
+  font-weight: 500;
+  color: var(--ink-blue);
+  border-bottom: 1.5px solid var(--ink-blue);
+  display: inline;
+  padding-bottom: 2px;
+  font-style: normal;
+}
+
+/* ====== TAGS — SOLID hex, never rgba (WeasyPrint double-rect trap) ====== */
+.tag {
+  display: inline-block;
+  background: var(--ink-tint);
+  color: var(--ink-blue);
+  font-family: "Inter", sans-serif;
+  font-size: 0.72rem;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  padding: 0.15rem 0.55rem;
+  border-radius: 2px;
+}
+
+/* ====== FIGURES ====== */
+.kami-img {
+  height: 20rem;
+  display: block;
+  margin: 0 auto;
+  border-radius: 3px;
+  border: 1px solid var(--border-warm);
+  box-shadow: 0 0 0 1px var(--ring-warm);
+  background: var(--paper-ivory);
+}
+
+.fig-caption {
+  font-family: "Inter", "PingFang SC", sans-serif;
+  font-size: 0.78rem;
+  color: var(--olive);
+  margin-top: 0.55rem;
+  text-align: center;
+  letter-spacing: 0;
+  font-style: normal;
+}
+
+/* ====== EQUATION HIGHLIGHT ====== */
+.eq-highlight {
+  background: var(--paper-ivory);
+  border: 1px solid var(--border-cream);
+  border-left: 3px solid var(--ink-blue);
+  border-radius: 3px;
+  padding: 0.9rem 1.2rem;
+  box-shadow: 0 0 0 1px var(--ring-warm);
+}
+
+/* ====== BLOCKQUOTE — editorial bar, warm gray ====== */
+.slidev-layout blockquote {
+  border-left: 2px solid var(--border-warm);
+  color: var(--charcoal);
+  padding: 0.2rem 0 0.2rem 1rem;
+  font-style: normal;
+}
+
+/* ====== TABLES ====== */
+.slidev-layout table {
+  border-collapse: collapse;
+  font-size: 0.92rem;
+}
+.slidev-layout th {
+  font-family: "Inter", sans-serif;
+  font-weight: 500;
+  color: var(--olive);
+  text-align: left;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  font-size: 0.72rem;
+  border-bottom: 1px solid var(--border-warm);
+  padding: 0.45rem 0.8rem;
+}
+.slidev-layout td {
+  color: var(--near-black);
+  border-bottom: 1px dotted var(--border-soft);
+  padding: 0.5rem 0.8rem;
+}
+
+/* ====== LIST MARKERS ====== */
+.slidev-layout ul {
+  list-style: none;
+  padding-left: 0;
+}
+.slidev-layout ul > li {
+  position: relative;
+  padding-left: 1.2em;
+  margin: 0.25em 0;
+}
+.slidev-layout ul > li::before {
+  content: "";
+  position: absolute;
+  left: 0.1em;
+  top: 0.68em;
+  width: 0.4em;
+  height: 1px;
+  background: var(--ink-blue);
+}
+
+/* Hide Slidev goto-dialog sidebar that leaks into production build */
+#slidev-goto-dialog {
+  display: none !important;
+}
+
+/* ====== CJK ADJUSTMENTS ====== */
+.slidev-layout[lang="zh"] p,
+.slidev-layout[lang="zh"] li,
+.slidev-layout[lang="ja"] p,
+.slidev-layout[lang="ja"] li {
+  font-family: "TsangerJinKai02", "Source Han Serif SC", "Noto Serif CJK SC",
+               "Songti SC", serif;
+  line-height: 1.62;  /* CJK body slightly looser for character spacing */
+}
+
+/* ---- talk-local overrides ---- */
+/* prose captions inside cards and text columns read as body text, not figure captions */
+.kami-card .fig-caption,
+.grid .fig-caption {
+  text-align: left;
+}
+
+/* the mark is text, per BRAND.md; the two glyphs are the brand pair, darkened for parchment */
+.fusion-mark {
+  font-family: "Inter", "Avenir Next", "Futura", "PingFang SC", sans-serif;
+  font-weight: 500;
+  letter-spacing: 0.2em;
+  color: var(--ink-blue);
+  line-height: 1.1;
+}
+
+/* nuclide labels must not be uppercased (⁹⁰Zr -> ⁹⁰ZR) */
+.ui-label.nocaps { text-transform: none; letter-spacing: 0.03em; }
+
+/* language switch on the cover; absolute path, so it resolves on the deployed site */
+.lang-switch {
+  border-bottom: 1px solid var(--border-warm);
+  padding-bottom: 2px;
+  text-decoration: none;
+}
+.lang-switch:hover { border-bottom-color: var(--ink-blue); }
