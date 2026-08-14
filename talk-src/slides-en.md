@@ -486,7 +486,7 @@ What to say: read the sentence out loud, pause for two seconds, then switch. Let
 
 Demo notes: check the terminal font size before switching. If nothing substantive happens within 30 seconds, cut to the recording. Do not explain and do not apologise.
 
-Timing: 13:30 to 25:30, twelve minutes.
+Timing: 13:30 to 24:00, ten and a half minutes. The figure slide follows immediately.
 
 Transition: afterwards, come back and say that the interesting part was not that it ran, but what it did after it ran.
 -->
@@ -511,6 +511,45 @@ Four beats to call out while it runs:
 2. It emits ap=0
 3. It runs a step-size and partial-wave convergence check
 4. It queries EXFOR and reports that there is no measurement at 50 MeV
+-->
+
+---
+
+# What the demo produced
+
+<div class="fig-caption" style="text-align:left; margin-bottom:10px">Green is the zero-free-parameter prediction of the KD02 global optical potential, pink points are EXFOR measurements. Each panel was recomputed at its own measured energy.</div>
+
+<img src="./figures/case-kd02-exfor.png" class="kami-img" style="width:100%; max-height:262px; object-fit:contain" />
+
+<div class="grid grid-cols-3 gap-5 mt-4">
+
+<div class="kami-card" style="padding:14px 18px">
+<div class="ui-label nocaps">Left · 24 MeV</div>
+<div style="margin-top:6px; font-size:0.87rem">Enriched <sup>90</sup>Zr, all angles. Median ratio <b>0.89</b></div>
+</div>
+
+<div class="kami-card" style="padding:14px 18px">
+<div class="ui-label nocaps">Right · 55 MeV</div>
+<div style="margin-top:6px; font-size:0.87rem">Natural Zr, forward angles. χ²/N = <b>0.75</b></div>
+</div>
+
+<div class="kami-card kami-card-accent" style="padding:14px 18px">
+<div class="ui-label nocaps">Middle · 50 MeV</div>
+<div style="margin-top:6px; font-size:0.87rem"><b>No panel, nothing measured at that energy</b></div>
+</div>
+
+</div>
+
+<!--
+Central message: the demo produced more than a curve. It also produced the sentence "there is no data here".
+
+What to say: describe the figure first, zero free parameters, neither energy fitted. Then move to the third card: the task named 50 MeV, EXFOR has nothing at 50 MeV, so it recomputed at the two energies that do have measurements and reported the gap as part of the answer.
+
+That is what someone doing research would do at this step: hand back the absence as a result rather than quietly substituting the nearest energy. Hold this slide an extra ten seconds.
+
+Timing: 24:00 to 25:30, immediately after the demo.
+
+Transition: which leaves the question of why you should believe that green curve.
 -->
 
 ---
@@ -1121,6 +1160,40 @@ layout: section
 ---
 
 # Backup
+
+---
+
+# Every check run on n+<sup>90</sup>Zr
+
+<div class="mt-4" style="font-size:0.83rem">
+
+| Check | Question | Result |
+|---|---|---|
+| `omp.py` deck vs hand-built deck | did the generator write it right | σ<sub>R</sub> = 1301.64017 mb, identical |
+| Radial step halved twice | has it converged | stable to 9 figures |
+| Matching radius, l<sub>max</sub> doubled | is the cutoff far enough | unchanged |
+| COLOSS vs FRESCO | do two implementations agree | 1299.188 vs 1299.191 mb, 6 figures |
+| Setting W = 0 | is flux conserved | absorption vanishes exactly |
+| Against EXFOR | how far from experiment | 0.89 median at 24 MeV, χ²/N = 0.75 at 55 |
+| Against 39 pinned values | are the parameters right | KD02 to 7 digits, CH89 exact |
+
+</div>
+
+<div class="box-idea mt-4" style="font-size:0.9rem">
+
+**1301.640 and 1299.19 are not comparable.** Two runs, different configurations: the first is the end-to-end result for the full KD02 potential, the second pair is two solvers checked against each other in one common configuration. Each row answers its own question. No row is ground truth for the others.
+
+</div>
+
+<!--
+This slide exists to answer one question: someone who has read the project website will have seen 1301.640 mb given as the final result, while slide 19 shows the 1299.19 pair.
+
+The answer: these are two different checks, not two versions of one number. The generator-versus-hand-built row proves omp.py wrote the deck correctly. The COLOSS-versus-FRESCO row proves two independent implementations agree. The two runs use different configurations, so the numbers should not match.
+
+If pressed on where the difference comes from: COLOSS's own cross-code benchmark procedure turns the spin-orbit term off, its verification.md states vsov=0.0, because that is the configuration in which the two codes are directly comparable. And 0.19% is the right order for the spin-orbit contribution to a total reaction cross section.
+
+Do not present that as a verified conclusion.
+-->
 
 ---
 

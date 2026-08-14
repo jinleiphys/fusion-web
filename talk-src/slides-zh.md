@@ -486,7 +486,7 @@ layout: section
 
 演示注意：屏幕切过去之前先确认终端字号足够大。如果 30 秒内没有实质进展，直接切录屏，不要解释，不要道歉。
 
-时间：13:30 到 25:30，共 12 分钟。
+时间：13:30 到 24:00，共 10 分半。演示后面紧跟着产出图那一页。
 
 转场：演示结束后回到这里说，刚才那一步里最值得看的其实不是它跑通了，是它在跑通之后做了什么。
 -->
@@ -511,6 +511,45 @@ layout: center
 2. 它写出 ap=0
 3. 它做了步长和分波数的收敛检查
 4. 它去查 EXFOR，然后告诉你 50 MeV 没有数据
+-->
+
+---
+
+# 演示产出的那张图
+
+<div class="fig-caption" style="text-align:left; margin-bottom:10px">绿线是 KD02 全局光学势的零自由参数预测，粉点是 EXFOR 实测。两个面板各自按它的实验能量重新算过。</div>
+
+<img src="./figures/case-kd02-exfor.png" class="kami-img" style="width:100%; max-height:262px; object-fit:contain" />
+
+<div class="grid grid-cols-3 gap-5 mt-4">
+
+<div class="kami-card" style="padding:14px 18px">
+<div class="ui-label nocaps">左 · 24 MeV</div>
+<div style="margin-top:6px; font-size:0.87rem">富集 <sup>90</sup>Zr，全角度。中位比 <b>0.89</b></div>
+</div>
+
+<div class="kami-card" style="padding:14px 18px">
+<div class="ui-label nocaps">右 · 55 MeV</div>
+<div style="margin-top:6px; font-size:0.87rem">天然 Zr，只有前角。χ²/N = <b>0.75</b></div>
+</div>
+
+<div class="kami-card kami-card-accent" style="padding:14px 18px">
+<div class="ui-label nocaps">中间 · 50 MeV</div>
+<div style="margin-top:6px; font-size:0.87rem"><b>没有这一格，那个能量没有测量</b></div>
+</div>
+
+</div>
+
+<!--
+中心信息：演示的产物不只是一条曲线，还包括一句"这里没有数据"。
+
+讲什么：先讲图本身，零自由参数，两个能量都不是拟合出来的。然后把重点放到第三张卡上：任务给的是 50 MeV，EXFOR 里 50 MeV 什么都没有，所以它改到两个真有数据的能量重算，并且如实报告这个空缺。
+
+一个会做研究的人在这一步会做的事，正是把"没有数据"当成结果的一部分交出来，而不是找一个最近的能量假装那就是。这一页值得多停十秒。
+
+时间：24:00 到 25:30，接在演示后面。
+
+转场：讲完这张图，问题就变成了，凭什么信它给的这条绿线。
 -->
 
 ---
@@ -1121,6 +1160,40 @@ layout: section
 ---
 
 # 备用材料
+
+---
+
+# n+<sup>90</sup>Zr 上一共做了哪些检查
+
+<div class="mt-4" style="font-size:0.83rem">
+
+| 检查 | 它回答的问题 | 结果 |
+|---|---|---|
+| `omp.py` 生成的 deck 对手写 deck | 生成器有没有写错 | σ<sub>R</sub> = 1301.64017 mb，完全一致 |
+| 积分步长连续减半两次 | 离散化收敛了吗 | 稳定到 9 位有效数字 |
+| 匹配半径与分波数加倍 | 截断够不够远 | 结果不变 |
+| COLOSS 对 FRESCO | 两个独立实现一致吗 | 1299.188 vs 1299.191 mb，6 位 |
+| 令 W = 0 | 通量守恒吗 | 吸收精确归零 |
+| 对 EXFOR | 跟实验差多少 | 24 MeV 中位比 0.89；55 MeV χ²/N = 0.75 |
+| 对 39 个钉住的参数值 | 势参数本身对不对 | KD02 到 7 位，CH89 到机器精度 |
+
+</div>
+
+<div class="box-idea mt-4" style="font-size:0.9rem">
+
+**1301.640 和 1299.19 不能直接相比**，它们来自配置不同的两次运行：前者是完整 KD02 的端到端结果，后者那一对是两个求解器在同一配置下的互检。每一行各自回答一个问题，没有哪一行是"标准答案"。
+
+</div>
+
+<!--
+这一页专门用来回答一个问题：如果有人读过项目网站，会看到 1301.640 mb 被写成最终结果，而正文第 19 页给的是 1299.19 那一对。
+
+答法：这是两次不同的检查，不是同一个数的两个版本。生成器对手写 deck 那一行证明的是 omp.py 没写错；COLOSS 对 FRESCO 那一行证明的是两个独立实现一致。两次运行的配置不同，所以数值不该相同。
+
+如果继续追问差别来自哪里：COLOSS 自己的跨程序对比流程是把自旋轨道关掉跑的，它的 verification.md 里写明了 vsov=0.0，因为那是两个程序能直接对比的配置。0.19% 也正是自旋轨道对总反应截面的量级。
+
+不要把这句话说成已经核实过的结论。
+-->
 
 ---
 
