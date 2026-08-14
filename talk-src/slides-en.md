@@ -1,7 +1,7 @@
 ---
 theme: seriph
-title: "FUSION: getting an agent to drive nuclear-physics codes correctly"
-info: "A general agent writes a plausible FRESCO deck with the wrong radius convention. FUSION fixes each code's domain knowledge, and a benchmark with a stated tolerance, into a skill."
+title: "FUSION: getting an agent to run nuclear-physics codes correctly"
+info: "A general agent writes a plausible FRESCO deck with the wrong radius convention. FUSION puts code knowledge and a benchmark with a stated tolerance into an auditable skill."
 author: "Jin Lei"
 background: none
 favicon: '/assets/logo-nav.png'
@@ -21,10 +21,10 @@ drawings:
 <div class="fusion-mark" style="font-size:3.2rem">FU <span style="letter-spacing:-0.04em"><span style="color:#2f7fb8">&#9656;</span><span style="color:#c8791a">&#9666;</span></span> SION</div>
 </div>
 
-# Getting an agent to drive nuclear-physics codes
+# Getting an agent to run nuclear-physics codes correctly
 
 <div style="text-align:center; margin-top: 6px">
-<p style="font-size:1.05rem">and being able to show that it did not get the number wrong</p>
+<p style="font-size:1.05rem">with evidence that the result survived a check</p>
 </div>
 
 <div style="text-align:center; margin-top: 46px">
@@ -36,20 +36,20 @@ drawings:
 </div>
 
 <!--
-Central message: this talk is not a software demo. It is about a verifiability problem and one way of solving it.
+Central message: I am not presenting software features. I am asking how to know that a calculation did not fail silently.
 
-Opening: what I usually present here is reaction theory. This is the other face of the same problem. We all run codes written by other people, and deciding whether the output is right has never been made systematic.
+Opening: I usually speak about reaction theory. Today I am taking a different route. Most nuclear-physics codes were written by someone else. Getting one to run is not enough; I still need to know whether its result is right. Until now, that judgement has stayed in people's heads rather than in a checkable procedure.
 
 Timing: 0:00 to 0:40.
 
-Transition: let me start with a question.
+Transition: start with what happens when someone runs an unfamiliar code for the first time.
 -->
 
 ---
 layout: center
 ---
 
-# Running a nuclear-physics code you have never run takes four steps
+# A first run of an unfamiliar nuclear-physics code has four stages
 
 <div class="grid grid-cols-4 gap-5 mt-12">
 
@@ -79,16 +79,16 @@ layout: center
 
 </div>
 
-<div class="takeaway mt-12">Only the fourth step is physics.</div>
+<div class="takeaway mt-12">The first three manage the code. The fourth tests the physics.</div>
 
 <!--
-Central message: most of the work of running a code is not physics, and the one step that is has no tool support at all.
+Central message: the first three stages announce failure. The fourth does not.
 
-What to say: ask the audience to recall their first FRESCO or TALYS run. The first three steps cost time. They hurt, but they are bounded, and when you are stuck you know you are stuck. The fourth is different: no error, no progress bar, no signal of any kind.
+What to say: a first FRESCO or TALYS run takes time because the source, build, and input format are unfamiliar. But when one of those stages fails, you know it. A wrong result followed by a clean exit is different.
 
 Timing: 0:40 to 2:00.
 
-Transition: the difference between the first three and the fourth is not one of difficulty.
+Transition: the difference is whether failure exposes itself.
 -->
 
 ---
@@ -104,18 +104,18 @@ layout: fact
 </div>
 
 <!--
-Central message: the only dangerous failure mode is the one that does not announce itself.
+Central message: an unannounced failure is the dangerous one.
 
-What to say: this is the pivot of the whole talk. Failures in the first three steps are self-reporting. Failure in the fourth is silent. And in our field most input errors are of the fourth kind: the code accepts the deck, finishes, and returns something with the right dimensions, a sensible shape, and the right order of magnitude.
+What to say: compilation stops. An unreadable input also stops. The hard case is different: the code accepts the deck, finishes normally, and returns a result with the right units, a sensible shape, and the right order of magnitude.
 
 Timing: 2:00 to 3:00.
 
-Transition: here is the specific one that every student in my group hits in their first year.
+Transition: here is a trap that new group members can easily hit.
 -->
 
 ---
 
-# One concrete trap: the radius convention
+# A trap that still lets the code finish: the radius convention
 
 <div class="grid grid-cols-2 gap-8 mt-8">
 
@@ -143,25 +143,25 @@ R = r0 * At^1/3
 
 <div class="box-idea mt-8">
 
-The fix is one token: `ap=0` on the `type=0` line. That line is mandatory even for a neutron, because declaring the radius convention is exactly what it does.
+Only one change is needed: write `ap=0` on the `type=0` line. A neutron run still needs that line because it declares the radius convention.
 
 </div>
 
-<div class="takeaway mt-8">This is not a disagreement about physics. It is two notations meeting inside one input file.</div>
+<div class="takeaway mt-8">The physics is unchanged. The two radius conventions were not joined correctly.</div>
 
 <!--
-Central message: a purely notational mismatch is enough to break the calculation, and it appears in no paper.
+Central message: both sides are correct on their own, yet the combined input is wrong.
 
-What to say: Koning and Delaroche of course state how their radii are defined. The FRESCO manual of course states how it builds radii. Both facts are public. No document anywhere tells you that joining them requires ap=0. That knowledge lives in the heads of people who have used both.
+What to say: Koning and Delaroche state their radius definition, and the FRESCO manual states how the code builds a radius. Both rules are public, but the original documents do not put the handoff in one place. The missing sentence is `ap=0`.
 
 Timing: 3:00 to 4:30.
 
-Transition: so what happens if you leave that token out.
+Transition: what happens when that sentence is omitted.
 -->
 
 ---
 
-# What happens if you leave it out
+# Omit `ap=0` and the code still reports success
 
 <div class="grid grid-cols-3 gap-6 mt-10">
 
@@ -187,25 +187,23 @@ Transition: so what happens if you leave that token out.
 
 <div v-click class="box-gap mt-10">
 
-This one code has at least two more of the same kind. Put the surface term `W_d` in `p1` of the `type=2` line instead of `p4` and it becomes a real surface well, so absorption quietly drops. Omit the `type=0` line and the radius convention is never declared at all.
+This code has at least two more silent errors. Put the surface term `W_d` in `p1` of the `type=2` line instead of `p4` and it becomes a real surface well, reducing the absorption. Omit the entire `type=0` line and no radius convention is declared.
 
 </div>
 
 <!--
-Central message: the cost of the error is 22%, and every observable signal says "success".
+Central message: the radii are about 22% too large, while every visible signal says "success".
 
-What to say: dwell on 22% for a moment. It is not an order of magnitude, which anyone would catch. It is not one part in ten thousand, which nobody would care about. It sits exactly in the band where you will believe it and it will ruin your conclusion.
-
-If there are experimentalists present: that is larger than the systematic uncertainty on many measurements.
+What to say: pause here. A 22% radius error is not an order-of-magnitude failure that is obvious at a glance, and it is not a negligible last digit. The code can still return a smooth, plausible angular distribution.
 
 Timing: 4:30 to 6:00.
 
-Transition: now put a general-purpose AI into this situation.
+Transition: now see what a general agent does with the same task.
 -->
 
 ---
 
-# A general agent fails here specifically
+# A general agent can return a false success here
 
 <div class="grid gap-8 mt-8" style="grid-template-columns: 1fr 1fr;">
 
@@ -213,12 +211,12 @@ Transition: now put a general-purpose AI into this situation.
 
 <div class="box-gap">
 
-Ask one for a FRESCO deck and it hands you a file that **looks entirely correct**. The deck runs. The cross section is 20% wrong. Nothing warns you.
+Ask for a FRESCO deck and it returns a file that **looks entirely correct**. The deck runs, the cross section is 20% wrong, and no warning appears.
 
 </div>
 
 <div class="fig-caption" style="margin-top:20px; line-height:1.8">
-It is not that it does not know the physics. It recites Koning and Delaroche better than I do, and it knows the FRESCO namelist structure. What it lacks is the seam, which was never written down anywhere.
+It knows the Koning-Delaroche formula and the FRESCO namelist. What is missing is the sentence that joins those two rules.
 </div>
 
 </div>
@@ -226,10 +224,10 @@ It is not that it does not know the physics. It recites Koning and Delaroche bet
 <div v-click>
 
 <div class="kami-card-accent">
-<div class="ui-label">Why this is worse than a person making the same mistake</div>
+<div class="ui-label">Why this error is hard to catch</div>
 <div style="margin-top:12px; line-height:1.9; font-size:0.95rem">
-A student who makes this mistake gets caught in a group meeting and fixes it.<br><br>
-An agent hands you the result in exactly the same confident register it uses when it is right, and it will do the same thing again next week, because it has nowhere to remember this.
+A student's mistake can be discussed in a group meeting and recorded.<br><br>
+An agent's tone does not change with correctness. Unless the rule enters a reusable document, the next run starts from the same gap.
 </div>
 </div>
 
@@ -238,41 +236,41 @@ An agent hands you the result in exactly the same confident register it uses whe
 </div>
 
 <!--
-Central message: the failure mode of a general agent lands in the most dangerous category, and it does not accumulate experience.
+Central message: a general agent can present a silent failure as a completed task.
 
-What to say: keep the wording careful here. Do not name a model and do not make it sound like mockery. This is not a capability gap. A larger model does the same thing, because what is missing is not reasoning, it is an oral convention that never entered any training corpus.
+What to say: do not name or mock a model. The derivation is already there. The small rule needed where the two conventions meet was never delivered with either code.
 
 Timing: 6:00 to 7:30.
 
-Transition: so the question becomes where that kind of knowledge should live.
+Transition: the remaining question is where that knowledge should live.
 -->
 
 ---
 layout: fact
 ---
 
-# The fix is not a larger model
+# Model size is not the fix
 
 <div style="max-width: 800px; margin: 36px auto 0">
 
 <div class="box-idea">
 
-Write each code's domain knowledge down, together with **one benchmark carrying a stated tolerance**, in a form that can be read, audited, and edited by someone else.
+Write the code knowledge down and add **one benchmark with a stated tolerance**. Other people can read, audit, and edit it.
 
 </div>
 
-<p style="margin-top: 28px; font-size:1rem; line-height:1.85; color: var(--olive)">What is missing is not reasoning. It is the things nobody wrote down: this code's notational conventions, its silent failure modes, and one known answer, so that a person can check that this build reproduces it.</p>
+<p style="margin-top: 28px; font-size:1rem; line-height:1.85; color: var(--olive)">The document must state the notation, the silent failure modes, and one known answer. Then the current build can be checked against it.</p>
 
 </div>
 
 <!--
-Central message: the one sentence the audience must leave with.
+Central message: the main sentence of the talk.
 
-What to say: slow down. The weight is on "a benchmark carrying a stated tolerance". Most people get to the first half on their own; the second half is what separates this from prompt engineering. Without a benchmark you have only changed the way you trust an AI.
+What to say: slow down. The weight is on "a benchmark with a stated tolerance". Writing experience into instructions is not enough. Without a known answer, the user still has to choose whether to trust the output.
 
 Timing: 7:30 to 8:30.
 
-Transition: FUSION is one implementation of that sentence.
+Transition: FUSION follows this rule.
 -->
 
 ---
@@ -287,7 +285,7 @@ Timing: 8:30. Move through quickly.
 
 ---
 
-# One code, one expert skill
+# One expert skill for each code
 
 <div class="grid grid-cols-3 gap-5 mt-10">
 
@@ -298,7 +296,7 @@ Timing: 8:30. Move through quickly.
 
 <div class="kami-card">
 <div class="ui-label">02 Write</div>
-<div class="fig-caption" style="margin-top:10px; line-height:1.7">Generate input in this code's conventions, seams included</div>
+<div class="fig-caption" style="margin-top:10px; line-height:1.7">Generate input in this code's conventions, including the rules where conventions meet</div>
 </div>
 
 <div class="kami-card">
@@ -312,8 +310,8 @@ Timing: 8:30. Move through quickly.
 </div>
 
 <div class="kami-card">
-<div class="ui-label">05 Recognise</div>
-<div class="fig-caption" style="margin-top:10px; line-height:1.7">Know this code's documented silent failure modes</div>
+<div class="ui-label">05 Inspect</div>
+<div class="fig-caption" style="margin-top:10px; line-height:1.7">Check this code's documented silent failure modes</div>
 </div>
 
 <div class="kami-card kami-card-accent">
@@ -323,16 +321,16 @@ Timing: 8:30. Move through quickly.
 
 </div>
 
-<div class="takeaway mt-10">The first five decide whether it is usable. The sixth decides whether you can trust it.</div>
+<div class="takeaway mt-10">The first five make the code usable. The sixth supplies evidence.</div>
 
 <!--
-Central message: a skill is not a prompt. It is a chain from install to verification whose endpoint is a number someone else can re-check.
+Central message: a skill runs from installation to verification and finishes with a number someone else can check.
 
-What to say: stress that step six is not on the same footing as the rest. Any serious wrapper does the first five. The sixth is the extra cost this project agrees to pay, and it is the only step that converts convenience into credibility.
+What to say: the first five answer whether the code is usable. The sixth answers why the result should be believed. The tolerance must appear in the document; "tests passed" is not enough.
 
 Timing: 8:40 to 10:00.
 
-Transition: rather than describe what a skill looks like, here is one.
+Transition: read the source rather than describing it.
 -->
 
 ---
@@ -352,24 +350,24 @@ Transition: rather than describe what a skill looks like, here is one.
 </div>
 
 <div class="grid grid-cols-3 gap-5 mt-8">
-<div v-click class="fig-caption">Plain Markdown and shell. No weights, no binaries</div>
-<div v-click class="fig-caption">Can be reviewed, disputed, and changed by pull request</div>
-<div v-click class="fig-caption">Can be printed and taped to a student's desk</div>
+<div v-click class="fig-caption">Only Markdown and shell, with no weights or binaries</div>
+<div v-click class="fig-caption">Anyone can review it and submit a pull request</div>
+<div v-click class="fig-caption">It can also be printed and given to a new student</div>
 </div>
 
 <!--
-Central message: let the audience see for themselves that this is auditable prose, not a black box.
+Central message: a skill is an ordinary document, not a black box.
 
-What to say: this is the most important slide in part two. The first reaction of a physics audience to AI is "I cannot check it", and this slide answers that head on. Point out that the text stands on its own as teaching material for a new student, with no agent involved.
+What to say: read this source text to the audience. It requires no trust in a model, and a new student can use it without an agent.
 
 Timing: 10:00 to 11:30.
 
-Transition: how many of these exist now.
+Transition: how many such skills exist now.
 -->
 
 ---
 
-# Which codes are covered
+# Which codes are covered now
 
 <div class="mt-6" style="font-size:0.93rem">
 
@@ -387,37 +385,37 @@ Transition: how many of these exist now.
 
 <div class="box-idea">
 
-**20** skills drive a specific code. **6** more: SFRESCO fitting, EXFOR retrieval, offline corpus search, two personal research wikis, and one that sets FUSION up. **26** in total.
+There are **20** skills for specific codes. **6** more cover SFRESCO fitting, EXFOR retrieval, offline corpus search, two personal research wikis, and first-run setup. **26** in total.
 
 </div>
 
 <div class="fig-caption" style="line-height:1.8">
-Admission has exactly three criteria, stated in CLAUDE.md: publicly obtainable, builds from source on the target platform, and has a published paper.<br><br>A skill ships only with an honest benchmark tier.
+Admission has three criteria: publicly obtainable, builds from source on the target platform, and has a published paper.<br><br>No stated benchmark tier means no release.
 </div>
 
 </div>
 
 <!--
-Central message: coverage is organised by physics area, and admission has a bar.
+Central message: the codes are organised by physics problem, and admission has explicit criteria.
 
-What to say: do not read the table. Pick two codes from whatever the audience actually works on.
+What to say: do not read the table. Pick two codes that match the audience, for example FRESCO and COLOSS for reactions or SMASH and vHLLE for heavy ions.
 
 Consistency reminder: 20 means code skills, 26 means all skills. Never mix the two in one sentence.
 
 Timing: 11:30 to 12:30.
 
-Transition: there is a question everyone asks at this point.
+Transition: answer the direct question of whether this is tied to one agent.
 -->
 
 ---
 
-# Not tied to one agent, or to one model
+# The agent and the model can both change
 
 <div class="grid grid-cols-2 gap-8 mt-8">
 
 <div>
 
-<div class="ui-label">All three common agents load them</div>
+<div class="ui-label">Three agent entry points</div>
 
 <div class="mt-4" style="font-size:0.92rem">
 
@@ -429,7 +427,7 @@ Transition: there is a question everyone asks at this point.
 
 </div>
 
-<div class="fig-caption" style="margin-top:16px">Skills are directories, not plugins, so porting costs almost nothing.</div>
+<div class="fig-caption" style="margin-top:16px">The same directory carries `SKILL.md` and `AGENTS.md` entry points.</div>
 
 </div>
 
@@ -437,14 +435,14 @@ Transition: there is a question everyone asks at this point.
 
 <div class="box-idea">
 
-The base is opencode, so it runs on whatever model you can reach: **DeepSeek, Qwen, GLM**, as readily as Claude or GPT.
+The base is opencode, which can connect to different model providers without changing the skill.
 
 </div>
 
 <div class="kami-card" style="margin-top:22px">
-<div class="ui-label">The Phase 0 acceptance test ran on one of those</div>
+<div class="ui-label">Phase 0 acceptance test</div>
 <div style="margin-top:10px; font-size:0.95rem; line-height:1.8">
-On deepseek-chat, independently author a FRESCO deck for n+<sup>90</sup>Zr elastic scattering. It agrees with the reference calculation to <b>4 to 5 significant figures</b>.
+The Phase 0 test used deepseek-chat to write an independent FRESCO deck for n+<sup>90</sup>Zr elastic scattering. It agrees with the reference calculation to <b>4 to 5 significant figures</b>.
 </div>
 </div>
 
@@ -453,13 +451,13 @@ On deepseek-chat, independently author a FRESCO deck for n+<sup>90</sup>Zr elast
 </div>
 
 <!--
-Central message: no dependence on any one vendor's model, and the acceptance test was run on an open Chinese model.
+Central message: the skills do not depend on one model vendor, and Phase 0 was accepted on deepseek-chat.
 
-What to say: answer this before anyone asks. The deeper point is that externalising the domain knowledge into the skill lowers the demand on the model rather than raising it.
+What to say: state the acceptance result directly. The code knowledge lives outside the model, so changing models does not require a new skill.
 
 Timing: 12:30 to 13:30.
 
-Transition: enough description. Let me run it.
+Transition: run it now.
 -->
 
 ---
@@ -480,15 +478,15 @@ Compute n+<sup>90</sup>Zr elastic scattering at 50 MeV with the KD02 global opti
 </div>
 
 <!--
-Central message: one sentence of natural language covers seven jobs: find the parameters, write the deck, compile, run, parse, find the data, plot.
+Central message: one sentence leads to parameter retrieval, input writing, compilation, execution, parsing, data retrieval, and plotting.
 
-What to say: read the sentence out loud, pause for two seconds, then switch. Let the audience notice that it contains no filename, no path, and no parameter.
+What to say: read the sentence, pause for two seconds, then switch. It contains no filename, path, or parameter.
 
 Demo notes: check the terminal font size before switching. If nothing substantive happens within 30 seconds, cut to the recording. Do not explain and do not apologise.
 
 Timing: 13:30 to 24:00, ten and a half minutes. The figure slide follows immediately.
 
-Transition: afterwards, come back and say that the interesting part was not that it ran, but what it did after it ran.
+Transition: after the demo, return here and show what it delivered.
 -->
 
 ---
@@ -504,7 +502,7 @@ layout: center
 <!--
 Placeholder only. Normally you never stop here.
 
-If the demo fails: cut to the recording, say "the network is not cooperating, here is the edited version" and move on. Do not debug live.
+If the demo fails: cut to the recording, say only "the network is not cooperating, here is the edited version", and continue. Do not debug live.
 
 Four beats to call out while it runs:
 1. It sources the KD02 parameters from Koning's own kd02.f already on disk, rather than rewriting the formulas from memory
@@ -515,7 +513,7 @@ Four beats to call out while it runs:
 
 ---
 
-# What the demo produced
+# What the demo delivered
 
 <div class="fig-caption" style="text-align:left; margin-bottom:10px">Green is the zero-free-parameter prediction of the KD02 global optical potential, pink points are EXFOR measurements. Each panel was recomputed at its own measured energy.</div>
 
@@ -541,48 +539,48 @@ Four beats to call out while it runs:
 </div>
 
 <!--
-Central message: the demo produced more than a curve. It also produced the sentence "there is no data here".
+Central message: the demo delivered a curve and the sentence "there is no data here".
 
-What to say: describe the figure first, zero free parameters, neither energy fitted. Then move to the third card: the task named 50 MeV, EXFOR has nothing at 50 MeV, so it recomputed at the two energies that do have measurements and reported the gap as part of the answer.
+What to say: start with the figure. Both energies are zero-free-parameter calculations. Then show the third card: EXFOR has no 50 MeV measurement, so the calculation was repeated at the two measured energies and the gap was reported.
 
-That is what someone doing research would do at this step: hand back the absence as a result rather than quietly substituting the nearest energy. Hold this slide an extra ten seconds.
+No data is not a failed task, and the nearest energy cannot be passed off as 50 MeV. Hold this slide for ten more seconds.
 
 Timing: 24:00 to 25:30, immediately after the demo.
 
-Transition: which leaves the question of why you should believe that green curve.
+Transition: the next question is why that green curve should be trusted.
 -->
 
 ---
 layout: section
 ---
 
-# 4. Why you should believe it
+# 4. Why these results should be believed
 
 <!--
 Timing: 25:30.
 
-This part is the academic centre of the talk. Everything before it was about convenience; everything from here is about trust. If you are short on time, cut part five, not this.
+This part is about evidence. If time is short, cut part five, not this section.
 -->
 
 ---
 
-# Two tiers of evidence, declared on every skill
+# Two tiers of evidence, declared in every code skill
 
 <div class="grid grid-cols-2 gap-8 mt-8">
 
 <div class="kami-card">
 <div class="ui-label">Tier 1　14 skills</div>
 <div style="margin-top:12px; font-size:0.97rem; line-height:1.85">
-The code's own distribution ships reference values or a test suite, and the skill reproduces them.<br><br>
-Several do so <b>byte for byte</b>, not "within uncertainty".
+The code distribution ships reference values or a test suite, and the skill reproduces them.<br><br>
+Several match <b>byte for byte</b>, not merely within uncertainty.
 </div>
 </div>
 
 <div class="kami-card">
 <div class="ui-label">Tier 2　6 skills</div>
 <div style="margin-top:12px; font-size:0.97rem; line-height:1.85">
-The code ships no reference output at all. So something else pins it: cross-platform reproduction, a physics invariant, or an independent analytic solution.<br><br>
-The evidence chain changes. Having none is not allowed.
+The code has no reference output, so another check is used: cross-platform reproduction, a physics invariant, or an independent analytic solution.<br><br>
+If no reference output exists, the substitute check must be stated.
 </div>
 </div>
 
@@ -590,23 +588,23 @@ The evidence chain changes. Having none is not allowed.
 
 <div class="box-idea mt-10">
 
-The grading is public. Each skill states in its own `references/verification.md` which tier it is, what pinned it, what the tolerance is, and which failure modes are known.
+The grading is public. Each code skill states its tier, evidence, tolerance, and known failure modes in `SKILL.md` or `references/verification.md`.
 
 </div>
 
 <!--
-Central message: credibility is graded, published, and checkable line by line, not asserted as "we tested it".
+Central message: the evidence is public, graded, and checkable line by line, not reduced to "tested".
 
-What to say: Tier 2 is the interesting column. Many codes ship no reference output, and the honest response is not to lower the bar but to change the evidence chain. Two concrete examples on the next slide.
+What to say: many codes ship no reference output. Tier 2 changes the verification method without lowering the standard. The next slide gives two cases.
 
 Timing: 25:30 to 27:00.
 
-Transition: an abstract grading scheme convinces nobody.
+Transition: look at two actual benchmarks.
 -->
 
 ---
 
-# Two examples
+# What two benchmarks look like
 
 <div class="grid grid-cols-2 gap-8 mt-6">
 
@@ -624,7 +622,7 @@ Bit-identical across <b>four builds</b>: macOS/clang patched at -O2 and -O0, Lin
 </div>
 </div>
 
-<div class="fig-caption" style="margin-top:14px">The unpatched gcc build agreeing bit for bit with the patched clang build is what proves the patch changed portability, not physics.</div>
+<div class="fig-caption" style="margin-top:14px">Bit-identical unpatched gcc and patched clang builds show that the patch changed portability, not the physics result.</div>
 
 </div>
 
@@ -640,27 +638,27 @@ AZURE2 reconstructs <sup>16</sup>O(p,γ)<sup>17</sup>F from the nine parameters 
 </div>
 </div>
 
-<div class="fig-caption" style="margin-top:14px">The −5.7% is written down as it stands. A reconstruction with no fit should carry a residual of that size; hiding it would be the problem.</div>
+<div class="fig-caption" style="margin-top:14px">The −5.7% is reported as it stands rather than absorbed by a fit.</div>
 
 </div>
 
 </div>
 
 <!--
-Central message: concrete benchmarks convince where a grading table does not, and the residuals are published.
+Central message: one case is bit-identical; the other reports its residual unchanged.
 
-What to say: spell out the CNOK argument, it is a clean piece of logic. Two patches were needed to compile on macOS. How do you prove the patches did not change the physics? Make the unpatched gcc build and the patched clang build agree bit for bit.
+What to say: CNOK needed two macOS patches. The check is direct: the unpatched gcc build and the patched clang build agree bit for bit.
 
-Volunteer the −5.7% rather than being asked about it. That is where trust is built.
+State the AZURE2 −5.7% directly rather than reporting only χ²/N.
 
 Timing: 27:00 to 29:00.
 
-Transition: there is a stronger check available, using a second code.
+Transition: another solver provides a further check.
 -->
 
 ---
 
-# Cross-check with a second solver
+# Use a second solver
 
 <div class="grid gap-8 mt-8" style="grid-template-columns: 3fr 2fr;">
 
@@ -687,12 +685,12 @@ Transition: there is a stronger check available, using a second code.
 
 <div class="box-evidence">
 
-The two solvers are **structurally unrelated**: one is a complex-scaled Lagrange-Laguerre basis expansion, the other is Numerov integration on the real axis. They share no code, no discretisation, and no treatment of boundary conditions.
+The two solvers follow **different numerical routes**: one uses a complex-scaled Lagrange-Laguerre basis expansion, the other Numerov integration on the real axis. They share neither code nor discretisation.
 
 </div>
 
 <div class="fig-caption" style="margin-top:18px; line-height:1.8">
-So agreement to six figures rules out not rounding error, but implementation error on either side.
+Agreement to six figures tests implementation errors that a one-code convergence study cannot see.
 </div>
 
 </div>
@@ -700,18 +698,18 @@ So agreement to six figures rules out not rounding error, but implementation err
 </div>
 
 <!--
-Central message: convergence shows the calculation is stable; independent implementations agreeing shows it is right.
+Central message: convergence tests one implementation; a cross-code calculation also tests the implementation itself.
 
-What to say: this slide lands hardest with anyone who does numerics. A convergence study is a self-consistency check and can only exclude discretisation error. Only a structurally different solver excludes implementation error. The W = 0 line is a third, independent kind of evidence: a physics identity.
+What to say: step-size and cutoff checks test discretisation. A solver that follows a different numerical route adds a check on implementation errors. Setting W = 0 and recovering zero absorption adds a physics identity.
 
 Timing: 29:00 to 30:30.
 
-Transition: how deep does verification actually go? Here is one I did not expect.
+Transition: next, show how the tolerance was set.
 -->
 
 ---
 
-# How deep verification goes
+# How the tolerance was set
 
 <div class="box-gap mt-6">
 
@@ -723,7 +721,7 @@ Checking the KD02 parameterisation value by value against Koning's own `kd02.f`,
 
 <div v-click>
 
-<div class="ui-label">The reason, found</div>
+<div class="ui-label">Where the difference comes from</div>
 
 <div style="margin-top:12px; font-size:0.93rem; line-height:1.85">
 That <code>kd02.f</code> is single precision wherever Fortran lets it be. The declarations say <code>real*8</code>, which does not make the arithmetic double:
@@ -742,9 +740,9 @@ Recompile the reference `kd02.f` with `-fdefault-real-8` and the two agree to **
 </div>
 
 <div style="margin-top:14px; font-size:0.9rem; line-height:1.8">
-Which means <b>the more accurate of the two is the skill's implementation, and the residual belongs to the Fortran</b>.
+The result is direct: <b>the skill's implementation is more accurate, and the residual comes from the Fortran</b>.
 <br><br>
-At the three or four meaningful digits of a global potential this is irrelevant. But once written down, anything above 2×10⁻⁷ is a real bug.
+The three or four physically meaningful digits are unaffected. Once the source is known, any difference above 2×10⁻⁷ is a real bug.
 </div>
 
 </div>
@@ -752,22 +750,22 @@ At the three or four meaningful digits of a global potential this is irrelevant.
 </div>
 
 <!--
-Central message: chase a reference value all the way down and you find that the reference has a story of its own, which is exactly what tells you where to set the tolerance.
+Central message: the tolerance comes from the measured precision of the reference code.
 
-What to say: this is my favourite find in the project, so relax the delivery a little. It shows how far "reproduce the reference" goes when taken seriously. The conclusion matters more than the anecdote: because the origin of those seven digits is understood, the tolerance can be set at 2e-7, and anything above it is a genuine error.
+What to say: explain why the comparison stops at seven digits, then show the sixteen-digit agreement after `-fdefault-real-8`. End at 2e-7: once the source is known, the tolerance has a basis.
 
-For a numerics-minded audience, hold this slide an extra fifteen seconds.
+Hold this slide for fifteen more seconds.
 
 Timing: 30:30 to 32:00.
 
-Transition: there is one more layer, which is letting a second AI attack our own work.
+Transition: code can test itself, but the verification scripts also need an attacker.
 -->
 
 ---
 
-# Every skill is attacked by a second AI before it ships
+# Before release, another AI searches for false positives
 
-<div class="fig-caption mt-4">An adversarial pass runs on each skill before release. It is not ceremony. Here is what it actually caught.</div>
+<div class="fig-caption mt-4">Every code skill gets an adversarial pass before release. All three errors below were found in those passes.</div>
 
 <div class="grid grid-cols-3 gap-5 mt-8">
 
@@ -776,7 +774,7 @@ Transition: there is one more layer, which is letting a second AI attack our own
 <div style="margin-top:10px; font-size:0.9rem; line-height:1.75">
 <code>run_talys.sh</code> could <b>run a stale deck and report success</b>. With an empty source directory and a leftover workdir, the copy failed silently under <code>|| true</code>, TALYS ran the previous <code>talys.inp</code>, and it exited 0.
 </div>
-<div class="fig-caption" style="margin-top:12px">The exact class of false positive the skill exists to prevent, inside the skill's own harness.</div>
+<div class="fig-caption" style="margin-top:12px">The skill was written to prevent this false positive, yet its own script contained one.</div>
 </div>
 
 <div v-click class="kami-card">
@@ -786,7 +784,7 @@ A selftest marker used a regex alternation (<code>non-numeric\|not finite</code>
 <br><br>
 <b>It could never fire.</b>
 </div>
-<div class="fig-caption" style="margin-top:12px">A test that has never failed and a test that does not exist are the same object.</div>
+<div class="fig-caption" style="margin-top:12px">A check that can never fail is no check.</div>
 </div>
 
 <div v-click class="kami-card">
@@ -800,20 +798,20 @@ The identity and ctest selftest blocks were <b>fabricating their own fixture</b>
 </div>
 
 <!--
-Central message: a verification system will also fool itself, so there has to be a layer whose only job is to attack it.
+Central message: verification scripts can also report false success, so they must be tested.
 
-What to say: do not rush these three. They build more credibility than anything else in the talk because they are self-incriminating. Say the TALYS one plainly: this project exists to prevent false positives, and a false positive was sitting in its own script.
+What to say: explain all three. TALYS ran stale input, the GiBUU check could never fire, and the SMASH fixture fabricated the wrong input. Verification scripts cannot be assumed correct.
 
 If someone asks who verifies the verifier: answer honestly that nobody does, which is why there are also cross-platform builds and physics identities. No single layer is sufficient.
 
 Timing: 32:00 to 34:00.
 
-Transition: cross-platform work produced an unexpected finding of its own.
+Transition: moving the same checks to another platform exposed another problem.
 -->
 
 ---
 
-# Platform differences are evidence, not noise
+# A second platform shows which quantity to pin
 
 <div class="grid gap-8 mt-8" style="grid-template-columns: 1fr 1fr;">
 
@@ -838,10 +836,10 @@ Baryon number **B = 788** and charge **Q = 316** are exact integers on both plat
 <div v-click>
 
 <div class="kami-card-accent">
-<div class="ui-label">So the verifier changed its anchor</div>
+<div class="ui-label">The verifier moved to conservation laws</div>
 <div style="margin-top:12px; font-size:0.95rem; line-height:1.85">
-Platform-sensitive multiplicities are no longer treated as ground truth. The checks anchor on conservation laws instead.<br><br>
-The same pass also caught an old rule that assigned baryon number zero to light-nucleus PDG codes.
+Platform-sensitive multiplicities are no longer treated as ground truth. The checks use conservation laws instead.<br><br>
+The same pass caught an old rule that assigned baryon number zero to light-nucleus PDG codes.
 </div>
 </div>
 
@@ -851,16 +849,16 @@ The same pass also caught an old rule that assigned baryon number zero to light-
 
 </div>
 
-<div class="takeaway mt-8">Verified on one platform only, that 25% would have been written into the documentation as ground truth.</div>
+<div class="takeaway mt-8">With one platform only, those multiplicities would have been recorded as ground truth.</div>
 
 <!--
-Central message: building on two platforms is not engineering fastidiousness. It tells you which numbers are physics and which are implementation.
+Central message: cross-platform checks decide which quantities may serve as benchmarks.
 
-What to say: this example sharpens the question of what may serve as a benchmark at all. Multiplicities here are platform-dependent and disqualified; conservation laws are exact integers and qualify. That judgement is only available if you have run both platforms.
+What to say: the multiplicities change with platform and cannot be benchmarks. B and Q remain exact integers on both and can. That conclusion requires both platforms.
 
 Timing: 34:00 to 35:30.
 
-Transition: with all that said, one limitation matters more than the rest.
+Transition: state the boundary now.
 -->
 
 ---
@@ -876,15 +874,13 @@ layout: fact
 </div>
 
 <!--
-Central message: state the boundary of what this can do, and hand responsibility back.
+Central message: benchmarks cover the tool layer; physics judgement remains with the user.
 
-What to say: deliver this in the plainest possible register, with nothing defensive in it. It removes tooling errors for you. It has not made a single physics judgement on your behalf.
-
-This slide earns more trust with senior colleagues than everything before it combined.
+What to say: state the boundary directly. A benchmark can test the build and known failure modes. It cannot choose the optical potential, continuum cutoff, or energy range.
 
 Timing: 35:30 to 36:30.
 
-Transition: that covers the codes. Now the other half, the literature.
+Transition: the codes are covered. Move to the offline literature layer.
 -->
 
 ---
@@ -899,7 +895,7 @@ Timing: 36:30. This part can be compressed if you are running late, but keep the
 
 ---
 
-# 61,167 pages, offline, read with grep
+# 61,167 local pages, readable with grep
 
 <div class="grid gap-8 mt-8" style="grid-template-columns: 1fr 1fr;">
 
@@ -910,13 +906,13 @@ Timing: 36:30. This part can be compressed if you are running late, but keep the
 <div style="margin-top:12px; font-size:0.95rem; line-height:1.85">
 61,059 arXiv nucl-th papers, one page each, plus 108 topic pages, plus a citation layer and a semantic-relation layer.
 <br><br>
-No server, no API key, no network.
+Read locally, with no server or API key and no network during search.
 </div>
 </div>
 
 <div class="box-gap" style="margin-top:18px">
 
-Those pages are machine-generated summaries and **they can be wrong**. Cite the paper, never the page.
+These pages are machine-generated summaries and **can be wrong**. Cite the original paper, not the page.
 
 </div>
 
@@ -924,7 +920,7 @@ Those pages are machine-generated summaries and **they can be wrong**. Cite the 
 
 <div>
 
-<div class="ui-label">A real task, given one PDF</div>
+<div class="ui-label">An actual task, given one PDF</div>
 
 <div style="margin-top:12px; font-size:0.92rem; line-height:1.8">
 The input was Abu-Ibrahim <i>et al.</i>, <i>PRC</i> <b>77</b>, 034607, reaction cross sections of carbon isotopes on a proton target. Fully offline, zero external calls.
@@ -943,13 +939,13 @@ The corpus resolved it to <code>0710.4193</code>; the citation graph returned th
 </div>
 
 <!--
-Central message: the value of this layer is that it is offline and checkable, and its two limits belong on the same slide.
+Central message: the offline corpus provides checkable leads and has explicit limits.
 
-What to say: the rhythm here is capability, then boundary, immediately. Do not separate them and do not defer the limits to the end of the talk.
+What to say: present the capability and the limits together. The summaries can be wrong, and the citation graph covers only this corpus.
 
 Timing: 36:30 to 38:30.
 
-Transition: this corpus has one more form worth looking at.
+Transition: now view the corpus as a map.
 -->
 
 ---
@@ -962,13 +958,13 @@ layout: center
 </div>
 
 <!--
-Central message: the corpus has structure, and the structure can be seen.
+Central message: citation structure divides the corpus into recognisable regions.
 
 What to say: let them look for five seconds before saying anything. Then point at two regions they will recognise: where reaction theory sits, where lattice QCD sits.
 
 Timing: 38:30 to 39:30.
 
-Transition: one design decision in this figure is worth its own slide.
+Transition: the next slide answers one question, why no edges are drawn.
 -->
 
 ---
@@ -981,16 +977,16 @@ Transition: one design decision in this figure is worth its own slide.
 
 <div class="box-idea">
 
-The citation graph is used only as a **layout constraint**. The visible output is a density map.
+Citation relations only **set the layout**. The visible result is a density map.
 
 </div>
 
 <div style="margin-top:18px; font-size:0.93rem; line-height:1.85">
-This is not an aesthetic choice. A citation network at this scale, drawn as a force-directed node-link diagram, degenerates into a hairball. That is a property of the objective function, and no amount of parameter tuning rescues it.
+The projection is not drawn this way for appearance. At this scale, a force-directed node-link drawing becomes a hairball, and further parameter tuning does not fix it.
 </div>
 
 <div class="fig-caption" style="margin-top:16px; line-height:1.8">
-The field avoids the full graph at this scale: Connected Papers draws only the ego graph of a seed paper, Open Knowledge Maps caps each map at 100 papers, VOSviewer renders about 100 nodes at the 100k scale. Paperscape, the one project that really does draw a whole corpus, takes exactly this no-edges route.
+Related tools also avoid a fully connected view: Connected Papers draws only the ego graph of a seed paper, Open Knowledge Maps caps each map at 100 papers, and VOSviewer renders about 100 nodes at the 100k scale. Paperscape likewise omits edges when drawing a whole corpus.
 </div>
 
 </div>
@@ -1002,7 +998,7 @@ The field avoids the full graph at this scale: Connected Papers draws only the e
 <div style="margin-top:12px; font-size:0.92rem; line-height:1.8">
 The five background regions come from clustering topic centroids and are only an aid. Five is the ceiling that passes an all-pairs contrast-accessibility check.
 <br><br>
-The names keep the figure readable in black-and-white print and under colour-vision deficiency, which is why it can go straight into a paper.
+The names keep the figure readable in black-and-white print and under colour-vision deficiency.
 </div>
 </div>
 
@@ -1020,9 +1016,9 @@ Eligibility is decided by a dispersion ratio at 0.78, not by hand.
 </div>
 
 <!--
-Central message: every design decision in this figure has a reason, and the reasons are checkable rather than matters of taste.
+Central message: this slide explains why edges are omitted and how place names are selected.
 
-What to say: state the hairball point with confidence, it is a known property of force-directed layouts. The QCD example is the good one: a topic spread across the whole map is not a place, it is a language.
+What to say: explain the hairball first, then QCD. A topic spread over the whole map is not a place and should not receive a place name.
 
 Timing: 39:30 to 41:00.
 
@@ -1031,55 +1027,55 @@ Transition: finally, what does not work yet.
 
 ---
 
-# What does not work yet
+# What is not ready yet
 
 <div class="grid grid-cols-2 gap-6 mt-8">
 
 <div class="kami-card">
-<div class="ui-label" style="color: var(--color-gap)">Cold-start installs are the least tested part</div>
+<div class="ui-label" style="color: var(--color-gap)">Cold-start installs have the least testing</div>
 <div style="margin-top:10px; font-size:0.92rem; line-height:1.8">
-Of the twenty codes, only FRESCO has been installed from a genuinely empty cache. Expect a missing dependency on another machine.
+Of the twenty codes, only FRESCO has completed a full install from an empty cache. Other codes will probably miss a dependency on a new machine.
 </div>
 </div>
 
 <div class="kami-card">
-<div class="ui-label" style="color: var(--color-gap)">The first two commands fail on a mainland network</div>
+<div class="ui-label" style="color: var(--color-gap)">Campus test: the first two commands failed</div>
 <div style="margin-top:10px; font-size:0.92rem; line-height:1.8">
-Measured on a university network on 2026-08-13: github.com answered 0 of 6 connection attempts and the clone died after 132 seconds. A proxy is needed. A mirror is the open problem.
+Measured on a university network on 2026-08-13: all six github.com connection attempts failed and the clone exited after 132 seconds. A proxy is currently needed; the mirror remains unresolved.
 </div>
 </div>
 
 <div class="kami-card">
 <div class="ui-label" style="color: var(--color-gap)">Disk and platform</div>
 <div style="margin-top:10px; font-size:0.92rem; line-height:1.8">
-TALYS wants about 11 GB, 8.6 GB of it a structure database, so do not start with it. Windows is not built, and the macOS and Linux binaries are unsigned.
+TALYS needs about 11 GB, including an 8.6 GB structure database, so do not try it first. There is no Windows build, and the macOS and Linux binaries are unsigned.
 </div>
 </div>
 
 <div class="kami-card">
-<div class="ui-label" style="color: var(--color-gap)">Exactly one person has used it</div>
+<div class="ui-label" style="color: var(--color-gap)">Only the author has used it so far</div>
 <div style="margin-top:10px; font-size:0.92rem; line-height:1.8">
-v0.1.0 is the first public build. It works and its author uses it daily, and nobody else has used it at all.
+v0.1.0 is the first public build. The author uses it daily, but no external user has completed a test.
 </div>
 </div>
 
 </div>
 
-<div class="takeaway mt-12">What breaks on your machine is the thing this release is for.</div>
+<div class="takeaway mt-12">The next task is to learn where it breaks on other machines.</div>
 
 <!--
-Central message: list the known potholes in one go rather than leaving people to find them.
+Central message: state all known problems directly.
 
-What to say: this slide can go faster, but do not drop any of the four. The network one in particular will be the first thing most of this room hits.
+What to say: move quickly, but keep all four. Put the network issue second because it appears during the first install.
 
 Timing: 41:00 to 42:30.
 
-Transition: so what is the report I most want.
+Transition: state which report I want most.
 -->
 
 ---
 
-# The report worth the most
+# The report I want most
 
 <div class="box-gap mt-10" style="max-width: 820px">
 
@@ -1088,36 +1084,36 @@ Transition: so what is the report I most want.
 </div>
 
 <div style="max-width: 820px; margin-top: 22px; font-size:1rem; line-height:1.9">
-The whole reason this project exists is that a general agent writes a plausible FRESCO deck with the wrong radius convention. If FUSION does something of that kind, send me the deck, the number, and what it should have been.
+A general agent can write a FRESCO deck with the wrong radius convention that still runs normally. If FUSION returns such a result, send me the deck, the number it produced, and the correct value.
 </div>
 
 <div class="fig-caption" style="margin-top:20px; line-height:1.8">
-It is the failure I fear most and the one least likely to be reported, because by definition it looks like a success.
+I fear this failure most, and it is the hardest report to receive because it looks like success.
 </div>
 
 <div class="grid grid-cols-3 gap-5 mt-10">
 <div class="kami-card">
-<div class="ui-label">Second</div>
+<div class="ui-label">Install failure</div>
 <div style="margin-top:8px; font-size:0.92rem">A code that will not install, with the error, your OS, and your compiler</div>
 </div>
 <div class="kami-card">
-<div class="ui-label">Third</div>
-<div style="margin-top:8px; font-size:0.92rem">Anything that felt stupid</div>
+<div class="ui-label">Awkward use</div>
+<div style="margin-top:8px; font-size:0.92rem">Anything that felt awkward</div>
 </div>
 <div class="kami-card">
-<div class="ui-label">And</div>
+<div class="ui-label">Missing code</div>
 <div style="margin-top:8px; font-size:0.92rem">Which code you wish had a skill</div>
 </div>
 </div>
 
 <!--
-Central message: define the most valuable kind of report explicitly, and lower the barrier to sending it.
+Central message: tell the audience which reports are most useful.
 
-What to say: emphasise the third one. Every awkward thing in the first-run flow was found by one person trying it and saying so plainly.
+What to say: ask for anything that feels awkward. First-time users see problems in the first-run flow that regular users no longer notice.
 
 Timing: 42:30 to 43:30.
 
-Transition: back to the question I opened with.
+Transition: return to the opening question.
 -->
 
 ---
@@ -1131,11 +1127,11 @@ layout: center
 
 <div class="box-idea">
 
-The hard step in running a nuclear-physics code was never getting it to run. It was knowing that it ran correctly.
+The hard part of running a nuclear-physics code is not starting it. It is knowing whether the result is right.
 
 </div>
 
-<p style="margin-top: 30px; font-size:1rem; line-height:1.9">That has always been solved by knowledge passed around inside one group by word of mouth.<br>It can now be written down, checked, and taken further by someone else.</p>
+<p style="margin-top: 30px; font-size:1rem; line-height:1.9">That knowledge used to pass by word of mouth inside a group.<br>It can now be written down, checked, and edited by the people who come next.</p>
 
 </div>
 
@@ -1146,11 +1142,11 @@ The hard step in running a nuclear-physics code was never getting it to run. It 
 </div>
 
 <!--
-Central message: lift the contribution from tooling to method, and stop.
+Central message: end in one sentence, with no more tooling detail.
 
-What to say: do not restate the skill count or the corpus size. Make one point: this kind of knowledge used to live only in a group's oral tradition, and it disappeared whenever someone changed field or graduated. Now it has a form that can be inspected and inherited.
+What to say: do not repeat the skill count or corpus size. Make one point: oral knowledge is lost; a document can be checked and changed.
 
-If there is time, add: that is also why it is open. Something only I can verify does not deserve to be called verified.
+If there is time, add: something only I can inspect cannot be called verified.
 
 Timing: 43:30 to 45:00, then questions.
 -->
@@ -1163,7 +1159,7 @@ layout: section
 
 ---
 
-# Every check run on n+<sup>90</sup>Zr
+# Checks run on n+<sup>90</sup>Zr
 
 <div class="mt-4" style="font-size:0.83rem">
 
@@ -1181,18 +1177,16 @@ layout: section
 
 <div class="box-idea mt-4" style="font-size:0.9rem">
 
-**1301.640 and 1299.19 are not comparable.** Two runs, different configurations: the first is the end-to-end result for the full KD02 potential, the second pair is two solvers checked against each other in one common configuration. Each row answers its own question. No row is ground truth for the others.
+**1301.640 and 1299.19 are not comparable.** They come from two runs with different configurations. The first checks the complete KD02 path end to end; the second checks two solvers in one common configuration. Each row answers its own question.
 
 </div>
 
 <!--
-This slide exists to answer one question: someone who has read the project website will have seen 1301.640 mb given as the final result, while slide 19 shows the 1299.19 pair.
+This slide explains why the project website gives 1301.640 mb while the main talk also shows the 1299.19 pair.
 
-The answer: these are two different checks, not two versions of one number. The generator-versus-hand-built row proves omp.py wrote the deck correctly. The COLOSS-versus-FRESCO row proves two independent implementations agree. The two runs use different configurations, so the numbers should not match.
+They are two checks, not two versions of one number. The generated-versus-hand-built row checks `omp.py`; the COLOSS-versus-FRESCO row checks two implementations. The configurations differ, so the numbers cannot be compared directly.
 
-If pressed on where the difference comes from: COLOSS's own cross-code benchmark procedure turns the spin-orbit term off, its verification.md states vsov=0.0, because that is the configuration in which the two codes are directly comparable. And 0.19% is the right order for the spin-orbit contribution to a total reaction cross section.
-
-Do not present that as a verified conclusion.
+If pressed on the source of the difference: the complete configurations from that run were not recorded, so the source has not been verified. Do not guess.
 -->
 
 ---
@@ -1240,7 +1234,7 @@ Admission: publicly obtainable, builds from source on the target platform, has a
 
 ---
 
-# Install and network
+# Network requirements during installation
 
 <div class="mt-8" style="font-size:0.93rem">
 
@@ -1262,13 +1256,13 @@ xattr -d com.apple.quarantine fusion          # macOS only
 
 <div class="box-gap">
 
-Both commands need GitHub and usually fail on a mainland-China network. Nothing after them touches the network: codes are fetched from their own upstreams on first use, and the corpus is already in the clone.
+Both commands need GitHub and usually fail on a mainland-China network. Installing a code for the first time also needs its upstream source. The corpus is already in the clone, so searching it is offline.
 
 </div>
 
 <div class="fig-caption" style="line-height:1.8">
-The clone is about 229 MB, nearly all of it the knowledge base. For the skills without the corpus, skip the clone and point the agent at the skills directory URL instead.<br><br>
-Requirements: git, make, gfortran, a C++ compiler, python3. Individual skills pull their own extra dependencies and say so first.
+The clone is about 229 MB, nearly all of it the knowledge base. If only the skills are needed, skip the clone and point the agent at the skills directory URL.<br><br>
+Requirements are git, make, gfortran, a C++ compiler, and python3. Each skill states any extra dependency before installation.
 </div>
 
 </div>
@@ -1307,36 +1301,36 @@ Pure Python standard library, runs locally.
 
 <div class="box-idea mt-10">
 
-Both steps are in the fusion-web repository and can be reproduced directly: `scripts/kb_citemap.py` and `scripts/kb_citemap_render.py`.
+Both steps are in the fusion-web repository: `scripts/kb_citemap.py` and `scripts/kb_citemap_render.py`.
 
 </div>
 
 ---
 
-# If asked: how is this different from a general coding assistant
+# If asked: how does this differ from a general coding assistant
 
 <div class="grid grid-cols-2 gap-8 mt-8">
 
 <div class="kami-card">
-<div class="ui-label">General assistant</div>
+<div class="ui-label">General assistant in this test</div>
 <div style="margin-top:12px; font-size:0.93rem; line-height:1.85">
-· Knowledge comes from training data and cannot be reviewed or edited<br>
-· No benchmark, so no way to judge this particular output<br>
-· Every conversation starts from zero; corrections do not accumulate<br>
-· Confidence is uncorrelated with correctness
+· It supplied a deck, not a separate document containing the code rules<br>
+· It gave no known answer or tolerance for checking the deck<br>
+· Unless a correction enters the shared document, it must be repeated next time<br>
+· Tone gives no information about correctness
 </div>
 </div>
 
 <div class="kami-card kami-card-accent">
 <div class="ui-label">A skill</div>
 <div style="margin-top:12px; font-size:0.93rem; line-height:1.85">
-· Knowledge is Markdown in a repository: readable, auditable, patchable<br>
-· Each skill carries one known answer and a stated tolerance<br>
-· A trap found once is written down and everyone gets it<br>
-· The tier and the known failure modes are declared up front
+· Knowledge is repository Markdown that can be reviewed and edited<br>
+· Each code skill carries one known answer and a stated tolerance<br>
+· A discovered error is written into the shared document<br>
+· The benchmark tier and known failure modes are stated directly
 </div>
 </div>
 
 </div>
 
-<div class="takeaway mt-10">The difference is not the model. It is where the knowledge lives, and whether anyone is accountable for it being right.</div>
+<div class="takeaway mt-10">The difference is not the model. It is where the knowledge lives and how the result is checked.</div>
