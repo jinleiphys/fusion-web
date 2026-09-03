@@ -653,12 +653,12 @@ footer { border-top: 1px solid var(--hairline); padding: 44px 0 60px; }
         <p class="lede">
           <span class="zh">FUSION 把核物理程序、文献检索和日常科研工具接到同一个 agent 上。当前版本内置
             <strong>26 个技能，其中 20 个负责具体程序</strong>，另带 <strong>61,167 页离线文献知识库</strong>，
-            包括 61,059 个论文页和 108 个主题页。DeepSeek、Qwen、GLM、Claude 和 GPT 都能用。
+            包括 61,059 个论文页和 108 个主题页。DeepSeek、Qwen、GLM、Claude 和 GPT 都能接，多步任务上差距明显。
             背景中的每个光点来自语料库里的一篇论文。</span>
           <span class="en">FUSION connects nuclear codes, literature search, and research workflows to one agent.
             The current release contains <strong>26 skills, including 20 for nuclear-physics codes</strong>, and
             <strong>61,167 offline knowledge-base pages</strong>: 61,059 paper pages and 108 topic pages.
-            It runs with DeepSeek, Qwen, GLM, Claude, and GPT.
+            It runs with DeepSeek, Qwen, GLM, Claude, and GPT, though not equally well on multi-step work.
             Each point of light in the background represents one paper in the corpus.</span>
         </p>
         <div class="cta-row">
@@ -741,20 +741,20 @@ footer { border-top: 1px solid var(--hairline); padding: 44px 0 60px; }
         <span class="en">A real session</span>
       </h2>
       <p class="sec-lede" style="margin-left:auto;margin-right:auto">
-        <span class="zh">这是 Phase 0 的一个真实测试：deepseek-chat 独立写出 n+⁹⁰Zr 弹性散射的 FRESCO 输入卡，计算结果与参考值一致到 4–5 位有效数字。</span>
-        <span class="en">One of the actual Phase-0 acceptance cases: on deepseek-chat, independently author a FRESCO deck for n+⁹⁰Zr elastic scattering, agreeing with the reference calculation to 4–5 significant figures.</span>
+        <span class="zh">下面是一次录制下来的会话，Claude Code 配 Opus 5：一句自然语言，它取 KD02 参数、写输入卡、跑 FRESCO、做收敛检查，再去 EXFOR 查有没有对应能量的数据。命令和数字逐个照抄，只压缩了长度。</span>
+        <span class="en">A recorded session, Claude Code on Opus 5: from one sentence it pulls the KD02 parameters, writes the deck, runs FRESCO, checks convergence, and asks EXFOR whether the energy was ever measured. Commands and numbers are copied from that recording; only the length is compressed.</span>
       </p>
     </div>
     <div class="term-wrap rv">
       <div class="term glass glass-deep" data-glass data-glass-bevel="30" data-glass-scale="58">
-        <div class="term-bar"><i></i><i></i><i></i><span>fusion · deepseek-chat · ~/work</span></div>
+        <div class="term-bar"><i></i><i></i><i></i><span>fusion · claude code · opus 5</span></div>
         <div class="term-body">
-<div class="ln" style="--i:0"><span class="t-prompt">❯</span> <span class="t-user"><span class="zh">帮我算 n+90Zr 弹性散射，10 MeV，用 KD03 全局光学势，给我 FRESCO 输入卡</span><span class="en">compute n+90Zr elastic scattering at 10 MeV with the KD03 global optical potential, give me a FRESCO deck</span></span></div>
+<div class="ln" style="--i:0"><span class="t-prompt">❯</span> <span class="t-user"><span class="zh">算 50 MeV 的 n+90Zr 弹性散射，用 KD02 全局光学势，然后跟 EXFOR 上有的实验数据比一下</span><span class="en">compute n+90Zr elastic scattering at 50 MeV with the KD02 global optical potential, then compare against whatever EXFOR has</span></span></div>
 <div class="ln" style="--i:1"><span class="t-sys">◆ skill</span> <span class="t-plasma">fresco</span> <span class="t-sys">loaded · install verified · benchmark current</span></div>
-<div class="ln" style="--i:2"><span class="t-sys">◆ corpus</span> <span class="t-dim">61,059 paper pages · offline grep</span> <span class="t-sys">→ Koning &amp; Delaroche, NPA 713 (2003) 231</span></div>
-<div class="ln" style="--i:3"><span class="t-ok">✓</span> <span class="t-dim">deck written → n90zr_kd.in   (potential terms: V, W_d, V_so + Coulomb)</span></div>
-<div class="ln" style="--i:4"><span class="t-ok">✓</span> <span class="t-dim">fresco n90zr_kd.in → fort.16 parsed</span></div>
-<div class="ln" style="--i:5"><span class="t-ok">✓</span> <span class="t-dim">σ(θ) <span class="zh">与参考计算一致到</span><span class="en">agrees with reference to</span> <b style="color:var(--core)">4–5 sig figs</b></span></div>
+<div class="ln" style="--i:2"><span class="t-sys">◆ omp.py</span> <span class="t-dim">--code kd02 --proj n --target 90Zr --energy 50</span> <span class="t-sys">→ ap=0 (R = r₀A<sub>t</sub><sup>1/3</sup>)</span></div>
+<div class="ln" style="--i:3"><span class="t-ok">✓</span> <span class="t-dim">deck written → n90zr_50.in   (potential terms: V, W_d, V_so + Coulomb)</span></div>
+<div class="ln" style="--i:4"><span class="t-ok">✓</span> <span class="t-dim">σ_R = 1301.638 mb → 1301.640 mb <span class="zh">（步长减半、分波加倍、去掉截断）</span><span class="en">(step halved, partial waves doubled, truncation dropped)</span> <b style="color:var(--core)">Δ 1.8e-6</b></span></div>
+<div class="ln" style="--i:5"><span class="t-ok">✓</span> <span class="t-dim">EXFOR 13160 · n+90Zr elastic → 8.0 10.0 24.0 MeV<span class="zh">，没有 50 MeV</span><span class="en">, no 50 MeV</span></span></div>
 <div class="ln" style="--i:6"><span class="t-prompt">❯</span> <span class="caret"></span></div>
         </div>
       </div>
@@ -806,8 +806,8 @@ footer { border-top: 1px solid var(--hairline); padding: 44px 0 60px; }
         <span class="no"><svg width="26" height="26" viewBox="0 0 26 26" fill="none" stroke="url(#bg1)" stroke-width="1.6" stroke-linecap="round"><rect x="7" y="7" width="12" height="12" rx="2"/><path d="M11 7V3.5M15 7V3.5M11 22.5V19M15 22.5V19M7 11H3.5M7 15H3.5M22.5 11H19M22.5 15H19"/></svg>MODELS</span>
         <h3><span class="zh">支持多种模型</span><span class="en">Runs with several model providers</span></h3>
         <p>
-          <span class="zh">DeepSeek、Qwen、GLM、Claude 和 GPT 都可以用。Phase 0 全程使用 deepseek-chat，<b>没有调用国外 API</b>。</span>
-          <span class="en">DeepSeek, Qwen, GLM, Claude, and GPT are supported. The Phase 0 quality gate ran on deepseek-chat, so <b>it did not depend on access to an overseas API</b>.</span>
+          <span class="zh">DeepSeek、Qwen、GLM、Claude 和 GPT 都可以用，Phase 0 的验收全程跑在 deepseek-chat 上，<b>没有调用国外 API</b>。但兼容不等于效果相同：单步任务国产模型没问题，而写输入卡、跑程序、读回结果再改一轮这类多步任务，deepseek-chat 只是<b>概率性地做对</b>。要稳定复现，目前还是 Claude Code 或 Codex 配各自最强的模型。</span>
+          <span class="en">DeepSeek, Qwen, GLM, Claude, and GPT are supported, and the Phase 0 quality gate ran entirely on deepseek-chat, so <b>it did not depend on access to an overseas API</b>. Compatibility is not equivalence, though: single-step work is fine on any of them, but authoring a deck, running the code, reading the result back and revising it is a chain where deepseek-chat is <b>right only some of the time</b>. Reproducing that reliably still means Claude Code or Codex on their strongest models.</span>
         </p>
       </div>
       <div class="why rv glass" data-glass data-glass-bevel="27" data-glass-scale="54">
@@ -977,12 +977,12 @@ footer { border-top: 1px solid var(--hairline); padding: 44px 0 60px; }
           <span class="en">n+⁹⁰Zr elastic scattering at 50 MeV with the KD02 global optical potential. The parameters were not rewritten from memory: the run reused Koning's own <code>kd02.f</code> already on disk, and the two independent implementations agreed to <b>8 significant figures</b>.</span>
         </p>
         <p style="margin-top:12px">
-          <span class="zh">这里有个很隐蔽的坑。FRESCO 使用 R = r₀(Aₚ<sup>1/3</sup> + A<sub>t</sub><sup>1/3</sup>)，KD02 则把半径定义为 R = r₀A<sub>t</sub><sup>1/3</sup>。如果没有设置 <code>ap=0</code>，所有半径都会大 <b>22%</b>，程序照样运行，截面看上去也很合理。最终得到 σ<sub>R</sub> = <b>1301.640 mb</b>。积分步长连续减半两次后稳定到 <b>9 位有效数字</b>，匹配半径和分波数加倍也不改变结果。再用独立求解器互检，COLOSS（复标度 Lagrange-Laguerre）给出 1299.188 mb，FRESCO（Numerov 耦合道）给出 1299.191 mb，两者一致到 <b>6 位有效数字</b>。设 W = 0 后吸收精确归零，通量守恒。</span>
-          <span class="en">It caught a trap that fails silently: FRESCO builds radii as R = r₀(Aₚ<sup>1/3</sup> + A<sub>t</sub><sup>1/3</sup>) while KD02 is defined on R = r₀A<sub>t</sub><sup>1/3</sup>. Without <code>ap=0</code> every radius is <b>22% too large</b> and the resulting cross section still looks entirely plausible. Final σ<sub>R</sub> = <b>1301.640 mb</b>: stable to <b>9 significant figures</b> under two halvings of the radial step and unchanged when the matching radius and partial-wave limit were doubled. A second, structurally unrelated solver then checked it: COLOSS (complex-scaled Lagrange-Laguerre) gave 1299.188 mb against FRESCO's 1299.191 mb, <b>6 significant figures</b>. With W = 0 the absorption vanished exactly and flux conservation held.</span>
+          <span class="zh">这里有个很隐蔽的坑。FRESCO 使用 R = r₀(Aₚ<sup>1/3</sup> + A<sub>t</sub><sup>1/3</sup>)，KD02 则把半径定义为 R = r₀A<sub>t</sub><sup>1/3</sup>。如果没有设置 <code>ap=0</code>，所有半径都会大 <b>22%</b>，程序照样运行，截面看上去也很合理。最终得到 σ<sub>R</sub> = <b>1301.640 mb</b>。积分步长连续减半两次后稳定到 <b>9 位有效数字</b>，匹配半径和分波数加倍也不改变结果。再用独立求解器互检，COLOSS（复标度 Lagrange-Laguerre）给出 1299.188 mb，FRESCO（Numerov 耦合道）给出 1299.191 mb，两者一致到 <b>6 位有效数字</b>。设 W = 0 后吸收精确归零，通量守恒。1301.640 和 1299.19 并不矛盾，差别只在质量约定：前者用物理质量（1.008665 和 89.904698），互检那一对用整数质量（A = 1 和 A = 90），同一套 FRESCO 输入卡换掉这两个数就能在两者之间来回复现，与求解器无关。</span>
+          <span class="en">It caught a trap that fails silently: FRESCO builds radii as R = r₀(Aₚ<sup>1/3</sup> + A<sub>t</sub><sup>1/3</sup>) while KD02 is defined on R = r₀A<sub>t</sub><sup>1/3</sup>. Without <code>ap=0</code> every radius is <b>22% too large</b> and the resulting cross section still looks entirely plausible. Final σ<sub>R</sub> = <b>1301.640 mb</b>: stable to <b>9 significant figures</b> under two halvings of the radial step and unchanged when the matching radius and partial-wave limit were doubled. A second, structurally unrelated solver then checked it: COLOSS (complex-scaled Lagrange-Laguerre) gave 1299.188 mb against FRESCO's 1299.191 mb, <b>6 significant figures</b>. With W = 0 the absorption vanished exactly and flux conservation held. The two figures do not disagree: 1301.640 uses physical masses (1.008665 and 89.904698) while the cross-check pair uses integer ones (A = 1 and A = 90). Swapping those two numbers in one deck moves the answer between them, so the gap belongs to the mass convention and not to either solver.</span>
         </p>
         <p style="margin-top:12px">
-          <span class="zh"><b>实验数据：</b>EXFOR 没有 50 MeV 的 n+⁹⁰Zr 弹性散射测量。于是换到两个有数据的能量重新计算：24 MeV 的中位比为 0.89，55 MeV 的 χ²/N = 0.75，两次计算都没有自由参数。下图是计算与数据的直接比较。</span>
-          <span class="en"><b>Experimental data:</b> EXFOR contains no n+⁹⁰Zr elastic-scattering measurement at 50 MeV. The calculation was repeated at the two measured energies: a median ratio of 0.89 at 24 MeV and χ²/N = 0.75 at 55 MeV, with no free parameters. The figure compares those calculations with the data.</span>
+          <span class="zh"><b>实验数据：</b>EXFOR 没有 50 MeV 的 n+⁹⁰Zr 弹性散射测量。于是换到两个有数据的能量重新计算，两次都没有自由参数，两个能量报同一个统计量：calc/data 的均值在 24 MeV 是 <b>0.929</b>，在 55 MeV 是 <b>0.995</b>（中位比分别为 0.891 和 0.961）。下图是计算与数据的直接比较。</span>
+          <span class="en"><b>Experimental data:</b> EXFOR contains no n+⁹⁰Zr elastic-scattering measurement at 50 MeV. The calculation was repeated at the two measured energies, with no free parameters and the same statistic reported for both panels: the mean calc/data ratio is <b>0.929</b> at 24 MeV and <b>0.995</b> at 55 MeV (medians 0.891 and 0.961). The figure compares those calculations with the data.</span>
         </p>
       </div>
 
