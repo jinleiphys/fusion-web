@@ -14,7 +14,7 @@ FUSION 项目官网 + 知识库可视化。自包含静态页面，无 CDN、无
 |---|---|
 | `index.html` | 项目主页：中英双语，介绍 FUSION 是什么/为什么/基准/路线；整页背景是真实语料：`assets/corpus-dust.png` 是全部 55,850 篇论文各一个点，`assets/stars.js` 是其中 8,000 篇的动画层加一张 80×80 密度场 |
 | `map.html` | 语料地图，55,850 篇论文的引用投影（数据已内联，双击即可打开） |
-| `nuclides.html` | 三维核素图：NUBASE2020 全部 3558 个基态，柱高可选 log T½ / B/A，颜色可选主衰变道 / 半衰期 / B/A，悬停看数据、可搜索核素；three.js r160 与数据都内联在页面里，双击即可打开 |
+| `nuclides.html` | 三维核素图：NUBASE2020 全部 3558 个基态，柱高是同量异位素能谷 ΔE = M(Z,A) − min_Z M(Z,A)（稳定核在谷底，每个 A 截面是质量抛物线），也可切成平铺；颜色可选主衰变道 / 半衰期 / B/A；滚轮朝指针缩放，Shift 拖动平移，六个按钮直达 A<30、Ca–Ni、Sn、Pb、超重区，悬停看数据、可搜索核素；three.js r160 与数据都内联在页面里，双击即可打开 |
 | `assets/glass.js` | 液态玻璃的 CSS + SVG 层：按面板尺寸生成高度场梯度贴图，装成 `feDisplacementMap`，给 `[data-glass]` 元素做真实的边缘折射压缩 |
 | `assets/glass-lens.js` | 液态玻璃的 WebGL2 层：语料地图上那块会跟着指针走的透镜，两次界面折射 + 色散 + GGX 高光 |
 | `assets/` | 品牌 logo（源文件在 FUSION 仓库 `assets/brand/`）、地图预览图、首屏点云与密度场数据 |
