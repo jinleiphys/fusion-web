@@ -56,6 +56,8 @@ def main():
     total = get('stats/total', token, **span)
     hits = get('stats/hits', token, limit=30, **span)
     stat = lambda page, n: get('stats/' + page, token, optional=True, limit=n, **span).get('stats') or []
+    # screen sizes come back with an empty name and the class in id ('phone', 'desktop', ...)
+    named = lambda page, n: [[s.get('name') or s.get('id') or '', s['count']] for s in stat(page, n) if s['count']]
 
     countries = []
     for c in stat('locations', 60):
@@ -69,6 +71,8 @@ def main():
     refs = {}
     for r in stat('toprefs', 40):
         name = host(r.get('name') or '')
+        if name == 'vibeinscience.com':  # moving between our own pages is not an arrival
+            continue
         refs[name] = refs.get(name, 0) + r['count']
 
     data = {
@@ -79,10 +83,10 @@ def main():
         'pages': [[h['path'], h['count']] for h in hits.get('hits') or [] if not h.get('event')],
         'countries': countries,
         'refs': sorted(([k, v] for k, v in refs.items()), key=lambda kv: -kv[1]),
-        'browsers': [[s['name'], s['count']] for s in stat('browsers', 8)],
-        'systems': [[s['name'], s['count']] for s in stat('systems', 8)],
-        'sizes': [[s['name'], s['count']] for s in stat('sizes', 6)],
-        'languages': [[s['name'], s['count']] for s in stat('languages', 10)],
+        'browsers': named('browsers', 8),
+        'systems': named('systems', 8),
+        'sizes': named('sizes', 6),
+        'languages': named('languages', 10),
     }
     out = os.path.join(HERE, 'assets', 'visitors-data.js')
     with open(out, 'w') as f:

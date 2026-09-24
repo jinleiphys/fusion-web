@@ -485,10 +485,18 @@ footer .wrap { border-top: 1px solid var(--hairline); padding-top: 26px; }
       .sort(function (a, b) { return b.n - a.n; }).slice(0, 10),
       function (r) { return '<span>' + esc(r.name) + '</span>'; }, false);
 
+    var SIZES = { phone: ['手机', 'Phone'], largephone: ['大屏手机', 'Large phone'], tablet: ['平板', 'Tablet'],
+      desktop: ['电脑', 'Desktop'], desktophd: ['高清大屏', 'HD desktop'], unknown: ['未知', 'Unknown'] };
+    function keyLabel(group, name) {
+      if (group === 'sizes' && SIZES[name]) return t(SIZES[name][0], SIZES[name][1]);
+      if (name === '(unknown)' || !name) return t('未知', 'Unknown');
+      return name;
+    }
     var palette = ['#52b7ff', '#ffa028', '#7fd6a8', '#c79bff', '#ff7a8a', '#ffd08a', '#5b6a80'];
     var groups = [['sizes', '屏幕', 'Screen'], ['systems', '系统', 'System'], ['browsers', '浏览器', 'Browser'], ['languages', '语言', 'Language']];
     document.getElementById('devices').innerHTML = groups.map(function (g) {
-      var rows = ((V && V[g[0]]) || []).filter(function (r) { return r[1] > 0; });
+      var rows = ((V && V[g[0]]) || []).filter(function (r) { return r[1] > 0; })
+        .map(function (r) { return [keyLabel(g[0], r[0]), r[1]]; });
       if (!rows.length) return '';
       var sum = rows.reduce(function (s, r) { return s + r[1]; }, 0);
       var top = rows.slice(0, 5), rest = sum - top.reduce(function (s, r) { return s + r[1]; }, 0);
