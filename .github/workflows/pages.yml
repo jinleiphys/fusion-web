@@ -1,0 +1,40 @@
+# Deploys the site to GitHub Pages, and refreshes the visitor counts shown on
+# visitors.html on every run. The counts are pulled from GoatCounter with the
+# GOATCOUNTER_TOKEN secret and written into the deployed copy only, so the
+# schedule never commits to main.
+name: Deploy site
+
+on:
+  push:
+    branches: [main]
+  schedule:
+    - cron: '17 */3 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Fetch visitor counts
+        env:
+          GOATCOUNTER_TOKEN: ${{ secrets.GOATCOUNTER_TOKEN }}
+        run: python3 scripts/fetch_visitors.py || echo "::warning::visitor counts not refreshed; visitors.html shows its placeholder"
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: .
+      - id: deploy
+        uses: actions/deploy-pages@v4
