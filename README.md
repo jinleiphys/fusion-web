@@ -1,6 +1,6 @@
 # fusion-web
 
-FUSION 项目官网 + 知识库可视化。自包含静态页面，无 CDN、无外部请求、无构建步骤，直接静态托管。
+FUSION 项目官网 + 知识库可视化。自包含静态页面，无 CDN、无构建步骤，直接静态托管。唯一的外部请求是 GoatCounter 访问统计（`gc.zgo.at/count.js`，无 cookie），数据看 https://jinleiphys.goatcounter.com 。
 
 主页当前与 FUSION 主项目 2026-08-12 状态同步：仓库共有 26 个技能，其中 20 个负责具体程序，另外 6 个是 SFRESCO 拟合、EXFOR 实验数据、`kb-search`、`literature-wiki`、`research-profile` 和 `fusion-setup`；离线 `kb-wiki` 共 61,167 页（61,059 个论文页 + 108 个主题页）。20 个程序技能覆盖反应、裂变统计、R 矩阵与核天体、结构与从头算、TDHF、重离子输运和状态方程。
 
