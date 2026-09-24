@@ -633,6 +633,7 @@ footer { border-top: 1px solid var(--hairline); padding: 44px 0 60px; }
       <a href="#bench"><span class="zh">技能</span><span class="en">Skills</span></a>
       <a href="#cases"><span class="zh">案例</span><span class="en">Cases</span></a>
       <a href="#map"><span class="zh">语料地图</span><span class="en">Corpus map</span></a>
+      <a href="#nuclides"><span class="zh">核素图</span><span class="en">Nuclides</span></a>
       <a href="#start"><span class="zh">开始使用</span><span class="en">Get started</span></a>
       <a href="#roadmap"><span class="zh">进度</span><span class="en">Roadmap</span></a>
     </div>
@@ -1028,8 +1029,33 @@ footer { border-top: 1px solid var(--hairline); padding: 44px 0 60px; }
       <div class="mp"><b><span class="zh">只标注聚集的主题</span><span class="en">Labels require spatial clustering</span></b>
         <span><span class="zh">没有明显空间聚集的通用主题不标地名。地图黑白打印仍然清楚，常见色觉缺陷的读者也能分辨。</span><span class="en">Broad topics without a spatial cluster are not labeled. The map remains legible in grayscale and under common forms of color-vision deficiency.</span></span></div>
       <div class="mp"><b><span class="zh">整张地图只有一个文件</span><span class="en">The map is one file</span></b>
-        <span><span class="zh">所有数据都内嵌在页面中，不用 CDN，也不会发起外部请求。打开文件即可浏览，无须构建。</span><span class="en">All data are inlined. The page uses no CDN, external requests, or build step.</span></span></div>
+        <span><span class="zh">所有数据都内嵌在页面中，不用 CDN，除访问统计外不发起外部请求。打开文件即可浏览，无须构建。</span><span class="en">All data are inlined. The page uses no CDN and no build step; its only external request is the visit counter.</span></span></div>
     </div>
+  </div>
+</section>
+
+<hr class="divider">
+
+<!-- ================= NUCLIDES ================= -->
+<section id="nuclides">
+  <div class="wrap">
+    <div class="rv">
+      <p class="eyebrow"><span class="zh">三维核素图 · Nuclide chart</span><span class="en">The nuclide chart</span></p>
+      <h2>
+        <span class="zh">3558 个基态，一片同量异位素山谷</span>
+        <span class="en">3558 ground states as an isobaric valley</span>
+      </h2>
+      <p class="sec-lede">
+        <span class="zh">NUBASE2020 的全部基态画成三维柱图。柱高是 ΔE = M(Z,A) − min<sub>Z</sub> M(Z,A)，稳定核落在谷底，每个 A 的截面就是一条质量抛物线。颜色可以切换为主衰变道、半衰期或 B/A；时间轴从 1896 年走到 2020 年，逐年点亮每个同位素被鉴别出来的时刻。</span>
+        <span class="en">Every NUBASE2020 ground state as a 3D column. Height is ΔE = M(Z,A) − min<sub>Z</sub> M(Z,A), so stable nuclei sit on the valley floor and each A-slice is a mass parabola. Colour switches between decay mode, half-life and B/A, and a timeline from 1896 to 2020 lights up each isotope in the year it was identified.</span>
+      </p>
+    </div>
+    <a class="map-frame rv" href="nuclides.html#pb">
+      <img src="assets/nuclides-preview.jpg" alt="3D nuclide chart around lead, N = 126" loading="lazy">
+      <span class="veil">
+        <span class="open glass" data-glass data-glass-bevel="13" data-glass-scale="26"><i>→</i><span class="zh">打开三维核素图 · 拖动旋转</span><span class="en">Enter the nuclide chart · drag to orbit</span></span>
+      </span>
+    </a>
   </div>
 </section>
 
