@@ -59,14 +59,30 @@ def main():
     # screen sizes come back with an empty name and the class in id ('phone', 'desktop', ...)
     named = lambda page, n: [[s.get('name') or s.get('id') or '', s['count']] for s in stat(page, n) if s['count']]
 
+    # Taiwan, Hong Kong and Macao are counted under China, and appear inside
+    # it as regions with the marker codes '@TW', '@HK', '@MO' that the page
+    # renders as 中国台湾 / Taiwan, China and so on.
+    FOLD = ('TW', 'HK', 'MO')
+    raw = stat('locations', 60)
+    folded = [['@' + c['id'], c['count']] for c in raw if c.get('id') in FOLD]
     countries = []
-    for c in stat('locations', 60):
+    for c in raw:
+        if c.get('id') in FOLD:
+            continue
         regions = []
         if len(countries) < 8 and c.get('id'):
             regions = [[r['name'], r['count']]
                        for r in get('stats/locations/' + c['id'], token, optional=True, limit=12, **span).get('stats') or []
                        if r.get('name')]
         countries.append([c.get('id') or '', c['name'], c['count'], regions])
+    if folded:
+        cn = next((c for c in countries if c[0] == 'CN'), None)
+        if cn is None:
+            cn = ['CN', 'China', 0, []]
+            countries.append(cn)
+        cn[2] += sum(n for _, n in folded)
+        cn[3] = sorted(cn[3] + folded, key=lambda r: -r[1])
+        countries.sort(key=lambda c: -c[2])
 
     refs = {}
     for r in stat('toprefs', 40):

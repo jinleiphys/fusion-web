@@ -6,9 +6,16 @@ a step so the dots pack hexagonally. Each dot carries the ISO 3166-1 alpha-2
 code of the country it falls in, which is the code GoatCounter reports for a
 visitor's location, so the page colours dots by joining on it.
 
-Source: Natural Earth 1:110m admin-0 countries (public domain),
-  https://raw.githubusercontent.com/nvkelso/natural-earth-vector/master/geojson/ne_110m_admin_0_countries.geojson
-ISO_A2 is -99 for France, Norway and Kosovo in that file, so ISO_A2_EH is used.
+Source: Natural Earth 1:10m admin-0 countries, China point of view (public
+domain; 14 MB, not kept in the repository, pass it with --src):
+  https://raw.githubusercontent.com/nvkelso/natural-earth-vector/master/geojson/ne_10m_admin_0_countries_chn.geojson
+In that edition Taiwan is part of the China polygon and the disputed Himalayan
+boundaries follow the Chinese position. Hong Kong and Macao are separate
+features there; they are folded into CN here, as are any TW visitors in
+scripts/fetch_visitors.py, so the map, the tooltip and the lists agree.
+ISO_A2 is -99 for France, Norway and Kosovo, so ISO_A2_EH is used.
+Rings are thinned to ~0.05 degree before the point-in-polygon test; the
+grid is 1.5 degrees, so nothing visible is lost.
 
 Output, run-length encoded per row, plus a label point per country so that
 territories too small for the grid (Singapore, Hong Kong, ...) still have a
@@ -16,15 +23,18 @@ place on the map:
   WORLD_DOTS = {step, lat1, nrow, ncol, codes: [...],
                 runs: [[row, col0, len, codeIndex], ...], centers: {code: [lon, lat]}}
 
-    python3 scripts/make_world_dots.py [--src FILE] [--step 1.5]
+    python3 scripts/make_world_dots.py --src ne_10m_admin_0_countries_chn.geojson [--step 1.5]
 """
 import argparse, json, os
 
 HERE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
-# Not in the 1:110m file at all; [lon, lat].
+# Parts of China reported under their own ISO code.
+FOLD = {'TW': 'CN', 'HK': 'CN', 'MO': 'CN'}
+
+# Label points for territories too small for the grid; [lon, lat].
 EXTRA_CENTERS = {
-    'SG': [103.82, 1.35], 'HK': [114.17, 22.32], 'MO': [113.55, 22.19],
+    'SG': [103.82, 1.35],
     'MT': [14.44, 35.9], 'LU': [6.13, 49.61], 'BH': [50.56, 26.07],
     'MU': [57.55, -20.25], 'MV': [73.5, 4.18], 'AD': [1.52, 42.51],
     'MC': [7.42, 43.74], 'LI': [9.55, 47.16], 'SM': [12.46, 43.94],
@@ -35,6 +45,14 @@ EXTRA_CENTERS = {
 def rings(geom):
     polys = [geom['coordinates']] if geom['type'] == 'Polygon' else geom['coordinates']
     return polys
+
+
+def thin(ring, tol=0.05):
+    out = [ring[0]]
+    for p in ring[1:]:
+        if abs(p[0] - out[-1][0]) + abs(p[1] - out[-1][1]) >= tol:
+            out.append(p)
+    return out if len(out) >= 4 else ring
 
 
 def inside(x, y, poly):
@@ -52,7 +70,7 @@ def inside(x, y, poly):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument('--src', default=os.path.join(HERE, 'data', 'ne_110m_admin_0_countries.geojson'))
+    ap.add_argument('--src', required=True, help='ne_10m_admin_0_countries_chn.geojson')
     ap.add_argument('--step', type=float, default=1.5, help='grid step in degrees')
     ap.add_argument('--lat0', type=float, default=-56.0)
     ap.add_argument('--lat1', type=float, default=80.0)
@@ -62,11 +80,13 @@ def main():
     shapes, centers = [], dict(EXTRA_CENTERS)
     for f in feats:
         code = f['properties']['ISO_A2_EH']
-        if code != '-99':
+        code = FOLD.get(code, code)
+        if code != '-99' and code not in centers:
             centers[code] = [round(f['properties']['LABEL_X'], 2), round(f['properties']['LABEL_Y'], 2)]
         if code == 'AQ':
             continue
         for poly in rings(f['geometry']):
+            poly = [thin(r) for r in poly]
             xs = [p[0] for p in poly[0]]; ys = [p[1] for p in poly[0]]
             shapes.append((code, min(xs), max(xs), min(ys), max(ys), poly))
 
