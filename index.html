@@ -283,6 +283,117 @@ html[data-lang="en"] h1 { letter-spacing: -0.015em; }
   .hero-in { padding-top: 110px; }
 }
 
+/* ================= knowledge base: three layers ================= */
+.kb-grid { display: grid; grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.35fr); gap: 26px; align-items: start; }
+@media (max-width: 960px) { .kb-grid { grid-template-columns: 1fr; } }
+.kb-tabs { display: flex; flex-direction: column; gap: 12px; }
+.kb-tab {
+  all: unset; box-sizing: border-box; cursor: pointer; display: grid; grid-template-columns: auto 1fr; gap: 4px 16px;
+  padding: 20px 22px; border-radius: 18px; position: relative; transition: transform .35s ease, opacity .35s ease;
+  opacity: .74;
+}
+.kb-tab:hover { opacity: .9; }
+.kb-tab[aria-selected="true"] { opacity: 1; transform: translateX(8px); }
+.kb-tab[aria-selected="true"]::before {
+  content: ""; position: absolute; left: -8px; top: 22px; bottom: 22px; width: 3px; border-radius: 3px;
+  background: linear-gradient(180deg, var(--plasma), var(--core));
+}
+.kb-tab:focus-visible { outline: 2px solid var(--plasma); outline-offset: 3px; }
+.kb-tab .num { grid-row: span 3; font: 700 34px/1 var(--disp); color: transparent; -webkit-text-stroke: 1px var(--hairline-2); align-self: start; padding-top: 2px; }
+.kb-tab[aria-selected="true"] .num { color: var(--core); -webkit-text-stroke: 0; }
+.kb-tab .name { font: 700 18px/1.3 var(--disp); color: var(--ink); }
+.kb-tab .name small { font: 12px var(--mono); color: var(--faint); font-weight: 400; margin-left: 8px; }
+.kb-tab .desc { font-size: 14px; color: var(--dim); line-height: 1.6; }
+.kb-tab .scope { font: 11px/1 var(--mono); letter-spacing: .06em; margin-top: 6px; }
+.kb-tab .scope.pub { color: var(--plasma); } .kb-tab .scope.priv { color: var(--core); }
+
+.kb-panel { display: none; }
+.kb-panel.on { display: block; animation: kbIn .45s ease; }
+@keyframes kbIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+.kb-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 14px; }
+@media (max-width: 620px) { .kb-stats { grid-template-columns: repeat(2, 1fr); } }
+.kb-stat { padding: 14px 16px; border-radius: 14px; }
+.kb-stat b { display: block; font: 700 22px/1.1 var(--disp); color: var(--ink); font-variant-numeric: tabular-nums; }
+.kb-stat span { font-size: 12px; color: var(--dim); line-height: 1.4; display: block; margin-top: 4px; }
+
+.md-win { border-radius: 16px; overflow: hidden; border: 1px solid var(--hairline-2); background: rgba(6, 10, 18, .82); }
+.md-bar { display: flex; align-items: center; gap: 8px; padding: 10px 14px; border-bottom: 1px solid var(--hairline); font: 12px var(--mono); color: var(--faint); }
+.md-bar i { width: 9px; height: 9px; border-radius: 50%; background: #2a3448; display: inline-block; }
+.md-bar .path { margin-left: 8px; color: var(--dim); }
+.md-bar .tag { margin-left: auto; font-size: 11px; padding: 3px 7px; border-radius: 5px; background: var(--plasma-soft); color: var(--plasma); }
+.md-body { padding: 16px 18px 18px; font: 12.6px/1.75 var(--mono); color: #c7d3e6; overflow-x: auto; max-height: 440px; overflow-y: auto; }
+.md-body .fm { color: #7d8ca5; }
+.md-body .k { color: #8fd0ff; }
+.md-body .h { color: #ffd08a; font-weight: 600; }
+.md-body .q { color: #9fb0c8; border-left: 2px solid var(--hairline-2); padding-left: 10px; display: block; margin: 4px 0; white-space: normal; }
+.md-body .lk { color: var(--plasma); }
+.md-body .rel { display: inline-block; font-size: 10.5px; padding: 1px 6px; border-radius: 4px; margin-right: 6px; }
+.md-body .rel.ext { background: rgba(255,160,40,.16); color: #ffc070; }
+.md-body .rel.use { background: rgba(82,183,255,.14); color: #8fd0ff; }
+.md-body .rel.con { background: rgba(255,110,110,.16); color: #ff9c9c; }
+.md-body .rel.cmp { background: rgba(160,140,255,.16); color: #c3b6ff; }
+.md-body .c { color: #5b6a80; font-style: italic; }
+.md-body pre { margin: 0; font: inherit; white-space: pre-wrap; }
+.kb-rels { margin-top: 14px; padding: 16px 18px; border-radius: 14px; }
+.kb-rels h4 { margin: 0 0 10px; font: 11.5px/1 var(--mono); color: var(--faint); letter-spacing: .1em; text-transform: uppercase; font-weight: 400; }
+.kb-rel { display: grid; grid-template-columns: 78px 1fr 64px; gap: 10px; align-items: center; font-size: 12.5px; margin: 5px 0; }
+.kb-rel span:first-child { font-family: var(--mono); color: var(--dim); }
+.kb-rel .bar { height: 6px; border-radius: 3px; background: linear-gradient(90deg, var(--plasma), rgba(82,183,255,.25)); }
+.kb-rel span:last-child { font: 12px var(--mono); color: var(--faint); text-align: right; }
+.kb-note { margin: 12px 2px 0; font-size: 13px; color: var(--faint); line-height: 1.7; }
+.kb-note b { color: var(--dim); }
+
+.kb-why { margin-top: 56px; }
+.kb-why-h { margin: 0 0 18px; font: 700 22px/1.3 var(--disp); }
+.kb-why-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+@media (max-width: 960px) { .kb-why-grid { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 620px) { .kb-why-grid { grid-template-columns: 1fr; } }
+.kb-w { padding: 18px 20px; border-radius: 16px; }
+.kb-w h4 { margin: 0 0 8px; font: 700 16px/1.35 var(--disp); color: var(--ink); }
+.kb-w p { margin: 0; font-size: 13.5px; line-height: 1.7; color: var(--dim); }
+.kb-flow { margin-top: 44px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; position: relative; }
+@media (max-width: 900px) { .kb-flow { grid-template-columns: 1fr; } }
+.kb-q { grid-column: 1 / -1; font: 600 16px/1.5 var(--disp); color: var(--ink); margin-bottom: 2px; }
+.kb-q span.lbl { font: 11.5px var(--mono); color: var(--core); letter-spacing: .1em; margin-right: 10px; }
+.kb-step { padding: 18px 20px; border-radius: 16px; }
+.kb-step .st { font: 11px/1 var(--mono); color: var(--faint); letter-spacing: .08em; }
+.kb-step h4 { margin: 8px 0 6px; font: 700 15.5px/1.35 var(--disp); }
+.kb-step p { margin: 0; font-size: 13.5px; color: var(--dim); line-height: 1.65; }
+
+/* ================= three.js scenes ================= */
+.phys-view canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.phys.wide { grid-column: 1 / -1; display: grid; grid-template-columns: minmax(0, 1.7fr) minmax(0, 1fr); }
+.phys.wide .phys-view { aspect-ratio: auto; min-height: 380px; border-bottom: none; border-right: 1px solid var(--hairline); }
+.phys.wide .phys-txt { align-self: center; padding: 28px 30px; }
+.phys.wide .phys-txt h3 { font-size: 22px; }
+.phys.wide .phys-txt p + p { margin-top: 10px; }
+.phys-txt sup { font-size: .75em; }
+.dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin: 0 2px 0 4px; vertical-align: 0; }
+.dot.p { background: #ff9440; } .dot.n { background: #5cb6ff; }
+@media (max-width: 900px) {
+  .phys.wide { grid-template-columns: 1fr; }
+  .phys.wide .phys-view { min-height: 0; aspect-ratio: 16 / 10; border-right: none; border-bottom: 1px solid var(--hairline); }
+}
+.phys-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
+@media (max-width: 1000px) { .phys-grid { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 640px) { .phys-grid { grid-template-columns: 1fr; } }
+.phys { border-radius: 20px; overflow: hidden; display: flex; flex-direction: column; }
+.phys-view {
+  position: relative; aspect-ratio: 4 / 3;
+  background: radial-gradient(120% 90% at 50% 40%, rgba(82,183,255,.10), rgba(5,8,15,0) 70%);
+  border-bottom: 1px solid var(--hairline);
+}
+.phys-view:not(.scene-on)::after {
+  content: attr(data-fallback); position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+  font: 12px var(--mono); color: var(--faint);
+}
+.phys-txt { padding: 18px 22px 22px; }
+.phys-txt .codes { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+.phys-txt .codes span { font: 11px/1.2 var(--mono); color: var(--plasma); padding: 4px 7px; border-radius: 5px; background: var(--plasma-soft); }
+.phys-txt h3 { margin: 0 0 8px; font: 700 17.5px/1.35 var(--disp); }
+.phys-txt p { margin: 0; color: var(--dim); font-size: 14px; line-height: 1.7; }
+.phys-txt p b { color: var(--ink); font-weight: 600; }
+
 /* ================= sections ================= */
 section { padding: 110px 0; position: relative; }
 .eyebrow {
@@ -629,6 +740,7 @@ footer { border-top: 1px solid var(--hairline); padding: 44px 0 60px; }
     </a>
     <div class="nav-links">
       <a href="#what"><span class="zh">是什么</span><span class="en">What</span></a>
+      <a href="#kb"><span class="zh">知识库</span><span class="en">Knowledge</span></a>
       <a href="#why"><span class="zh">为什么</span><span class="en">Why</span></a>
       <a href="#bench"><span class="zh">技能</span><span class="en">Skills</span></a>
       <a href="#cases"><span class="zh">案例</span><span class="en">Cases</span></a>
@@ -733,6 +845,201 @@ footer { border-top: 1px solid var(--hairline); padding: 44px 0 60px; }
 
 <hr class="divider">
 
+<!-- ================= KNOWLEDGE ================= -->
+<section id="kb">
+  <div class="wrap">
+    <div class="rv">
+      <p class="eyebrow"><span class="zh">知识库 · Knowledge</span><span class="en">The knowledge base</span></p>
+      <h2>
+        <span class="zh">三层知识库：整个领域、你读过的、你做过的</span>
+        <span class="en">Three layers of knowledge: the field, what you read, what you did</span>
+      </h2>
+      <p class="sec-lede">
+        <span class="zh">FUSION 的核心是三层 wiki。它们全是纯文本 Markdown，agent 用 grep 就能查，<strong>不需要服务器、数据库或向量索引</strong>。第一层随仓库公开发布；后两层属于你自己，只存在你的机器上。回答一个问题时，agent 依次查这三层：领域里谁做过，你读的时候得出了什么结论，你自己是不是已经试过、为什么没成。</span>
+        <span class="en">The core of FUSION is three wikis. All three are plain Markdown that the agent searches with grep, <strong>with no server, database, or vector index</strong>. The first ships publicly with the repository; the other two are yours and stay on your machine. To answer a question the agent works down the layers: who in the field has done this, what you concluded when you read them, and whether you have already tried it yourself and why it did not work.</span>
+      </p>
+    </div>
+
+    <div class="kb-grid rv">
+      <div class="kb-tabs" role="tablist" aria-label="Knowledge layers">
+        <button class="kb-tab glass" role="tab" aria-selected="true" aria-controls="kb-p1" id="kb-t1" data-glass data-glass-bevel="18" data-glass-scale="32">
+          <span class="num">1</span>
+          <span class="name">Corpus<small>kb-wiki</small></span>
+          <span class="desc"><span class="zh">arXiv nucl-th 1992 年至今的 61,059 篇论文，每篇一页，加 108 个主题页和一张引用图。</span><span class="en">61,059 arXiv nucl-th papers from 1992 on, one page each, plus 108 topic pages and a citation graph.</span></span>
+          <span class="scope pub"><span class="zh">公开 · 随仓库发布 · 离线</span><span class="en">PUBLIC · SHIPS WITH THE REPO · OFFLINE</span></span>
+        </button>
+        <button class="kb-tab glass" role="tab" aria-selected="false" aria-controls="kb-p2" id="kb-t2" data-glass data-glass-bevel="18" data-glass-scale="32">
+          <span class="num">2</span>
+          <span class="name">Literature wiki<small>literature-wiki</small></span>
+          <span class="desc"><span class="zh">你真正读过的论文。每读完一篇，agent 把它整合进方法、体系、观测量和争论页面，结论随时间累积，不用每次重新从 PDF 里找。</span><span class="en">The papers you have actually read. Each one is folded into method, system, observable, and debate pages, so conclusions accumulate instead of being rediscovered from PDFs.</span></span>
+          <span class="scope priv"><span class="zh">私有 · 只在你的机器上</span><span class="en">PRIVATE · ON YOUR MACHINE</span></span>
+        </button>
+        <button class="kb-tab glass" role="tab" aria-selected="false" aria-controls="kb-p3" id="kb-t3" data-glass data-glass-bevel="18" data-glass-scale="32">
+          <span class="num">3</span>
+          <span class="name">Personal wiki<small>research-profile</small></span>
+          <span class="desc"><span class="zh">你自己的研究档案：项目、论文、想法，以及每一次失败的原因。一页摘要在每次会话开始时自动载入。</span><span class="en">Your own research record: projects, papers, ideas, and why each failure failed. A one-page summary loads at the start of every session.</span></span>
+          <span class="scope priv"><span class="zh">私有 · 只在你的机器上</span><span class="en">PRIVATE · ON YOUR MACHINE</span></span>
+        </button>
+      </div>
+
+      <div>
+        <div class="kb-panel on" role="tabpanel" id="kb-p1" aria-labelledby="kb-t1">
+          <div class="kb-stats">
+            <div class="kb-stat glass" data-glass data-glass-bevel="12" data-glass-scale="22"><b>61,059</b><span class="zh">论文页</span><span class="en">paper pages</span></div>
+            <div class="kb-stat glass" data-glass data-glass-bevel="12" data-glass-scale="22"><b>108</b><span class="zh">PhySH 主题页</span><span class="en">PhySH topic pages</span></div>
+            <div class="kb-stat glass" data-glass data-glass-bevel="12" data-glass-scale="22"><b>703,430</b><span class="zh">语料内引用边</span><span class="en">in-corpus citation edges</span></div>
+            <div class="kb-stat glass" data-glass data-glass-bevel="12" data-glass-scale="22"><b>233,774</b><span class="zh">标了类型的引用关系</span><span class="en">typed citation relations</span></div>
+          </div>
+          <div class="md-win">
+            <div class="md-bar"><i></i><i></i><i></i><span class="path">kb-wiki/papers/2101.03193.md</span><span class="tag"><span class="zh">真实页面节选</span><span class="en">real page, excerpt</span></span></div>
+            <div class="md-body"><pre><span class="fm">---
+<span class="k">arxiv:</span> 2101.03193
+<span class="k">title:</span> "Implications of PREX-II on the equation of state of neutron-rich matter"
+<span class="k">authors:</span> "Reed, Brendan T.; Fattoyev, F. J.; Horowitz, C. J.; Piekarewicz, J."
+<span class="k">doi:</span> 10.1103/PhysRevLett.126.172503
+<span class="k">digest_model:</span> deepseek-chat
+<span class="k">digest_date:</span> 2026-07-14
+<span class="k">concepts:</span> ["neutron-skin-thickness", "symmetry-energy"]
+---</span>
+<span class="q">Laboratory experiments sensitive to the equation of state of neutron rich matter in the vicinity of nuclear saturation density provide the first rung in a "density ladder" … <span class="c">[arXiv abstract, verbatim]</span></span>
+<span class="h">## Key claim</span>
+Using a specific class of relativistic energy density functionals, the authors report a value of the slope of the symmetry energy L = (106 ± 37) MeV derived from the PREX-II neutron skin measurement …
+
+<span class="h">## Key numbers</span>
+- Neutron skin thickness of 208Pb: Rskin = (0.283 ± 0.071) fm
+- Slope of symmetry energy at saturation density: L = (106 ± 37) MeV
+<span class="c">…</span>
+<span class="h">## Related work</span>
+<span class="rel con">contrasts</span><span class="lk">1311.0168</span>  Neutron skin of 208Pb from Coherent Pion Photoproduction
+<span class="rel con">contrasts</span><span class="lk">1904.12269</span>  Neutron skins of atomic nuclei: per aspera ad astra
+<span class="rel cmp">compares</span><span class="lk">1611.01871</span>  Symmetry Energy III: Isovector Skins
+<span class="rel use">uses</span><span class="lk">1306.6034</span>   Has a thick neutron skin in 208Pb been ruled out?
+<span class="rel use">uses</span><span class="lk">1912.05702</span>  A NICER View of PSR J0030+0451 …
+<span class="c">…</span>
+<span class="h">## In-corpus citations</span>
+Cites (33)   Cited by (226)</pre></div>
+          </div>
+          <div class="kb-rels glass" data-glass data-glass-bevel="14" data-glass-scale="26">
+            <h4><span class="zh">引用关系按用途分类</span><span class="en">Citations typed by what they do</span></h4>
+            <div class="kb-rel"><span>uses</span><i class="bar" style="width:100%"></i><span>189,453</span></div>
+            <div class="kb-rel"><span>compares</span><i class="bar" style="width:12.0%"></i><span>22,760</span></div>
+            <div class="kb-rel"><span>extends</span><i class="bar" style="width:5.9%"></i><span>11,153</span></div>
+            <div class="kb-rel"><span>contrasts</span><i class="bar" style="width:3.2%"></i><span>6,000</span></div>
+            <div class="kb-rel"><span>applies</span><i class="bar" style="width:2.3%"></i><span>4,408</span></div>
+          </div>
+          <p class="kb-note"><span class="zh">摘要逐字取自 arXiv；Key claim、Method、Key numbers 由语言模型读全文生成，<b>不是作者写的</b>，每页都记下了生成模型和日期。引用关系是找文献的线索，写论文时仍要引用原文并回原文核对。作者要求撤下自己的页面，一律照办。</span><span class="en">Abstracts are verbatim from arXiv; Key claim, Method, and Key numbers are generated by a language model reading the full text, <b>not written by the authors</b>, and every page records the model and date. Citation links are leads for finding literature: cite the paper, and check the link against it. Any author who asks for their page to be removed gets it removed.</span></p>
+        </div>
+
+        <div class="kb-panel" role="tabpanel" id="kb-p2" aria-labelledby="kb-t2">
+          <div class="md-win">
+            <div class="md-bar"><i></i><i></i><i></i><span class="path">~/research-wiki/</span><span class="tag"><span class="zh">目录结构</span><span class="en">layout</span></span></div>
+            <div class="md-body"><pre>├── raw/            <span class="c"><span class="zh"># 原始 PDF，只进不改</span><span class="en"># source PDFs, never edited</span></span>
+├── sources/        <span class="c"><span class="zh"># 每篇读过的论文一页</span><span class="en"># one page per paper you read</span></span>
+├── methods/        <span class="c"><span class="zh"># 壳模型、R 矩阵、耦合道 … 每个方法一页</span><span class="en"># shell model, R-matrix, CDCC … one page each</span></span>
+├── systems/        <span class="c"><span class="zh"># ²⁰⁸Pb、⁴⁸Ca、¹²C … 每个体系一页</span><span class="en"># ²⁰⁸Pb, ⁴⁸Ca, ¹²C … one page per system</span></span>
+├── observables/    <span class="c"><span class="zh"># 截面、谱因子 … 每个物理量一页</span><span class="en"># cross sections, widths … one page each</span></span>
+├── entities/       <span class="c"><span class="zh"># 作者、组、实验、程序</span><span class="en"># authors, groups, experiments, codes</span></span>
+├── debates/        <span class="c"><span class="zh"># 谁和谁的结论不一致</span><span class="en"># who disagrees with whom</span></span>
+├── synthesis/      <span class="c"><span class="zh"># 跨论文的综合判断</span><span class="en"># conclusions that span papers</span></span>
+└── log.md</pre></div>
+          </div>
+          <div class="md-win" style="margin-top:14px">
+            <div class="md-bar"><i></i><i></i><i></i><span class="path">sources/&lt;paper-id&gt;.md</span><span class="tag"><span class="zh">页面骨架</span><span class="en">page skeleton</span></span></div>
+            <div class="md-body"><pre><span class="fm">---
+<span class="k">methods:</span> [ … ]   <span class="k">systems:</span> [ … ]   <span class="k">observables:</span> [ … ]
+<span class="k">source_pdf:</span> raw/…
+---</span>
+<span class="h">## For future agents</span>
+<span class="c"><span class="zh">两三句话：论文主张什么、那个关键数字是多少、涉及哪些方法和体系、
+什么问题会用到这一页。agent 读这几行就能决定要不要往下看。</span><span class="en">Two or three sentences: the claim, its one key number, the methods and
+systems it touches, and which questions need this page. The agent
+decides from these lines whether to read on.</span></span>
+
+<span class="h">## Key claims</span>    <span class="c"><span class="zh">带章节出处</span><span class="en">with section references</span></span>
+<span class="h">## Key numbers</span>
+<span class="c">→ [[methods/…]]  [[systems/…]]  [[debates/…]]</span></pre></div>
+          </div>
+          <p class="kb-note"><span class="zh">每收进一篇，通常会改动 5 到 15 个页面：方法页、体系页的正文被改写，新旧结论矛盾的地方被标出来，写进 <b>debates/</b>。标签来自受控词表，所以“用过 CDCC 的所有论文”这种问题一次就能答。</span><span class="en">Filing one paper typically touches 5 to 15 pages: method and system pages are rewritten, and conflicts with earlier conclusions are flagged in <b>debates/</b>. Tags come from a controlled vocabulary, so a question like “every paper I read that uses CDCC” is answered in one read.</span></p>
+        </div>
+
+        <div class="kb-panel" role="tabpanel" id="kb-p3" aria-labelledby="kb-t3">
+          <div class="md-win">
+            <div class="md-bar"><i></i><i></i><i></i><span class="path">~/research-wiki-personal/</span><span class="tag"><span class="zh">目录结构</span><span class="en">layout</span></span></div>
+            <div class="md-body"><pre>├── profile.md      <span class="c"><span class="zh"># 一页摘要，每次会话自动载入</span><span class="en"># one-page summary, loaded every session</span></span>
+├── projects/       <span class="c"># active / paused / done</span>
+├── papers/         <span class="c"># published / submitted / drafts / rejected</span>
+├── ideas/          <span class="c"># promising / parked / killed</span>
+├── failures/       <span class="c"><span class="zh"># 没做成的事，以及原因</span><span class="en"># what did not work, and why</span></span>
+├── collaborators/
+└── log.md</pre></div>
+          </div>
+          <div class="md-win" style="margin-top:14px">
+            <div class="md-bar"><i></i><i></i><i></i><span class="path">failures/&lt;slug&gt;.md</span><span class="tag"><span class="zh">页面骨架</span><span class="en">page skeleton</span></span></div>
+            <div class="md-body"><pre><span class="h">## What was tried</span>
+<span class="h">## Why it should have worked</span>      <span class="c"><span class="zh"># 当时的判断</span><span class="en"># the belief at the time</span></span>
+<span class="h">## What actually happened</span>
+<span class="h">## What was ruled out</span>
+<span class="h">## Conditions that might revive it</span></pre></div>
+          </div>
+          <p class="kb-note"><span class="zh">科研里最常见的浪费，是把同一条死路再走一遍。失败页和论文、项目用同一套标签（方法、体系、课题），所以 agent 在你开始一个新想法之前，能先查到自己以前在同一个体系上栽过什么跟头。状态变化（投稿、接收、换单位）按时间追加记录，不覆盖旧值。</span><span class="en">The commonest waste in research is walking the same dead end twice. Failure pages carry the same tags as papers and projects (method, system, topic), so before you start a new idea the agent can find what already went wrong on that system. Changes of state (submitted, accepted, a new affiliation) are appended with dates, never overwritten.</span></p>
+        </div>
+      </div>
+    </div>
+
+
+    <div class="kb-why rv">
+      <h3 class="kb-why-h"><span class="zh">为什么是 wiki，而不是每次让模型现查</span><span class="en">Why a wiki, instead of asking the model fresh each time</span></h3>
+      <div class="kb-why-grid">
+        <div class="kb-w glass" data-glass data-glass-bevel="16" data-glass-scale="28">
+          <h4><span class="zh">读一次，一直有效</span><span class="en">Read once, useful forever</span></h4>
+          <p><span class="zh">直接问模型，或者临时检索 PDF，每个问题都要从原文重新找一遍，读过的东西留不下来。wiki 把一篇论文读一次、整理一次，结论写进方法页和体系页，下一个问题直接在上面接着用。</span><span class="en">Asking a model, or retrieving from PDFs on the fly, rediscovers everything for every question, and nothing read is kept. A wiki reads and files a paper once, writes its conclusions into method and system pages, and the next question starts from there.</span></p>
+        </div>
+        <div class="kb-w glass" data-glass data-glass-bevel="16" data-glass-scale="28">
+          <h4><span class="zh">模型记不住，文件记得住</span><span class="en">The model forgets; files do not</span></h4>
+          <p><span class="zh">每次开新会话，模型都从零开始。个人档案的一页摘要在会话开始时自动载入，模型一上来就知道你在做什么、试过什么、为什么放弃，不用你每次重讲一遍。</span><span class="en">Every new session starts from zero. The one-page summary of your research record loads at the start, so the model already knows what you are working on, what you tried, and why you stopped, without you retelling it.</span></p>
+        </div>
+        <div class="kb-w glass" data-glass data-glass-bevel="16" data-glass-scale="28">
+          <h4><span class="zh">先读摘要，再决定读不读</span><span class="en">Triage before reading</span></h4>
+          <p><span class="zh">上下文窗口是有限的。每页开头几行就说清楚这篇讲什么、关键数字是多少，agent 扫过几十个候选页就能筛掉大半，把窗口留给真正相关的内容，而不是塞满整篇 PDF。</span><span class="en">The context window is finite. The first lines of each page state the claim and the key number, so the agent can scan dozens of candidates, drop most of them, and spend the window on what matters instead of whole PDFs.</span></p>
+        </div>
+        <div class="kb-w glass" data-glass data-glass-bevel="16" data-glass-scale="28">
+          <h4><span class="zh">每句话都能追到出处</span><span class="en">Every answer has a source</span></h4>
+          <p><span class="zh">结论指向具体的页面，页面指向 arXiv 原文。检索规则要求报告的每一条结果都来自实际跑过的搜索，模型不能凭记忆编文献。页面是纯文本，人可以直接打开、改错，用 git 看改动历史。</span><span class="en">Conclusions point to pages and pages point to arXiv. The search rules require every reported hit to come from a search that actually ran, so the model cannot cite from memory. Pages are plain text: a person can open them, fix them, and read the history in git.</span></p>
+        </div>
+        <div class="kb-w glass" data-glass data-glass-bevel="16" data-glass-scale="28">
+          <h4><span class="zh">换模型，不用重建</span><span class="en">Swap models, keep the knowledge</span></h4>
+          <p><span class="zh">没有向量数据库，也不绑定某个嵌入模型。DeepSeek、Qwen、GLM、Claude、GPT 读的是同一批文件，换模型或者断网都不影响。</span><span class="en">No vector database and no tie to an embedding model. DeepSeek, Qwen, GLM, Claude, and GPT all read the same files, so switching models or working offline changes nothing.</span></p>
+        </div>
+        <div class="kb-w glass" data-glass data-glass-bevel="16" data-glass-scale="28">
+          <h4><span class="zh">私人的留在本机</span><span class="en">Private stays local</span></h4>
+          <p><span class="zh">公开发布的只有第一层。你读过什么、怎么评价、哪些想法失败了，都只在你自己的机器上，FUSION 只定义怎么挂载，不打包、不上传。</span><span class="en">Only the first layer is published. What you read, what you thought of it, and which ideas failed stay on your machine; FUSION defines how they mount and never packages or uploads them.</span></p>
+        </div>
+      </div>
+    </div>
+
+    <div class="kb-flow rv">
+      <p class="kb-q"><span class="lbl"><span class="zh">一个问题</span><span class="en">ONE QUESTION</span></span><span class="zh">“²⁰⁸Pb 的中子皮到底有多厚？”</span><span class="en">“How thick is the neutron skin of ²⁰⁸Pb?”</span></p>
+      <div class="kb-step glass" data-glass data-glass-bevel="16" data-glass-scale="28">
+        <span class="st">1 · CORPUS</span>
+        <h4><span class="zh">领域里谁说过什么</span><span class="en">What the field has said</span></h4>
+        <p><span class="zh">grep 摘要和 Key numbers 找到 PREX-II 给出的 0.283 fm，再沿 contrasts 关系找到结论相反的测量（例如相干 π 光生），主题页给出全貌。</span><span class="en">Grep abstracts and key numbers to find PREX-II's 0.283 fm, follow the contrasts relations to measurements that disagree (coherent pion photoproduction, for one), and read the topic page for the landscape.</span></p>
+      </div>
+      <div class="kb-step glass" data-glass data-glass-bevel="16" data-glass-scale="28">
+        <span class="st">2 · LITERATURE WIKI</span>
+        <h4><span class="zh">你读的时候怎么判断</span><span class="en">What you concluded</span></h4>
+        <p><span class="zh">打开你读过的那几篇的页面和 debates/ 里的记录：哪些结论你当时就不信，哪些数字后来被别的论文推翻。</span><span class="en">Open your pages on the papers you read and the notes in debates/: which conclusions you doubted at the time, which numbers were later overturned.</span></p>
+      </div>
+      <div class="kb-step glass" data-glass data-glass-bevel="16" data-glass-scale="28">
+        <span class="st">3 · PERSONAL WIKI</span>
+        <h4><span class="zh">你自己做到了哪一步</span><span class="en">Where your own work stands</span></h4>
+        <p><span class="zh">查你的项目和失败页：这个体系你算过没有，卡在哪里，哪条路已经证明走不通。</span><span class="en">Check your projects and failure pages: whether you have computed this system, where it stalled, which routes are already known to fail.</span></p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<hr class="divider">
+
 <!-- ================= TERMINAL ================= -->
 <section id="demo">
   <div class="wrap">
@@ -823,6 +1130,84 @@ footer { border-top: 1px solid var(--hairline); padding: 44px 0 60px; }
     </div>
   </div>
 </section>
+
+<!-- ================= PHYSICS ================= -->
+<section id="physics">
+  <div class="wrap">
+    <div class="rv">
+      <p class="eyebrow"><span class="zh">物理 · Physics</span><span class="en">The physics inside</span></p>
+      <h2>
+        <span class="zh">二十个程序背后的原子核物理</span>
+        <span class="en">The nuclear physics behind the twenty codes</span>
+      </h2>
+      <p class="sec-lede">
+        <span class="zh">每张图对应一类技能，选的都是基准表里真正跑过的体系或同类的标准例子。图是示意，但账是真的：原子核按实际的质子数、中子数堆成，半径取 1.2A<sup>1/3</sup> fm；裂变和俘获前后质子数、质量数守恒；壳层图的能级取自实测分离能。鼠标移上去可以转动视角。</span>
+        <span class="en">Each panel stands for one family of skills, using the systems in the benchmark table or standard examples of the same kind. The pictures are schematic but the bookkeeping is real: nuclei are built from their actual proton and neutron numbers at radius 1.2A<sup>1/3</sup> fm, fission and capture conserve Z and A, and the shell diagram uses measured separation energies. Move the pointer over a panel to tilt it.</span>
+      </p>
+    </div>
+    <div class="phys-grid">
+      <article class="phys wide glass rv" data-glass data-glass-bevel="20" data-glass-scale="36">
+        <div class="phys-view" data-scene="breakup" data-fallback="d + ²⁰⁸Pb breakup"></div>
+        <div class="phys-txt">
+          <div class="codes"><span>FRESCO</span><span>COLOSS</span><span>NLAT</span><span>CNOK</span><span>pikoe</span><span>SIDES</span><span>SWANLOP</span></div>
+          <h3><span class="zh">直接反应：氘核在 ²⁰⁸Pb 表面破裂</span><span class="en">Direct reactions: a deuteron breaks up on ²⁰⁸Pb</span></h3>
+          <p><span class="zh">弱束缚的氘核（结合能只有 2.22 MeV）掠过铅核表面时被拆开：中子被靶核吸收，质子在库仑场里偏转飞走，这就是<b>非弹性破裂</b>。靶核由 82 个质子<i class="dot p"></i>和 126 个中子<i class="dot n"></i>堆成，半径 1.2A<sup>1/3</sup> ≈ 7.1 fm。</span><span class="en">The weakly bound deuteron (binding energy only 2.22 MeV) is torn apart as it grazes the lead surface: the neutron is absorbed and the proton is deflected by the Coulomb field, which is <b>nonelastic breakup</b>. The target holds 82 protons<i class="dot p"></i> and 126 neutrons<i class="dot n"></i> at radius 1.2A<sup>1/3</sup> ≈ 7.1 fm.</span></p>
+          <p><span class="zh">反应类的 8 个技能覆盖光学模型、耦合道与 CDCC、转移和敲出反应；基准表里 FRESCO 与 COLOSS 两个独立求解器的反应截面一致到 6 位。</span><span class="en">The eight reaction skills cover the optical model, coupled channels and CDCC, transfer and knockout; in the benchmark table FRESCO and COLOSS, two independent solvers, agree on the reaction cross section to six figures.</span></p>
+        </div>
+      </article>
+      <article class="phys glass rv" data-glass data-glass-bevel="20" data-glass-scale="36">
+        <div class="phys-view" data-scene="fusion" data-fallback="¹⁶O + ¹⁴⁴Sm → ¹⁶⁰Yb*"></div>
+        <div class="phys-txt">
+          <div class="codes"><span>CCFULL</span><span>FRESCO</span></div>
+          <h3><span class="zh">熔合：越过库仑势垒</span><span class="en">Fusion over the Coulomb barrier</span></h3>
+          <p><span class="zh">¹⁶O 打 ¹⁴⁴Sm，两核接触后粘在一起，形成高激发的复合核 <b>¹⁶⁰Yb*</b>。势垒附近的熔合截面对靶核的集体激发很敏感，这正是耦合道计算要处理的。</span><span class="en">¹⁶O on ¹⁴⁴Sm: once the surfaces touch, the two nuclei stick and relax into the excited compound nucleus <b>¹⁶⁰Yb*</b>. Near the barrier the fusion cross section is sensitive to collective excitations of the target, which is what coupled-channels codes are for.</span></p>
+        </div>
+      </article>
+      <article class="phys glass rv" data-glass data-glass-bevel="20" data-glass-scale="36">
+        <div class="phys-view" data-scene="fission" data-fallback="²⁵²Cf → ¹⁰⁸Mo + ¹⁴⁴Ba"></div>
+        <div class="phys-txt">
+          <div class="codes"><span>CGMF</span><span>TALYS</span></div>
+          <h3><span class="zh">裂变：²⁵²Cf 一分为二</span><span class="en">Fission: ²⁵²Cf splits</span></h3>
+          <p><span class="zh">核被拉长、出现颈部后断开。这里画的是其中一种分法：初级碎片 <b>¹⁰⁸Mo + ¹⁴⁴Ba</b>，各蒸发两个中子成为 ¹⁰⁶Mo + ¹⁴²Ba，再放出 γ 光子。²⁵²Cf 自发裂变平均放出约 3.8 个瞬发中子，CGMF 逐事件模拟这一步。</span><span class="en">The nucleus elongates, forms a neck and snaps. One of many splits is drawn: primary fragments <b>¹⁰⁸Mo + ¹⁴⁴Ba</b>, each evaporating two neutrons to become ¹⁰⁶Mo + ¹⁴²Ba, then emitting γ rays. Spontaneous fission of ²⁵²Cf releases about 3.8 prompt neutrons on average; CGMF follows this event by event.</span></p>
+        </div>
+      </article>
+      <article class="phys glass rv" data-glass data-glass-bevel="20" data-glass-scale="36">
+        <div class="phys-view" data-scene="capture" data-fallback="¹⁶O(p,γ)¹⁷F"></div>
+        <div class="phys-txt">
+          <div class="codes"><span>AZURE2</span><span>SkyNet</span></div>
+          <h3><span class="zh">核天体：¹⁶O(p,γ)¹⁷F</span><span class="en">Nuclear astrophysics: ¹⁶O(p,γ)¹⁷F</span></h3>
+          <p><span class="zh">恒星里，质子被 ¹⁶O 俘获成为 <b>¹⁷F</b>，多出的能量由 γ 光子带走，这是 CNO 循环的一个分支。基准表里 AZURE2 复现的正是这个反应的天体物理 S 因子；SkyNet 把成千上万个这样的反应接成核合成网络。</span><span class="en">In a star, ¹⁶O captures a proton to become <b>¹⁷F</b> and a γ ray carries off the excess energy, a branch of the CNO cycle. AZURE2 reproduces this reaction's astrophysical S factor in the benchmark table; SkyNet links thousands of such reactions into a nucleosynthesis network.</span></p>
+        </div>
+      </article>
+      <article class="phys glass rv" data-glass data-glass-bevel="20" data-glass-scale="36">
+        <div class="phys-view" data-scene="shell" data-fallback="¹⁶O shell structure"></div>
+        <div class="phys-txt">
+          <div class="codes"><span>KSHELL</span><span>NuclearToolkit.jl</span><span>GSM</span><span>Sky3D</span></div>
+          <h3><span class="zh">壳结构：¹⁶O 的双幻数</span><span class="en">Shell structure: doubly magic ¹⁶O</span></h3>
+          <p><span class="zh">质子（左）和中子（右）各 8 个，恰好填满 0s½、0p3/2、0p½；再往上的 0d5/2 要多花约 11 MeV，这就是<b>幻数 8</b>。能级取自 ¹⁶O、¹⁵N/¹⁵O 和 ¹⁷O/¹⁷F 的实测分离能与激发能，0s 只示意位置；质子能级整体偏高，是库仑排斥的结果。</span><span class="en">Eight protons (left) and eight neutrons (right) exactly fill 0s½, 0p3/2 and 0p½; the next orbital, 0d5/2, costs about 11 MeV more, which is <b>magic number 8</b>. Levels come from measured separation and excitation energies of ¹⁶O, ¹⁵N/¹⁵O and ¹⁷O/¹⁷F, with 0s placed schematically; the proton levels sit higher because of Coulomb repulsion.</span></p>
+        </div>
+      </article>
+      <article class="phys glass rv" data-glass data-glass-bevel="20" data-glass-scale="36">
+        <div class="phys-view" data-scene="collision" data-fallback="Au + Au"></div>
+        <div class="phys-txt">
+          <div class="codes"><span>SMASH</span><span>GiBUU</span></div>
+          <h3><span class="zh">重离子碰撞：Au + Au</span><span class="en">Heavy-ion collision: Au + Au</span></h3>
+          <p><span class="zh">接近光速的两个金核在实验室系被洛伦兹收缩成薄饼。重叠区的核子（<b>参与者</b>）停下来，变成高温高密的火球并产生大量强子；不重叠的<b>旁观者</b>继续往前飞。输运程序逐个粒子追踪这个过程。</span><span class="en">Two gold nuclei near the speed of light are Lorentz-contracted into pancakes. Nucleons in the overlap (<b>participants</b>) stop and turn into a hot, dense fireball that produces many hadrons, while the <b>spectators</b> fly on. Transport codes follow this particle by particle.</span></p>
+        </div>
+      </article>
+      <article class="phys glass rv" data-glass data-glass-bevel="20" data-glass-scale="36">
+        <div class="phys-view" data-scene="flow" data-fallback="elliptic flow"></div>
+        <div class="phys-txt">
+          <div class="codes"><span>vHLLE</span><span>Thermal-FIST</span></div>
+          <h3><span class="zh">流体与状态方程：椭圆流</span><span class="en">Hydrodynamics and the EOS: elliptic flow</span></h3>
+          <p><span class="zh">非对心碰撞留下的火球是杏仁形的。反应平面内的压强梯度更大，所以沿短轴膨胀得更快，形状最后反过来；这种各向异性叫<b>椭圆流</b>，对状态方程和粘滞很敏感。颜色表示温度，冷却到冻结后强子自由飞出。</span><span class="en">An off-centre collision leaves an almond-shaped fireball. The pressure gradient is steeper in the reaction plane, so it expands faster along the short axis until the shape inverts; this <b>elliptic flow</b> is sensitive to the equation of state and viscosity. Colour tracks temperature; after freeze-out the hadrons stream freely.</span></p>
+        </div>
+      </article>
+    </div>
+  </div>
+</section>
+
+<hr class="divider">
 
 <!-- ================= BENCHMARKS ================= -->
 <section id="bench" class="bench">
@@ -1243,6 +1628,30 @@ footer { border-top: 1px solid var(--hairline); padding: 44px 0 60px; }
 </footer>
 
 <script src="assets/stars.js"></script>
+<script>
+(function () {
+  var tabs = document.querySelectorAll('.kb-tab');
+  function show(t) {
+    tabs.forEach(function (x) {
+      var on = x === t;
+      x.setAttribute('aria-selected', on ? 'true' : 'false');
+      x.tabIndex = on ? 0 : -1;
+      document.getElementById(x.getAttribute('aria-controls')).classList.toggle('on', on);
+    });
+  }
+  tabs.forEach(function (t, i) {
+    t.addEventListener('click', function () { show(t); });
+    t.addEventListener('keydown', function (e) {
+      var k = e.key === 'ArrowDown' || e.key === 'ArrowRight' ? 1 : e.key === 'ArrowUp' || e.key === 'ArrowLeft' ? -1 : 0;
+      if (!k) return;
+      e.preventDefault();
+      var n = tabs[(i + k + tabs.length) % tabs.length]; n.focus(); show(n);
+    });
+  });
+})();
+</script>
+<script src="assets/three-bundle.js" defer></script>
+<script src="assets/physics-scenes.js" defer></script>
 <script src="assets/glass.js"></script>
 <script src="assets/glass-lens.js"></script>
 <script>
