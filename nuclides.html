@@ -2387,7 +2387,8 @@ const ease = (t) => 1 - Math.pow(1 - t, 3);
 let last = performance.now();
 function animate(now) {
   requestAnimationFrame(animate);
-  const dt = Math.min(0.1, (now - last) / 1000);
+  // the first rAF timestamp can predate the performance.now() taken at start: never let dt go negative
+  const dt = Math.min(0.1, Math.max(0, (now - last) / 1000));
   last = now;
   if (playing) {
     playY += dt * (Y1 + 1 - Y0) / 16; // the whole history in about sixteen seconds
