@@ -339,10 +339,11 @@
       }
 
       // ---- SAMURAI: F7-F12 24.7 m, F7-F13 39.6 m [5]; H-type superconducting dipole, round 2 m pole,
-      // 800 mm gap, yoke 6.7 m x 3.5 m x 4.64 m, 7 Tm, on a base rotatable from -5 to 95 degrees; STQ25 6.45 m
-      // upstream of the magnet centre [7]; NEBULA neutron walls downstream at zero degrees [1]
+      // 0.88 m gap, yoke 6.7 m x 3.5 m x 4.64 m, 7 Tm, on a base rotatable from -5 to 95 degrees; STQ25 6.45 m
+      // upstream of the magnet centre [7]; standard configuration (yoke at 30 degrees, target, FDC1, exit window,
+      // FDC2, HODF, NEBULA at zero degrees) from the hall plan and yoke drawing of [15]
       const gSAM = A.section("SAMURAI", "end", [TS.at(26), TS.at(58)], 5);
-      const samC = TS.at(39.6 - 11.3 + 2.2), samPit = [samC.x - 14.5, samC.z - 6.5, samC.x + 7.5, samC.z + 5];
+      const samC = TS.at(39.6 - 11.3 + 2.2), samPit = [samC.x - 14.5, samC.z - 6.5, samC.x + 7.5, samC.z + 5.8];
       PITS.push([samPit[0], samPit[1], samPit[2], samPit[3], -2.55]);
       const samRoutes = [];
       gSAM.userData.detailLabels = [];
@@ -352,114 +353,149 @@
         fchamber(TS.at(24.7 - 11.3), TS.d, gSamLine);
         stq(samC.clone().addScaledVector(TS.d, -6.45), TS.d, gSamLine);
         const F13 = TS.at(39.6 - 11.3);
-        A.pipe([TS.p.clone(), samC.clone().addScaledVector(TS.d, -5.15)], gSamLine, 0.09);
-        // Reference image frame: +x is the incident/neutron axis; +z is the charged-particle fan.
+        A.pipe([TS.p.clone(), samC.clone().addScaledVector(TS.d, -4.8)], gSamLine, 0.09);
+        // Beam frame: origin at the magnet centre, +x the incident (and neutron) axis, +z the bending side.
+        // Standard configuration [15]: the yoke turned 30 degrees, so the beam enters through the back face
+        // and neutrons and charged fragments all leave through the long exit window on the front face.
         const theta = Math.atan2(TS.d.z, TS.d.x), mag = new THREE.Group();
         mag.position.copy(samC); mag.rotation.y = -theta;
         const blue = new THREE.MeshStandardMaterial({ color: "#102abd", metalness: 0.12, roughness: 0.4, envMapIntensity: 0.3 });
         const gold = new THREE.MeshStandardMaterial({ color: "#f3c547", metalness: 0.28, roughness: 0.45 });
         const coil = new THREE.MeshStandardMaterial({ color: "#ee5837", metalness: 0.22, roughness: 0.4 });
         const basePaint = new THREE.MeshStandardMaterial({ color: "#94764f", metalness: 0.25, roughness: 0.52 });
-        const window = new THREE.MeshStandardMaterial({ color: "#a9e8e7", metalness: 0.03, roughness: 0.38, emissive: "#23686c", emissiveIntensity: 0.12 });
+        const window = new THREE.MeshStandardMaterial({ color: "#a9e8e7", metalness: 0.03, roughness: 0.38, emissive: "#23686c", emissiveIntensity: 0.12, transparent: true, opacity: 0.6 });
         const barPaint = new THREE.MeshStandardMaterial({ color: "#88c9da", metalness: 0.08, roughness: 0.48 });
-        const framePaint = new THREE.MeshStandardMaterial({color:"#19272e",metalness:0,roughness:0.8});
-        // Circular turntable and rotation rail, seen clearly around the open front.
-        mag.add(prism(ann(0, 0, 0, 4.05, 0, 2 * PI, 96), -2.45, -2.1, basePaint));
-        for (const r of [3.92, 4.15]) {
-          const rail = new THREE.Mesh(new THREE.TorusGeometry(r, 0.04, 8, 96), K.rf);
-          rail.rotation.x = PI / 2; rail.position.y = -2.04; mag.add(rail);
+        const framePaint = new THREE.MeshStandardMaterial({ color: "#19272e", metalness: 0, roughness: 0.8 });
+        const glass = new THREE.MeshStandardMaterial({ color: "#f3c547", metalness: 0.2, roughness: 0.4, transparent: true, opacity: 0.22, depthWrite: false });
+        const YB = -2.32, ROT = 30 * D2R, n = V3(Math.cos(ROT), 0, Math.sin(ROT)), ex = V3(Math.sin(ROT), 0, -Math.cos(ROT));
+        const toYoke = (p) => [p.dot(ex), p.dot(n)];                        // beam frame -> yoke plan (x along 6.7 m, z out of the exit face)
+        // Rotating base, 10 m across [15], set in the pit; the yoke stands on it.
+        mag.add(prism(ann(0, 0, 0, 5, 0, 2 * PI, 120), -2.55, YB, basePaint));
+        for (const r of [4.75, 4.95]) { const rail = new THREE.Mesh(new THREE.TorusGeometry(r, 0.035, 8, 120), K.rf); rail.rotation.x = PI / 2; rail.position.y = YB + 0.02; mag.add(rail); }
+        // Yoke [15]: 6.7 m wide, 3.5 m deep, 4.64 m high, gap 0.88 m; return yokes at both ends with a 3.4 m
+        // opening that widens towards the faces; field clamps above and below the gap on both long faces.
+        const yk = new THREE.Group(); yk.rotation.y = PI / 2 - ROT; mag.add(yk);
+        // The upper assembly has its own materials, so after the static merge it stays a separate mesh that the
+        // apparatus view lifts (as in the overview cutaway); in the hall it sits assembled.
+        const blueU = blue.clone(), goldU = gold.clone(), coilU = coil.clone(), up = new THREE.Group(); yk.add(up);
+        gSAM.userData.explode = { mats: [blueU, goldU, coilU], lift: 2.5 };
+        const RY = [[1.7, -0.6], [1.7, 0.6], [2.6, 1.5], [2.6, 1.75], [3.35, 1.75], [3.35, -1.75], [2.6, -1.75], [2.6, -1.5]];
+        for (const s of [1, -1]) {
+          const pts = RY.map(([x, z]) => [s * x, z]); if (s < 0) pts.reverse();
+          yk.add(prism(pts, -1.3, 1.3, blue));
         }
-        // The cutaway has a broad curved back and two cheeks, not a rectangular lintel.
-        const outer = new THREE.Shape();
-        outer.moveTo(-3.35, -1.65); outer.lineTo(-3.35, 0.75);
-        outer.quadraticCurveTo(-2.95, 1.75, -2.1, 1.75); outer.lineTo(2.1, 1.75);
-        outer.quadraticCurveTo(2.95, 1.75, 3.35, 0.75); outer.lineTo(3.35, -1.65); outer.closePath();
-        mag.add(prism(outer, -2.02, -1.15, blue));
-        const back = [[-3.35,1.15],[-3.35,-0.75],[-2.95,-1.45],[-2.15,-1.75],[-1.5,-1.75],[-1.1,-1.45],
-          [1.1,-1.45],[1.5,-1.75],[2.15,-1.75],[2.95,-1.45],[3.35,-0.75],[3.35,1.15],
-          [2.65,1.15],[2.65,-0.15],[2.25,-0.7],[1.45,-0.7],[0.95,-0.45],[-0.95,-0.45],[-1.45,-0.7],[-2.25,-0.7],[-2.65,-0.15],[-2.65,1.15]];
-        mag.add(prism(back, -1.15, 1.55, blue));
-        // Round lower pole (2 m diameter). The matching upper assembly is lifted for the cutaway.
-        mag.add(prism(ann(0, 0, 0, 1, 0, 2 * PI, 64), -0.8, -0.4, gold));
-        mag.add(prism(ann(0, 0, 1.03, 1.37, 0, 2 * PI, 64), -0.87, -0.57, coil));
-        mag.add(prism(ann(0, 0, 0.97, 1.47, 0, 2 * PI, 64), -1.02, -0.89, gold));
-        const upper = new THREE.Shape();
-        upper.moveTo(-1.9, -0.45); upper.lineTo(1.9, -0.45); upper.lineTo(1.9, 0.45);
-        upper.quadraticCurveTo(1.6, 1.05, 0.95, 1.5); upper.quadraticCurveTo(0.5, 1.65, 0.05, 1.45);
-        upper.quadraticCurveTo(-0.3, 1.45, -0.55, 1.58); upper.quadraticCurveTo(-1.15, 1.55, -1.25, 1.25);
-        upper.quadraticCurveTo(-1.85, 1.35, -1.9, 0.6); upper.closePath();
-        mag.add(prism(upper, 3.35, 4.65, blue));
-        mag.add(prism(ann(0, 0, 0, 1, 0, 2 * PI, 64), 2.93, 3.3, gold));
-        mag.add(prism(ann(0, 0, 1.03, 1.37, 0, 2 * PI, 64), 3.04, 3.34, coil));
-        mag.add(prism([[-1.8,1.1],[1.8,1.1],[1.8,-0.65],[-1.8,-0.65]], 2.82, 2.94, gold));
-        // The chamber is a curved fan with a narrow entrance and a broad charged-particle opening.
-        const chamber = [[-2.1,-0.18],[-1.65,-0.32],[-1.3,-0.58],[-0.4,-0.58],[0.25,-0.4],[1.3,-0.12],
-          [3.15,-0.12],[3.15,0.18],[1.45,0.25],[1.5,0.9],[1.2,1.8],[0.6,2.05],[-0.2,2.05],[-1.2,1.8],[-1.55,0.95],[-2.1,0.18]];
-        mag.add(prism(chamber, -0.3, -0.23, gold));
-        const rim = chamber.map(([x,z]) => V3(x,-0.18,z)); rim.push(rim[0]);
-        mag.add(new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(rim,false,'centripetal'),96,0.035,8,false), gold));
-        // Purple secondary target just upstream of the magnet, as in the overview.
-        const target = V3(-4.8,0,0);
-        mag.add(A.rbox(0.16,1.1,0.95,0.025,new THREE.MeshStandardMaterial({color:"#8f25ba",roughness:0.4}),target.x,0,0));
-        const targetFoil = A.box(0.02,0.64,0.54,K.rf,target.x-0.1,0,0); mag.add(targetFoil);
-        // Nucleon clusters identify the incoming RI beam and the heavy fragment schematically.
-        const proton = new THREE.MeshStandardMaterial({color:"#f35250",roughness:0.36,metalness:0.08});
-        const neutron = new THREE.MeshStandardMaterial({color:"#71cdea",roughness:0.36,metalness:0.08});
-        for (const center of [V3(-5.7,0,0),V3(0.9,0,4.55)]) for (let i=0;i<12;i++) {
-          const a=i*2.39996, y=1-2*(i+0.5)/12, r=Math.sqrt(1-y*y);
-          const ball=new THREE.Mesh(new THREE.SphereGeometry(0.15,16,12),i%2?proton:neutron);
-          ball.position.copy(center).add(V3(0.27*r*Math.cos(a),0.27*y,0.27*r*Math.sin(a)));mag.add(ball);
+        yk.add(prism([[-3.35, -1.75], [3.35, -1.75], [3.35, 1.75], [-3.35, 1.75]], YB + 0.3, -1.3, blue));
+        yk.add(prism([[-2.6, -1.6], [2.6, -1.6], [2.6, 1.6], [-2.6, 1.6]], YB, YB + 0.3, blue));
+        up.add(prism([[-3.35, -1.75], [3.35, -1.75], [3.35, 1.75], [-3.35, 1.75]], 1.3, 2.02, blueU));
+        up.add(prism([[-2.6, -1.6], [2.6, -1.6], [2.6, 1.6], [-2.6, 1.6]], 2.02, 2.32, blueU));
+        for (const z of [1.5, -1.75]) for (const [y0, y1] of [[-1.3, -0.5], [0.5, 1.3]]) yk.add(prism([[-2.6, z], [2.6, z], [2.6, z + 0.25], [-2.6, z + 0.25]], y0, y1, blue));
+        // Round poles, 2 m across, and the superconducting coils around them.
+        yk.add(prism(ann(0, 0, 0, 1, 0, 2 * PI, 64), -1.3, -0.44, gold)); yk.add(prism(ann(0, 0, 1.05, 1.42, 0, 2 * PI, 64), -1.2, -0.58, coil));
+        up.add(prism(ann(0, 0, 0, 1, 0, 2 * PI, 64), 0.44, 1.3, goldU)); up.add(prism(ann(0, 0, 1.05, 1.42, 0, 2 * PI, 64), 0.58, 1.2, coilU));
+        // Vacuum chamber in the gap, from the entrance on the back face to the exit window on the front face.
+        const chamber = [[-1.35, -1.75], [-0.65, -1.75], [0.9, -0.95], [1.55, 0], [1.6, 1.75], [-2.5, 1.75], [-2.5, 1.5], [-1.62, 0.3], [-1.62, -0.6]];
+        const chamberGlass = prism(chamber, -0.4, 0.4, glass); yk.add(chamberGlass);
+        yk.add(prism(chamber, -0.44, -0.4, gold));
+        for (const y of [-0.4, 0.4]) {
+          const rim = chamber.map(([x, z]) => V3(x, y, z)); rim.push(rim[0].clone());
+          yk.add(new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(rim, false, "catmullrom", 0), 160, 0.03, 6, false), gold));
         }
-        const protonBall=new THREE.Mesh(new THREE.SphereGeometry(0.17,20,16),proton);protonBall.position.set(-1.4,0,4.3);mag.add(protonBall);
-        // Four thin tracking windows are staggered in front of the charged-particle opening.
-        const routeMats = [new THREE.MeshBasicMaterial({color:"#76dcff"}),new THREE.MeshBasicMaterial({color:"#86e89a"}),new THREE.MeshBasicMaterial({color:"#ff6655"})];
-        const exits = [V3(6.4,0,0),V3(0.85,0,3.85),V3(-1.4,0,3.5)];
-        for (let i=0;i<3;i++) {
-          const end=exits[i], curve=new THREE.CubicBezierCurve3(target,V3(-0.75,0,0),i===0?V3(2,0,0):V3(i===1?0.65:-1.1,0,1.6),end);
-          mag.add(new THREE.Mesh(new THREE.TubeGeometry(curve,64,0.026,8,false),routeMats[i]));
-          samRoutes.push({pts:curve.getPoints(64).map(p=>p.applyAxisAngle(V3(0,1,0),-theta).add(samC)),color:routeMats[i].color.toArray()});
-          if(i===0)continue;
-          for(const [x,z] of i===1?[[0.7,2.35],[0.85,3.25]]:[[-1.1,2.5],[-1.4,3.35]]) {
-            const det=new THREE.Group(),w=i===1?1.55:1.35,h=0.88;
-            det.add(A.rbox(w,h,0.065,0.025,K.rf));
-            det.add(A.box(w-0.13,h-0.13,0.015,window,0,0,0.045));
-            for(const a of [-1,1])det.add(A.box(0.055,0.85,0.07,K.iron,a*(w/2-0.1),-0.83,0));
-            det.position.set(x,-0.12,z);det.rotation.y=i===1?-0.12:0.16;mag.add(det);
-          }
+        yk.add(A.box(4.1, 0.8, 0.03, window, -0.45, 0, 1.78));                                  // exit window
+        for (const y of [-0.45, 0.45]) yk.add(A.box(4.2, 0.1, 0.08, K.rf, -0.45, y, 1.8));
+        for (const x of [-2.52, 1.62]) yk.add(A.box(0.1, 0.9, 0.08, K.rf, x, 0, 1.8));
+        // Secondary target and FDC1 upstream of the magnet [15].
+        const target = V3(-4.45, 0, 0);
+        mag.add(A.rbox(0.16, 1.1, 0.95, 0.025, new THREE.MeshStandardMaterial({ color: "#8f25ba", roughness: 0.4 }), target.x, 0, 0));
+        mag.add(A.box(0.02, 0.64, 0.54, K.rf, target.x - 0.1, 0, 0));
+        { const f = new THREE.Group(); f.add(A.rbox(0.3, 0.75, 1.0, 0.03, K.rf)); f.add(A.box(0.32, 0.45, 0.7, window)); f.position.set(-3.25, 0, 0); mag.add(f); }
+        // Tracks: hard-edge field of radius RF about the centre. Heavy fragments bend about 60 degrees, protons
+        // (lower rigidity) more; neutrons go straight on to NEBULA. Angles are illustrative.
+        const RF = 1.2;
+        function track(deg) {
+          const th = deg * D2R, rho = RF / Math.tan(th / 2), c = V3(-RF, 0, rho), u = V3(Math.cos(th), 0, Math.sin(th)), pts = [target.clone()];
+          for (let i = 0; i <= 24; i++) { const a = th * i / 24; pts.push(V3(c.x + rho * Math.sin(a), 0, c.z - rho * Math.cos(a))); }
+          const X = pts[pts.length - 1], [xw, zw] = toYoke(X), [, du] = toYoke(u), sW = (1.75 - zw) / du;
+          return { pts, X, u, sW, at: (s) => X.clone().addScaledVector(u, sW + s) };
         }
-        // NEBULA: two double-layer walls, 30 vertical scintillator bars per layer, downstream at zero degrees.
-        for(const k of [0,1]) {
-          const wall=new THREE.Group();
-          for(const l of [0,1])for(let i=0;i<30;i++) {
-            const z=-1.74+i*0.12,x=l*0.14;
-            wall.add(A.box(0.12,1.8,0.113,barPaint,x,0,z));
-            for(const sign of [-1,1]) {
-              const pmt=A.cyl(0.044,0.25,K.bar,12);pmt.position.set(x,sign*1.03,z);wall.add(pmt);
-              const collar=A.cyl(0.055,0.045,K.rf,12);collar.position.set(x,sign*0.94,z);wall.add(collar);
+        const heavy = track(60), prot = track(78);
+        // Downstream of the exit window: FDC2 for all charged particles, then HODF (fragments) and HODP (protons) side by side.
+        function place(g, p, u) { g.position.copy(p); g.rotation.y = -Math.atan2(u.z, u.x); mag.add(g); return g; }
+        const uMid = heavy.u.clone().add(prot.u).normalize(), pFDC2 = heavy.at(1.3).add(prot.at(1.3)).multiplyScalar(0.5);
+        { const f = new THREE.Group(), w = 2.9, h = 1.4;
+          for (const y of [-h / 2, h / 2]) f.add(A.box(0.6, 0.12, w, K.rf, 0, y, 0));
+          for (const z of [-w / 2, w / 2]) f.add(A.box(0.6, h, 0.12, K.rf, 0, 0, z));
+          f.add(A.box(0.02, h - 0.1, w - 0.1, window, 0.3, 0, 0)); f.add(A.box(0.02, h - 0.1, w - 0.1, window, -0.3, 0, 0));
+          for (const s of [-1, 1]) f.add(A.box(0.5, -h / 2 + 2.55, 0.1, K.iron, 0, (-2.55 - h / 2) / 2, s * (w / 2 - 0.2)));
+          place(f, pFDC2, uMid); }
+        const side = V3(-uMid.z, 0, uMid.x);                          // towards larger bending angle
+        function hodo(nb, p, u) {
+          const g = new THREE.Group(), w = nb * 0.1;
+          for (let i = 0; i < nb; i++) { const z = -w / 2 + 0.05 + i * 0.1; g.add(A.box(0.02, 1.2, 0.095, barPaint, 0, 0, z));
+            for (const s of [-1, 1]) { const pm = A.cyl(0.03, 0.2, K.bar, 10); pm.position.set(0, s * 0.72, z); g.add(pm); } }
+          for (const y of [-0.85, 0.85]) g.add(A.box(0.1, 0.05, w + 0.15, framePaint, 0, y, 0));
+          for (const s of [-1, 1]) g.add(A.box(0.08, 2.55 - 0.85, 0.08, K.iron, 0, (-2.55 - 0.85) / 2, s * (w / 2 + 0.05)));   // to the pit floor
+          return place(g, p, u);
+        }
+        hodo(24, heavy.at(2.5).addScaledVector(side, -0.45), uMid);    // HODF: 24 bars of 10 cm [15]
+        hodo(16, prot.at(2.9).addScaledVector(side, 0.35), uMid);      // HODP: 16 bars
+        // NEBULA: two walls of two layers, 30 bars of 12 x 12 x 180 cm per layer, at zero degrees behind the magnet [15].
+        for (const k of [0, 1]) {
+          const wall = new THREE.Group();
+          for (const l of [0, 1]) for (let i = 0; i < 30; i++) {
+            const z = -1.74 + i * 0.12, x = l * 0.14;
+            wall.add(A.box(0.12, 1.8, 0.113, barPaint, x, 0, z));
+            for (const sign of [-1, 1]) {
+              const pmt = A.cyl(0.044, 0.25, K.bar, 12); pmt.position.set(x, sign * 1.03, z); wall.add(pmt);
+              const collar = A.cyl(0.055, 0.045, K.rf, 12); collar.position.set(x, sign * 0.94, z); wall.add(collar);
             }
           }
-          for(const y of [-1.2,1.2])wall.add(A.box(0.23,0.065,3.8,framePaint,0.07,y,0));
-          for(const z of [-1.88,1.88])wall.add(A.box(0.24,2.5,0.06,framePaint,0.07,0,z));
-          wall.position.set(5.15+k*0.8,0,0);mag.add(wall);
+          for (const y of [-1.2, 1.2]) wall.add(A.box(0.23, 0.065, 3.8, framePaint, 0.07, y, 0));
+          for (const z of [-1.88, 1.88]) wall.add(A.box(0.24, 2.5, 0.06, framePaint, 0.07, 0, z));
+          for (const z of [-1.88, 1.88]) { wall.add(A.box(0.12, 1.3, 0.12, framePaint, 0.07, -1.9, z)); wall.add(A.box(0.9, 0.06, 0.3, framePaint, 0.07, -2.52, z)); }
+          wall.position.set(7.5 + k * 0.9, 0, 0); mag.add(wall);
         }
+        // Nucleon clusters for the incoming RI beam and the heavy fragment, as in the overview.
+        const proton = new THREE.MeshStandardMaterial({ color: "#f35250", roughness: 0.36, metalness: 0.08 });
+        const neutron = new THREE.MeshStandardMaterial({ color: "#71cdea", roughness: 0.36, metalness: 0.08 });
+        const heavyEnd = heavy.at(3.6), protEnd = prot.at(3.9);
+        for (const center of [V3(-5.0, 0, 0), heavyEnd]) for (let i = 0; i < 12; i++) {
+          const a = i * 2.39996, y = 1 - 2 * (i + 0.5) / 12, r = Math.sqrt(1 - y * y);
+          const ball = new THREE.Mesh(new THREE.SphereGeometry(0.15, 16, 12), i % 2 ? proton : neutron);
+          ball.position.copy(center).add(V3(0.27 * r * Math.cos(a), 0.27 * y, 0.27 * r * Math.sin(a))); mag.add(ball);
+        }
+        const protonBall = new THREE.Mesh(new THREE.SphereGeometry(0.17, 20, 16), proton); protonBall.position.copy(protEnd); mag.add(protonBall);
+        const routeMats = [new THREE.MeshBasicMaterial({ color: "#76dcff" }), new THREE.MeshBasicMaterial({ color: "#86e89a" }), new THREE.MeshBasicMaterial({ color: "#ff6655" })];
+        const routes = [[target.clone(), V3(7.45, 0, 0)], [...heavy.pts, heavy.at(3.3)], [...prot.pts, prot.at(3.6)]];
+        routes.forEach((pts, i) => {
+          const curve = new THREE.CatmullRomCurve3(pts, false, "catmullrom", 0);
+          mag.add(new THREE.Mesh(new THREE.TubeGeometry(curve, 96, 0.026, 8, false), routeMats[i]));
+          samRoutes.push({ pts: curve.getPoints(64).map((p) => p.applyAxisAngle(V3(0, 1, 0), -theta).add(samC)), color: routeMats[i].color.toArray() });
+        });
         // Local labels are part of the apparatus view and remain readable while orbiting.
-        for(const [text,color,pos,anchor] of [
-          ["RI beam","#a9d5ff",[-5.7,1.15,0],[-5.7,0,0]],
-          ["2 m pole","#f3c547",[3.5,4.25,1.8],[0.8,2.96,0]],
-          ["superconducting coil","#ff765d",[3.5,3.55,1.8],[1.2,3.15,-0.15]],
-          ["vacuum chamber","#f3c547",[3.9,1.5,1.8],[1.2,-0.2,1.4]],
-          ["neutrons","#76dcff",[6.6,2.3,0],[5.15,0,0]],
-          ["heavy fragments","#86e89a",[1.35,-1.35,5.8],[0.9,0,4.55]],
-          ["protons","#ff6655",[-2.4,-1.35,5.35],[-1.4,0,4.3]]]) {
-          const tex=A.canvasTex(512,96,(ctx,w,h)=>{ctx.fillStyle=color;ctx.font='500 32px "Avenir Next",sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(text,w/2,h/2)});
-          tex.colorSpace=THREE.SRGBColorSpace;
-          const label=new THREE.Sprite(new THREE.SpriteMaterial({map:tex,transparent:true,depthTest:false,toneMapped:false}));
-          label.position.set(...pos);label.scale.set(3.5,0.66,1);label.visible=false;mag.add(label);
+        const L3 = (p, dy) => [p.x, p.y + (dy || 0), p.z], Y3 = (x, y, z) => L3(ex.clone().multiplyScalar(x).addScaledVector(n, z), y);
+        for (const [text, color, pos, anchor] of [
+          ["RI beam", "#a9d5ff", [-5.6, -1.2, 0.8], [-5.0, -0.3, 0]],
+          ["target + FDC1", "#d6a4ff", [-4.0, 1.8, 0], [-3.9, 0.5, 0]],
+          ["2 m pole", "#f3c547", [0, 5.7, -3.2], [0, 3.0, -1.0]],
+          ["superconducting coil", "#ff765d", [2.6, 4.9, -3.6], [1.0, 3.6, -0.9]],
+          ["vacuum chamber", "#f3c547", Y3(4.6, 2.4, 0.3), Y3(-0.1, 0, -0.7)],
+          ["exit window", "#a9e8e7", L3(V3(...Y3(1.6, 0, 1.78)).add(V3(2.6, 1.3, -0.6))), Y3(1.5, 0.35, 1.8)],
+          ["FDC2", "#d7e0e8", L3(pFDC2.clone().addScaledVector(side, 2.6), 0.9), L3(pFDC2.clone().addScaledVector(side, 1.45), 0.5)],
+          ["HODF / HODP", "#88c9da", L3(heavy.at(2.5).addScaledVector(side, -2.9), 1.2), L3(heavy.at(2.5).addScaledVector(side, -1.3), 0.6)],
+          ["NEBULA", "#76dcff", [8.0, 2.4, 0], [8.0, 1.25, 0]],
+          ["heavy fragments", "#86e89a", L3(heavyEnd, -1.0), L3(heavyEnd)],
+          ["protons", "#ff6655", L3(protEnd, -1.0), L3(protEnd)],
+          ["rotating base", "#d7b98a", [-3.6, -2.1, 4.6], [-3.0, -2.32, 3.8]]]) {
+          const tex = A.canvasTex(512, 96, (ctx, w, h) => { ctx.font = '500 32px "Avenir Next",sans-serif'; const tw = ctx.measureText(text).width + 28;
+            ctx.fillStyle = "#0b0f16b8"; ctx.beginPath(); ctx.roundRect((w - tw) / 2, 22, tw, h - 44, 12); ctx.fill(); ctx.fillStyle = color; ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillText(text, w / 2, h / 2); });
+          tex.colorSpace = THREE.SRGBColorSpace;
+          const label = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true, depthTest: false, toneMapped: false }));
+          label.position.set(...pos); label.scale.set(3.5, 0.66, 1); label.visible = false; mag.add(label);
           gSAM.userData.detailLabels.push(label);
-          const leader=new THREE.Line(new THREE.BufferGeometry().setFromPoints([V3(...pos),V3(...anchor)]),new THREE.LineBasicMaterial({color,transparent:true,opacity:0.55}));
-          leader.visible=false;mag.add(leader);gSAM.userData.detailLabels.push(leader);
+          const leader = new THREE.Line(new THREE.BufferGeometry().setFromPoints([V3(...pos), V3(...anchor)]), new THREE.LineBasicMaterial({ color, transparent: true, opacity: 0.55 }));
+          leader.visible = false; mag.add(leader); gSAM.userData.detailLabels.push(leader);
         }
-        gSAM.add(A.shadowy(mag));
+        gSAM.add(A.shadowy(mag)); chamberGlass.castShadow = false;
         refit(gSAM,[TS.at(24.7-11.3),samC.clone().addScaledVector(TS.d,11)],3);
         // A matching three-quarter view: incoming beam left, charged fragments in front, neutron wall right.
         const offset=V3(13,10,17).applyAxisAngle(V3(0,1,0),-theta);
@@ -752,13 +788,15 @@
         sector angular widths, dipole bending radii (6 m assumed for BigRIPS), cryostat sizes, the RF resonator shapes and
         all transport-line quadrupoles are generic. Machine colours follow the facility's own chain diagram, not the paint.
         RIPS, GARIS-II, KISS, CRIB and GARIS-III are generic shapes at the right place in the chain (GARIS-III: two
-        dipoles and three quadrupoles [10], order and angles not verified). SAMURAI follows the official exploded
-        cutaway [14]: blue sculpted return yoke, lifted upper assembly, round 2 m poles, red winding cutaways, gold
-        vacuum chamber, four charged-particle tracking windows and two double-layer NEBULA walls. The assembled
-        magnet has a 0.8 m gap and a nominal 6.7 m x 3.5 m x 4.64 m yoke [7]; the lifted component is a display convention. Hidden geometry is inferred from
-        the single overview image, not engineering drawings. The neutron flight distance is compressed to match the overview composition. Detector positions and the red proton / green heavy-fragment
-        paths are illustrative; blue neutrons continue straight. Click SAMURAI for an isolated apparatus view;
-        the facility button restores the surrounding hall. The SHARAQ
+        dipoles and three quadrupoles [10], order and angles not verified). SAMURAI is drawn in its standard configuration
+        from the hall plan and yoke drawing of [15]: an H-type yoke 6.7 m x 3.5 m x 4.64 m with return yokes at both
+        ends, field clamps on both long faces, round 2 m poles, a 0.88 m gap (0.8 m inside the vacuum chamber),
+        turned 30 degrees on a 10 m rotating base, so the beam enters through the back face and neutrons and charged
+        fragments leave through one long exit window on the front face. Upstream: target and FDC1; downstream: FDC2,
+        then HODF (fragments) and HODP (protons) side by side, and the two double-layer NEBULA walls at zero degrees,
+        about 7.5 m behind the magnet centre [15]. The click-through apparatus view lifts the upper yoke as in the
+        official cutaway [14]; in the hall the magnet is assembled. Chamber outline, detector sizes and the green
+        (about 60 degrees) and red (about 78 degrees) tracks are schematic; blue neutrons continue straight. The SHARAQ
         branch leaves BigRIPS at D6 [8, 1]; its branch dipoles are schematic. The Rare RI Ring is fed through SHARAQ and
         an injection line of five quadrupole doublets and one dipole [9]. The ZD MRTOF with its cryogenic gas cell
         (SLOWRI) sits behind F11 of ZeroDegree [11]. Not drawn: SCRIT (separate electron facility), PALIS at BigRIPS F2,
@@ -778,9 +816,10 @@
         facility, arXiv:2110.11507, Nucl. Instrum. Methods A 1047, 167824 (2023).
         [12] Y. Hirayama et al., Development of KEK isotope separation system, RIKEN Accel. Prog. Rep. 47 (2014).
         [13] P. Craddock, Cyclotrons and FFAGs: from Nishina's pioneering work to RI-Beam Factory (RIKEN, 2010).
-        [14] <a href="https://www.nishina.riken.jp/ribf/SAMURAI/overview.html" target="_blank" rel="noopener">RIKEN, SAMURAI overview</a>, magnet cutaway and beam-line layout.</p>`;
+        [14] <a href="https://www.nishina.riken.jp/ribf/SAMURAI/overview.html" target="_blank" rel="noopener">RIKEN, SAMURAI overview</a>, magnet cutaway and beam-line layout.
+        [15] RIKEN, SAMURAI <a href="https://www.nishina.riken.jp/ribf/SAMURAI/config.html" target="_blank" rel="noopener">configuration</a> (experimental hall plan, May 2012, magnet at 30 degrees; exit window; downstream detectors) and <a href="https://www.nishina.riken.jp/ribf/SAMURAI/tecinfo.html" target="_blank" rel="noopener">technical information</a> (yoke drawing, gap, field, detectors).</p>`;
 
-      return { view: { target: [18, 0, 8], pos: [-95, 165, 175] }, beams, note, fog: [330, 1100] };
+      return { view: { target: [18, 0, 8], pos: [-95, 165, 175] }, beams, note, fog: [330, 1100], ground: -4.0 };   // ground below the SRC vault floor (-3.9)
     },
   };
 })();

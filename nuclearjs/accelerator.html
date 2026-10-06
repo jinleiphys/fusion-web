@@ -1627,7 +1627,7 @@ for (const g of complex.children) mergeStatic(g);
 
 // ---------- other facilities: modules in assets/fac-*.js register FACILITY_MODULES.key = { label, build(A) }.
 // build(A) adds sections with A.section(...) (they attach to that facility's root) and returns
-// { view: { target: [x, y, z], pos: [x, y, z] }, beams: [{ pts: [Vector3...], n, speed, color: [r, g, b], size }], note: html }
+// { view: { target: [x, y, z], pos: [x, y, z] }, beams: [{ pts: [Vector3...], n, speed, color: [r, g, b], size }], note: html, ground: y }
 // the key light's shadow area: each facility sets its own, FRIB's is the linac building
 function shadowArea(cx, cz, span) {
   sun.position.set(cx - 90, 160, cz + 120); sun.target.position.set(cx, 0, cz);
@@ -1651,7 +1651,7 @@ function buildFacility(key) {
   SECTION_ROOT = complex; CUR_BUILD = "frib";
   for (const g of root.children) mergeStatic(g);
   const beams = (out.beams || []).map((b) => ({ path: new Path(b.pts), n: b.n || 20, speed: b.speed || 0.08, color: b.color || [0.66, 0.8, 0.95], size: b.size || 0.8 }));
-  FACS[key] = { label: mod.label, root, beams, view: out.view, note: out.note || "", fog: out.fog || [260, 900], sun: pendingSun }; pendingSun = null;
+  FACS[key] = { label: mod.label, root, beams, view: out.view, note: out.note || "", fog: out.fog || [260, 900], sun: pendingSun, ground: out.ground }; pendingSun = null;
   for (const g of SECTIONS) if (g.userData.fac === key && !LAB.some((L) => L.g === g)) addLabel(g);
   return FACS[key];
 }
@@ -2289,6 +2289,9 @@ function setDetailSection(g) {
   detailVisibility = g ? g.parent.children.map(part => [part, part.visible]) : [];
   if (g) for (const [part] of detailVisibility) part.visible = part === g;
   for (const section of SECTIONS) for (const label of section.userData.detailLabels || []) label.visible = section === g && showLabels;
+  // an exploded section (SAMURAI) lifts its upper assembly in the apparatus view only
+  for (const section of SECTIONS) { const ex = section.userData.explode; if (ex) section.traverse((m) => {
+    if (m.isMesh && ex.mats.includes(m.material)) { m.userData.y0 ??= m.position.y; m.position.y = m.userData.y0 + (section === g ? ex.lift : 0); } }); }
   bunches.visible = !g;
   // The normal pass of GTAO treats the annotation sprites as opaque rectangles.
   gtao.enabled = !g;
@@ -2518,6 +2521,7 @@ function setFacility(key, keepTab) {          // keepTab: a tab named in the has
   CUR_FAC = key; S.area = null;
   document.getElementById("sceneApparatus").hidden = key !== "riken";
   for (const k in FACS) FACS[k].root.visible = k === key;
+  scene.getObjectByName("facility-ground").position.y = FACS[key].ground ?? FLOOR - 0.41;   // below the deepest pit of the facility
   if (key === "frib") { sun.position.copy(FRIB_SUN.p); sun.target.position.copy(FRIB_SUN.t); const sp = FRIB_SUN.s; Object.assign(sun.shadow.camera, { left: -sp, right: sp, top: sp, bottom: -sp }); sun.shadow.camera.updateProjectionMatrix(); }
   else if (FACS[key].sun) shadowArea(...FACS[key].sun);
   [scene.fog.near, scene.fog.far] = key === "frib" ? [260, 900] : FACS[key].fog;
