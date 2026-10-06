@@ -371,14 +371,17 @@
         const toYoke = (p) => [p.dot(ex), p.dot(n)];                        // beam frame -> yoke plan (x along 6.7 m, z out of the exit face)
         // Rotating base, 10 m across [15], set in the pit; the yoke stands on it.
         mag.add(prism(ann(0, 0, 0, 5, 0, 2 * PI, 120), -2.55, YB, basePaint));
-        for (const r of [4.75, 4.95]) { const rail = new THREE.Mesh(new THREE.TorusGeometry(r, 0.035, 8, 120), K.rf); rail.rotation.x = PI / 2; rail.position.y = YB + 0.02; mag.add(rail); }
+        const railMat = K.rf.clone(), stripe = new THREE.MeshStandardMaterial({ color: "#5d4a31", metalness: 0.2, roughness: 0.6 });
+        for (const r of [4.75, 4.95]) { const rail = new THREE.Mesh(new THREE.TorusGeometry(r, 0.035, 8, 120), railMat); rail.rotation.x = PI / 2; rail.position.y = YB + 0.02; mag.add(rail); }
+        // radial marks on the base, so that its rotation is visible
+        for (let k = 0; k < 12; k++) { const a = k * PI / 6, m = A.box(k % 3 ? 0.6 : 1.1, 0.012, 0.07, stripe, 0, YB + 0.006, 0);
+          m.position.set((k % 3 ? 4.3 : 4.05) * Math.cos(a), YB + 0.006, (k % 3 ? 4.3 : 4.05) * Math.sin(a)); m.rotation.y = -a; mag.add(m); }
         // Yoke [15]: 6.7 m wide, 3.5 m deep, 4.64 m high, gap 0.88 m; return yokes at both ends with a 3.4 m
         // opening that widens towards the faces; field clamps above and below the gap on both long faces.
         const yk = new THREE.Group(); yk.rotation.y = PI / 2 - ROT; mag.add(yk);
         // The upper assembly has its own materials, so after the static merge it stays a separate mesh that the
         // apparatus view lifts (as in the overview cutaway); in the hall it sits assembled.
         const blueU = blue.clone(), goldU = gold.clone(), coilU = coil.clone(), up = new THREE.Group(); yk.add(up);
-        gSAM.userData.explode = { mats: [blueU, goldU, coilU], lift: 2.5 };
         const RY = [[1.7, -0.6], [1.7, 0.6], [2.6, 1.5], [2.6, 1.75], [3.35, 1.75], [3.35, -1.75], [2.6, -1.75], [2.6, -1.5]];
         for (const s of [1, -1]) {
           const pts = RY.map(([x, z]) => [s * x, z]); if (s < 0) pts.reverse();
@@ -394,15 +397,15 @@
         up.add(prism(ann(0, 0, 0, 1, 0, 2 * PI, 64), 0.44, 1.3, goldU)); up.add(prism(ann(0, 0, 1.05, 1.42, 0, 2 * PI, 64), 0.58, 1.2, coilU));
         // Vacuum chamber in the gap, from the entrance on the back face to the exit window on the front face.
         const chamber = [[-1.35, -1.75], [-0.65, -1.75], [0.9, -0.95], [1.55, 0], [1.6, 1.75], [-2.5, 1.75], [-2.5, 1.5], [-1.62, 0.3], [-1.62, -0.6]];
-        const chamberGlass = prism(chamber, -0.4, 0.4, glass); yk.add(chamberGlass);
-        yk.add(prism(chamber, -0.44, -0.4, gold));
+        const chamberGlass = prism(chamber, -0.4, 0.4, glass), chamberGold = gold.clone(), exitWin = window.clone(), exitRf = K.rf.clone(); yk.add(chamberGlass);
+        yk.add(prism(chamber, -0.44, -0.4, chamberGold));
         for (const y of [-0.4, 0.4]) {
           const rim = chamber.map(([x, z]) => V3(x, y, z)); rim.push(rim[0].clone());
-          yk.add(new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(rim, false, "catmullrom", 0), 160, 0.03, 6, false), gold));
+          yk.add(new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(rim, false, "catmullrom", 0), 160, 0.03, 6, false), chamberGold));
         }
-        yk.add(A.box(4.1, 0.8, 0.03, window, -0.45, 0, 1.78));                                  // exit window
-        for (const y of [-0.45, 0.45]) yk.add(A.box(4.2, 0.1, 0.08, K.rf, -0.45, y, 1.8));
-        for (const x of [-2.52, 1.62]) yk.add(A.box(0.1, 0.9, 0.08, K.rf, x, 0, 1.8));
+        yk.add(A.box(4.1, 0.8, 0.03, exitWin, -0.45, 0, 1.78));                                  // exit window
+        for (const y of [-0.45, 0.45]) yk.add(A.box(4.2, 0.1, 0.08, exitRf, -0.45, y, 1.8));
+        for (const x of [-2.52, 1.62]) yk.add(A.box(0.1, 0.9, 0.08, exitRf, x, 0, 1.8));
         // Secondary target and FDC1 upstream of the magnet [15].
         const target = V3(-4.45, 0, 0);
         mag.add(A.rbox(0.16, 1.1, 0.95, 0.025, new THREE.MeshStandardMaterial({ color: "#8f25ba", roughness: 0.4 }), target.x, 0, 0));
@@ -466,6 +469,14 @@
         const protonBall = new THREE.Mesh(new THREE.SphereGeometry(0.17, 20, 16), proton); protonBall.position.copy(protEnd); mag.add(protonBall);
         const routeMats = [new THREE.MeshBasicMaterial({ color: "#76dcff" }), new THREE.MeshBasicMaterial({ color: "#86e89a" }), new THREE.MeshBasicMaterial({ color: "#ff6655" })];
         const routes = [[target.clone(), V3(7.45, 0, 0)], [...heavy.pts, heavy.at(3.3)], [...prot.pts, prot.at(3.6)]];
+        // dense copies of the routes: a track ends where it meets a return yoke (the beam holes along the yoke's long
+        // axis, 0.4 m high [15], stay open), which is what the rotation of the magnet changes
+        const dense = routes.map((pts) => { const out = [pts[0]]; for (let i = 1; i < pts.length; i++) { const k = Math.max(1, Math.ceil(pts[i].distanceTo(pts[i - 1]) / 0.05)); for (let j = 1; j <= k; j++) out.push(pts[i - 1].clone().lerp(pts[i], j / k)); } return out; });
+        const inPoly = (x, z, poly) => { let c = false; for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) { const [xi, zi] = poly[i], [xj, zj] = poly[j]; if ((zi > z) !== (zj > z) && x < (xj - xi) * (z - zi) / (zj - zi) + xi) c = !c; } return c; };
+        const yokePolys = [RY, RY.map(([x, z]) => [-x, z])];
+        const blocked = (p, rot) => { const x = p.x * Math.sin(rot) - p.z * Math.cos(rot), z = p.x * Math.cos(rot) + p.z * Math.sin(rot);
+          return Math.abs(z) > 0.2 && yokePolys.some((poly) => inPoly(x, z, poly)); };
+        const tubeWorld = (pts) => new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts.map((p) => p.clone().applyAxisAngle(V3(0, 1, 0), -theta).add(samC)), false, "catmullrom", 0), 96, 0.026, 8, false);
         routes.forEach((pts, i) => {
           const curve = new THREE.CatmullRomCurve3(pts, false, "catmullrom", 0);
           mag.add(new THREE.Mesh(new THREE.TubeGeometry(curve, 96, 0.026, 8, false), routeMats[i]));
@@ -473,6 +484,7 @@
         });
         // Local labels are part of the apparatus view and remain readable while orbiting.
         const L3 = (p, dy) => [p.x, p.y + (dy || 0), p.z], Y3 = (x, y, z) => L3(ex.clone().multiplyScalar(x).addScaledVector(n, z), y);
+        const chamberLabels = [];
         for (const [text, color, pos, anchor] of [
           ["RI beam", "#a9d5ff", [-5.6, -1.2, 0.8], [-5.0, -0.3, 0]],
           ["target + FDC1", "#d6a4ff", [-4.0, 1.8, 0], [-3.9, 0.5, 0]],
@@ -494,8 +506,29 @@
           gSAM.userData.detailLabels.push(label);
           const leader = new THREE.Line(new THREE.BufferGeometry().setFromPoints([V3(...pos), V3(...anchor)]), new THREE.LineBasicMaterial({ color, transparent: true, opacity: 0.55 }));
           leader.visible = false; mag.add(leader); gSAM.userData.detailLabels.push(leader);
+          if (text === "vacuum chamber" || text === "exit window") chamberLabels.push(label, leader);
         }
         gSAM.add(A.shadowy(mag)); chamberGlass.castShadow = false;
+        // Pose of the magnet, called by the page after the static merge (the merged meshes are in world coordinates):
+        // the yoke and its base turn about the magnet centre from -5 to 95 degrees [7]; the upper assembly is lifted
+        // in the apparatus view. The vacuum chamber is specific to each configuration, so it is drawn only at 30 degrees.
+        const turning = new Set([blue, blueU, gold, goldU, coil, coilU, glass, chamberGold, exitWin, exitRf, basePaint, railMat, stripe]);
+        const lifted = new Set([blueU, goldU, coilU]), chamberMats = new Set([glass, chamberGold, exitWin, exitRf]);
+        gSAM.userData.rotate = { min: -5, max: 95, std: 30 };
+        gSAM.userData.pose = ({ exploded, angle }) => {
+          const q = new THREE.Quaternion().setFromAxisAngle(V3(0, 1, 0), -(angle - 30) * D2R), std = Math.abs(angle - 30) < 0.5;
+          gSAM.traverse((m) => {
+            if (!m.isMesh) return;
+            if (turning.has(m.material)) {
+              m.quaternion.copy(q); m.position.copy(samC).sub(samC.clone().applyQuaternion(q));
+              if (lifted.has(m.material) && exploded) m.position.y += 2.5;
+              if (chamberMats.has(m.material)) m.visible = std;
+            }
+            const i = routeMats.indexOf(m.material);
+            if (i >= 0) { const d = dense[i], k = d.findIndex((p) => blocked(p, angle * D2R)); m.geometry.dispose(); m.geometry = tubeWorld(k < 0 ? d : d.slice(0, Math.max(2, k + 1))); }
+          });
+          for (const o of chamberLabels) o.material.opacity = std ? (o.isSprite ? 1 : 0.55) : 0;
+        };
         refit(gSAM,[TS.at(24.7-11.3),samC.clone().addScaledVector(TS.d,11)],3);
         // A matching three-quarter view: incoming beam left, charged fragments in front, neutron wall right.
         const offset=V3(13,10,17).applyAxisAngle(V3(0,1,0),-theta);
@@ -795,7 +828,9 @@
         fragments leave through one long exit window on the front face. Upstream: target and FDC1; downstream: FDC2,
         then HODF (fragments) and HODP (protons) side by side, and the two double-layer NEBULA walls at zero degrees,
         about 7.5 m behind the magnet centre [15]. The click-through apparatus view lifts the upper yoke as in the
-        official cutaway [14]; in the hall the magnet is assembled. Chamber outline, detector sizes and the green
+        official cutaway [14]; in the hall the magnet is assembled. There the base can also be turned through its full
+        range, -5 to 95 degrees [7] (slider, or a sweep): tracks end where they meet a return yoke, the beam holes along
+        the long axis stay open, and the vacuum chamber, specific to each configuration, is drawn only at 30 degrees. Chamber outline, detector sizes and the green
         (about 60 degrees) and red (about 78 degrees) tracks are schematic; blue neutrons continue straight. The SHARAQ
         branch leaves BigRIPS at D6 [8, 1]; its branch dipoles are schematic. The Rare RI Ring is fed through SHARAQ and
         an injection line of five quadrupole doublets and one dipole [9]. The ZD MRTOF with its cryogenic gas cell

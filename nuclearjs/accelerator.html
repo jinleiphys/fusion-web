@@ -125,6 +125,10 @@ table.fac sup{font-size:.7em}
 #sceneTools{position:fixed;top:18px;left:50%;transform:translateX(-50%);z-index:4;display:flex;gap:4px;padding:4px;border:1px solid #ffffff20;border-radius:30px;background:#101621db;backdrop-filter:blur(12px)}
 #sceneTools button{border:0;border-radius:24px;background:none;color:#a9b4c6;font:11px var(--mono);padding:8px 12px;cursor:pointer}
 #sceneTools button:hover,#sceneTools button[aria-pressed="true"]{color:#f2c14e;background:#f2c14e12}
+#sceneRot{display:flex;align-items:center;gap:8px;color:#a9b4c6;font:11px var(--mono);padding:0 8px}
+#sceneRot[hidden]{display:none}
+#sceneRot input{width:130px;accent-color:#f2c14e}
+#sceneRot output{color:#f2c14e;min-width:3ch;text-align:right}
 body.scene-only .panel,body.scene-only .hint{visibility:hidden;pointer-events:none}
 body.scene-only #stamp{opacity:.65}
 body.apparatus-view #ctl,body.apparatus-view #side,body.apparatus-view #stamp,body.apparatus-view .hint,body.apparatus-view #sceneOnly{display:none}
@@ -363,6 +367,8 @@ body.apparatus-view #sceneTools{top:calc(18px + env(safe-area-inset-top,0px));le
   <button id="sceneOnly" aria-pressed="false" title="Hide panels (H)">◫ hide panels</button>
   <button id="sceneApparatus" hidden>SAMURAI</button>
   <button id="sceneFacility" hidden>← facility</button>
+  <label id="sceneRot" hidden title="Rotation of the magnet on its base (standard configuration 30°)">rotation <input id="sceneRotInput" type="range" step="1" aria-label="Magnet rotation"><output id="sceneRotOut">30°</output></label>
+  <button id="sceneRotPlay" hidden aria-pressed="false" title="Sweep the rotation back and forth">▶ rotate</button>
   <button id="sceneLabels" aria-pressed="true" title="Toggle section labels">labels</button>
 </div>
 <div id="hoverNote" hidden></div>
@@ -2289,9 +2295,12 @@ function setDetailSection(g) {
   detailVisibility = g ? g.parent.children.map(part => [part, part.visible]) : [];
   if (g) for (const [part] of detailVisibility) part.visible = part === g;
   for (const section of SECTIONS) for (const label of section.userData.detailLabels || []) label.visible = section === g && showLabels;
-  // an exploded section (SAMURAI) lifts its upper assembly in the apparatus view only
-  for (const section of SECTIONS) { const ex = section.userData.explode; if (ex) section.traverse((m) => {
-    if (m.isMesh && ex.mats.includes(m.material)) { m.userData.y0 ??= m.position.y; m.position.y = m.userData.y0 + (section === g ? ex.lift : 0); } }); }
+  // a posable section (SAMURAI) is exploded in the apparatus view only, and starts in its standard angle
+  stopRotation();
+  for (const section of SECTIONS) if (section.userData.pose) section.userData.pose({ exploded: section === g, angle: section.userData.rotate.std });
+  const rot = g?.userData.rotate;
+  document.getElementById("sceneRot").hidden = document.getElementById("sceneRotPlay").hidden = !rot;
+  if (rot) Object.assign(document.getElementById("sceneRotInput"), { min: rot.min, max: rot.max, value: rot.std }), showRotation(rot.std);
   bunches.visible = !g;
   // The normal pass of GTAO treats the annotation sprites as opaque rectangles.
   gtao.enabled = !g;
@@ -2300,6 +2309,25 @@ function setDetailSection(g) {
   document.getElementById("sceneFacility").hidden = !g;
   document.getElementById("sceneApparatus").hidden = !!g || CUR_FAC !== "riken";
 }
+// rotation of the isolated apparatus on its base: slider, and a sweep back and forth across the range
+let rotPlay = null;
+function showRotation(a) { document.getElementById("sceneRotOut").textContent = `${Math.round(a)}°`; }
+function setRotation(a) { if (!detailSection?.userData.pose) return; detailSection.userData.pose({ exploded: true, angle: a }); showRotation(a); document.getElementById("sceneRotInput").value = a; }
+function stopRotation() { if (rotPlay) cancelAnimationFrame(rotPlay.id); rotPlay = null; const b = document.getElementById("sceneRotPlay"); b.textContent = "▶ rotate"; b.setAttribute("aria-pressed", "false"); }
+document.getElementById("sceneRotInput").addEventListener("input", (e) => { stopRotation(); setRotation(+e.target.value); });
+document.getElementById("sceneRotPlay").addEventListener("click", () => {
+  if (rotPlay) return stopRotation();
+  const r = detailSection.userData.rotate, b = document.getElementById("sceneRotPlay");
+  b.textContent = "❚❚ rotate"; b.setAttribute("aria-pressed", "true");
+  rotPlay = { a: +document.getElementById("sceneRotInput").value, dir: 1, t: performance.now() };
+  const step = (now) => {
+    const dt = Math.min(0.1, (now - rotPlay.t) / 1000); rotPlay.t = now;
+    rotPlay.a += rotPlay.dir * 18 * dt;                       // 18 degrees per second (display speed)
+    if (rotPlay.a >= r.max) { rotPlay.a = r.max; rotPlay.dir = -1; } else if (rotPlay.a <= r.min) { rotPlay.a = r.min; rotPlay.dir = 1; }
+    setRotation(rotPlay.a); rotPlay.id = requestAnimationFrame(step);
+  };
+  rotPlay.id = requestAnimationFrame(step);
+});
 document.getElementById("sceneApparatus").addEventListener("click", () => focusSection(SECTIONS.find(g => g.userData.fac === "riken" && g.userData.name === "SAMURAI")));
 document.getElementById("sceneFacility").addEventListener("click", () => setFacility(CUR_FAC));
 function focusSection(g, tab) {
