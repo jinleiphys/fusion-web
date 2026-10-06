@@ -1,2 +1,2 @@
-Copied from the nuclearjs repository, commit 741f891, on 2026-10-06T10:34Z.
+Copied from the nuclearjs repository, commit 160c617, on 2026-10-06T11:51Z.
 Do not edit here: change nuclearjs and rerun scripts/publish_to_fusion_web.sh.
