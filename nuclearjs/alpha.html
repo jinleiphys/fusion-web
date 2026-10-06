@@ -1,0 +1,1015 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Alpha decay · nuclearjs</title>
+<link rel="stylesheet" href="assets/glass.css">
+<style>
+body{margin:0}
+:root{
+  color-scheme:dark;
+  --ground:#0b0d12; --line:#262c3a;
+  --ink:#e6e8ee; --muted:#8a92a6; --accent:#f2c14e;
+  --neu:#a8cdf2; --pro:#ff9656;
+  --sans:"Avenir Next","Futura","Helvetica Neue","PingFang SC","Noto Sans SC",system-ui,sans-serif;
+  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+}
+html,body{height:100%}
+body{background:var(--ground);color:var(--ink);font-family:var(--sans);overflow:hidden}
+#stage{position:fixed;inset:0}
+#stage canvas{display:block;touch-action:none}
+.panel{position:fixed;border-radius:18px;padding:16px 18px;display:flex;flex-direction:column;gap:12px;overflow:auto;box-sizing:border-box}
+.panel{z-index:2}
+.panel>*{flex-shrink:0}
+#ctl{left:16px;top:calc(16px + env(safe-area-inset-top,0px));width:min(316px,calc(100% - 32px));max-height:calc(100% - 60px)}
+#side{right:16px;top:calc(16px + env(safe-area-inset-top,0px));width:360px;max-height:calc(100% - 32px);gap:10px}
+h1{margin:0;font-size:22px;font-weight:600;letter-spacing:.01em}
+h1 sup{font-size:.6em}
+.sub{margin:2px 0 0;color:var(--muted);font-size:13px;line-height:1.45}
+.sub sup,.src sup{font-size:.7em}
+.grp{display:flex;flex-direction:column;gap:6px}
+.lab{font-size:11px;text-transform:uppercase;letter-spacing:.12em;color:var(--muted)}
+.seg{display:flex;border:1px solid var(--line);border-radius:4px;overflow:hidden}
+.seg button{flex:1;background:none;border:0;color:var(--muted);font:500 12px var(--mono);padding:6px 4px;cursor:pointer}
+.seg button+button{border-left:1px solid var(--line)}
+.seg button[aria-pressed="true"]{background:#1f2533;color:var(--ink)}
+button:focus-visible,input:focus-visible,summary:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+input[type=text]{background:#0f121a;border:1px solid var(--line);border-radius:4px;color:var(--ink);font:13px var(--mono);padding:6px 8px;width:100%;box-sizing:border-box}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chips button{background:#161a24;border:1px solid var(--line);border-radius:4px;color:var(--ink);font:12px var(--mono);padding:5px 8px;cursor:pointer}
+.chips button:hover{border-color:var(--muted)}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:3px 10px;font:12px var(--mono);font-variant-numeric:tabular-nums}
+.kv dt{color:var(--muted)}.kv dd{margin:0}
+.kv .hi{color:var(--accent)}
+.row{display:flex;gap:8px;align-items:center;font:12px var(--mono);color:var(--muted)}
+.row input[type=range]{flex:1;accent-color:var(--accent);min-width:0}
+.row output{min-width:72px;text-align:right;color:var(--ink);font-variant-numeric:tabular-nums}
+.row span{min-width:20px}
+details summary{cursor:pointer;font-size:11px;text-transform:uppercase;letter-spacing:.12em;color:var(--muted);list-style:none}
+details summary::before{content:"▸ ";}
+details[open] summary::before{content:"▾ ";}
+details .grp{margin-top:8px}
+.linkbtn{background:none;border:0;color:var(--muted);font:12px var(--mono);padding:0;cursor:pointer;text-decoration:underline;align-self:flex-start}
+.home{font:12px var(--mono);color:var(--muted);text-decoration:none}.home:hover{color:var(--ink)}
+.src{font-size:11px;color:var(--muted);line-height:1.45}
+.src a{color:var(--muted)}
+.warn{font-size:12px;color:var(--accent);line-height:1.4}
+.plot{width:100%;height:158px;display:block;cursor:crosshair}
+.cap{display:flex;justify-content:space-between;align-items:baseline;font:11px var(--mono);color:var(--muted)}
+.cap b{font:600 13px var(--sans);color:var(--ink)}
+.leg{display:flex;flex-wrap:wrap;gap:4px 12px;font:11px var(--mono);color:var(--muted)}
+.leg i{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:5px;vertical-align:0}
+.axlab{position:fixed;font:500 11px var(--mono);color:var(--accent);pointer-events:none;transform:translate(-50%,-50%);opacity:.85;white-space:nowrap;text-shadow:0 0 6px #0b0d12}
+.axlab.tick{color:#c9d6ea;transform:translate(-100%,-50%);opacity:.75}
+#stamp{position:fixed;left:50%;bottom:calc(26px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);text-align:center;pointer-events:none}
+#stamp b{display:block;font:600 clamp(30px,4.6vw,54px)/1 var(--sans);letter-spacing:-.01em}
+#stamp b sup{font-size:.55em}
+#stamp small{display:block;font:500 12px var(--mono);color:var(--muted);margin-top:6px}
+.hint{position:fixed;left:16px;bottom:calc(14px + env(safe-area-inset-bottom,0px));font:11px var(--mono);color:var(--muted)}
+@media (max-width:900px){
+  #ctl{max-height:42vh}
+  #side{left:16px;right:16px;width:auto;top:auto;bottom:calc(12px + env(safe-area-inset-bottom,0px));max-height:44vh}
+  #stamp,.hint,.axlab{display:none}
+}
+@media (max-width:560px){.panel{padding:10px 12px;gap:9px}h1{font-size:18px}}
+</style>
+<script data-goatcounter="https://jinleiphys.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
+</head>
+<body>
+
+<div id="stage"></div>
+
+<aside id="ctl" class="panel glass glass-deep" data-glass data-glass-bevel="22" data-glass-scale="42">
+  <div>
+    <a class="home" href="index.html">← nuclearjs</a> &nbsp; <a class="home" id="toNuc" href="nucleus.html#212Po">shell model →</a> &nbsp; <a class="home" href="https://vibeinscience.com/nuclides.html">chart</a>
+    <h1 id="title">Alpha decay</h1>
+    <p class="sub">Gamow's picture: an alpha particle rattles inside the nucleus and leaks out through the Coulomb barrier. The leak is exponentially small, so the half-life follows Q<sub>α</sub> over thirty decades.</p>
+  </div>
+  <div class="grp">
+    <label class="lab" for="find">Parent nucleus</label>
+    <input id="find" type="text" placeholder="212Po, 238U, 144Nd" autocomplete="off" spellcheck="false">
+    <div class="chips" id="chips">
+      <button data-n="212Po">212Po</button><button data-n="210Po">210Po</button><button data-n="226Ra">226Ra</button>
+      <button data-n="238U">238U</button><button data-n="144Nd">144Nd</button><button data-n="241Am">241Am</button>
+      <button data-n="294Og">294Og</button>
+    </div>
+  </div>
+  <div class="grp">
+    <div class="lab">What if Q<sub>α</sub> were</div>
+    <div class="row"><span>Q</span><input id="qs" type="range" min="-1" max="1" step="0.001" value="0"><output id="qout"></output></div>
+    <div class="row" style="justify-content:space-between"><span id="whatif" style="min-width:0;color:var(--ink)"></span><button class="linkbtn" id="qreset" type="button">measured Q</button></div>
+  </div>
+  <div class="grp">
+    <div class="lab">Barrier and half-life</div>
+    <dl class="kv" id="info"></dl>
+    <p class="warn" id="warn" hidden></p>
+  </div>
+  <div class="grp">
+    <div class="lab">Rendering</div>
+    <div class="seg" id="qmode">
+      <button data-v="high" title="bloom">cinematic</button>
+      <button data-v="low">fast</button>
+    </div>
+    <p class="src">What is drawn: the landscape is the potential of the radial equation the drawn wave solves, −V<sub>0</sub>′ inside R and the Coulomb potential outside, each plus the centrifugal term ħ²l(l+1)/2μr² (zero for l = 0), as a solid, height in MeV and radius in fm each scaled to fit (scales differ per nucleus), warm where it exceeds Q (classically forbidden), cool where it is below Q, with 5 MeV contours and 10 fm rings. It is cut open towards you, the cut turning with the camera, so the well and the inside of the barrier stay visible; the cut faces are the same profile, hatched above Q, and the amber line across them at height Q, from R to b, is the tunnelling path (for l &gt; 0 it also crosses the centrifugal core near the centre, classically forbidden as well, where the regular wave falls off as r<sup>l+1</sup>; that stretch is not part of the escape path). The glass sheet is the level Q. The wave rides on Q with height ∝ log<sub>10</sub>|u| over 40 decades (linear inside R); its ribbon runs just in front of the two cut faces. The well floor is drawn at the depth V<sub>0</sub>′ the drawn wave solves (see Model), not at the 35 MeV of the half-life, and for l &gt; 0 it carries the centrifugal term inside R as well, so the drawn wave solves the drawn profile for every l; that term diverges at r = 0, so the profile is cut flat at 1.2 times its height at R, above which nothing is drawn. The alpha particle (2 p + 2 n) is not to size, and its bounce is not to time. Materials, lights, glow and the stand are decoration.</p>
+  </div>
+  <details>
+    <summary>Model, exactly</summary>
+    <div class="grp src">
+      <span>Q<sub>α</sub> from AME2020 (Q(α) of the rct1 table, with its uncertainty, which carries the correlation between parent and daughter masses; Z ≥ 50). Below Z = 50, Q = B(Z−2, N−2) + B(<sup>4</sup>He) − B(Z, N) from the NUBASE2020 binding energies, whose 4-decimal B/A leave each B uncertain by up to A × 5×10<sup>−5</sup> MeV (that bound is the error bar there). The Q error and its effect on log T are shown. Electron screening: Q is raised by (65.3 Z<sup>7/5</sup> − 80.0 Z<sup>2/5</sup>) eV of the parent. The alpha and the daughter are a two-body system in the centre-of-mass frame with their reduced mass, so recoil is exact and needs no extra correction.</span>
+      <span>Sharp surface at R = r<sub>0</sub>(A<sub>d</sub><sup>1/3</sup> + 4<sup>1/3</sup>), r<sub>0</sub> = 1.20 fm. Inside, a flat well, alpha kinetic energy Q + V<sub>0</sub>, V<sub>0</sub> = 35 MeV (25 or 50 MeV moves the even-even rms by &lt; 0.001). Outside, V = 2Z<sub>d</sub>e²/r + ħ²l(l+1)/2μr².</span>
+      <span>The drawn wave: inside R the regular solution u<sub>l</sub>(K′r) = K′r j<sub>l</sub>(K′r) of the flat well with its centrifugal term, −V<sub>0</sub>′ + ħ²l(l+1)/2μr² (the profile drawn inside R), joined in value and slope to the exact outgoing Coulomb wave at R. A 35 MeV well generally has no level exactly at Q, while the formula below assumes one (for l = 0, sin²KR = K²/(K² + κ<sub>R</sub>²)); the well that has it, depth V<sub>0</sub>′ (39.6 MeV for <sup>212</sup>Po, 41.5 MeV for <sup>238</sup>U), is the one drawn and solved. The half-life keeps V<sub>0</sub> = 35 MeV, where it enters only through K.</span>
+      <span>λ = S ν P, ν = ħK/(2μR) = v<sub>in</sub>/2R, P = [4Kκ<sub>R</sub>/(K² + κ<sub>R</sub>²)] exp(−2∫<sub>R</sub><sup>b</sup>κ dr), Langer (l + ½)². This is the WKB limit of the decay width of the quasi-stationary state with the outgoing Coulomb wave G + iF; the exact form, with 1/(F<sub>l</sub>² + G<sub>l</sub>²) and G′/G at kR, is computed too and differs by at most 0.008 in log T over all 624 decays.</span>
+      <span>S = 0.041 (log S = −1.391) is the one fitted constant, the mean of log(T<sub>calc</sub>/T<sub>exp</sub>) over the even-even set (187 decays, <sup>264</sup>Hs left out, see below); rms 0.371. It is not a measured preformation probability: r<sub>0</sub> and S are nearly degenerate (any r<sub>0</sub> from 1.0 to 1.3 fm fits with rms 0.34 to 0.43 once S is refitted), and S absorbs the nuclear attraction that a sharp surface leaves out of the barrier.</span>
+      <span>T<sub>exp</sub> = T<sub>½</sub>/BR with BR the total alpha branch of NUBASE2020, which includes decays to excited daughter states, while the calculation is ground state to ground state. The ground-state branch alone is smaller (<sup>238</sup>U: 79%), so the true partial g.s. half-life is longer than T<sub>exp</sub>: by about 0.1 decade for an even-even parent like <sup>238</sup>U, and by more for odd ones, whose g.s. transition is often hindered.</span>
+      <span>l: 0 for even-even (0<sup>+</sup> → 0<sup>+</sup>); otherwise the lowest value allowed by the ground-state J<sup>π</sup> of parent and daughter (angular momentum and parity), 0 when either is unknown (flagged tentative). Where no l satisfies both (<sup>210</sup>Bi 1<sup>−</sup> → 0<sup>−</sup>, <sup>238</sup>Am 1<sup>+</sup> → (0<sup>+</sup>), <sup>258</sup>Db 0<sup>−</sup> → 4<sup>+</sup>), there is no g.s. → g.s. alpha decay: these parents are left out of the comparison.</span>
+    </div>
+  </details>
+  <div class="src">
+    Masses, half-lives, J<sup>π</sup>, alpha branching: NUBASE2020, Kondev et al., Chin. Phys. C 45, 030001 (2021). Q<sub>α</sub>: AME2020, Wang et al., Chin. Phys. C 45, 030003 (2021). Coulomb functions under the barrier agree with an independent arbitrary-precision evaluation to 4×10<sup>−9</sup>.<br>
+    Flagged, kept as tabulated, left out of the statistics: <sup>264</sup>Hs (hollow point). NUBASE2020 lists T<sub>1/2</sub> = 0.7(3) s with a 70% alpha branch, and the model gives 3.3 decades shorter; Sato et al., J. Phys. Soc. Jpn. 80, 094201 (2011) report the half-life in milliseconds (of order 0.6 ms), which the model would match to 0.3 decades. A unit slip in the table is likely but not established here. Even-even rms: 0.371 without it, 0.443 with the tabulated 0.7 s, 0.371 if it were 0.7 ms.
+  </div>
+</aside>
+
+<aside id="side" class="panel glass glass-deep" data-glass data-glass-bevel="22" data-glass-scale="42">
+  <div class="cap"><b>Calculated vs measured</b><span>log<sub>10</sub> T<sub>½</sub>/s, partial α</span></div>
+  <canvas id="pc" class="plot" aria-label="calculated vs measured half-lives"></canvas>
+  <div class="leg" id="legc"></div>
+  <div class="cap"><b>Geiger–Nuttall</b><span>even-even, by element</span></div>
+  <canvas id="pg" class="plot" aria-label="Geiger-Nuttall plot"></canvas>
+  <div class="src" id="gnote">Each line is one element. Dashed amber: this model for the selected nucleus as Q is varied; the ring is the slider.</div>
+  <div class="cap"><b>Shell effect</b><span>log<sub>10</sub>(T<sub>calc</sub>/T<sub>exp</sub>) vs N</span></div>
+  <canvas id="pn" class="plot" aria-label="residual vs neutron number"></canvas>
+  <div class="src" id="nnote"></div>
+  <div class="cap"><b>WKB vs exact barrier</b><span>error in 1/(F² + G²), %</span></div>
+  <canvas id="pw" class="plot" aria-label="WKB error"></canvas>
+  <div class="src">Exact: Coulomb functions at kR. WKB: (κ<sub>R</sub>/k) exp(−2∫κ dr). Sharp radius at r<sub>0</sub> = 1.2 fm, A<sub>d</sub> = 2.5 Z<sub>d</sub>, l = 0. The error grows only when the barrier gets thin.</div>
+</aside>
+
+<div id="lR" class="axlab" hidden>R</div>
+<div id="lB" class="axlab" hidden>b</div>
+<div id="lQ" class="axlab" hidden>Q</div>
+<div id="lV" class="axlab" hidden></div>
+<div id="ticks"></div>
+<div id="stamp"></div>
+<div class="hint">drag to orbit · scroll to zoom · click a point in a plot</div>
+
+<script src="assets/three-bundle.js"></script>
+<script src="assets/three-post.js"></script>
+<script src="assets/wave-stage.js"></script>
+<script src="assets/nubase.js"></script>
+<script src="assets/alpha-data.js"></script>
+<script src="assets/alphadecay.js"></script>
+<script>
+"use strict";
+// ---------- data
+const NUC = window.NUC;                    // [Z, N, sym, log10 T1/2, mode, B/A, est, J^pi, year]
+const ROW = new Map(), SYM = {}, ELEM = {};
+for (const r of NUC) { ROW.set(r[0] + "," + r[1], r); SYM[r[2].toLowerCase()] = r[0]; ELEM[r[0]] = r[2]; }
+const AD = new Map();
+for (const a of window.ALPHA_DATA) AD.set(a[0] + "," + a[1], a);
+const MT = ALPHA.massTable(NUC, window.ALPHA_Q);       // Q_alpha: AME2020 rct1 (Z >= 50), else NUBASE2020 B/A
+const P = ALPHA.DEF;
+const sup = (A) => `<sup>${A}</sup>`;
+const SET = ALPHA.dataset(NUC, window.ALPHA_DATA, MT, P);
+const STAT = {};
+for (const c of ["ee", "oA", "oo"]) STAT[c] = ALPHA.stats(SET.filter((e) => e.cls === c));   // FLAGS records skipped
+const STAT_EE_ALL = ALPHA.stats(SET.filter((e) => e.cls === "ee"), "logT", true);
+const CLS = { ee: { c: "#f2c14e", n: "even-even" }, oA: { c: "#a8cdf2", n: "odd-A" }, oo: { c: "#ff9656", n: "odd-odd" } };
+
+function parseNucleus(s) {
+  s = s.trim();
+  let m = s.match(/^#?Z(\d+)N(\d+)$/i);
+  if (m) return { Z: +m[1], N: +m[2] };
+  s = s.toLowerCase().replace(/^#/, "").replace(/[-\s]/g, "");
+  m = s.match(/^(\d+)([a-z]+)$/) || s.match(/^([a-z]+)(\d+)$/);
+  if (!m) return null;
+  let A, el;
+  if (/^\d/.test(m[1])) { A = +m[1]; el = m[2]; } else { el = m[1]; A = +m[2]; }
+  const Z = SYM[el];
+  if (Z == null || A <= Z) return null;
+  return { Z, N: A - Z };
+}
+// a half-life in words, from log10 T in seconds
+function fmtT(lg) {
+  if (!isFinite(lg)) return "n/a";
+  const s = Math.pow(10, lg), y = 3.15576e7;
+  const u = [[1e-9, "ns"], [1e-6, "µs"], [1e-3, "ms"], [1, "s"], [60, "min"], [3600, "h"], [86400, "d"], [y, "y"], [1e3 * y, "ky"], [1e6 * y, "My"], [1e9 * y, "Gy"]];
+  if (s < 1e-9) return `10<sup>${lg.toFixed(1)}</sup> s`;
+  if (s >= 1e12 * y) return `${(s / y / Math.pow(10, Math.floor(Math.log10(s / y)))).toFixed(1)}×10<sup>${Math.floor(Math.log10(s / y))}</sup> y`;
+  let k = 0;
+  for (let i = 0; i < u.length; i++) if (s >= u[i][0]) k = i;
+  if (u[k][1] === "d" && s >= 1.5 * y) k++;
+  // a value that rounds up to 1000 of a unit (0.9997 s -> "1000 ms") is shown in the next unit
+  if (s / u[k][0] >= 999.5 && k + 1 < u.length && u[k + 1][0] / u[k][0] === 1000) k++;
+  const v = s / u[k][0];
+  return `${v < 10 ? v.toPrecision(2) : v.toFixed(0)} ${u[k][1]}`;
+}
+
+// ---------- state
+const S = { Z: 84, N: 128, Q0: 0, dQ: 0, l: 0, lNote: "", e: null, d: null, wave: null, rmax: 40, sH: 1, sV: 1, Qmin: 0, Qmax: 0 };
+const DMAX = 40;                           // decades shown on the log amplitude scale
+const HW = 9;                              // height of 1 decade-scale unit... the full 40 decades, world units
+
+// ---------- scene
+const stage = document.getElementById("stage");
+const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.setSize(innerWidth, innerHeight);
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.05;
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+stage.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(38, innerWidth / innerHeight, 0.1, 600);
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+// lighting only: a studio sky with soft panels (assets/wave-stage.js), PMREM'd as the environment
+const SKY = WaveStage.skyGLSL(new THREE.Vector3(-0.55, 0.78, 0.42));
+scene.environment = WaveStage.environment(renderer, SKY);
+scene.fog = new THREE.Fog("#0b0d12", 120, 260);
+// The ground colour #0b0d12 is drawn untouched on the direct path, but OutputPass runs it through
+// ACES, whose toe crushes it to black. On the bloom path the background and fog therefore take the
+// linear colour that ACES (exposure 1.05) maps back to exactly #0b0d12: found by Newton on the r160
+// shader formula, residual 1e-11, sRGB out (11, 13, 18).
+const GROUND = new THREE.Color("#0b0d12");
+const GROUND_PRE_ACES = new THREE.Color().setRGB(0.0115476, 0.0131218, 0.0174740, THREE.LinearSRGBColorSpace);
+scene.background = GROUND.clone();
+
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+controls.dampingFactor = 0.08;
+controls.minDistance = 8;
+controls.maxDistance = 220;
+const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+controls.autoRotate = !reduce;
+controls.autoRotateSpeed = 0.25;
+controls.addEventListener("start", () => (controls.autoRotate = false));
+
+const RIG = WaveStage.rig(scene, SKY, 200, 62);
+
+// world: x, z in fm times sH (the disc is always 40 units across its radius), y in MeV times sV
+const RW = 40;
+
+// The landscape is cut open towards the viewer: a wedge of half-angle CUT around the camera
+// azimuth is removed (it turns with the camera), so the well and the inside of the barrier stay in
+// view, and the two cut faces show V(r) in profile. One set of uniforms drives the landscape, its
+// shadow and its ambient-occlusion buffers.
+const CUT = 58 * Math.PI / 180;
+const CUTU = { uCutDir: { value: new THREE.Vector2(0, 1) }, uCutCos: { value: Math.cos(CUT) }, uCutOn: { value: 1 } };
+const CUT_GLSL = `uniform vec2 uCutDir; uniform float uCutCos, uCutOn;
+  bool inCut(vec2 xz){ float l = length(xz); return uCutOn > 0.5 && l > 1e-3 && dot(xz / l, uCutDir) > uCutCos; }`;
+function patchCut(mat, key, extraV, extraF) {
+  mat.onBeforeCompile = (sh) => {
+    Object.assign(sh.uniforms, CUTU, extraF ? extraF.uniforms : {});
+    sh.vertexShader = sh.vertexShader
+      .replace("#include <common>", `#include <common>\nvarying vec3 vObj;\n${extraV ? extraV.decl : ""}`)
+      .replace("#include <begin_vertex>", `#include <begin_vertex>\nvObj = position;\n${extraV ? extraV.body : ""}`);
+    sh.fragmentShader = sh.fragmentShader
+      .replace("#include <common>", `#include <common>\nvarying vec3 vObj;\n${CUT_GLSL}\n${extraF ? extraF.decl : ""}`)
+      .replace("#include <clipping_planes_fragment>", "#include <clipping_planes_fragment>\nif (inCut(vObj.xz)) discard;");
+    if (extraF) for (const [a, b] of extraF.repl) sh.fragmentShader = sh.fragmentShader.replace(a, b);
+  };
+  mat.customProgramCacheKey = () => "alphacut:" + key;
+  return mat;
+}
+
+// potential landscape: the effective potential V(r) + hbar^2 l(l+1)/2 mu r^2 of the radial equation, floor at
+// -V0' inside R (rising toward the centre for l > 0, cut at 1.2 V(R)), wall at R, Coulomb + centrifugal outside,
+// as a solid: dark ceramic, tinted by height, warm where V > Q (classically forbidden), cool where
+// V < Q, with 5 MeV contours and 10 fm rings engraved, and the Q contour (the turning point b) lit
+const NA = 160;
+const LANDU = { uQ: { value: 0 }, uR: { value: 1 }, uTop: { value: 1 }, uV0: { value: 35 } };
+const potMat = patchCut(new THREE.MeshPhysicalMaterial({
+  color: "#ffffff", roughness: 0.48, metalness: 0.15, clearcoat: 0.35, clearcoatRoughness: 0.35, envMapIntensity: 0.9,
+  roughnessMap: WaveStage.noiseTexture(256, 8, 0.6, 1.0, 9),
+}), "land", { decl: "attribute float aE; attribute float aR; varying float vE; varying float vR;", body: "vE = aE; vR = aR;" }, {
+  uniforms: LANDU,
+  decl: "uniform float uQ, uR, uTop, uV0; varying float vE; varying float vR;\n" +
+    "float gridline(float x, float step){ float f = abs(fract(x / step - 0.5) - 0.5) * step; return 1.0 - smoothstep(0.0, max(1.2 * fwidth(x), 1e-4), f); }",
+  repl: [["#include <color_fragment>", `#include <color_fragment>
+    float hgt = clamp((vE + uV0) / (uTop + uV0), 0.0, 1.0);
+    bool forbidden = vE > uQ, wall = abs(vR - uR) < uR * 0.0005, skirt = vR < 0.0;
+    vec3 base = forbidden ? mix(vec3(0.24, 0.15, 0.10), vec3(0.62, 0.34, 0.17), hgt * hgt)
+                          : mix(vec3(0.08, 0.10, 0.14), vec3(0.20, 0.26, 0.36), hgt);
+    if (wall) base = vec3(0.10, 0.10, 0.11);
+    if (skirt) base = vec3(0.075, 0.08, 0.09);
+    float g = (wall || skirt) ? 0.0 : max(gridline(vE, 5.0) * 0.6, gridline(vR, 10.0) * 0.4);
+    base *= 1.0 - 0.55 * g;
+    diffuseColor.rgb = base;`],
+  ["#include <emissivemap_fragment>", `#include <emissivemap_fragment>
+    float qe = 1.0 - smoothstep(0.0, 2.0 * fwidth(vE), abs(vE - uQ));
+    if (!(abs(vR - uR) < uR * 0.0005) && vR >= 0.0) totalEmissiveRadiance += vec3(1.0, 0.72, 0.28) * 2.2 * qe;`]],
+});
+potMat.extensions = { derivatives: true };
+const pot = new THREE.Mesh(new THREE.BufferGeometry(), potMat);
+pot.castShadow = true; pot.receiveShadow = true;
+pot.customDepthMaterial = patchCut(new THREE.MeshDepthMaterial({ depthPacking: THREE.RGBADepthPacking }), "depth");
+scene.add(pot);
+
+// the two cut faces: the solid in profile, with the Q line drawn across it where it runs inside the
+// barrier (R < r < b, the tunnelling path) and faint 5 MeV strata
+const CAPU = { uQy: { value: 0 }, uSV: { value: 1 } };
+const capMat = new THREE.MeshStandardMaterial({ color: "#ffffff", roughness: 0.6, metalness: 0.0, side: THREE.DoubleSide, envMapIntensity: 0.8,
+  roughnessMap: WaveStage.noiseTexture(256, 10, 0.75, 1.0, 13) });
+capMat.onBeforeCompile = (sh) => {
+  Object.assign(sh.uniforms, CAPU);
+  sh.vertexShader = sh.vertexShader.replace("#include <common>", "#include <common>\nvarying vec2 vC;")
+    .replace("#include <begin_vertex>", "#include <begin_vertex>\nvC = position.xy;");
+  sh.fragmentShader = sh.fragmentShader.replace("#include <common>", "#include <common>\nvarying vec2 vC; uniform float uQy, uSV;")
+    .replace("#include <color_fragment>", `#include <color_fragment>
+      // the cut face in profile: above Q (inside the barrier, classically forbidden) the same warm
+      // tint as the forbidden slopes, below Q a neutral dark body; faint 5 MeV strata as a ruler
+      float e = vC.y / uSV, f = abs(fract(e / 5.0 - 0.5) - 0.5) * 5.0;
+      float strata = 1.0 - smoothstep(0.0, 1.2 * fwidth(e), f);
+      float above = smoothstep(-0.05, 0.05, vC.y - uQy);
+      float hx = vC.x + vC.y, hw = fwidth(hx);
+      float hatch = 1.0 - smoothstep(0.18 - hw, 0.18 + hw, abs(fract(hx / 1.1) - 0.5) * 1.1);
+      vec3 body = mix(vec3(0.07, 0.075, 0.085), mix(vec3(0.55, 0.33, 0.18), vec3(1.0, 0.72, 0.40), hatch), above);
+      diffuseColor.rgb = body * (1.0 - 0.18 * strata);`)
+    .replace("#include <emissivemap_fragment>", `#include <emissivemap_fragment>
+      float dq = abs(vC.y - uQy), w = fwidth(vC.y);
+      totalEmissiveRadiance += vec3(1.0, 0.72, 0.28) * (2.6 * (1.0 - smoothstep(0.0, 2.0 * w, dq)) + 0.35 * exp(-dq * dq / 0.8));`);
+};
+capMat.customProgramCacheKey = () => "alphacap";
+capMat.extensions = { derivatives: true };
+const caps = new THREE.Group();
+const capA = new THREE.Mesh(new THREE.BufferGeometry(), capMat), capB = new THREE.Mesh(new THREE.BufferGeometry(), capMat);
+capA.castShadow = capB.castShadow = true; capA.receiveShadow = capB.receiveShadow = true;
+caps.add(capA, capB);
+scene.add(caps);
+
+// stage: a turned-metal plinth under the landscape, and the floor with a contact shadow
+const stand = new THREE.Group();
+{
+  const metal = new THREE.MeshStandardMaterial({ color: "#2e323a", metalness: 1.0, roughness: 0.4, roughnessMap: WaveStage.turnedTexture(), envMapIntensity: 1.0 });
+  const plinth = new THREE.Mesh(BufferGeometryUtils.mergeGeometries([
+    new THREE.CylinderGeometry(RW + 2.2, RW + 2.6, 1.6, 160).translate(0, -0.8, 0),
+    new THREE.CylinderGeometry(RW + 2.6, RW + 1.8, 0.8, 160).translate(0, -2.0, 0)]), metal);
+  plinth.castShadow = true; plinth.receiveShadow = true;
+  stand.add(plinth, WaveStage.floor(RW * 3.4, -2.4, RW * 1.5, 0.8));
+}
+scene.add(stand);
+
+function buildPotential() {
+  const d = S.d, R = d.R, mu = d.mu, Zd = S.Z - 2, l = S.l;
+  const V0 = S.V0d;                                  // the depth the drawn interior wave solves (ALPHA.wave)
+  // the effective potential of the radial equation the drawn wave solves: the centrifugal term on both sides of R
+  // (inside, u_l(K'r) is the regular solution of -V0' + hbar^2 l(l+1)/2 mu r^2), so for l > 0 the floor rises
+  // toward the centre; it diverges at r = 0 and is cut flat at 1.2 V(R), as everything above that height is
+  const cf = ALPHA.HBARC * ALPHA.HBARC * l * (l + 1) / (2 * mu);
+  const V = (r) => (r < R ? -V0 : 2 * Zd * ALPHA.E2 / r) + (r > 0 ? cf / (r * r) : (cf > 0 ? Infinity : 0));
+  const Vin = (r) => -V0 + (r > 0 ? cf / (r * r) : (cf > 0 ? Infinity : 0));
+  const top = (E) => Math.min(E, 1.2 * V(R));
+  const yb = -V0 * S.sV - 1.5;                       // base of the solid
+  // radial rings: floor (curved for l > 0: denser toward the centre), wall at R (corners doubled for hard
+  // edges), then denser near R where V bends most; then the outer skirt and the base (aR = -1: not part of V)
+  const rings = [];
+  const nIn = l > 0 ? 48 : 2;
+  for (let i = 0; i <= nIn; i++) { const t = i / nIn, r = R * (l > 0 ? t * t * (3 - 2 * t) * 0.5 + 0.5 * t : t); rings.push([r, Math.min(Vin(r), 1.2 * V(R)), r]); }
+  rings.push([R, Vin(R), R], [R, V(R), R], [R, V(R), R * 1.001]);
+  const nInner = rings.length;                       // index of the first ring outside the floor + wall
+  const n = 140;
+  for (let i = 1; i <= n; i++) { const t = i / n, r = R + (S.rmax - R) * t * t; rings.push([r, V(r), r]); }
+  const rm = S.rmax;
+  rings.push([rm, V(rm), -1], [rm, yb / S.sV, -1], [rm, yb / S.sV, -1], [0, yb / S.sV, -1]);
+  const nv = rings.length * (NA + 1);
+  const pos = new Float32Array(nv * 3), aE = new Float32Array(nv), aR = new Float32Array(nv), uv = new Float32Array(nv * 2);
+  let k = 0;
+  for (const [r, E, ar] of rings) for (let j = 0; j <= NA; j++) {
+    const ph = 2 * Math.PI * j / NA;
+    const x = r * S.sH * Math.cos(ph), z = r * S.sH * Math.sin(ph);
+    pos[3 * k] = x; pos[3 * k + 1] = (ar < 0 ? E : top(E)) * S.sV; pos[3 * k + 2] = z;
+    uv[2 * k] = x / RW * 1.5; uv[2 * k + 1] = z / RW * 1.5;
+    aE[k] = E; aR[k] = ar; k++;
+  }
+  const idx = [];
+  for (let i = 0; i < rings.length - 1; i++) for (let j = 0; j < NA; j++) {
+    const a = i * (NA + 1) + j, b = a + NA + 1;
+    idx.push(a, a + 1, b, a + 1, b + 1, b);   // counter-clockwise from above: normals up, out of the solid
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute("position", new THREE.BufferAttribute(pos, 3));
+  g.setAttribute("aE", new THREE.BufferAttribute(aE, 1));
+  g.setAttribute("aR", new THREE.BufferAttribute(aR, 1));
+  g.setAttribute("uv", new THREE.BufferAttribute(uv, 2));
+  g.setIndex(idx);
+  g.computeVertexNormals();
+  pot.geometry.dispose(); pot.geometry = g;
+  LANDU.uR.value = R; LANDU.uTop.value = top(V(R)); LANDU.uV0.value = V0;
+  // the cut face: the same profile as a flat shape in (r, height)
+  const sh = new THREE.Shape();
+  sh.moveTo(0, yb);
+  for (let i = 0; i < nInner - 1; i++) sh.lineTo(rings[i][0] * S.sH, top(rings[i][1]) * S.sV);   // floor and wall
+  for (let i = nInner; i < rings.length - 4; i++) sh.lineTo(rings[i][0] * S.sH, top(rings[i][1]) * S.sV);
+  sh.lineTo(rm * S.sH, yb); sh.closePath();
+  const cg = new THREE.ShapeGeometry(sh);
+  capA.geometry.dispose(); capA.geometry = cg; capB.geometry = cg;
+  CAPU.uSV.value = S.sV;
+  stand.position.y = yb;
+}
+
+// the energy level Q: a thin glass sheet, its tunnelling annulus R < r < b lit amber
+const planeMat = new THREE.ShaderMaterial({
+  uniforms: { uR: { value: 1 }, uB: { value: 2 }, uS: { value: 1 } },
+  vertexShader: `varying vec2 vP; varying vec3 vW; void main(){ vP = position.xz; vec4 w = modelMatrix * vec4(position, 1.0); vW = w.xyz; gl_Position = projectionMatrix * viewMatrix * w; }`,
+  fragmentShader: `
+    uniform float uR, uB, uS; varying vec2 vP; varying vec3 vW;
+    ${SKY.glsl}
+    void main(){
+      float r = length(vP) / uS;
+      vec3 v = normalize(cameraPosition - vW), n = vec3(0.0, sign(v.y), 0.0);
+      float F = 0.04 + 0.96 * pow(1.0 - abs(v.y), 5.0);
+      vec3 refl = studioSky(reflect(-v, n));
+      float under = step(uR, r) * step(r, uB);
+      float stripe = 0.5 + 0.5 * sin((vP.x + vP.y) * 3.0);
+      float ring = (1.0 - smoothstep(0.0, 1.5 * fwidth(r), abs(r - uR))) + (1.0 - smoothstep(0.0, 1.5 * fwidth(r), abs(r - uB)));
+      float rim = 1.0 - smoothstep(0.0, 2.0 * fwidth(r * uS), abs(r * uS - ${(RW - 0.15).toFixed(2)}));
+      vec3 amber = vec3(0.95, 0.76, 0.31);
+      vec3 col = refl * F * 0.6 + amber * (under * (0.10 + 0.06 * stripe) + 0.85 * ring) + vec3(0.8, 0.9, 1.0) * 0.5 * rim;
+      float a = clamp(0.02 + F * 0.35 + under * (0.10 + 0.06 * stripe) + 0.85 * ring + 0.5 * rim, 0.0, 1.0);
+      gl_FragColor = vec4(col, a);
+      #include <tonemapping_fragment>
+      #include <colorspace_fragment>
+    }`,
+  transparent: true, depthWrite: false, side: THREE.DoubleSide,
+});
+planeMat.extensions = { derivatives: true };
+const plane = new THREE.Mesh(new THREE.CircleGeometry(RW, 160).rotateX(-Math.PI / 2), planeMat);
+plane.renderOrder = 2;
+scene.add(plane);
+
+// the wave: a polar sheet at height Q, displaced by A(r) cos(phi(r) - w t), A on a log scale,
+// drawn as a faintly glowing membrane (lit from its own screen-space normal)
+const NRI = 110, NRO = 380, NR = NRI + NRO;
+const waveR = new Float32Array(NR);        // fm
+const waveA = new Float32Array(NR), wavePh = new Float32Array(NR), waveL = new Float32Array(NR);
+const wavePos = new Float32Array(NR * (NA + 1) * 3), waveCol = new Float32Array(NR * (NA + 1));
+const waveGeo = new THREE.BufferGeometry();
+waveGeo.setAttribute("position", new THREE.BufferAttribute(wavePos, 3));
+waveGeo.setAttribute("aL", new THREE.BufferAttribute(waveCol, 1));
+const waveD = new Float32Array(NR * (NA + 1));
+waveGeo.setAttribute("aD", new THREE.BufferAttribute(waveD, 1));
+{
+  const idx = [];
+  for (let i = 0; i < NR - 1; i++) for (let j = 0; j < NA; j++) {
+    const a = i * (NA + 1) + j, b = a + NA + 1;
+    idx.push(a, b, a + 1, a + 1, b, b + 1);
+  }
+  waveGeo.setIndex(idx);
+}
+const waveMat = new THREE.ShaderMaterial({
+  uniforms: { uGain: { value: 1 }, uKey: { value: SKY.key.clone() } },
+  vertexShader: `attribute float aL; attribute float aD; varying float vL; varying float vD; varying vec3 vW;
+    void main(){ vL = aL; vD = aD; vec4 w = modelMatrix * vec4(position, 1.0); vW = w.xyz; gl_Position = projectionMatrix * viewMatrix * w; }`,
+  fragmentShader: `
+    uniform float uGain; uniform vec3 uKey; varying float vL; varying float vD; varying vec3 vW;
+    void main(){
+      // inside (vL > 1): warm white; through the barrier and outside: cooling to the neutron blue
+      vec3 c = vL > 1.0 ? vec3(1.0, 0.86, 0.62) : mix(vec3(0.40, 0.62, 0.95), vec3(1.0, 0.90, 0.70), clamp(vL, 0.0, 1.0));
+      float a = (vL > 1.0 ? 0.20 : 0.07 + 0.22 * clamp(vL, 0.0, 1.0)) * (0.4 + 1.0 * max(vD, 0.0));
+      vec3 n = normalize(cross(dFdx(vW), dFdy(vW))), v = normalize(cameraPosition - vW);
+      if (dot(n, v) < 0.0) n = -n;
+      float edge = pow(1.0 - abs(dot(n, v)), 2.0);
+      float glint = pow(max(dot(n, normalize(uKey + v)), 0.0), 60.0);
+      vec3 col = c * a * (0.8 + 0.35 * edge) + vec3(1.0, 0.95, 0.85) * glint * 0.25 * a * 3.0;
+      gl_FragColor = vec4(col * uGain, a);
+      #include <tonemapping_fragment>
+      #include <colorspace_fragment>
+    }`,
+  transparent: true, depthWrite: false, side: THREE.DoubleSide, blending: THREE.AdditiveBlending,
+});
+waveMat.extensions = { derivatives: true };
+const waveMesh = new THREE.Mesh(waveGeo, waveMat);
+waveMesh.frustumCulled = false;
+waveMesh.renderOrder = 3;
+scene.add(waveMesh);
+// the profile along the two cut faces (just in front of them), drawn as a luminous ribbon that
+// always faces the camera: a white-hot core with a coloured halo
+const NPR = 2 * NR;
+const profPos = new Float32Array(NPR * 2 * 3), profT = new Float32Array(NPR * 2 * 3), profS = new Float32Array(NPR * 2), profL = new Float32Array(NPR * 2);
+const profGeo = new THREE.BufferGeometry();
+profGeo.setAttribute("position", new THREE.BufferAttribute(profPos, 3));
+profGeo.setAttribute("aT", new THREE.BufferAttribute(profT, 3));
+profGeo.setAttribute("aS", new THREE.BufferAttribute(profS, 1));
+profGeo.setAttribute("aL", new THREE.BufferAttribute(profL, 1));
+{
+  const idx = [];
+  for (let h = 0; h < 2; h++) for (let i = 0; i < NR - 1; i++) {
+    const a = 2 * (h * NR + i), b = a + 2;
+    idx.push(a, a + 1, b, b, a + 1, b + 1);
+  }
+  for (let q = 0; q < NPR; q++) { profS[2 * q] = -1; profS[2 * q + 1] = 1; }
+  profGeo.setIndex(idx);
+}
+const profMat = new THREE.ShaderMaterial({
+  uniforms: { uW: { value: 0.32 } },
+  vertexShader: `attribute vec3 aT; attribute float aS; attribute float aL; uniform float uW; varying float vS; varying float vL;
+    void main(){
+      vS = aS; vL = aL;
+      vec4 mv = modelViewMatrix * vec4(position, 1.0);
+      vec3 t = normalize((modelViewMatrix * vec4(aT, 0.0)).xyz);
+      vec3 side = normalize(cross(t, normalize(-mv.xyz)));
+      mv.xyz += side * uW * aS;
+      gl_Position = projectionMatrix * mv;
+    }`,
+  fragmentShader: `varying float vS; varying float vL;
+    void main(){
+      float core = exp(-vS * vS * 18.0), halo = exp(-vS * vS * 3.0);
+      vec3 hc = vL > 1.0 ? vec3(1.0, 0.72, 0.38) : mix(vec3(0.35, 0.6, 1.0), vec3(1.0, 0.8, 0.55), clamp(vL, 0.0, 1.0));
+      vec3 col = vec3(1.0, 0.97, 0.9) * core * 1.6 + hc * halo * 0.55;
+      gl_FragColor = vec4(col, 1.0);
+      #include <tonemapping_fragment>
+      #include <colorspace_fragment>
+    }`,
+  transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
+});
+const prof = new THREE.Mesh(profGeo, profMat);
+prof.frustumCulled = false;
+prof.renderOrder = 4;
+scene.add(prof);
+
+// log-amplitude ruler: ticks every 10 decades at the rim of the disc
+const tickGeo = new THREE.BufferGeometry();
+const ticks = new THREE.LineSegments(tickGeo, new THREE.LineBasicMaterial({ color: "#c9d6ea", transparent: true, opacity: 0.55 }));
+scene.add(ticks);
+const tickEls = [];
+for (let k = 0; k <= DMAX; k += 10) {
+  const el = document.createElement("div");
+  el.className = "axlab tick"; el.hidden = true;
+  el.innerHTML = k === 0 ? "|u| = 1" : `10<sup>−${k}</sup>`;
+  document.getElementById("ticks").appendChild(el);
+  tickEls.push({ el, k });
+}
+
+// the alpha particle, bouncing inside the well (2 p + 2 n): glossy spheres with a clear coat
+const alpha = new THREE.Group();
+{
+  const g = new THREE.SphereGeometry(1, 40, 28);
+  const mp = new THREE.MeshPhysicalMaterial({ color: "#ff9656", roughness: 0.3, metalness: 0.0, clearcoat: 1.0, clearcoatRoughness: 0.06, emissive: "#ff9656", emissiveIntensity: 0.12, sheen: 0.5, sheenColor: new THREE.Color("#ffd2b0") });
+  const mn = new THREE.MeshPhysicalMaterial({ color: "#a8cdf2", roughness: 0.3, metalness: 0.0, clearcoat: 1.0, clearcoatRoughness: 0.06, emissive: "#a8cdf2", emissiveIntensity: 0.08, sheen: 0.5, sheenColor: new THREE.Color("#e2f0ff") });
+  const off = [[1, 1, 1], [-1, -1, 1], [-1, 1, -1], [1, -1, -1]];
+  off.forEach((o, i) => { const m = new THREE.Mesh(g, i < 2 ? mp : mn); m.position.set(o[0], o[1], o[2]).multiplyScalar(0.62); m.castShadow = true; m.receiveShadow = true; alpha.add(m); });
+}
+scene.add(alpha);
+
+// cinematic post: AO on the solid landscape only (its normal buffer gets the same cut), restrained bloom, SMAA
+const POST = WaveStage.post(renderer, scene, camera, [0.35, 0.5, 0.72], { intensity: 0.9, radius: 6, thickness: 4,
+  patch: (m) => {
+    m.onBeforeCompile = (sh) => {
+      Object.assign(sh.uniforms, CUTU, { uCutCosAO: { value: 0 } });
+      sh.uniforms.uCutCosAO = { get value() { return Math.cos(CUT - 0.03); } };
+      sh.vertexShader = sh.vertexShader.replace("void main() {", "varying vec3 vWP;\nvoid main() {")
+        .replace("#include <project_vertex>", "#include <project_vertex>\nvWP = (modelMatrix * vec4(transformed, 1.0)).xyz;");
+      sh.fragmentShader = sh.fragmentShader.replace("void main() {", `varying vec3 vWP;\n${CUT_GLSL}\nuniform float uCutCosAO; uniform float uBase;\nvoid main() {`)
+        .replace("#include <clipping_planes_fragment>", `#include <clipping_planes_fragment>
+          { float l = length(vWP.xz); if (uCutOn > 0.5 && l > 1e-3 && l < ${RW + 0.5} && vWP.y > uBase + 0.05 && dot(vWP.xz / l, uCutDir) > uCutCosAO) discard; }`);
+      sh.uniforms.uBase = { get value() { return stand.position.y; } };
+    };
+    m.customProgramCacheKey = () => "alphacut:ao";
+  } });
+const composer = POST.composer, bloom = POST.bloom;
+
+// ---------- physics for the selected nucleus
+function lFor(Z, N) {
+  if (Z % 2 === 0 && N % 2 === 0) return { l: 0, note: "0+ → 0+" };
+  const r = ROW.get(Z + "," + N), rd = ROW.get((Z - 2) + "," + (N - 2));
+  const jp = r && r[7], jd = rd && rd[7];
+  const lm = ALPHA.lMin(ALPHA.parseJ(jp), ALPHA.parseJ(jd));
+  if (!lm) return { l: 0, note: `J<sup>π</sup> ${jp || "?"} → ${jd || "?"} not known: l = 0 assumed`, tent: true };
+  // no g.s. -> g.s. alpha transition exists: the barrier is drawn for the lowest l allowed by angular
+  // momentum alone, as an illustration, and no half-life is compared
+  if (lm.forbidden) return { l: lm.lAM != null ? lm.lAM : 0, note: `${jp} → ${jd}: g.s. → g.s. forbidden (${lm.why})${lm.tent ? ", J<sup>π</sup> tentative" : ""}`, tent: lm.tent, forbidden: true };
+  return { l: lm.l, note: `${jp} → ${jd}${lm.tent ? ", tentative" : ""}`, tent: lm.tent };
+}
+function solveAt(Q) {
+  return ALPHA.decay(S.Z, S.N, Q, S.l, Object.assign({}, P, { Bd: S.q.Bd }));
+}
+
+function setNucleus(Z, N) {
+  const q = ALPHA.qAlpha(MT, Z, N);
+  const W = document.getElementById("warn");
+  if (!q) { W.hidden = false; W.textContent = "No binding energy for this nucleus or its alpha daughter in NUBASE2020."; return false; }
+  const lf = lFor(Z, N);
+  const dd = ALPHA.decay(Z, N, q.Q, lf.l, Object.assign({}, P, { Bd: q.Bd }));
+  if (q.Q <= 0 || dd.above) {
+    W.hidden = false;
+    W.textContent = q.Q <= 0 ? `Q_α = ${q.Q.toFixed(3)} MeV < 0: ${Z + N}${ELEM[Z]} cannot emit an alpha particle.` : "Q is above the barrier top at R: no tunnelling, the Gamow picture does not apply.";
+    return false;
+  }
+  S.Z = Z; S.N = N; S.q = q; S.l = lf.l; S.lNote = lf.note; S.lTent = lf.tent; S.forbidden = !!lf.forbidden;
+  S.Q0 = q.Q; S.dQ = 0;
+  S.e = SET.find((e) => e.Z === Z && e.N === N) || null;
+  // slider range and the disc: the disc must hold the outer turning point at the lowest Q
+  const span = Math.min(1.5, 0.35 * q.Q);
+  S.Qmin = q.Q - span; S.Qmax = q.Q + span;
+  const qs = document.getElementById("qs");
+  qs.min = -span; qs.max = span; qs.step = span / 500; qs.value = 0;
+  const lo = solveAt(S.Qmin);
+  S.rmax = 1.1 * lo.b;
+  S.sH = RW / S.rmax;
+  S.d = solveAt(q.Q);
+  S.sV = 20 / S.d.Bbar;
+  plane.material.uniforms.uS.value = S.sH;
+  // ruler at the far rim
+  const tp = [];
+  for (const t of tickEls) { const y = 0; tp.push(-RW, y, 0, -RW - 1.2, y, 0); }
+  tickGeo.setAttribute("position", new THREE.Float32BufferAttribute(tp, 3));
+  alpha.scale.setScalar(Math.max(0.12, 1.0 * S.sH));
+  setQ(0);
+  drawGN(); drawResid(); drawCalc(); drawWkb();
+  const A = Z + N, hash = `#${A}${ELEM[Z]}`;
+  if (location.hash !== hash) history.replaceState(null, "", hash);
+  document.getElementById("toNuc").href = `nucleus.html#${A}${ELEM[Z]}`;
+  document.getElementById("title").innerHTML = `${sup(A)}${ELEM[Z]} → ${sup(A - 4)}${ELEM[Z - 2]} + α`;
+  document.title = `${A}${ELEM[Z]} alpha decay · nuclearjs`;
+  return true;
+}
+
+function setQ(dQ) {
+  S.dQ = dQ;
+  const Q = S.Q0 + dQ;
+  S.d = solveAt(Q);
+  S.wave = ALPHA.wave(S.Z, S.N, Q, S.l, Object.assign({}, P, { Bd: S.q.Bd }), S.rmax * 1.001);
+  // the landscape is drawn with the well the drawn wave solves (depth V0', Q a quasi-stationary level of it)
+  S.V0d = S.wave.V0p;
+  buildPotential();
+  LANDU.uQ.value = S.d.Q;
+  CAPU.uQy.value = S.d.Q * S.sV;
+  plane.position.y = S.d.Q * S.sV;
+  planeMat.uniforms.uR.value = S.d.R;
+  planeMat.uniforms.uB.value = S.d.b;
+  resampleWave();
+  // ruler: heights of 10^0 ... 10^-40 on the wave scale
+  const tp = [];
+  for (const t of tickEls) { const y = plane.position.y + HW * (1 - t.k / DMAX); tp.push(0, y, 0, -1.4, y, 0); }
+  tp.push(0, plane.position.y, 0, 0, plane.position.y + HW, 0);
+  tickGeo.setAttribute("position", new THREE.Float32BufferAttribute(tp, 3));
+  drawInfo();
+  drawGN();
+}
+
+// radial samples of the display wave: A(r) (signed inside), phase, brightness level
+function resampleWave() {
+  const w = S.wave, d = S.d;
+  const lgR = w.lg[w.r.findIndex((x) => x >= w.R)] || 0;
+  const LR = Math.max(0, 1 + lgR / DMAX);
+  const interp = (x) => {
+    let lo = 0, hi = w.r.length - 1;
+    while (hi - lo > 1) { const m = (lo + hi) >> 1; if (w.r[m] < x) lo = m; else hi = m; }
+    const t = w.r[hi] > w.r[lo] ? (x - w.r[lo]) / (w.r[hi] - w.r[lo]) : 0;
+    return [w.lg[lo] + t * (w.lg[hi] - w.lg[lo]), w.ph[lo] + t * (w.ph[hi] - w.ph[lo])];
+  };
+  for (let i = 0; i < NR; i++) {
+    const r = i < NRI ? w.R * i / NRI : w.R + (S.rmax - w.R) * (i - NRI) / (NRO - 1);
+    waveR[i] = r;
+    if (i < NRI) {
+      waveA[i] = LR * w.uIn(r); wavePh[i] = 0; waveL[i] = 1.5;     // u_l(K'r) / u_l(K'R), linear inside R
+    } else {
+      const [lg, ph] = interp(r);
+      const L = Math.max(0, 1 + lg / DMAX);
+      waveA[i] = L; wavePh[i] = ph; waveL[i] = L;
+    }
+  }
+  for (let i = 0; i < NR; i++) for (let j = 0; j <= NA; j++) waveCol[i * (NA + 1) + j] = waveL[i];
+  waveGeo.attributes.aL.needsUpdate = true;
+}
+let tWave = 0;
+const cut = { az: 0 };                     // camera azimuth: the centre of the cut wedge
+function updateWave(dt) {
+  if (!S.wave) return;
+  tWave += reduce ? 0 : dt;
+  const om = 2 * Math.PI / 1.6, y0 = plane.position.y;
+  let k = 0;
+  // the two cut faces, and the ribbon just in front of each (0.5 units into the wedge)
+  const pA = cut.az + CUT, pB = cut.az - CUT;
+  const dir = [[Math.cos(pA), Math.sin(pA), Math.sin(pA) * 0.5, -Math.cos(pA) * 0.5], [Math.cos(pB), Math.sin(pB), -Math.sin(pB) * 0.5, Math.cos(pB) * 0.5]];
+  for (let i = 0; i < NR; i++) {
+    const cs = Math.cos(wavePh[i] - om * tWave), y = y0 + HW * waveA[i] * cs;
+    const r = waveR[i] * S.sH, dd = Math.sign(waveA[i]) * cs;
+    for (let j = 0; j <= NA; j++) {
+      const ph = 2 * Math.PI * j / NA;
+      wavePos[3 * k] = r * Math.cos(ph); wavePos[3 * k + 1] = y; wavePos[3 * k + 2] = r * Math.sin(ph); waveD[k] = dd; k++;
+    }
+    for (let h = 0; h < 2; h++) {
+      const [cx, cz, ox, oz] = dir[h], q = 2 * (h * NR + i);
+      for (let s2 = 0; s2 < 2; s2++) {
+        profPos[3 * (q + s2)] = r * cx + ox; profPos[3 * (q + s2) + 1] = y + 0.02; profPos[3 * (q + s2) + 2] = r * cz + oz;
+        profL[q + s2] = waveL[i];
+      }
+    }
+  }
+  // ribbon tangents by differences along each half-profile
+  for (let h = 0; h < 2; h++) for (let i = 0; i < NR; i++) {
+    const q = 2 * (h * NR + i), a = 2 * (h * NR + Math.max(0, i - 1)), b = 2 * (h * NR + Math.min(NR - 1, i + 1));
+    const tx = profPos[3 * b] - profPos[3 * a], ty = profPos[3 * b + 1] - profPos[3 * a + 1], tz = profPos[3 * b + 2] - profPos[3 * a + 2];
+    for (let s2 = 0; s2 < 2; s2++) { profT[3 * (q + s2)] = tx; profT[3 * (q + s2) + 1] = ty; profT[3 * (q + s2) + 2] = tz; }
+  }
+  waveGeo.attributes.position.needsUpdate = true;
+  waveGeo.attributes.aD.needsUpdate = true;
+  for (const a of ["position", "aT", "aL"]) profGeo.attributes[a].needsUpdate = true;
+  // alpha particle: bounces wall to wall across the screen, period not to scale (the real one is 1/nu ~ 4e-22 s)
+  const R = S.d.R * S.sH, ra = alpha.scale.x * 1.25, x = (R - ra) * (2 * Math.abs(((tWave / 1.1) % 2) - 1) - 1);
+  const ax = cut.az - Math.PI / 2;
+  alpha.position.set(x * Math.cos(ax), y0, x * Math.sin(ax));
+  alpha.rotation.y += dt * 0.8;
+}
+
+// ---------- info panel
+function drawInfo() {
+  const d = S.d, q = S.q, e = S.e, A = S.Z + S.N;
+  const r = ROW.get(S.Z + "," + S.N), ad = AD.get(S.Z + "," + S.N);
+  const f = (x, n = 3) => (x == null || !isFinite(x) ? "n/a" : x.toFixed(n));
+  const d0 = S.dQ === 0 ? d : solveAt(S.Q0);
+  // the Q uncertainty (AME2020 1 sd, or the B/A rounding), carried to log T by a centred difference over +-10 keV
+  const sens = (solveAt(S.Q0 + 0.01).log10T - solveAt(S.Q0 - 0.01).log10T) / 0.02;
+  let exp = "n/a", ratio = "";
+  if (e) {
+    exp = `${fmtT(e.logTexp)}${e.br < 100 ? ` (T<sub>½</sub>/${e.br < 0.1 ? e.br.toExponential(1) : e.br}%, total α branch)` : ""}`;
+    ratio = `log<sub>10</sub>(T<sub>calc</sub>/T<sub>exp</sub>) = <span class="hi">${(d0.log10T - e.logTexp >= 0 ? "+" : "") + f(d0.log10T - e.logTexp, 2)}</span>${e.flag ? ' <span style="color:var(--muted)">(record flagged, not in the statistics)</span>' : ""}`;
+  } else if (r && r[3] != null && r[3] !== 99) {
+    const why = S.forbidden ? "g.s. → g.s. forbidden; the measured α decay feeds excited states" : !ad ? "no alpha branch listed" : S.Z < 52 ? "Z < 52: light emitters are left out of the comparison" : ad[3] === "?" ? "alpha branch observed, intensity not given" : ad[3] === "<" || ad[3] === ">" ? `alpha branch only bounded (${ad[3]}${ad[2]}%)` : ad[7] ? "half-life is a limit or from systematics" : "Q from systematics";
+    exp = `total T<sub>½</sub> ${fmtT(r[3])}; partial α ${S.forbidden ? "not compared" : "n/a"} (${why})`;
+  }
+  const qsrc = q.src === "AME2020" ? "AME2020" : "NUBASE2020 B/A, rounding";
+  document.getElementById("info").innerHTML = `
+    <dt>Q<sub>α</sub></dt><dd>${f(q.Q, q.dQsd < 0.0005 ? 4 : 3)} ± ${f(q.dQsd, q.dQsd < 0.0005 ? 4 : 3)} MeV <span style="color:var(--muted)">(${qsrc})</span></dd>
+    <dt>+ screening</dt><dd>${f(ALPHA.screening(S.Z) * 1000, 1)} keV → ${f(d0.Q)} MeV</dd>
+    <dt>l</dt><dd>${S.l} &nbsp;<span style="color:var(--muted)">${S.lNote}</span></dd>
+    <dt>R, b</dt><dd>${f(d.R, 2)} fm, ${f(d.b, 1)} fm</dd>
+    <dt>well</dt><dd>V<sub>0</sub> ${f(P.V0, 0)} MeV in T<sub>½</sub>; drawn ${f(S.wave.V0p, 1)} MeV <span style="color:var(--muted)">(Q a level)</span></dd>
+    <dt>barrier at R</dt><dd>${f(d.Bbar, 1)} MeV</dd>
+    <dt>ν</dt><dd>${d.nu.toExponential(2)} s<sup>−1</sup> · edge ${f(d.edge, 2)}</dd>
+    <dt>e<sup>−2∫κdr</sup></dt><dd>10<sup>${f(d.log10Twkb, 2)}</sup></dd>
+    <dt>1/(F²+G²)</dt><dd>exact 10<sup>${f(d.log10Pexact, 3)}</sup> · WKB ${((Math.pow(10, d.log10PexactWKB - d.log10Pexact) - 1) * 100 >= 0 ? "+" : "") + f((Math.pow(10, d.log10PexactWKB - d.log10Pexact) - 1) * 100, 2)}%</dd>
+    <dt class="hi">T<sub>½</sub> calc</dt><dd class="hi">${S.forbidden ? '<span style="color:var(--muted)">g.s. → g.s. forbidden, illustration for l = ' + S.l + ':</span> ' : ""}${S.dQ ? '<span style="color:var(--muted)">at measured Q:</span> ' : ""}${fmtT(d0.log10T)} &nbsp;<span style="color:var(--muted)">10<sup>${f(d0.log10T, 2)}</sup> s ± ${f(Math.abs(sens) * q.dQsd, 2)} (Q, 1 sd)</span></dd>
+    <dt>exact barrier</dt><dd>10<sup>${f(d0.log10Texact, 2)}</sup> s</dd>
+    <dt>T<sub>½</sub> measured</dt><dd>${exp}</dd>
+    ${ratio ? `<dt></dt><dd>${ratio}</dd>` : ""}`;
+  const dT = d.log10T - d0.log10T;
+  document.getElementById("qout").textContent = `${f(S.Q0 + S.dQ, 3)} MeV`;
+  document.getElementById("whatif").innerHTML = S.dQ === 0 ? `T<sub>½</sub> = ${fmtT(d.log10T)}` :
+    `T<sub>½</sub> = ${fmtT(d.log10T)}, ×10<sup>${(dT >= 0 ? "+" : "") + dT.toFixed(1)}</sup>`;
+  const w = [];
+  if (S.forbidden) w.push("No ground-state to ground-state alpha transition is allowed by these J^π; the barrier and half-life shown are for the lowest l allowed by angular momentum alone, an illustration, not a prediction.");
+  else if (S.lTent) w.push("l is tentative: ground-state J^π uncertain or unknown.");
+  if (e && e.flag) w.push(`Flagged record: ${e.flag.why}. Left out of the statistics.`);
+  if (q.est) w.push("This Q is from systematics, not measured.");
+  if (e && e.cls !== "ee") w.push("Odd nucleus: computed ground state to ground state; the measured alpha decay often feeds excited daughter states, so the ratio mixes hindrance and branching.");
+  const W = document.getElementById("warn");
+  W.hidden = !w.length; W.textContent = w.join(" ");
+  const st = document.getElementById("stamp");
+  st.innerHTML = `<b>${sup(A)}${ELEM[S.Z]}</b><small>Q = ${f(S.Q0 + S.dQ, 2)} MeV · T<sub>½</sub> calc ${fmtT(d.log10T)}${e && S.dQ === 0 ? ` · measured ${fmtT(e.logTexp)}` : ""} · wave height ∝ log<sub>10</sub>|u| over ${DMAX} decades (linear inside R)</small>`;
+}
+
+// ---------- plots
+function setupCanvas(c) {
+  const dpr = Math.min(devicePixelRatio, 2), w = c.clientWidth, h = c.clientHeight;
+  c.width = w * dpr; c.height = h * dpr;
+  const x = c.getContext("2d");
+  x.setTransform(dpr, 0, 0, dpr, 0, 0);
+  return { x, w, h };
+}
+function axes(ctx, w, h, xr, yr, xs, ys, xl, yl) {
+  const L = 32, R = 6, T = 6, B = 18;
+  const X = (v) => L + (v - xr[0]) / (xr[1] - xr[0]) * (w - L - R);
+  const Y = (v) => T + (yr[1] - v) / (yr[1] - yr[0]) * (h - T - B);
+  ctx.font = "10px ui-monospace,Menlo,monospace"; ctx.lineWidth = 1;
+  ctx.strokeStyle = "#1e2432"; ctx.fillStyle = "#8a92a6";
+  for (let v = Math.ceil(yr[0] / ys) * ys; v <= yr[1] + 1e-9; v += ys) {
+    ctx.beginPath(); ctx.moveTo(L, Y(v)); ctx.lineTo(w - R, Y(v)); ctx.stroke();
+    ctx.textAlign = "right"; ctx.fillText(+v.toFixed(2), L - 4, Y(v) + 3);
+  }
+  ctx.textAlign = "center";
+  for (let v = Math.ceil(xr[0] / xs) * xs; v <= xr[1] + 1e-9; v += xs) {
+    ctx.beginPath(); ctx.moveTo(X(v), T); ctx.lineTo(X(v), h - B); ctx.stroke();
+    ctx.fillText(+v.toFixed(2), X(v), h - 5);
+  }
+  if (xl) { ctx.textAlign = "right"; ctx.fillText(xl, w - R - 2, h - B - 4); }
+  if (yl) { ctx.textAlign = "left"; ctx.fillText(yl, L + 4, T + 10); }
+  return { X, Y, L, R, T, B };
+}
+function dot(ctx, x, y, r, c, fill = true) {
+  ctx.beginPath(); ctx.arc(x, y, r, 0, 2 * Math.PI);
+  if (fill) { ctx.fillStyle = c; ctx.fill(); } else { ctx.strokeStyle = c; ctx.lineWidth = 1.2; ctx.stroke(); }
+}
+function ring(ctx, x, y) { dot(ctx, x, y, 6, "#ffffff", false); }
+const HIT = { pc: [], pg: [], pn: [] };
+
+function drawCalc() {
+  const { x: ctx, w, h } = setupCanvas(document.getElementById("pc"));
+  const ax = axes(ctx, w, h, [-10, 30], [-10, 30], 10, 10, "measured", "calculated");
+  ctx.strokeStyle = "#4a5266"; ctx.setLineDash([3, 3]);
+  ctx.beginPath(); ctx.moveTo(ax.X(-10), ax.Y(-10)); ctx.lineTo(ax.X(30), ax.Y(30)); ctx.stroke();
+  ctx.setLineDash([]);
+  HIT.pc = [];
+  for (const c of ["oo", "oA", "ee"]) for (const e of SET) if (e.cls === c) {
+    const px = ax.X(e.logTexp), py = ax.Y(e.logT);
+    ctx.globalAlpha = c === "ee" ? 0.95 : 0.6;
+    dot(ctx, px, py, c === "ee" ? 2.1 : 1.7, CLS[c].c, !e.flag);       // hollow: flagged, not in the statistics
+    HIT.pc.push([px, py, e]);
+  }
+  ctx.globalAlpha = 1;
+  if (S.e) ring(ctx, ax.X(S.e.logTexp), ax.Y(S.e.logT));
+  document.getElementById("legc").innerHTML = ["ee", "oA", "oo"].map((c) =>
+    `<span><i style="background:${CLS[c].c}"></i>${CLS[c].n} ${STAT[c].n}, rms ${STAT[c].rms.toFixed(2)}${c === "ee" ? "" : `, mean ${STAT[c].mean >= 0 ? "+" : ""}${STAT[c].mean.toFixed(2)}`}</span>`).join("") +
+    `<span>hollow: <sup>264</sup>Hs, not counted (with it, even-even rms ${STAT_EE_ALL.rms.toFixed(2)})</span>`;
+}
+
+// Geiger-Nuttall: log10 T vs Z / sqrt(Q), even-even, a line per element
+const GN = (() => {
+  const m = new Map();
+  for (const e of SET) if (e.cls === "ee") { if (!m.has(e.Z)) m.set(e.Z, []); m.get(e.Z).push(e); }
+  for (const L of m.values()) L.sort((a, b) => a.N - b.N);
+  return m;
+})();
+function zColor(Z, a = 1) { const t = (Z - 52) / (118 - 52); return `hsla(${200 - 170 * t}, 70%, ${58 + 10 * t}%, ${a})`; }
+function drawGN() {
+  const { x: ctx, w, h } = setupCanvas(document.getElementById("pg"));
+  const ax = axes(ctx, w, h, [20, 70], [-10, 30], 10, 10, "Z/√Q (MeV^−½)", "log₁₀ T");
+  HIT.pg = [];
+  for (const [Z, L] of GN) {
+    const hi = Z === S.Z;
+    ctx.strokeStyle = zColor(Z, hi ? 1 : 0.55); ctx.lineWidth = hi ? 2 : 1;
+    ctx.beginPath();
+    L.forEach((e, i) => { const px = ax.X(e.Z / Math.sqrt(e.Q)), py = ax.Y(e.logTexp); if (i) ctx.lineTo(px, py); else ctx.moveTo(px, py); });
+    ctx.stroke();
+    for (const e of L) { const px = ax.X(e.Z / Math.sqrt(e.Q)), py = ax.Y(e.logTexp); dot(ctx, px, py, hi ? 2.4 : 1.6, zColor(Z, hi ? 1 : 0.8)); HIT.pg.push([px, py, e]); }
+  }
+  // the model for the selected nucleus as Q is swept over the slider range
+  ctx.strokeStyle = "#f2c14e"; ctx.setLineDash([4, 3]); ctx.lineWidth = 1.4; ctx.beginPath();
+  for (let i = 0; i <= 40; i++) {
+    const Q = S.Qmin + (S.Qmax - S.Qmin) * i / 40, d = ALPHA.decay(S.Z, S.N, Q, S.l, Object.assign({}, P, { Bd: S.q.Bd, exact: false }));
+    const px = ax.X(S.Z / Math.sqrt(Q)), py = ax.Y(d.log10T);
+    if (i) ctx.lineTo(px, py); else ctx.moveTo(px, py);
+  }
+  ctx.stroke(); ctx.setLineDash([]);
+  const Q = S.Q0 + S.dQ;
+  ring(ctx, ax.X(S.Z / Math.sqrt(Q)), ax.Y(S.d.log10T));
+  if (S.e) dot(ctx, ax.X(S.Z / Math.sqrt(S.Q0)), ax.Y(S.e.logTexp), 3, "#ffffff");
+}
+function drawResid() {
+  const { x: ctx, w, h } = setupCanvas(document.getElementById("pn"));
+  const ax = axes(ctx, w, h, [50, 180], [-3.5, 2.5], 20, 1, "N", "");
+  for (const n of [82, 126, 152]) {
+    ctx.strokeStyle = "#f2c14e55"; ctx.setLineDash([2, 3]);
+    ctx.beginPath(); ctx.moveTo(ax.X(n), ax.Y(2.5)); ctx.lineTo(ax.X(n), ax.Y(-3.5)); ctx.stroke(); ctx.setLineDash([]);
+    ctx.fillStyle = "#f2c14e"; ctx.textAlign = "center"; ctx.fillText(n, ax.X(n), ax.Y(2.5) + 9);
+  }
+  HIT.pn = [];
+  for (const c of ["oA", "ee"]) for (const e of SET) if (e.cls === c) {
+    const px = ax.X(e.N), py = ax.Y(Math.max(-3.5, Math.min(2.5, e.logT - e.logTexp)));
+    ctx.globalAlpha = c === "ee" ? 0.95 : 0.4;
+    dot(ctx, px, py, c === "ee" ? 2.1 : 1.5, CLS[c].c, !e.flag);
+    HIT.pn.push([px, py, e]);
+  }
+  ctx.globalAlpha = 1;
+  if (S.e) ring(ctx, ax.X(S.e.N), ax.Y(Math.max(-3.5, Math.min(2.5, S.e.logT - S.e.logTexp))));
+  const g = (Z, N) => SET.find((e) => e.Z === Z && e.N === N);
+  const a = g(84, 126), b = g(84, 128);
+  document.getElementById("nnote").innerHTML = a && b ?
+    `Amber: even-even, blue: odd-A. The half-lives of <sup>210</sup>Po (N = 126, Q ${a.Q.toFixed(2)} MeV) and <sup>212</sup>Po (N = 128, Q ${b.Q.toFixed(2)} MeV) differ by ${(a.logTexp - b.logTexp).toFixed(1)} decades. The barrier, driven by Q, accounts for nearly all of it: the model gets <sup>212</sup>Po to ${(b.logT - b.logTexp >= 0 ? "+" : "") + (b.logT - b.logTexp).toFixed(2)} in log T, but <sup>210</sup>Po decays ${Math.pow(10, a.logTexp - a.logT).toFixed(0)}× slower than computed. In the Po, Rn, Ra and Th chains the N = 126 parent sits below its N = 124 (or 122) and N = 128 neighbours; in U it does not (<sup>218</sup>U ${(() => { const u = g(92, 126); return u ? (u.logT - u.logTexp >= 0 ? "+" : "") + (u.logT - u.logTexp).toFixed(2) : "n/a"; })()}, <sup>216</sup>U ${(() => { const u = g(92, 124); return u ? (u.logT - u.logTexp).toFixed(2) : "n/a"; })()}). A smaller alpha preformation at the closed neutron shell is the usual reading, but these residuals do not isolate it: S also absorbs the radius, the sharp surface and the branching to excited states.` : "";
+}
+// WKB error map, computed once
+const WKB = (() => {
+  const out = [];
+  for (const Zd of [50, 70, 90, 110]) {
+    const pts = [];
+    for (let Q = 2; Q <= 12.001; Q += 0.5) {
+      const Ad = Math.round(2.5 * Zd), mu = 4 * Ad * ALPHA.AMU / (Ad + 4), R = 1.2 * (Math.cbrt(Ad) + Math.cbrt(4));
+      const w = ALPHA.wkbIntegral(Q, Zd, mu, R, 0.25);
+      if (w.above) continue;
+      const eta = Zd * 2 * ALPHA.E2 * mu / (ALPHA.HBARC * ALPHA.HBARC * w.k);
+      const c = ALPHA.coulombBarrier(eta, w.k * R, 0);
+      pts.push([Q, (Math.pow(10, Math.log10(w.kappaR / w.k) - 2 * w.I / Math.LN10 - c.log10P) - 1) * 100]);
+    }
+    out.push({ Zd, pts });
+  }
+  return out;
+})();
+function drawWkb() {
+  const { x: ctx, w, h } = setupCanvas(document.getElementById("pw"));
+  const ax = axes(ctx, w, h, [2, 12], [-1, 7], 2, 1, "Q (MeV)", "");
+  for (const c of WKB) {
+    ctx.strokeStyle = zColor(c.Zd + 2); ctx.lineWidth = 1.4; ctx.beginPath();
+    c.pts.forEach(([Q, e], i) => { if (i) ctx.lineTo(ax.X(Q), ax.Y(e)); else ctx.moveTo(ax.X(Q), ax.Y(e)); });
+    ctx.stroke();
+    const lp = c.pts[c.pts.length - 1];
+    ctx.fillStyle = zColor(c.Zd + 2); ctx.textAlign = "right"; ctx.fillText(`Z_d ${c.Zd}`, ax.X(lp[0]) - 2, ax.Y(lp[1]) - 4);
+  }
+  const d = S.d, e = (Math.pow(10, d.log10PexactWKB - d.log10Pexact) - 1) * 100;
+  if (d.Q >= 2 && d.Q <= 12) ring(ctx, ax.X(d.Q), ax.Y(Math.max(-1, Math.min(7, e))));
+}
+function pick(id, ev) {
+  const c = document.getElementById(id), b = c.getBoundingClientRect();
+  const x = ev.clientX - b.left, y = ev.clientY - b.top;
+  let best = null, bd = 64;
+  for (const [px, py, e] of HIT[id]) { const d2 = (px - x) ** 2 + (py - y) ** 2; if (d2 < bd) { bd = d2; best = e; } }
+  return best;
+}
+for (const id of ["pc", "pg", "pn"]) {
+  const c = document.getElementById(id);
+  c.addEventListener("click", (ev) => { const e = pick(id, ev); if (e) setNucleus(e.Z, e.N); });
+  c.addEventListener("mousemove", (ev) => { const e = pick(id, ev); c.title = e ? `${e.A}${e.sym}: Q ${e.Q.toFixed(3)} MeV, log T exp ${e.logTexp.toFixed(2)}, calc ${e.logT.toFixed(2)}${e.cls === "ee" ? "" : `, l = ${e.l}`}` : ""; });
+}
+
+// ---------- UI wiring
+const find = document.getElementById("find");
+find.addEventListener("keydown", (e) => {
+  if (e.key !== "Enter") return;
+  const p = parseNucleus(find.value);
+  if (!p || !ROW.get(p.Z + "," + p.N)) { find.setCustomValidity("no such nucleus in NUBASE2020"); find.reportValidity(); return; }
+  find.setCustomValidity(""); setNucleus(p.Z, p.N);
+});
+find.addEventListener("input", () => find.setCustomValidity(""));
+document.getElementById("chips").addEventListener("click", (e) => {
+  const b = e.target.closest("button"); if (!b) return;
+  const p = parseNucleus(b.dataset.n); setNucleus(p.Z, p.N);
+});
+let pending = false;
+document.getElementById("qs").addEventListener("input", (e) => {
+  const v = +e.target.value;
+  if (!pending) { pending = true; requestAnimationFrame(() => { pending = false; setQ(+document.getElementById("qs").value); drawWkb(); }); }
+  document.getElementById("qout").textContent = `${(S.Q0 + v).toFixed(3)} MeV`;
+});
+document.getElementById("qreset").addEventListener("click", () => { document.getElementById("qs").value = 0; setQ(0); drawWkb(); });
+addEventListener("hashchange", () => { const p = parseNucleus(location.hash); if (p && (p.Z !== S.Z || p.N !== S.N)) setNucleus(p.Z, p.N); });
+addEventListener("resize", () => {
+  camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight);
+  composer.setSize(innerWidth, innerHeight);
+  drawCalc(); drawGN(); drawResid(); drawWkb();
+});
+let quality = innerWidth < 700 ? "low" : "high";
+function applyQuality() {
+  const g = quality === "high" ? GROUND_PRE_ACES : GROUND;
+  scene.background.copy(g); scene.fog.color.copy(g);
+  // fast: no shadow maps (the composer with AO, bloom and SMAA runs only in cinematic)
+  renderer.shadowMap.enabled = quality === "high";
+  RIG.key.castShadow = quality === "high";
+  for (const b of document.querySelectorAll("#qmode button")) b.setAttribute("aria-pressed", b.dataset.v === quality ? "true" : "false");
+}
+document.getElementById("qmode").addEventListener("click", (e) => {
+  const b = e.target.closest("button"); if (!b) return;
+  quality = b.dataset.v; applyQuality();
+});
+applyQuality();
+
+// ---------- start
+{
+  const p = parseNucleus(location.hash || "212Po");
+  if (!(p && ROW.get(p.Z + "," + p.N) && setNucleus(p.Z, p.N))) setNucleus(84, 128);
+  camera.position.set(0.15, 0.5, 1.0).setLength(145);
+  controls.target.set(0, 3, 0);
+}
+
+// ---------- labels
+const labs = { lR: document.getElementById("lR"), lB: document.getElementById("lB"), lQ: document.getElementById("lQ"), lV: document.getElementById("lV") };
+const tmp = new THREE.Vector3();
+function place(el, x, y, z) {
+  tmp.set(x, y, z).project(camera);
+  const vis = tmp.z < 1 && Math.abs(tmp.x) < 1 && Math.abs(tmp.y) < 1;
+  el.hidden = !vis;
+  if (vis) { el.style.left = (tmp.x * 0.5 + 0.5) * innerWidth + "px"; el.style.top = (-tmp.y * 0.5 + 0.5) * innerHeight + "px"; }
+}
+function drawLabels() {
+  const d = S.d, y = plane.position.y;
+  // labels along the screen-right direction through the centre, the ruler on the screen-left rim
+  const az = Math.atan2(camera.position.z - controls.target.z, camera.position.x - controls.target.x) - Math.PI / 2;
+  const cx = Math.cos(az), cz = Math.sin(az);
+  // R and b sit on the screen-right cut face, where the Q line crosses the solid
+  const bx = Math.cos(cut.az - CUT), bz = Math.sin(cut.az - CUT);
+  place(labs.lR, d.R * S.sH * bx, y - 1.4, d.R * S.sH * bz);
+  labs.lR.textContent = `R ${d.R.toFixed(1)} fm`;
+  place(labs.lB, d.b * S.sH * bx, y - 1.4, d.b * S.sH * bz);
+  labs.lB.textContent = `b ${d.b.toFixed(1)} fm`;
+  place(labs.lQ, RW * cx, y + 0.8, RW * cz);
+  labs.lQ.textContent = `Q ${(S.Q0 + S.dQ).toFixed(2)} MeV`;
+  const vb = Math.min(d.Bbar, 1.2 * d.Bbar) * S.sV;
+  place(labs.lV, d.R * S.sH * 1.15 * -cx, vb + 1.2, d.R * S.sH * 1.15 * -cz);
+  labs.lV.textContent = `${d.Bbar.toFixed(1)} MeV`;
+  ticks.position.set(-(RW + 0.4) * cx, 0, -(RW + 0.4) * cz);
+  ticks.rotation.y = -az;
+  for (const t of tickEls) place(t.el, -(RW + 2.2) * cx, y + HW * (1 - t.k / DMAX), -(RW + 2.2) * cz);
+}
+
+// ---------- loop
+let last = performance.now();
+function animate(now) {
+  requestAnimationFrame(animate);
+  // the first rAF timestamp can predate the performance.now() taken at start: never let dt go negative
+  const dt = Math.min(0.1, Math.max(0, (now - last) / 1000)); last = now;
+  controls.update();
+  // the cut wedge faces the camera
+  cut.az = Math.atan2(camera.position.z - controls.target.z, camera.position.x - controls.target.x);
+  CUTU.uCutDir.value.set(Math.cos(cut.az), Math.sin(cut.az));
+  capA.rotation.y = -(cut.az + CUT); capB.rotation.y = -(cut.az - CUT);
+  updateWave(dt);
+  if (quality === "high") composer.render(); else renderer.render(scene, camera);
+  drawLabels();
+}
+requestAnimationFrame(animate);
+</script>
+<script src="assets/glass.js"></script>
+</body>
+</html>

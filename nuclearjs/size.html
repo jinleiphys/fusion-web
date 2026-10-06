@@ -1,0 +1,763 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>The size of the nucleus · nuclearjs</title>
+<link rel="stylesheet" href="assets/glass.css">
+<style>
+body{margin:0}
+:root{
+  color-scheme:dark;
+  --ground:#0b0d12; --line:#262c3a;
+  --ink:#e6e8ee; --muted:#8a92a6; --accent:#f2c14e;
+  --data:#7fd1b9; --ws:#c39bd3; --mott:#8a92a6; --beam:#6fa8ff;
+  --sans:"Avenir Next","Futura","Helvetica Neue","PingFang SC","Noto Sans SC",system-ui,sans-serif;
+  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+}
+html,body{height:100%}
+body{background:var(--ground);color:var(--ink);font-family:var(--sans);overflow:hidden}
+#stage{position:fixed;inset:0}
+#stage canvas{display:block;touch-action:none}
+.panel{position:fixed;border-radius:18px;padding:16px 18px;display:flex;flex-direction:column;gap:12px;overflow:auto;box-sizing:border-box;z-index:2}
+.panel>*{flex-shrink:0}
+#ctl{left:16px;top:calc(16px + env(safe-area-inset-top,0px));width:min(320px,calc(100% - 32px));max-height:calc(100% - 56px)}
+#side{right:16px;top:calc(16px + env(safe-area-inset-top,0px));width:384px;max-height:calc(100% - 32px);gap:9px}
+h1{margin:0;font-size:22px;font-weight:600;letter-spacing:.01em}
+.sub{margin:2px 0 0;color:var(--muted);font-size:13px;line-height:1.45}
+.sub sup,.src sup,.kv sup,.cap sup,.leg sup{font-size:.7em}
+.grp{display:flex;flex-direction:column;gap:6px}
+.lab{font-size:11px;text-transform:uppercase;letter-spacing:.12em;color:var(--muted)}
+.chips{display:flex;flex-wrap:wrap;gap:5px}
+.chips button{background:none;border:1px solid var(--line);border-radius:4px;color:var(--ink);font:500 12px var(--mono);padding:5px 7px;cursor:pointer}
+.chips button:hover{border-color:var(--muted)}
+.chips button[aria-pressed="true"]{border-color:var(--accent);color:var(--accent)}
+.chips.small button{font-size:11px;padding:4px 7px;color:var(--muted)}
+.chips.small button[aria-pressed="true"]{color:var(--accent)}
+.seg{display:flex;border:1px solid var(--line);border-radius:4px;overflow:hidden}
+.seg button{flex:1;background:none;border:0;color:var(--muted);font:500 12px var(--mono);padding:6px 4px;cursor:pointer}
+.seg button+button{border-left:1px solid var(--line)}
+.seg button[aria-pressed="true"]{background:#1f2533;color:var(--ink)}
+button:focus-visible,input:focus-visible,summary:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:3px 10px;font:12px var(--mono);font-variant-numeric:tabular-nums}
+.kv dt{color:var(--muted)}.kv dd{margin:0}
+.kv .hi{color:var(--accent)}
+.kv .dat{color:var(--data)}
+.row{display:flex;gap:8px;align-items:center;font:12px var(--mono);color:var(--muted)}
+.row input[type=range]{flex:1;accent-color:var(--accent);min-width:0}
+.row output{min-width:74px;text-align:right;color:var(--ink);font-variant-numeric:tabular-nums}
+.row[hidden]{display:none}
+details summary{cursor:pointer;font-size:11px;text-transform:uppercase;letter-spacing:.12em;color:var(--muted);list-style:none}
+details summary::before{content:"▸ ";}
+details[open] summary::before{content:"▾ ";}
+details .grp{margin-top:8px}
+.home{font:12px var(--mono);color:var(--muted);text-decoration:none}.home:hover{color:var(--ink)}
+.src{font-size:11px;color:var(--muted);line-height:1.5}
+.src b{color:var(--ink);font-weight:600}
+.src a{color:inherit}
+.plot{width:100%;height:190px;display:block}
+.plot.tall{height:220px}
+.cap{display:flex;flex-wrap:wrap;gap:2px 8px;justify-content:space-between;align-items:baseline;font:11px var(--mono);color:var(--muted)}
+.cap b{font:600 13px var(--sans);color:var(--ink)}
+.leg{display:flex;flex-wrap:wrap;gap:3px 11px;font:10.5px var(--mono);color:var(--muted);line-height:1.4}
+.leg i{display:inline-block;width:14px;height:0;border-top:2px solid;vertical-align:middle;margin-right:4px}
+.leg i.d{border-top-style:dashed}
+.leg i.p{width:6px;height:6px;border:0;border-radius:50%;vertical-align:0}
+.axlab{position:fixed;font:500 11px var(--mono);color:#d6deea;pointer-events:none;transform:translate(-50%,-50%);white-space:nowrap;text-shadow:0 0 6px #000,0 0 2px #000;background:rgba(8,10,15,.5);padding:1px 5px;border-radius:4px}
+.axlab.hot{color:var(--accent)}
+.axlab.beam{color:var(--beam)}
+.axlab.dim{background:none;color:#9aa5bb}
+#stamp{position:fixed;left:50%;bottom:calc(22px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);text-align:center;pointer-events:none;width:min(640px,46vw)}
+#stamp b{display:block;font:600 clamp(24px,3.2vw,40px)/1.05 var(--sans);letter-spacing:-.01em}
+#stamp b sup{font-size:.55em}
+#stamp small{display:block;font:500 12px var(--mono);color:var(--muted);margin-top:6px;line-height:1.5}
+.hint{position:fixed;left:16px;bottom:calc(14px + env(safe-area-inset-bottom,0px));font:11px var(--mono);color:var(--muted)}
+@media (max-width:900px){
+  #ctl{max-height:34vh}
+  #side{left:16px;right:16px;width:auto;top:auto;bottom:calc(12px + env(safe-area-inset-bottom,0px));max-height:36vh}
+  #stamp,.hint,.axlab{display:none}
+}
+@media (max-width:560px){.panel{padding:10px 12px;gap:9px}h1{font-size:18px}}
+</style>
+<script data-goatcounter="https://jinleiphys.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
+</head>
+<body>
+
+<div id="stage"></div>
+
+<aside id="ctl" class="panel glass glass-deep" data-glass data-glass-bevel="22" data-glass-scale="42">
+  <div>
+    <a class="home" href="index.html">← nuclearjs</a> &nbsp; <a class="home" href="nucleus.html">shell model</a> &nbsp; <a class="home" href="scatter.html">elastic scattering</a> &nbsp; <a class="home" href="halo.html">halo nuclei</a>
+    <h1>The size of the nucleus</h1>
+    <p class="sub">A fast electron sees the nucleus only through its charge. Its wavelength 2πħc/E, <span id="lamr"></span>, is of the size of the nucleus, so the scattered wave carries a diffraction pattern, like light behind a disc. In the plane-wave Born approximation (PWBA) the minima sit where the form factor F(q), the Fourier transform of the charge density, passes through zero. A bigger nucleus or a faster electron moves them to smaller angles.</p>
+  </div>
+  <div class="grp">
+    <div class="lab">Nucleus (measured charge density)</div>
+    <div class="chips" id="chips"></div>
+  </div>
+  <div class="grp">
+    <label class="lab" for="es">Electron energy</label>
+    <div class="row"><input id="es" type="range" min="1.69897" max="3" step="0.001"><output id="eout"></output></div>
+    <div class="chips small" id="echips"></div>
+  </div>
+  <div class="grp">
+    <div class="lab">Density in the scene</div>
+    <div class="seg" id="kind">
+      <button data-v="fb" title="Fourier-Bessel fit to the data, de Vries et al. 1987 Table IV">measured</button>
+      <button data-v="fermi" title="two-parameter Fermi">2pF</button>
+      <button data-v="sphere" title="uniform sphere">sphere</button>
+      <button data-v="gauss" title="Gaussian">Gaussian</button>
+    </div>
+    <div class="row" id="r1"><label id="l1" for="p1">c</label><input id="p1" type="range" step="0.001"><output id="o1"></output></div>
+    <div class="row" id="r2"><label id="l2" for="p2">a</label><input id="p2" type="range" min="0.2" max="1.2" step="0.001"><output id="o2"></output></div>
+    <div class="chips small"><button id="refit" title="back to the parameters closest to the measured density">closest to measured</button><button id="wsb" aria-pressed="false" title="Woods-Saxon shell model (nucleus.html): point protons folded with the proton's charge radius">+ shell model</button></div>
+    <p class="src" id="knote"></p>
+  </div>
+  <div class="grp">
+    <div class="lab">This nucleus at this energy</div>
+    <dl class="kv" id="info"></dl>
+  </div>
+  <div class="grp">
+    <div class="lab">Rendering</div>
+    <div class="seg" id="qmode">
+      <button data-v="high" title="bloom">cinematic</button>
+      <button data-v="low">fast</button>
+    </div>
+    <p class="src" id="vnote"></p>
+  </div>
+</aside>
+
+<aside id="side" class="panel glass glass-deep" data-glass data-glass-bevel="22" data-glass-scale="42">
+  <div class="cap"><b>Charge density ρ(r)</b><span>e fm⁻³ against r (fm)</span></div>
+  <canvas id="prho" class="plot" aria-label="charge density"></canvas>
+  <div class="leg" id="legr"></div>
+  <div class="cap"><b>Form factor |F(q)|²</b><span>log, against q (fm⁻¹)</span></div>
+  <canvas id="pff" class="plot" aria-label="form factor"></canvas>
+  <div class="leg" id="legf"></div>
+  <div class="cap"><b>Cross section</b><span id="xcap">dσ/dΩ (mb/sr) against θ</span></div>
+  <canvas id="pxs" class="plot" aria-label="cross section"></canvas>
+  <div class="leg" id="legx"></div>
+  <div class="cap"><b>Charge radii across the chart</b><span>908 nuclei, Angeli and Marinova 2013</span></div>
+  <canvas id="prad" class="plot tall" aria-label="charge radii against mass number"></canvas>
+  <div class="leg" id="legrad"></div>
+  <div class="cap"><b>Along one element</b><span>δ⟨r²⟩ (fm²) against N</span></div>
+  <div class="chips small" id="cchips"></div>
+  <canvas id="pchain" class="plot" aria-label="isotope chain"></canvas>
+  <div class="leg" id="legc"></div>
+  <details>
+    <summary>Why the measured minima are not zeros</summary>
+    <div class="grp src" id="why"></div>
+  </details>
+  <details>
+    <summary>Sources and what is computed</summary>
+    <div class="grp src" id="srcs"></div>
+  </details>
+</aside>
+
+<div id="labels"></div>
+<div id="stamp"></div>
+<div class="hint">drag to orbit · scroll to zoom · move the energy</div>
+
+<script src="assets/three-bundle.js"></script>
+<script src="assets/three-post.js"></script>
+<script src="assets/wave-stage.js"></script>
+<script src="assets/ws.js"></script>
+<script src="assets/size-data.js"></script>
+<script src="assets/size.js"></script>
+<script>
+"use strict";
+const D = window.SIZE_DATA, PI = Math.PI, L10 = Math.log10, DEG = 180 / PI;
+const SETS = D.fb.filter((s) => s.id === s.nuc);                  // one set per nucleus; 208PbE is the second 208Pb analysis
+const BYID = Object.fromEntries(SETS.map((s) => [s.id, s]));
+const SECOND = { "208Pb": D.fb.find((s) => s.id === "208PbE") };
+const ELEM = { 6: "C", 8: "O", 20: "Ca", 28: "Ni", 38: "Sr", 40: "Zr", 56: "Ba", 80: "Hg", 82: "Pb" };
+const RAD = new Map(D.radii.map((r) => [r[0] * 1000 + r[2], r]));
+const PROTON = RAD.get(1001);                                      // the table's proton charge radius
+const KINDS = { fb: "fb", "2pf": "fermi", sphere: "sphere", gauss: "gauss" };
+const KEYOF = { fb: "fb", fermi: "2pf", sphere: "sphere", gauss: "gauss" };
+const EMIN = 50, EMAX = 1000;
+const supA = (s) => String(s).replace(/\d/g, (d) => "⁰¹²³⁴⁵⁶⁷⁸⁹"[d]);
+const nucHTML = (s) => `<sup>${s.A}</sup>${s.nuc.replace(/^\d+/, "")}`;
+const nucTXT = (s) => supA(s.A) + s.nuc.replace(/^\d+/, "");
+
+// ---------- state
+const S = { set: BYID["208Pb"], E: 500, kind: "fb", par: {}, ws: false };
+let FBM = null, M = null, WSD = null, ZEROS = [], ART = [], FIT = {};
+const RP_CODATA = D.codataRp.val;                                  // CODATA 2018 proton rms charge radius
+
+// ---------- scene
+const stage = document.getElementById("stage");
+const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.setSize(innerWidth, innerHeight);
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.05;
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+stage.appendChild(renderer.domElement);
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(34, innerWidth / innerHeight, 0.1, 1200);
+const SKY = WaveStage.skyGLSL(new THREE.Vector3(-0.45, 0.82, 0.38));
+scene.environment = WaveStage.environment(renderer, SKY);
+// The ground colour #0b0d12 is drawn untouched on the direct path; on the bloom path OutputPass runs it through
+// ACES, so there the background takes the linear colour that ACES (exposure 1.05) maps back to #0b0d12.
+const GROUND = new THREE.Color("#0b0d12");
+const GROUND_PRE_ACES = new THREE.Color().setRGB(0.0115476, 0.0131218, 0.0174740, THREE.LinearSRGBColorSpace);
+scene.background = GROUND.clone();
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true; controls.dampingFactor = 0.08;
+controls.minDistance = 14; controls.maxDistance = 420;
+const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+const POST = WaveStage.post(renderer, scene, camera, [0.55, 0.55, 0.72], { intensity: 0.5, radius: 4, thickness: 2 });
+const composer = POST.composer;
+
+const RW = 46;       // radius of the wave sheet, fm (to scale with the nucleus)
+const RD = 62;       // the detector sphere (not to scale: a real detector is metres away)
+const NB = 128;      // samples of the angular pattern in the shaders, theta 0 to 180 deg
+
+// the pattern b(theta) in [0, 1]: 1 + log10 |F(q(theta))|^2 / 8, clamped (the Mott factor is divided out)
+const PAT = new Float32Array(NB);
+// the scattering plane: incident plane wave from -x, outgoing spherical wave with the angular pattern
+const sheetMat = new THREE.ShaderMaterial({
+  uniforms: { uK: { value: 1 }, uT: { value: 0 }, uR: { value: 6 }, uRW: { value: RW }, uB: { value: PAT }, uT0: { value: 0 }, uT1: { value: PI } },
+  vertexShader: `varying vec2 vP; void main(){ vP = position.xz; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
+  fragmentShader: `uniform float uK, uT, uR, uRW, uT0, uT1; uniform float uB[${NB}]; varying vec2 vP;
+    float pat(float th){ float x = clamp(th / 3.14159265 * ${NB - 1}.0, 0.0, ${NB - 1}.0); int i = int(floor(x)); int j = min(i + 1, ${NB - 1});
+      float a = 0.0, b = 0.0; for (int k = 0; k < ${NB}; k++){ if (k == i) a = uB[k]; if (k == j) b = uB[k]; } return mix(a, b, fract(x)); }
+    void main(){
+      float r = length(vP), th = atan(abs(vP.y), vP.x);
+      float edge = 1.0 - smoothstep(uRW * 0.82, uRW, r);
+      // incident: crests of cos(kx - wt), faint, everywhere
+      float ci = pow(0.5 + 0.5 * cos(uK * vP.x - uT), 10.0);
+      // scattered: crests of cos(kr - wt) with the pattern as amplitude, outside the nucleus
+      float b = pat(th);
+      // outside the angles where the data's q range is reached the pattern is not measured: grey, dimmer
+      float inR = step(uT0, th) * step(th, uT1);
+      vec3 sc = mix(vec3(0.55, 0.58, 0.66) * 0.5, vec3(1.0, 0.80, 0.42), inR);
+      float cs = pow(0.5 + 0.5 * cos(uK * r - uT), 8.0) * b * b * smoothstep(uR, uR + 3.0, r);
+      vec3 col = vec3(0.30, 0.48, 0.95) * ci * 0.32 + sc * cs * 1.15 + sc * 0.05 * b * smoothstep(uR, uR + 3.0, r);
+      float a = clamp((ci * 0.32 + cs * 1.1 + 0.05) * edge, 0.0, 1.0);
+      gl_FragColor = vec4(col * edge, a);
+      #include <tonemapping_fragment>
+      #include <colorspace_fragment>
+    }`,
+  transparent: true, depthWrite: false, side: THREE.DoubleSide, blending: THREE.AdditiveBlending,
+});
+const sheet = new THREE.Mesh(new THREE.CircleGeometry(RW, 200).rotateX(-PI / 2), sheetMat);
+sheet.renderOrder = 2; scene.add(sheet);
+
+// the detector sphere, seen from inside: brightness = the pattern at the angle from the beam
+const domeMat = new THREE.ShaderMaterial({
+  uniforms: { uB: { value: PAT }, uZ: { value: new Float32Array(8).fill(-1) }, uT0: { value: 0 }, uT1: { value: PI } },
+  vertexShader: `varying vec3 vN; void main(){ vN = normalize(position); gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
+  fragmentShader: `uniform float uB[${NB}]; uniform float uZ[8]; uniform float uT0, uT1; varying vec3 vN;
+    float pat(float th){ float x = clamp(th / 3.14159265 * ${NB - 1}.0, 0.0, ${NB - 1}.0); int i = int(floor(x)); int j = min(i + 1, ${NB - 1});
+      float a = 0.0, b = 0.0; for (int k = 0; k < ${NB}; k++){ if (k == i) a = uB[k]; if (k == j) b = uB[k]; } return mix(a, b, fract(x)); }
+    vec3 ramp(float t){ t = clamp(t, 0.0, 1.0);
+      vec3 c0 = vec3(0.03, 0.04, 0.08), c1 = vec3(0.10, 0.20, 0.45), c2 = vec3(0.55, 0.30, 0.45), c3 = vec3(0.98, 0.62, 0.28), c4 = vec3(1.0, 0.95, 0.80);
+      if (t < 0.25) return mix(c0, c1, t * 4.0); if (t < 0.5) return mix(c1, c2, t * 4.0 - 1.0); if (t < 0.75) return mix(c2, c3, t * 4.0 - 2.0); return mix(c3, c4, t * 4.0 - 3.0); }
+    void main(){
+      if (vN.y > 0.0) discard;                     // a bowl: the half of the detector sphere below the scattering plane
+      float th = acos(clamp(vN.x, -1.0, 1.0));
+      float b = pat(th);
+      vec3 col = ramp(b) * (0.06 + 0.6 * b * b * b);
+      // outside the measured angular range (measured density only): grey, the series there is not data
+      float inR = step(uT0, th) * step(th, uT1);
+      col = mix(vec3(dot(col, vec3(0.3, 0.5, 0.2))) * 0.45, col, inR);
+      // graticule every 30 degrees of theta and the minima as thin amber circles
+      float g = abs(fract(th * 57.29578 / 30.0 + 0.5) - 0.5) * 30.0;
+      col += vec3(0.25, 0.3, 0.4) * (1.0 - smoothstep(0.0, 0.35, g)) * 0.35;
+      for (int k = 0; k < 8; k++){ if (uZ[k] > 0.0){ float d = abs(th - uZ[k]) * 57.29578; col += vec3(0.95, 0.76, 0.31) * (1.0 - smoothstep(0.0, 0.45, d)) * 0.9; } }
+      float hole = smoothstep(0.035, 0.06, th) * smoothstep(0.035, 0.06, 3.14159265 - th);
+      gl_FragColor = vec4(col * hole * (gl_FrontFacing ? 0.3 : 1.0), 1.0);
+      #include <tonemapping_fragment>
+      #include <colorspace_fragment>
+    }`,
+  side: THREE.DoubleSide, depthWrite: false,
+});
+const dome = new THREE.Mesh(new THREE.SphereGeometry(RD, 160, 96).rotateZ(-PI / 2), domeMat);
+dome.renderOrder = -1; scene.add(dome);
+const rim = new THREE.Mesh(new THREE.TorusGeometry(RD, 0.22, 8, 240).rotateX(PI / 2),
+  new THREE.MeshBasicMaterial({ color: "#3a4a6a", transparent: true, opacity: 0.8, blending: THREE.AdditiveBlending, depthWrite: false }));
+rim.userData.noAO = true; scene.add(rim);
+
+// the beam: a pencil of electrons along +x, and the unscattered part going on
+function beamLine(x0, x1, col, w, op) {
+  const g = new THREE.CylinderGeometry(w, w, x1 - x0, 24, 1, true).rotateZ(PI / 2).translate((x0 + x1) / 2, 0, 0);
+  const m = new THREE.Mesh(g, new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: op, blending: THREE.AdditiveBlending, depthWrite: false }));
+  m.userData.noAO = true; return m;
+}
+const beamIn = beamLine(-RD, -2, "#6fa8ff", 0.22, 0.85), beamOut = beamLine(2, RD, "#6fa8ff", 0.16, 0.35);
+scene.add(beamIn, beamOut);
+// electrons in the incoming pencil
+const NE = 260, ePos = new Float32Array(NE * 3), ePh = new Float32Array(NE);
+for (let i = 0; i < NE; i++) { ePh[i] = Math.random(); const a = Math.random() * 2 * PI, r = 1.6 * Math.sqrt(Math.random()); ePos[3 * i + 1] = r * Math.cos(a); ePos[3 * i + 2] = r * Math.sin(a); }
+const eGeo = new THREE.BufferGeometry(); eGeo.setAttribute("position", new THREE.BufferAttribute(ePos, 3));
+const spriteMat = (size, col) => new THREE.ShaderMaterial({
+  uniforms: { uSize: { value: size }, uPix: { value: 600 }, uC: { value: new THREE.Color(col) }, uA: { value: 1 } },
+  vertexShader: `attribute float aV; uniform float uSize, uPix; varying float vV;
+    void main(){ vV = aV; vec4 mv = modelViewMatrix * vec4(position, 1.0); gl_Position = projectionMatrix * mv; gl_PointSize = max(1.5, uSize * uPix / -mv.z); }`,
+  fragmentShader: `uniform vec3 uC; uniform float uA; varying float vV;
+    void main(){ vec2 d = gl_PointCoord - 0.5; float r2 = dot(d, d) * 4.0; if (r2 > 1.0) discard;
+      float core = exp(-r2 * 5.0); vec3 col = mix(uC, vec3(1.0, 0.97, 0.9), core * 0.6) * (0.35 + 0.65 * vV);
+      gl_FragColor = vec4(col * core * uA, core * uA);
+      #include <tonemapping_fragment>
+      #include <colorspace_fragment>
+    }`,
+  transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
+});
+const eMat = spriteMat(0.9, "#9cc2ff");
+eGeo.setAttribute("aV", new THREE.BufferAttribute(new Float32Array(NE).fill(1), 1));
+const electrons = new THREE.Points(eGeo, eMat); electrons.userData.noAO = true; electrons.frustumCulled = false;
+scene.add(electrons);
+
+// the nucleus: a cloud of points drawn from 4 pi r^2 rho(r), coloured by rho/rho_max
+const NC = 14000, cPos = new Float32Array(NC * 3), cVal = new Float32Array(NC);
+const cGeo = new THREE.BufferGeometry();
+cGeo.setAttribute("position", new THREE.BufferAttribute(cPos, 3));
+cGeo.setAttribute("aV", new THREE.BufferAttribute(cVal, 1));
+const cMat = spriteMat(0.34, "#ff9656");
+const cloud = new THREE.Points(cGeo, cMat); cloud.userData.noAO = true; cloud.frustumCulled = false; cloud.renderOrder = 5;
+scene.add(cloud);
+// the equivalent sharp sphere: a faint glass shell of radius R_eq
+const shellMat = new THREE.ShaderMaterial({
+  vertexShader: `varying vec3 vN, vV; void main(){ vN = normalize(normalMatrix * normal); vec4 mv = modelViewMatrix * vec4(position, 1.0); vV = normalize(-mv.xyz); gl_Position = projectionMatrix * mv; }`,
+  fragmentShader: `varying vec3 vN, vV; void main(){ float f = pow(1.0 - abs(dot(vN, vV)), 3.0); gl_FragColor = vec4(vec3(0.95, 0.76, 0.31) * f * 0.55, f * 0.55);
+      #include <tonemapping_fragment>
+      #include <colorspace_fragment>
+    }`,
+  transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
+});
+const shell = new THREE.Mesh(new THREE.SphereGeometry(1, 64, 48), shellMat);
+shell.userData.noAO = true; scene.add(shell);
+
+function sampleCloud(rhoF, rmax) {
+  const n = 600, h = rmax / n, cdf = new Float64Array(n + 1);
+  let rmaxv = 0;
+  for (let i = 0; i <= n; i++) rmaxv = Math.max(rmaxv, rhoF(i * h));
+  for (let i = 1; i <= n; i++) { const r = (i - 0.5) * h; cdf[i] = cdf[i - 1] + Math.max(0, rhoF(r)) * r * r; }
+  let seed = 12345; const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+  for (let k = 0; k < NC; k++) {
+    const u = rnd() * cdf[n];
+    let lo = 0, hi = n; while (hi - lo > 1) { const m = (lo + hi) >> 1; if (cdf[m] < u) lo = m; else hi = m; }
+    const r = (lo + (u - cdf[lo]) / Math.max(1e-30, cdf[hi] - cdf[lo])) * h;
+    const ct = 2 * rnd() - 1, st = Math.sqrt(1 - ct * ct), ph = 2 * PI * rnd();
+    cPos[3 * k] = r * st * Math.cos(ph); cPos[3 * k + 1] = r * ct; cPos[3 * k + 2] = r * st * Math.sin(ph);
+    cVal[k] = Math.max(0, rhoF(r)) / rmaxv;
+  }
+  cGeo.attributes.position.needsUpdate = true; cGeo.attributes.aV.needsUpdate = true;
+}
+
+// ---------------------------------------------------------------- physics state
+function fbModel(s) { return SIZE.model({ kind: "fb", Z: s.Z, coef: s.coef, R: s.R }); }
+function defaults(s) {
+  const m = fbModel(s), f = SIZE.fit2pF(m.rho, s.Z, s.R, [0.92 * Math.sqrt(5 / 3) * s.rms, 0.5]);
+  return { c: f.c, a: f.a, R: Math.sqrt(5 / 3) * m.rms, b: Math.sqrt(2 / 3) * m.rms };
+}
+function curModel() {
+  const s = S.set;
+  if (S.kind === "fb") return FBM;
+  if (S.kind === "fermi") return SIZE.model({ kind: "fermi", Z: s.Z, c: S.par.c, a: S.par.a });
+  if (S.kind === "sphere") return SIZE.model({ kind: "sphere", Z: s.Z, R: S.par.R });
+  return SIZE.model({ kind: "gauss", Z: s.Z, b: S.par.b });
+}
+// shell model: point protons of the Woods-Saxon model (nucleus.html), folded with a Gaussian proton of the table's radius
+function shellModel(s) {
+  const res = WS.solve(s.Z, s.A - s.Z), g = res.species.p.rho, h = res.G.h;
+  const n = Math.min(g.length - 1, Math.round((res.G.R + 14) / h));
+  const pt = new Float64Array(n + 1); for (let i = 0; i <= n; i++) pt[i] = g[i];
+  const ch = SIZE.foldGauss(pt, h, PROTON[3] * PROTON[3]);
+  const point = SIZE.model({ kind: "grid", Z: s.Z, rho: pt, h }), charge = SIZE.model({ kind: "grid", Z: s.Z, rho: ch, h });
+  // <r^2>_ch = <r^2>_folded + (N/Z) <r^2>_n (the neutron's mean-square charge radius, from the table)
+  const msCh = charge.msr + (s.A - s.Z) / s.Z * D.neutronMsr.msr;
+  return { point, charge, msCh, msCodata: msCh - PROTON[3] * PROTON[3] + RP_CODATA * RP_CODATA };
+}
+const KMAX = (E, A) => SIZE.kin(E, PI, A).q;            // largest q at this energy (180 degrees)
+function pattern() {
+  const s = S.set, F = M.F;
+  for (let i = 0; i < NB; i++) {
+    const th = Math.max(1e-3, PI * i / (NB - 1)), q = SIZE.kin(S.E, th, s.A).q, f = F(q);
+    PAT[i] = Math.max(0, Math.min(1, 1 + L10(f * f + 1e-30) / 8));
+  }
+  const qm = KMAX(S.E, s.A), all = SIZE.zeros(F, qm, 0.01);
+  // the measured density is data only over [q_min, q_max]: zeros outside are not minima of the data. Above q_max the
+  // series is cut at R, F falls like sin(qR)/q^3 and its zeros tend to multiples of pi/R, artifacts of the cutoff.
+  if (S.kind === "fb") { ZEROS = all.filter((q) => q >= s.qmin && q <= s.qmax); ART = all.filter((q) => q < s.qmin || q > s.qmax); }
+  else { ZEROS = all; ART = []; }
+  const t0 = S.kind === "fb" ? SIZE.thetaOfQ(S.E, s.qmin, s.A) : 0, t1 = S.kind === "fb" ? SIZE.thetaOfQ(S.E, s.qmax, s.A) : PI;
+  for (const m of [sheetMat, domeMat]) { m.uniforms.uT0.value = t0 == null ? PI + 1 : t0; m.uniforms.uT1.value = t1 == null ? PI + 1 : t1; }
+  const zt = domeMat.uniforms.uZ.value; zt.fill(-1);
+  ZEROS.slice(0, 8).forEach((q, i) => { zt[i] = SIZE.thetaOfQ(S.E, q, s.A); });
+}
+
+// ---------------------------------------------------------------- labels
+const labels = document.getElementById("labels"), LAB = {};
+function lab(key, cls) {
+  if (!LAB[key]) { const el = document.createElement("div"); el.className = "axlab " + (cls || ""); labels.appendChild(el); LAB[key] = el; }
+  return LAB[key];
+}
+const tmpV = new THREE.Vector3();
+function place(el, p, html) {
+  tmpV.copy(p).project(camera);
+  const vis = tmpV.z < 1 && Math.abs(tmpV.x) < 1 && Math.abs(tmpV.y) < 1 && html !== "";
+  el.hidden = !vis;
+  if (vis) { el.style.left = (tmpV.x * 0.5 + 0.5) * innerWidth + "px"; el.style.top = (-tmpV.y * 0.5 + 0.5) * innerHeight + "px"; if (html != null && el._h !== html) { el.innerHTML = html; el._h = html; } }
+}
+const ORD = ["1st", "2nd", "3rd", "4th", "5th", "6th", "7th", "8th"];
+function drawLabels() {
+  // the minima on the far side of the detector sphere, along the meridian facing away from the camera
+  // the meridian across the screen: in the y-z plane, perpendicular to the camera's direction, pointing up
+  // on the bowl: the lowest meridian, turned a little away from the camera
+  const u = new THREE.Vector3(0, -1, -0.35 * Math.sign(camera.position.z || 1)).normalize();
+  for (let i = 0; i < 8; i++) {
+    const q = ZEROS[i], th = q != null ? SIZE.thetaOfQ(S.E, q, S.set.A) : null;
+    const p = th != null ? new THREE.Vector3(RD * 0.97 * Math.cos(th), 0, 0).addScaledVector(u, RD * 0.97 * Math.sin(th)) : new THREE.Vector3();
+    place(lab("z" + i, "hot"), p, th != null && i < 5 ? `${ORD[i]} minimum ${(th * DEG).toFixed(1)}°` : "");
+  }
+  const tq = S.kind === "fb" ? SIZE.thetaOfQ(S.E, S.set.qmax, S.set.A) : null;
+  place(lab("qmax", "dim"), tq != null ? new THREE.Vector3(RD * 0.97 * Math.cos(tq), 0, 0).addScaledVector(u, RD * 0.97 * Math.sin(tq)) : new THREE.Vector3(),
+    tq != null ? `data end: q<sub>max</sub> = ${S.set.qmax} fm⁻¹ at ${(tq * DEG).toFixed(1)}°; beyond, grey` : "");
+  place(lab("beam", "beam"), new THREE.Vector3(-RD * 0.8, 3, 0), `e⁻ ${fmtE(S.E)} · λ = ${(2 * PI * SIZE.HBARC / S.E).toFixed(2)} fm`);
+  place(lab("nuc"), new THREE.Vector3(0, Math.sqrt(5 / 3) * M.rms + 3.5, 0), `${nucTXT(S.set)}: R<sub>eq</sub> = ${(Math.sqrt(5 / 3) * M.rms).toFixed(2)} fm`);
+}
+function fmtE(E) { return E >= 1000 ? `${+(E / 1000).toPrecision(3)} GeV` : `${+E.toPrecision(3)} MeV`; }
+
+// ---------------------------------------------------------------- 2D plots
+function setupCanvas(c) {
+  const d = Math.min(devicePixelRatio, 2), w = c.clientWidth, h = c.clientHeight;
+  c.width = w * d; c.height = h * d;
+  const x = c.getContext("2d"); x.setTransform(d, 0, 0, d, 0, 0);
+  x.font = "10px ui-monospace,Menlo,monospace";
+  return { x, w, h };
+}
+const COL = { model: "#f2c14e", data: "#7fd1b9", ws: "#c39bd3", mott: "#8a92a6", second: "#7fd1b9" };
+function frame(ctx, w, h, P, xr, yr, xt, yt, ylog) {
+  const X = (v) => P[0] + (v - xr[0]) / (xr[1] - xr[0]) * (w - P[0] - P[1]);
+  const Y = (v) => h - P[3] - (v - yr[0]) / (yr[1] - yr[0]) * (h - P[2] - P[3]);
+  ctx.strokeStyle = "#1c2230"; ctx.lineWidth = 1; ctx.fillStyle = "#8a92a6";
+  for (const t of xt) { ctx.beginPath(); ctx.moveTo(X(t), P[2]); ctx.lineTo(X(t), h - P[3]); ctx.stroke(); ctx.textAlign = "center"; ctx.fillText(String(t), X(t), h - P[3] + 12); }
+  for (const t of yt) { ctx.beginPath(); ctx.moveTo(P[0], Y(t)); ctx.lineTo(w - P[1], Y(t)); ctx.stroke(); ctx.textAlign = "right"; ctx.fillText(ylog ? `1e${t}` : String(+t.toPrecision(3)), P[0] - 4, Y(t) + 3); }
+  return { X, Y };
+}
+function curve(ctx, pts, col, lw, dash, alpha) {
+  ctx.strokeStyle = col; ctx.lineWidth = lw; ctx.setLineDash(dash || []); ctx.globalAlpha = alpha == null ? 1 : alpha;
+  ctx.beginPath(); let pen = false;
+  for (const p of pts) { if (p == null || !isFinite(p[1])) { pen = false; continue; } if (!pen) { ctx.moveTo(p[0], p[1]); pen = true; } else ctx.lineTo(p[0], p[1]); }
+  ctx.stroke(); ctx.setLineDash([]); ctx.globalAlpha = 1;
+}
+function drawRho() {
+  const { x: ctx, w, h } = setupCanvas(document.getElementById("prho"));
+  const s = S.set, rmax = s.R + 0.5;
+  let ymax = 0; for (let r = 0; r <= rmax; r += 0.05) { ymax = Math.max(ymax, FBM.rho(r), M.rho(r)); if (WSD) ymax = Math.max(ymax, WSD.charge.rho(r)); }
+  ymax *= 1.12;
+  const step = ymax > 0.1 ? 0.04 : 0.02;
+  const yt = []; for (let t = 0; t <= ymax; t += step) yt.push(+t.toFixed(2));
+  const xt = []; for (let t = 0; t <= rmax; t += 2) xt.push(t);
+  const { X, Y } = frame(ctx, w, h, [40, 8, 6, 18], [0, rmax], [0, ymax], xt, yt);
+  const pts = (f) => { const a = []; for (let r = 0; r <= rmax; r += rmax / 300) a.push([X(r), Y(f(r))]); return a; };
+  if (SECOND[s.id]) curve(ctx, pts(fbModel(SECOND[s.id]).rho), COL.second, 1.2, [4, 3], 0.8);
+  if (WSD) curve(ctx, pts(WSD.charge.rho), COL.ws, 1.6);
+  curve(ctx, pts(FBM.rho), COL.data, 2.2);
+  if (S.kind !== "fb") curve(ctx, pts(M.rho), COL.model, 2);
+  // the equivalent sharp radius
+  const Req = Math.sqrt(5 / 3) * M.rms;
+  ctx.strokeStyle = COL.model; ctx.setLineDash([2, 3]); ctx.beginPath(); ctx.moveTo(X(Req), Y(0)); ctx.lineTo(X(Req), Y(ymax * 0.9)); ctx.stroke(); ctx.setLineDash([]);
+  ctx.fillStyle = COL.model; ctx.textAlign = "left"; ctx.fillText(`R_eq ${Req.toFixed(2)}`, X(Req) + 3, Y(ymax * 0.86));
+  document.getElementById("legr").innerHTML = `<span><i style="border-color:${COL.data}"></i>measured: ${s.ref} (FB, ${s.qmin} to ${s.qmax} fm⁻¹)</span>` +
+    (SECOND[s.id] ? `<span><i class="d" style="border-color:${COL.second}"></i>${SECOND[s.id].ref} (${SECOND[s.id].qmin} to ${SECOND[s.id].qmax} fm⁻¹)</span>` : "") +
+    (S.kind !== "fb" ? `<span><i style="border-color:${COL.model}"></i>${{ fermi: "2pF", sphere: "sphere", gauss: "Gaussian" }[S.kind]}</span>` : "") +
+    (WSD ? `<span><i style="border-color:${COL.ws}"></i>Woods-Saxon protons ⊗ proton</span>` : "");
+}
+const QMAXP = 4.5;
+function drawFF() {
+  const { x: ctx, w, h } = setupCanvas(document.getElementById("pff"));
+  const s = S.set, yr = [-8, 0.3];
+  const { X, Y } = frame(ctx, w, h, [40, 8, 6, 18], [0, QMAXP], yr, [0, 1, 2, 3, 4], [-8, -6, -4, -2, 0], true);
+  const qm = KMAX(S.E, s.A);
+  // beyond 2k: not reachable at this energy
+  if (qm < QMAXP) { ctx.fillStyle = "rgba(138,146,166,0.12)"; ctx.fillRect(X(qm), 6, X(QMAXP) - X(qm), h - 24); ctx.fillStyle = "#8a92a6"; ctx.textAlign = "left"; ctx.fillText("beyond q(180°)", Math.min(X(qm) + 3, w - 90), 16); }
+  // the measured q range
+  ctx.fillStyle = "rgba(127,209,185,0.5)"; ctx.fillRect(X(s.qmin), h - 20, X(s.qmax) - X(s.qmin), 3);
+  const lg = (f) => { const v = f * f; return v > 0 ? Math.max(yr[0] - 1, L10(v)) : yr[0] - 1; };
+  const pts = (F, a, b) => { const out = []; for (let i = 0; i <= 500; i++) { const q = a + (b - a) * i / 500; out.push([X(q), Y(lg(F(Math.max(q, 1e-4))))]); } return out; };
+  ctx.save(); ctx.beginPath(); ctx.rect(40, 6, w - 48, h - 24); ctx.clip();
+  if (SECOND[s.id]) curve(ctx, pts(fbModel(SECOND[s.id]).F, 0, QMAXP), COL.second, 1.1, [4, 3], 0.7);
+  if (WSD) curve(ctx, pts(WSD.charge.F, 0, QMAXP), COL.ws, 1.4);
+  curve(ctx, pts(FBM.F, 0, s.qmin), COL.data, 1.2, [2, 3], 0.6);
+  curve(ctx, pts(FBM.F, s.qmin, s.qmax), COL.data, 2.2);
+  curve(ctx, pts(FBM.F, s.qmax, QMAXP), COL.data, 1.2, [2, 3], 0.6);
+  if (S.kind !== "fb") curve(ctx, pts(M.F, 0, QMAXP), COL.model, 1.8);
+  ctx.restore();
+  ctx.fillStyle = COL.model; for (const q of ZEROS) if (q < QMAXP) { ctx.fillRect(X(q) - 0.5, h - 26, 1, 6); }
+  ctx.fillStyle = "#6b7387"; for (const q of ART) if (q < QMAXP) { ctx.fillRect(X(q) - 0.5, h - 26, 1, 6); }
+  document.getElementById("legf").innerHTML = `<span><i style="border-color:${COL.data}"></i>measured, solid over the data's q range (bar)</span><span><i class="d" style="border-color:${COL.data}"></i>the same series outside it: not measured; above q<sub>max</sub> it is cut at R = ${s.R} fm and its zeros tend to multiples of π/R = ${(PI / s.R).toFixed(3)} fm⁻¹, artifacts of the cutoff</span>` +
+    (S.kind !== "fb" ? `<span><i style="border-color:${COL.model}"></i>model</span>` : "") + `<span>amber ticks: zeros of the scene's F${S.kind === "fb" ? " inside the data; grey: outside" : ""}</span>`;
+}
+function drawXS() {
+  const { x: ctx, w, h } = setupCanvas(document.getElementById("pxs"));
+  const s = S.set, n = 360, th0 = 2 * DEG * Math.max(0.02, 0.15 / (S.E / SIZE.HBARC)) ;
+  const t0 = Math.max(2, Math.min(15, th0));
+  const ths = []; for (let i = 0; i <= n; i++) ths.push(t0 + (179 - t0) * i / n);
+  const mott = ths.map((t) => SIZE.mott(S.E, t / DEG, s.Z, s.A));
+  const fbX = ths.map((t) => SIZE.pwba(S.E, t / DEG, s.Z, s.A, FBM.F));
+  const mX = ths.map((t) => SIZE.pwba(S.E, t / DEG, s.Z, s.A, M.F));
+  const top = Math.ceil(L10(Math.max(...mott)));
+  const lowest = Math.max(top - 14, Math.floor(L10(Math.max(1e-30, Math.min(...fbX.filter((v) => v > 0).slice(-40))))) - 1);
+  const yr = [lowest, top];
+  const yt = []; for (let t = yr[0]; t <= yr[1]; t += Math.max(1, Math.round((yr[1] - yr[0]) / 5))) yt.push(t);
+  const { X, Y } = frame(ctx, w, h, [40, 8, 6, 18], [0, 180], yr, [0, 30, 60, 90, 120, 150, 180], yt, true);
+  const lg = (v) => (v > 0 ? Math.max(yr[0] - 2, L10(v)) : yr[0] - 2);
+  ctx.save(); ctx.beginPath(); ctx.rect(40, 6, w - 48, h - 24); ctx.clip();
+  curve(ctx, ths.map((t, i) => [X(t), Y(lg(mott[i]))]), COL.mott, 1.2, [4, 3]);
+  // measured density: solid where q is inside the data's range
+  const inR = ths.map((t) => { const q = SIZE.kin(S.E, t / DEG, s.A).q; return q >= s.qmin && q <= s.qmax; });
+  curve(ctx, ths.map((t, i) => (inR[i] ? [X(t), Y(lg(fbX[i]))] : null)), COL.data, 2);
+  curve(ctx, ths.map((t, i) => (!inR[i] ? [X(t), Y(lg(fbX[i]))] : null)), COL.data, 1.1, [2, 3], 0.6);
+  if (S.kind !== "fb") curve(ctx, ths.map((t, i) => [X(t), Y(lg(mX[i]))]), COL.model, 1.7);
+  ctx.restore();
+  ctx.fillStyle = COL.model; for (const q of ZEROS) { const t = SIZE.thetaOfQ(S.E, q, s.A); if (t != null) ctx.fillRect(X(t * DEG) - 0.5, h - 26, 1, 6); }
+  ctx.fillStyle = "#6b7387"; for (const q of ART) { const t = SIZE.thetaOfQ(S.E, q, s.A); if (t != null) ctx.fillRect(X(t * DEG) - 0.5, h - 26, 1, 6); }
+  document.getElementById("xcap").textContent = `PWBA at ${fmtE(S.E)}, mb/sr against θ`;
+  document.getElementById("legx").innerHTML = `<span><i class="d" style="border-color:${COL.mott}"></i>Mott (point charge)</span><span><i style="border-color:${COL.data}"></i>Mott × |F|², measured density (dashed where q is outside the data)</span>` +
+    (S.kind !== "fb" ? `<span><i style="border-color:${COL.model}"></i>Mott × |F|², model</span>` : "") + `<span>plane-wave Born: its zeros match measured minima only for light nuclei; for heavy nuclei Coulomb distortion fills and shifts them (see below)</span>`;
+}
+// charge radii: rms against A with sqrt(3/5) r0 A^(1/3); the chosen element in colour
+const CHAINS = [["Ca", 20, 20], ["Sr", 38, 50], ["Ba", 56, 82], ["Hg", 80, 126], ["Pb", 82, 126]];
+let CHAIN = CHAINS[4];
+const R0 = SIZE.r0Fit(D.radii, 40);
+function drawRadii() {
+  const { x: ctx, w, h } = setupCanvas(document.getElementById("prad"));
+  const { X, Y } = frame(ctx, w, h, [40, 8, 6, 18], [0, 250], [0.5, 6.2], [0, 50, 100, 150, 200, 250], [1, 2, 3, 4, 5, 6]);
+  const k = Math.sqrt(3 / 5) * R0.r0;
+  curve(ctx, Array.from({ length: 200 }, (_, i) => { const A = 1 + 249 * i / 199; return [X(A), Y(k * Math.cbrt(A))]; }), COL.model, 1.4, [5, 3]);
+  for (const r of D.radii) {
+    const on = r[0] === CHAIN[1];
+    ctx.fillStyle = on ? COL.ws : "rgba(127,209,185,0.55)";
+    ctx.beginPath(); ctx.arc(X(r[2]), Y(r[3]), on ? 2 : 1.3, 0, 2 * PI); ctx.fill();
+  }
+  const me = RAD.get(S.set.Z * 1000 + S.set.A);
+  if (me) { ctx.strokeStyle = "#fff"; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(X(me[2]), Y(me[3]), 5, 0, 2 * PI); ctx.stroke(); }
+  document.getElementById("legrad").innerHTML = `<span><i class="p" style="background:${COL.data}"></i>measured rms charge radius</span><span><i class="d" style="border-color:${COL.model}"></i>√(3/5) r₀A<sup>1/3</sup>, r₀ = ${R0.r0.toFixed(3)} fm (least squares of R<sub>eq</sub> = r₀A<sup>1/3</sup> over the ${R0.n} nuclei with A ≥ 40)</span><span><i class="p" style="background:${COL.ws}"></i>${CHAIN[0]}</span><span>ring: ${nucTXT(S.set)}</span>`;
+}
+function drawChain() {
+  const { x: ctx, w, h } = setupCanvas(document.getElementById("pchain"));
+  const [el, Z, N0] = CHAIN;
+  const rows = D.radii.filter((r) => r[0] === Z).sort((a, b) => a[1] - b[1]);
+  const ref = rows.find((r) => r[1] === N0);
+  const pts = rows.map((r) => [r[1], r[3] * r[3] - ref[3] * ref[3], 2 * r[3] * r[4]]);
+  // the smooth reference: sqrt(3/5) r0 A^(1/3) as a mean-square radius, through the magic-N point
+  const drop = (N) => 0.6 * R0.r0 * R0.r0 * (Math.pow(Z + N, 2 / 3) - Math.pow(Z + N0, 2 / 3));
+  const n0 = rows[0][1] - 1, n1 = rows[rows.length - 1][1] + 1;
+  let lo = Math.min(...pts.map((p) => p[1]), drop(n0)), hi = Math.max(...pts.map((p) => p[1]), drop(n1));
+  const pad = 0.08 * (hi - lo); lo -= pad; hi += pad;
+  const st = (hi - lo) > 2 ? 0.5 : (hi - lo) > 0.8 ? 0.2 : 0.1;
+  const yt = []; for (let t = Math.ceil(lo / st) * st; t <= hi; t += st) yt.push(+t.toFixed(2));
+  const xs = n1 - n0 > 20 ? 5 : 2, xt = []; for (let t = Math.ceil(n0 / xs) * xs; t <= n1; t += xs) xt.push(t);
+  const { X, Y } = frame(ctx, w, h, [40, 8, 6, 18], [n0, n1], [lo, hi], xt, yt);
+  curve(ctx, Array.from({ length: 100 }, (_, i) => { const N = n0 + (n1 - n0) * i / 99; return [X(N), Y(drop(N))]; }), COL.model, 1.3, [5, 3]);
+  ctx.strokeStyle = "#8a92a6"; ctx.setLineDash([2, 3]); ctx.beginPath(); ctx.moveTo(X(N0), 6); ctx.lineTo(X(N0), h - 18); ctx.stroke(); ctx.setLineDash([]);
+  ctx.fillStyle = "#8a92a6"; ctx.textAlign = "left"; ctx.fillText(`N = ${N0}`, X(N0) + 3, 16);
+  curve(ctx, pts.map((p) => [X(p[0]), Y(p[1])]), COL.ws, 1, [], 0.5);
+  for (const p of pts) {
+    ctx.strokeStyle = COL.ws; ctx.beginPath(); ctx.moveTo(X(p[0]), Y(p[1] - p[2])); ctx.lineTo(X(p[0]), Y(p[1] + p[2])); ctx.stroke();
+    ctx.fillStyle = COL.ws; ctx.beginPath(); ctx.arc(X(p[0]), Y(p[1]), 2.3, 0, 2 * PI); ctx.fill();
+  }
+  document.getElementById("legc").innerHTML = `<span><i class="p" style="background:${COL.ws}"></i>${el}: R² − R²(N = ${N0}), from the tabulated radii (bars: 2RΔR of each radius alone; the table's isotope-shift differences are more precise than that)</span><span><i class="d" style="border-color:${COL.model}"></i>(3/5) r₀² (A<sup>2/3</sup> − A₀<sup>2/3</sup>), same r₀</span>`;
+}
+
+// ---------------------------------------------------------------- text
+function f3(x) { return x.toFixed(3); }
+function drawInfo() {
+  const s = S.set, me = RAD.get(s.Z * 1000 + s.A), Req = Math.sqrt(5 / 3) * M.rms;
+  const k = S.E / SIZE.HBARC, lam = 2 * PI / k, qm = KMAX(S.E, s.A);
+  const x1 = SIZE.sphereZero(1), qs = x1 / Req, ths = SIZE.thetaOfQ(S.E, qs, s.A);
+  const z1 = ZEROS[0], th1 = z1 != null ? SIZE.thetaOfQ(S.E, z1, s.A) : null;
+  const none = S.kind === "gauss" ? "none: a Gaussian's F has no zeros, so no diffraction minimum at any angle"
+    : S.kind === "fb" ? (KMAX(S.E, s.A) < s.qmin ? "none: this energy does not reach the data's q range" : "none inside the data's q range at this energy")
+    : "beyond 180° at this energy";
+  let rows = `<dt>Z, N</dt><dd>${s.Z}, ${s.A - s.Z}</dd>
+    <dt>rms, scene</dt><dd class="hi">${S.kind === "fb" ? `${M.rms.toFixed(4)} fm <span style="color:var(--muted)">(computed from the coefficients, one digit beyond the printed value)</span>` : `${M.rms.toFixed(3)} fm <span style="color:var(--muted)">(${{ fermi: "2pF", sphere: "sphere", gauss: "Gaussian" }[S.kind]})</span>`}</dd>
+    <dt>rms, printed</dt><dd class="dat">${s.rms.toFixed(3)}(${Math.round(s.rmsErr * 1000)}) fm <span style="color:var(--muted)">de Vries Table IV, ${s.ref}</span></dd>
+    <dt>rms, table</dt><dd class="dat">${me ? `${me[3].toFixed(4)}(${Math.round(me[4] * 1e4)}) fm <span style="color:var(--muted)">Angeli-Marinova</span>` : "not in the table"}</dd>
+    <dt>R<sub>eq</sub></dt><dd>√(5/3) rms = ${Req.toFixed(2)} fm; R<sub>eq</sub>/A<sup>1/3</sup> = ${(Req / Math.cbrt(s.A)).toFixed(3)} fm</dd>`;
+  if (S.kind === "fermi") rows += `<dt>2pF</dt><dd>c = ${S.par.c.toFixed(3)}, a = ${S.par.a.toFixed(3)} fm; skin t = 4 ln3 a = ${(4 * Math.log(3) * S.par.a).toFixed(2)} fm</dd>`;
+  rows += `<dt>k, λ</dt><dd>${k.toFixed(3)} fm⁻¹, λ = 2π/k = ${lam.toFixed(2)} fm</dd>
+    <dt>kR<sub>eq</sub></dt><dd>${(k * Req).toFixed(1)}; q reaches ${qm.toFixed(2)} fm⁻¹ at 180°</dd>
+    <dt>1st minimum</dt><dd class="hi">${th1 != null ? `PWBA: q = ${z1.toFixed(3)} fm⁻¹, θ = ${(th1 * DEG).toFixed(1)}°` : none}</dd>
+    <dt>sphere rule</dt><dd>q = ${x1.toFixed(3)}/R<sub>eq</sub> = ${qs.toFixed(3)} fm⁻¹${ths != null ? `, θ = ${(ths * DEG).toFixed(1)}°` : ""}</dd>`;
+  if (WSD) rows += `<dt>shell model</dt><dd style="color:var(--ws)">point protons ${f3(WSD.point.rms)} fm; ⊗ proton ${f3(WSD.charge.rms)} fm; + (N/Z)⟨r²⟩<sub>n</sub> ${f3(Math.sqrt(WSD.msCh))} fm; with the CODATA 2018 r<sub>p</sub> ${f3(Math.sqrt(WSD.msCodata))} fm</dd>`;
+  document.getElementById("info").innerHTML = rows;
+  document.getElementById("eout").textContent = fmtE(S.E);
+  document.getElementById("stamp").innerHTML = `<b>${nucHTML(s)} at ${fmtE(S.E)}</b><small>λ = ${lam.toFixed(2)} fm · ${th1 != null ? `first PWBA minimum at ${(th1 * DEG).toFixed(1)}°` : S.kind === "gauss" ? "a Gaussian has no diffraction minimum" : S.kind === "fb" ? "no minimum inside the data's q range" : "no minimum below 180°"} · θ<sub>min</sub> ∝ 1/(kR)</small>`;
+}
+function drawKnote() {
+  const t = { fb: `The density measured, as a Fourier-Bessel series fitted to the data (no shape assumed). Only the data's q range, ${S.set.qmin} to ${S.set.qmax} fm⁻¹, is measured; minima are ringed and labelled only there. Above q<sub>max</sub> the series, cut at R = ${S.set.R} fm, falls like sin(qR)/q³ and its zeros tend to multiples of π/R: artifacts of the cutoff radius, drawn grey and dashed, not minima of the data.`,
+    fermi: `ρ₀/(1 + e<sup>(r−c)/a</sup>): flat interior of radius about c, surface thickness (90 % to 10 %) t = 4 ln3 a = ${(4 * Math.log(3)).toFixed(2)}a. Starts at the 2pF closest to the measured density (least squares of r²(ρ − ρ<sub>meas</sub>)²).`,
+    sphere: `Uniform sphere of radius R; F = 3j₁(qR)/(qR), whose zeros sit at qR = ${SIZE.sphereZero(1).toFixed(3)}, ${SIZE.sphereZero(2).toFixed(3)}, ... (tan x = x). Starts at the R of the same rms as the measured density.`,
+    gauss: "ρ₀e<sup>−r²/b²</sup>: F = e<sup>−q²b²/4</sup> has no zeros at all, so no diffraction minima: the minima need a surface. Starts at the b of the same rms." };
+  document.getElementById("knote").innerHTML = t[S.kind];
+}
+function drawStatic() {
+  document.getElementById("lamr").textContent = `${(2 * PI * SIZE.HBARC / EMIN).toFixed(1)} fm at ${EMIN} MeV to ${(2 * PI * SIZE.HBARC / EMAX).toFixed(2)} fm at ${EMAX / 1000} GeV`;
+  document.getElementById("why").innerHTML = `
+    <span>The plane-wave Born approximation (PWBA) treats the electron as a plane wave before and after the collision, so dσ/dΩ = σ<sub>Mott</sub>|F(q)|² vanishes wherever F does. A real electron moves in the nucleus's Coulomb field: it is accelerated on the way in, and its wave is distorted, so the cross section mixes several momentum transfers and the zeros fill in. The size of the effect grows with Zα: ${(6 * SIZE.ALPHA).toFixed(3)} for carbon, ${(82 * SIZE.ALPHA).toFixed(2)} for lead, so for light nuclei the measured minima stay close to the PWBA zeros and for heavy nuclei they are shallow, shifted dips. De Vries et al. note (p. 497) that for a given charge distribution the cross section can be calculated accurately by phase-shift analysis. That calculation is not on this page: the curves here give the PWBA minimum positions, not the measured depths, nor the shifts distortion causes.</span>
+    <span>What the data fix: the positions of the minima carry the radius, their depth and the fall of |F| at large q carry the surface, and finer detail needs larger q. Only Fourier components of ρ(r) with wavelengths between 2π/q<sub>max</sub> and 2π/q<sub>min</sub> can be extracted from data over q<sub>min</sub> to q<sub>max</sub> (de Vries et al., p. 497); beyond q<sub>max</sub> the Fourier-Bessel analyses assume a bounded fall-off (q⁻⁴ and exp(−αq²), same page). That is why the two ²⁰⁸Pb analyses, over different q ranges, can differ beyond the range they share.</span>`;
+  document.getElementById("srcs").innerHTML = `
+    <span><b>Measured densities</b>: H. de Vries, C. W. de Jager, C. de Vries, At. Data Nucl. Data Tables 36, 495 (1987), Table IV (Fourier-Bessel coefficients, R, rms, q range, reference of each analysis: ${SETS.map((s) => `${nucTXT(s)} ${s.ref}`).join(", ")}, ²⁰⁸Pb also Eu78). Transcribed from the scan kept by the <a href="http://discovery.phys.virginia.edu/research/groups/ncd/" target="_blank" rel="noopener">Nuclear Charge Density Archive</a> (Univ. of Virginia) and checked number by number against that archive's digital file; every set integrates to Z and reproduces its printed rms.</span>
+    <span><b>Charge radii</b>: I. Angeli and K. P. Marinova, At. Data Nucl. Data Tables 99, 69 (2013), the radius_val column of the IAEA table <a href="https://www-nds.iaea.org/radii/" target="_blank" rel="noopener">www-nds.iaea.org/radii</a> (${D.radii.length} nuclei; the ${D.radiiPrelimSkipped} preliminary IAEA updates in a separate column are not used). The proton's radius used for the shell-model folding, ${PROTON[3]} fm, is that table's ¹H entry (an electron-scattering value); the CODATA 2018 recommended value, ${RP_CODATA} fm, is shown beside it. The neutron's mean-square charge radius, ${D.neutronMsr.msr} fm², is the table's n entry.</span>
+    <span><b>Constants</b>: CODATA 2018 (NIST, physics.nist.gov/cuu/Constants, the 2018 listing): ħc, α, the atomic mass unit and the proton radius.</span>
+    <span><b>Computed live</b> (assets/size.js, checked against mpmath in tests/check_size.py): every form factor (closed form for sphere, Gaussian and the Fourier-Bessel series; Simpson quadrature for the 2pF), rms radii, the Mott cross section with recoil on M = A u (q = 2√(EE′) sin(θ/2) is √Q², the four-momentum transfer, with the electron mass neglected), the zeros of F and their angles, the 2pF closest to each measured density, r₀, and the Gaussian folding. The shell model is the Woods-Saxon solver of <a href="nucleus.html">nucleus.html</a> with its default parameters. Its point-proton density is folded with a Gaussian proton; the neutrons' charge enters only the rms, as (N/Z)⟨r²⟩<sub>n</sub>, not the drawn density; no Darwin-Foldy or spin-orbit term is included. It is a picture, not a fit.</span>`;
+}
+
+// ---------------------------------------------------------------- updates
+function setSlidersForKind() {
+  const p1 = document.getElementById("p1"), r2 = document.getElementById("r2"), l1 = document.getElementById("l1");
+  document.getElementById("r1").hidden = S.kind === "fb"; r2.hidden = S.kind !== "fermi";
+  const Rm = Math.sqrt(5 / 3) * S.set.rms;
+  if (S.kind === "fermi") { l1.textContent = "c"; p1.min = (0.4 * Rm).toFixed(3); p1.max = (1.4 * Rm).toFixed(3); p1.value = S.par.c; }
+  if (S.kind === "sphere") { l1.textContent = "R"; p1.min = (0.5 * Rm).toFixed(3); p1.max = (1.6 * Rm).toFixed(3); p1.value = S.par.R; }
+  if (S.kind === "gauss") { l1.textContent = "b"; p1.min = (0.3 * Rm).toFixed(3); p1.max = (1.3 * Rm).toFixed(3); p1.value = S.par.b; }
+  document.getElementById("p2").value = S.par.a;
+  document.getElementById("o1").textContent = S.kind === "fb" ? "" : `${(+p1.value).toFixed(3)} fm`;
+  document.getElementById("o2").textContent = `${S.par.a.toFixed(3)} fm`;
+  for (const b of document.querySelectorAll("#kind button")) b.setAttribute("aria-pressed", b.dataset.v === S.kind ? "true" : "false");
+  drawKnote();
+}
+function update(rebuildCloud) {
+  M = curModel();
+  pattern();
+  if (rebuildCloud) {
+    sampleCloud(M.rho, S.kind === "gauss" ? 3.2 * S.par.b : M.rmax);
+    const Req = Math.sqrt(5 / 3) * M.rms; shell.scale.setScalar(Req);
+    sheetMat.uniforms.uR.value = Req;
+  }
+  sheetMat.uniforms.uK.value = S.E / SIZE.HBARC;
+  drawInfo(); drawRho(); drawFF(); drawXS();
+  setHash();
+}
+function setNucleus(id, keepPar) {
+  S.set = BYID[id] || BYID["208Pb"];
+  FBM = fbModel(S.set);
+  FIT = defaults(S.set);
+  if (!keepPar) S.par = { ...FIT };
+  WSD = S.ws ? shellModel(S.set) : null;
+  for (const b of document.querySelectorAll("#chips button")) b.setAttribute("aria-pressed", b.dataset.id === S.set.id ? "true" : "false");
+  const z = CHAINS.find((c) => c[1] === S.set.Z); if (z) CHAIN = z;
+  setSlidersForKind(); drawChainChips(); drawRadii(); drawChain();
+  update(true);
+}
+function setE(E) {
+  S.E = Math.min(EMAX, Math.max(EMIN, E));
+  document.getElementById("es").value = L10(S.E);
+  for (const b of document.querySelectorAll("#echips button")) b.setAttribute("aria-pressed", Math.abs(+b.dataset.e - S.E) < 1e-9 ? "true" : "false");
+  update(false);
+}
+function setHash() {
+  const h = `#${S.set.id}@${+S.E.toPrecision(4)}~${KEYOF[S.kind]}`;
+  if (location.hash !== h) history.replaceState(null, "", h);
+}
+function parseHash() {
+  let raw = location.hash.slice(1);
+  try { raw = decodeURIComponent(raw); } catch (e) { return null; }
+  const m = raw.match(/^(\d+[A-Z][a-z]?)(?:@(\d+(?:\.\d+)?))?(?:~(fb|2pf|sphere|gauss))?$/);
+  if (!m || !BYID[m[1]]) return null;
+  const E = m[2] != null ? +m[2] : null;
+  return { id: m[1], E: E != null && isFinite(E) && E > 0 ? E : null, kind: m[3] ? KINDS[m[3]] : null };
+}
+function drawChainChips() {
+  document.getElementById("cchips").innerHTML = CHAINS.map((c) => `<button data-z="${c[1]}" aria-pressed="${c === CHAIN}">${c[0]}, N₀ = ${c[2]}</button>`).join("");
+}
+
+document.getElementById("chips").innerHTML = SETS.map((s) => `<button data-id="${s.id}">${nucTXT(s)}</button>`).join("");
+document.getElementById("echips").innerHTML = [100, 250, 500, 800].map((e) => `<button data-e="${e}">${e} MeV</button>`).join("");
+document.getElementById("chips").addEventListener("click", (e) => { const b = e.target.closest("button"); if (b) setNucleus(b.dataset.id); });
+document.getElementById("echips").addEventListener("click", (e) => { const b = e.target.closest("button"); if (b) setE(+b.dataset.e); });
+document.getElementById("cchips").addEventListener("click", (e) => { const b = e.target.closest("button"); if (!b) return; CHAIN = CHAINS.find((c) => c[1] === +b.dataset.z) || CHAIN; drawChainChips(); drawRadii(); drawChain(); });
+document.getElementById("kind").addEventListener("click", (e) => { const b = e.target.closest("button"); if (!b) return; S.kind = b.dataset.v; setSlidersForKind(); update(true); });
+document.getElementById("refit").addEventListener("click", () => { S.par = { ...FIT }; setSlidersForKind(); update(true); });
+document.getElementById("wsb").addEventListener("click", (e) => {
+  S.ws = !S.ws; e.target.setAttribute("aria-pressed", S.ws ? "true" : "false");
+  WSD = S.ws ? shellModel(S.set) : null; update(false);
+});
+let pend = false;
+function onSlide() {
+  if (pend) return; pend = true;
+  requestAnimationFrame(() => {
+    pend = false;
+    const v = +document.getElementById("p1").value;
+    if (S.kind === "fermi") { S.par.c = v; S.par.a = +document.getElementById("p2").value; }
+    if (S.kind === "sphere") S.par.R = v;
+    if (S.kind === "gauss") S.par.b = v;
+    document.getElementById("o1").textContent = `${v.toFixed(3)} fm`;
+    document.getElementById("o2").textContent = `${S.par.a.toFixed(3)} fm`;
+    update(true);
+  });
+}
+document.getElementById("p1").addEventListener("input", onSlide);
+document.getElementById("p2").addEventListener("input", onSlide);
+let pendE = false;
+document.getElementById("es").addEventListener("input", () => {
+  if (pendE) return; pendE = true;
+  requestAnimationFrame(() => { pendE = false; setE(Math.round(Math.pow(10, +document.getElementById("es").value))); });
+});
+addEventListener("hashchange", () => {
+  const h = parseHash(); if (!h) return;
+  if (h.E) S.E = Math.min(EMAX, Math.max(EMIN, h.E));
+  if (h.kind) S.kind = h.kind;
+  document.getElementById("es").value = L10(S.E);
+  if (h.id !== S.set.id) setNucleus(h.id); else { setSlidersForKind(); update(true); }
+});
+addEventListener("resize", () => {
+  camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight); composer.setSize(innerWidth, innerHeight);
+  fitCamera(); drawRho(); drawFF(); drawXS(); drawRadii(); drawChain();
+});
+let quality = innerWidth < 700 ? "low" : "high";
+function applyQuality() {
+  scene.background.copy(quality === "high" ? GROUND_PRE_ACES : GROUND);
+  cMat.uniforms.uA.value = quality === "high" ? 1 : 0.4;          // no bloom to spread the light: fewer additive layers saturate
+  for (const b of document.querySelectorAll("#qmode button")) b.setAttribute("aria-pressed", b.dataset.v === quality ? "true" : "false");
+  document.getElementById("vnote").innerHTML = `Nucleus, beam and waves are to one scale, 1 unit = 1 fm: the cloud is drawn from 4πr²ρ(r) of the density chosen above, the amber shell is the equivalent sharp sphere. On the horizontal sheet, blue crests: the incoming plane wave, spaced by λ; gold crests: the outgoing spherical wave, bright where |F(q(θ))|² is large (brightness 1 + log₁₀|F|²/8, so eight decades from black to full; the Mott factor, a smooth fall with angle, is divided out). The bowl is the lower half of a detector sphere around the target: the same pattern against the angle from the beam, with the zeros of F as thin amber circles and 30° lines. It is not to scale (a real spectrometer sits metres away), and the crests move at no particular speed.`;
+}
+document.getElementById("qmode").addEventListener("click", (e) => { const b = e.target.closest("button"); if (!b) return; quality = b.dataset.v; applyQuality(); });
+
+function fitCamera() {
+  const wide = innerWidth / innerHeight;
+  const d = wide > 1.2 ? 300 : 420;
+  controls.target.set(wide > 1.2 ? 4 : 0, -6, 0);
+  camera.position.set(-55, 150, 125).normalize().multiplyScalar(d).add(controls.target);
+}
+drawStatic();
+applyQuality();
+{
+  const h = parseHash();
+  if (h && h.E) S.E = Math.min(EMAX, Math.max(EMIN, h.E));
+  if (h && h.kind) S.kind = h.kind;
+  document.getElementById("es").value = L10(S.E);
+  for (const b of document.querySelectorAll("#echips button")) b.setAttribute("aria-pressed", Math.abs(+b.dataset.e - S.E) < 1e-9 ? "true" : "false");
+  setNucleus(h ? h.id : "208Pb");
+}
+fitCamera();
+
+let last = performance.now(), tW = 0;
+function animate(now) {
+  requestAnimationFrame(animate);
+  const dt = Math.min(0.1, Math.max(0, (now - last) / 1000)); last = now;
+  controls.update();
+  const pix = renderer.domElement.height / (2 * Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2));
+  cMat.uniforms.uPix.value = pix; eMat.uniforms.uPix.value = pix;
+  if (!reduce) {
+    tW += dt;
+    // crests advance 9 fm per second of screen time; electrons ride in the pencil
+    sheetMat.uniforms.uT.value = tW * 9 * sheetMat.uniforms.uK.value;
+    for (let i = 0; i < NE; i++) { const x = ((ePh[i] + tW * 0.16) % 1); ePos[3 * i] = -RD + (RD - 3) * x; }
+    eGeo.attributes.position.needsUpdate = true;
+    cloud.rotation.y += dt * 0.05;
+  }
+  if (quality === "high") composer.render(); else renderer.render(scene, camera);
+  drawLabels();
+}
+requestAnimationFrame(animate);
+</script>
+<script src="assets/glass.js"></script>
+</body>
+</html>

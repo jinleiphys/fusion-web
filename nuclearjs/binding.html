@@ -1,0 +1,958 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Binding energy · nuclearjs</title>
+<link rel="stylesheet" href="assets/glass.css">
+<style>
+body{margin:0}
+:root{
+  color-scheme:dark;
+  --ground:#0b0d12; --line:#262c3a;
+  --ink:#e6e8ee; --muted:#8a92a6; --accent:#f2c14e;
+  --ee:#a8cdf2; --oa:#9fd7b0; --oo:#ff9656; --fus:#6fd0a4; --fis:#ff9656;
+  --sans:"Avenir Next","Futura","Helvetica Neue","PingFang SC","Noto Sans SC",system-ui,sans-serif;
+  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+}
+html,body{height:100%}
+body{background:var(--ground);color:var(--ink);font-family:var(--sans);overflow:hidden}
+#stage{position:fixed;inset:0}
+#stage canvas{display:block;touch-action:none}
+.panel{position:fixed;border-radius:18px;padding:16px 18px;display:flex;flex-direction:column;gap:12px;overflow:auto;box-sizing:border-box}
+.panel{z-index:2}
+.panel>*{flex-shrink:0}
+#ctl{left:16px;top:calc(16px + env(safe-area-inset-top,0px));width:min(330px,calc(100% - 32px));max-height:calc(100% - 32px)}
+#side{right:16px;top:calc(16px + env(safe-area-inset-top,0px));width:370px;max-height:calc(100% - 32px);gap:8px}
+h1{margin:0;font-size:22px;font-weight:600;letter-spacing:.01em}
+.sub{margin:2px 0 0;color:var(--muted);font-size:13px;line-height:1.45}
+.sub sup,.src sup,.claim sup,.cap sup,.kv sup{font-size:.7em}
+.grp{display:flex;flex-direction:column;gap:6px}
+.lab{font-size:11px;text-transform:uppercase;letter-spacing:.12em;color:var(--muted)}
+.seg{display:flex;border:1px solid var(--line);border-radius:4px;overflow:hidden}
+.seg button{flex:1;background:none;border:0;color:var(--muted);font:500 12px var(--mono);padding:6px 4px;cursor:pointer}
+.seg button+button{border-left:1px solid var(--line)}
+.seg button[aria-pressed="true"]{background:#1f2533;color:var(--ink)}
+button:focus-visible,input:focus-visible,summary:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+input[type=text]{background:#0f121a;border:1px solid var(--line);border-radius:4px;color:var(--ink);font:13px var(--mono);padding:6px 8px;width:100%;box-sizing:border-box}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chips button{background:#161a24;border:1px solid var(--line);border-radius:4px;color:var(--ink);font:12px var(--mono);padding:5px 8px;cursor:pointer}
+.chips button:hover{border-color:var(--muted)}
+.chips button[aria-pressed="true"]{border-color:var(--accent);color:var(--accent)}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:3px 10px;font:12px var(--mono);font-variant-numeric:tabular-nums}
+.kv dt{color:var(--muted)}.kv dd{margin:0}
+.kv .pos{color:#ffb38a}.kv .neg{color:#8fc1ff}
+.est{color:var(--accent);font-weight:700}
+.row{display:flex;gap:8px;align-items:center;font:12px var(--mono);color:var(--muted)}
+.row input[type=range]{flex:1;accent-color:var(--accent);min-width:0}
+.row output{min-width:58px;text-align:right;color:var(--ink);font-variant-numeric:tabular-nums}
+.row span{min-width:26px}
+.formula{font:12px/1.6 var(--mono);color:#c9cdd8;background:#0f121a;border:1px solid var(--line);border-radius:6px;padding:7px 9px}
+.formula sup{font-size:.72em}
+details summary{cursor:pointer;font-size:11px;text-transform:uppercase;letter-spacing:.12em;color:var(--muted);list-style:none}
+details summary::before{content:"▸ ";}
+details[open] summary::before{content:"▾ ";}
+details .grp{margin-top:8px}
+.home{font:12px var(--mono);color:var(--muted);text-decoration:none}.home:hover{color:var(--ink)}
+.go{font:12px var(--mono);color:var(--accent);text-decoration:none}.go:hover{text-decoration:underline}
+.src{font-size:11px;color:var(--muted);line-height:1.45}
+.src a{color:var(--muted)}
+.claim{margin:0;font-size:13px;line-height:1.5;color:#c9cdd8}
+.claim b{color:var(--ink);font-weight:600;font-variant-numeric:tabular-nums}
+.claim .ref{color:var(--muted);font-size:11.5px}
+.warn{color:#ffb38a}
+.legend{display:flex;flex-direction:column;gap:5px;font:11px var(--mono);color:var(--muted)}
+.ramp{height:9px;border-radius:2px}
+.rampl{display:flex;justify-content:space-between}
+.plot{width:100%;height:150px;display:block;cursor:crosshair}
+.cap{display:flex;justify-content:space-between;align-items:baseline;font:11px var(--mono);color:var(--muted);gap:8px}
+.cap b{font:600 13px var(--sans);color:var(--ink)}
+.cap .seg button{padding:2px 7px;font-size:11px}
+.key{display:flex;gap:10px;flex-wrap:wrap;font:11px var(--mono);color:var(--muted)}
+.key i{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:4px;vertical-align:0}
+.mag{position:fixed;font:500 11px var(--mono);color:var(--accent);pointer-events:none;transform:translate(-50%,-50%);opacity:.85;white-space:nowrap}
+.mag.big{font:600 13px var(--sans);opacity:1;text-shadow:0 1px 6px #000}
+.mag.fus{color:var(--fus)}.mag.fis{color:var(--fis)}.mag.top{color:#fff6d6}.mag.drip{color:#8fd8ff}
+#stamp{position:fixed;left:50%;bottom:58px;transform:translateX(-50%);text-align:center;pointer-events:none}
+#stamp b{display:block;font:600 clamp(30px,4.6vw,54px)/1 var(--sans);letter-spacing:-.01em}
+#stamp b sup{font-size:.55em}
+#stamp small{display:block;font:500 12px var(--mono);color:var(--muted);margin-top:6px}
+.hint{position:fixed;right:16px;bottom:calc(14px + env(safe-area-inset-bottom,0px));font:11px var(--mono);color:var(--muted)}
+@media (max-width:1180px){#stamp{display:none}}
+#viewtools{position:fixed;z-index:4;left:50%;bottom:14px;transform:translateX(-50%);display:flex;border-radius:10px;overflow:hidden}
+#viewtools button{background:transparent;border:0;color:var(--muted);padding:8px 12px;cursor:pointer;font:11px var(--mono)}
+#viewtools button[aria-pressed="true"]{color:var(--accent);background:#1f2533}
+#selTag{position:fixed;z-index:1;pointer-events:none;transform:translate(-50%,-100%);text-align:center;border:1px solid #f2c14e66;border-radius:8px;background:#0b0d12dd;padding:6px 9px;font:11px var(--mono);color:var(--accent);white-space:nowrap;line-height:1.5}
+#selTag b{font:600 14px var(--sans);color:var(--ink)}
+body.scene-only .panel,body.scene-only .hint{display:none}
+body.scene-only #stamp{display:block;left:50%}
+@media (max-width:900px){
+  #ctl{max-height:42vh}
+  #side{left:16px;right:16px;width:auto;top:auto;bottom:calc(12px + env(safe-area-inset-bottom,0px));max-height:44vh}
+  #stamp,.hint,.mag{display:none}
+}
+@media (max-width:560px){.panel{padding:10px 12px;gap:9px}h1{font-size:18px}}
+</style>
+<script data-goatcounter="https://jinleiphys.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
+</head>
+<body>
+
+<div id="stage"></div>
+<div id="viewtools" class="glass"><button id="dripBtn" aria-pressed="false" title="S_n = 0 and S_p = 0 of the drop, drawn on the floor">drop's drip lines</button><button id="sceneOnly" aria-pressed="false" title="Hide or show panels (H)">hide panels · H</button></div>
+<div id="selTag"></div>
+<div id="mags"></div>
+
+<aside id="ctl" class="panel glass glass-deep" data-glass data-glass-bevel="22" data-glass-scale="42">
+  <div>
+    <a class="home" href="index.html">← nuclearjs</a> &nbsp; <a class="home" href="https://vibeinscience.com/nuclides.html">nuclide chart</a>
+    <h1>Binding energy and the liquid drop</h1>
+    <p class="sub">Each column is one nucleus of AME2020; its height is the binding energy per nucleon. B/A climbs steeply through the light nuclei, peaks near nickel and iron, and falls slowly towards uranium: fusing light nuclei and splitting heavy ones both move uphill in B/A and release energy. Five terms of a charged liquid drop reproduce the landscape to a few MeV in B; what they miss is mainly the shell structure.</p>
+  </div>
+  <div class="grp">
+    <div class="lab">Height</div>
+    <div class="seg" id="hmode">
+      <button data-v="ba" aria-pressed="true">B/A</button>
+      <button data-v="res" aria-pressed="false" title="measured B minus the liquid drop's B">B − B<sub>drop</sub></button>
+    </div>
+    <div class="legend" id="legend"></div>
+  </div>
+  <div class="grp">
+    <label class="lab" for="find">Nucleus</label>
+    <input id="find" type="text" placeholder="56Fe, 208Pb, U" autocomplete="off" spellcheck="false">
+    <div class="lab" id="selLab">Selected</div>
+    <dl class="kv" id="info"></dl>
+    <a class="go" id="toShells" href="shells.html">its separation energies and shell gaps →</a>
+  </div>
+  <div class="grp">
+    <div class="lab">The drop, fitted live</div>
+    <div class="formula">B = a<sub>v</sub>A − a<sub>s</sub>A<sup>2/3</sup> − a<sub>c</sub><span id="cform">Z(Z−1)</span>/A<sup>1/3</sup> − a<sub>a</sub>(N−Z)<sup>2</sup>/A + a<sub>p</sub>δ/A<sup>1/2</sup><br>δ = +1 even-even, 0 odd A, −1 odd-odd</div>
+    <div class="row"><span>fit</span><div class="seg" id="amin" style="flex:1"><button data-v="16" aria-pressed="true">A ≥ 16</button><button data-v="50">A ≥ 50</button><button data-v="100">A ≥ 100</button></div></div>
+    <div class="row"><span>a<sub>c</sub>×</span><div class="seg" id="cmode" style="flex:1"><button data-v="zz1" aria-pressed="true">Z(Z−1)</button><button data-v="zz">Z<sup>2</sup></button></div></div>
+    <div id="sliders"></div>
+    <div class="chips"><button id="lsq" aria-pressed="true">least squares</button><button id="bzA" title="Benzaid et al. 2020, Eq. (7), A ≥ 50, Coulomb Z²">Benzaid 2020</button></div>
+    <p class="claim" id="fitout"></p>
+  </div>
+  <div class="grp">
+    <div class="lab">Energy released, from measured masses</div>
+    <div class="chips" id="react">
+      <button data-r="dt">d + t</button>
+      <button data-r="3a">3α → <sup>12</sup>C</button>
+      <button data-r="ccne"><sup>12</sup>C + <sup>12</sup>C</button>
+      <button data-r="u235">n + <sup>235</sup>U</button>
+      <button data-r="u238a"><sup>238</sup>U α</button>
+    </div>
+    <p class="claim" id="qout"></p>
+  </div>
+  <div class="grp">
+    <div class="lab">The top of the ridge</div>
+    <p class="claim" id="ridge"></p>
+  </div>
+  <div class="grp">
+    <div class="lab">Rendering</div>
+    <div class="seg" id="qmode">
+      <button data-v="high" title="glass, shadows and bloom">cinematic</button>
+      <button data-v="low">fast</button>
+    </div>
+    <p class="src">Column height and colour are the quantity on the legend's scale; the glass, lighting, shadows, the glowing valley path and the glow of the lit cores are illustration.</p>
+  </div>
+  <details>
+    <summary>Definitions</summary>
+    <div class="grp">
+      <p class="sub">B(Z,N) = Z Δ(<sup>1</sup>H) + N Δ(n) − Δ(Z,N) from the atomic mass excesses Δ of AME2020. This is AME's own convention (atomic masses, so the electrons' binding is not removed); B/A computed this way equals AME2020's printed B/A column to its rounding for all <span id="nAll"></span> nuclides with A ≥ 2 (tests/check_binding.py).</p>
+      <p class="sub">The fit: unweighted least squares on B (not B/A) over every nuclide with a measured mass and A at or above the cut; masses AME estimates from systematics (<span class="est">#</span>) are left out. Unweighted, because the formula misses by MeV while the mass uncertainties of the fitted nuclides are far smaller (<span id="sigStat"></span>): weighting by the mass uncertainties would let a handful of precisely measured nuclei decide the coefficients. The formula is linear in the five coefficients, so the minimum is the solution of a 5×5 linear system, solved in your browser whenever the cut or the Coulomb form changes.</p>
+      <p class="sub">Pairing: a<sub>p</sub>δ/A<sup>1/2</sup>. Other conventions (a<sub>p</sub>/A<sup>3/4</sup>, or a separate odd-odd term) change a<sub>p</sub> and its meaning, so coefficients from different papers can only be compared within the same form. Coulomb: Z(Z−1) removes a proton's self-energy; Z<sup>2</sup> is the older form.</p>
+      <p class="sub">Valley floor: the integer Z of largest B<sub>drop</sub> at each A, pairing left out, i.e. the drop's most bound isobar; the glowing path follows the measured most bound isobars (largest B at fixed A). Neither is the β-stability line, which runs through the smallest atomic mass at fixed A: a neutron outweighs a hydrogen atom, so the two choices differ, for the measured masses at <span id="isoStat"></span>. The β valley with its decays is on <a href="beta.html">beta.html</a>.</p>
+      <p class="sub">Drip lines of the drop: a nucleus counts as bound against neutron emission when S<sub>n</sub> = B(Z,N) − B(Z,N−1) &gt; 0 and S<sub>2n</sub> = B(Z,N) − B(Z,N−2) &gt; 0, and the neutron drip line is the largest such N for each Z; likewise S<sub>p</sub>, S<sub>2p</sub> and the smallest N on the proton side. Pairing makes S<sub>n</sub> zigzag, so odd-N isotopes can be unbound inside the line while heavier even-N ones are still bound. The heaviest isotope with a measured mass is not the drip line: some measured nuclei are unbound (<sup>25</sup>O has S<sub>n</sub> &lt; 0, <sup>26</sup>O has S<sub>2n</sub> &lt; 0), and many bound ones have no measured mass.</p>
+    </div>
+  </details>
+  <div class="src">
+    Masses: AME2020, Wang et al., Chin. Phys. C 45, 030003 (2021), <a href="https://www-nds.iaea.org/amdc/">IAEA AMDC</a> mass_1.mas20; stable nuclei and element names: NUBASE2020, Kondev et al., Chin. Phys. C 45, 030001 (2021). Comparison set: D. Benzaid, S. Bentridi, A. Kerraci, N. Amrani, Nucl. Sci. Tech. 31, 9 (2020), Eq. (7), fitted to AME2016. The β valley itself, with decays, is on <a href="beta.html">beta.html</a>; fission of the drop on <a href="fission.html">fission.html</a>.
+  </div>
+</aside>
+
+<aside id="side" class="panel glass glass-deep" data-glass data-glass-bevel="22" data-glass-scale="42">
+  <div class="cap"><b>B/A against A</b><div class="seg" id="zoom"><button data-v="full" aria-pressed="true">all</button><button data-v="zoom">A≥30</button></div></div>
+  <canvas id="p1" class="plot" style="height:190px"></canvas>
+  <div class="key"><span><i style="background:var(--ee)"></i>even-even</span><span><i style="background:var(--oa)"></i>odd A</span><span><i style="background:var(--oo)"></i>odd-odd</span><span><i style="background:#fff;border-radius:0;height:2px;width:12px;vertical-align:3px"></i>drop, valley floor (most bound isobar)</span></div>
+  <div class="cap"><b>B − B<sub>drop</sub> against N</b><span>MeV</span></div>
+  <canvas id="p2" class="plot" style="height:120px"></canvas>
+  <div class="cap"><b>B − B<sub>drop</sub> against Z</b><span>MeV</span></div>
+  <canvas id="p3" class="plot" style="height:120px"></canvas>
+  <div class="cap"><b id="t4">The drop's terms, per nucleon</b><span>MeV</span></div>
+  <canvas id="p4" class="plot" style="height:150px"></canvas>
+  <div class="src" id="plotNote"></div>
+</aside>
+
+<div id="stamp"></div>
+<div class="hint">drag to orbit · scroll to zoom · right-drag to pan · click a column</div>
+
+<script src="assets/three-bundle.js"></script>
+<script src="assets/three-post.js"></script>
+<script src="assets/hw-studio.js"></script>
+<script src="assets/nubase.js"></script>
+<script src="assets/shells-data.js"></script>
+<script src="assets/binding.js"></script>
+<script>
+"use strict";
+// ---------- data
+const T = BW.build(window.AME);
+const ELEM = {}, SYM = {}, STABLE = new Set();
+for (const r of window.NUC) { ELEM[r[0]] = r[2]; SYM[r[2].toLowerCase()] = r[0]; if (r[3] === 99) STABLE.add(r[0] * 1000 + r[1]); }
+const NUCS = T.list;                                   // A >= 2, measured and estimated
+const n = NUCS.length;
+const IDX = new Map(NUCS.map((o, i) => [o.Z * 1000 + o.N, i]));
+const MEAS = NUCS.filter((o) => !o.est);
+const sup = (A) => `<sup>${A}</sup>`;
+const nm = (Z, N) => `${sup(Z + N)}${ELEM[Z]}`;
+const MAGIC = [8, 20, 28, 50, 82, 126];
+const f3 = (v, d) => v.toFixed(d).replace("-", "−");
+const sgn = (v, d) => (v >= 0 ? "+" : "−") + Math.abs(v).toFixed(d);
+
+function parseNucleus(s) {
+  s = s.trim().toLowerCase().replace(/^#/, "").replace(/[-\s]/g, "");
+  const m = s.match(/^(\d+)([a-z]+)$/) || s.match(/^([a-z]+)(\d+)$/);
+  if (!m) return null;
+  let A, el;
+  if (/^\d/.test(m[1])) { A = +m[1]; el = m[2]; } else { el = m[1]; A = +m[2]; }
+  const Z = SYM[el];
+  if (Z == null || A <= Z || A - Z >= 1000 || !Number.isSafeInteger(A)) return null;
+  return { Z, N: A - Z };
+}
+
+// ---------- state: height mode, selection, fit cut and Coulomb form, the coefficients on the sliders
+const S = { h: "ba", sel: [26, 30], amin: 16, form: "zz1", c: null, fit: null, src: "lsq", zoom: "full", drip: false, react: null };
+const KEYS = ["a<sub>v</sub>", "a<sub>s</sub>", "a<sub>c</sub>", "a<sub>a</sub>", "a<sub>p</sub>"];
+const SL = [[13, 18, 0.001], [12, 22, 0.001], [0.5, 0.9, 0.0001], [14, 30, 0.001], [0, 20, 0.01]];
+const B_drop = (Z, N) => BW.ldm(Z, N, S.c, S.form);
+const inFit = (o) => !o.est && o.A >= S.amin;
+
+// ---------- scene
+const stage = document.getElementById("stage");
+const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.setSize(innerWidth, innerHeight);
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.05;
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+stage.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(40, innerWidth / innerHeight, 0.5, 1200);
+function applyOffset() {
+  const a = document.getElementById("ctl").getBoundingClientRect(), b = document.getElementById("side").getBoundingClientRect();
+  const free = innerWidth > 900 && !document.body.classList.contains("scene-only") ? (a.right + b.left) / 2 : innerWidth / 2;
+  const dx = innerWidth / 2 - free;
+  if (Math.abs(dx) > 1) camera.setViewOffset(innerWidth, innerHeight, dx, 0, innerWidth, innerHeight); else camera.clearViewOffset();
+}
+applyOffset();
+const POST = HW.post(renderer, scene, camera, { bloom: [0.45, 0.5, 0.9], ao: { radius: 0.9, thickness: 1.5, scale: 1, distanceExponent: 1.5 }, aoIntensity: 0.8 });
+const composer = POST.composer;
+scene.environment = HW.studioEnv(renderer, { intensity: 0.9 });
+scene.fog = new THREE.Fog("#0b0d12", 280, 640);
+// background through ACES on the bloom path: the linear colour that maps back to #0b0d12 (as shells.html)
+const GROUND = new THREE.Color("#0b0d12");
+const GROUND_PRE_ACES = new THREE.Color().setRGB(0.0115476, 0.0131218, 0.0174740, THREE.LinearSRGBColorSpace);
+scene.background = GROUND.clone();
+
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+controls.dampingFactor = 0.08;
+controls.screenSpacePanning = false;
+controls.maxPolarAngle = Math.PI * 0.47;
+controls.minDistance = 10;
+controls.maxDistance = 520;
+const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+scene.add(new THREE.HemisphereLight("#cfd8ff", "#1a1410", 0.9));
+const sun = new THREE.DirectionalLight("#fff3e0", 2.2);
+sun.position.set(-60, 120, 80);
+sun.shadow.mapSize.set(4096, 4096);
+Object.assign(sun.shadow.camera, { left: -150, right: 150, top: 130, bottom: -130, near: 10, far: 420 });
+sun.shadow.bias = -0.0004;
+sun.shadow.normalBias = 0.04;
+scene.add(sun, sun.target);
+const rim = new THREE.DirectionalLight("#7fa6ff", 0.6);
+rim.position.set(80, 40, -100);
+scene.add(rim);
+
+// layout: N across (x), Z into depth (−z), as on the nuclide chart
+const X = (N) => N, Zc = (Z) => -Z;
+const rnd = HW.rng(2020);
+const floorMap = HW.canvasTex(1024, 1024, (x, w, h) => {
+  x.fillStyle = "#151a26"; x.fillRect(0, 0, w, h);
+  for (let i = 0; i < 6000; i++) { const v = rnd() * 10 | 0; x.fillStyle = `rgba(${30 + v},${36 + v},${50 + v},0.35)`; x.fillRect(rnd() * w, rnd() * h, 2, 2); }
+  const c = w / 10;
+  x.strokeStyle = "#252c3d"; x.lineWidth = 2.2;
+  for (let k = 0; k <= 10; k++) { x.beginPath(); x.moveTo(k * c, 0); x.lineTo(k * c, h); x.stroke(); x.beginPath(); x.moveTo(0, k * c); x.lineTo(w, k * c); x.stroke(); }
+  x.strokeStyle = "#2f3850"; x.lineWidth = 3.2;
+  x.beginPath(); x.moveTo(0, 0); x.lineTo(w, 0); x.moveTo(0, 0); x.lineTo(0, h); x.stroke();
+}, [140, 140], true);
+floorMap.offset.set(0.05, 0.05);
+const floor = new THREE.Mesh(new THREE.PlaneGeometry(1400, 1400),
+  new THREE.MeshStandardMaterial({ map: floorMap, roughness: 0.85, metalness: 0.05, envMapIntensity: 0.3 }));
+floor.rotation.x = -Math.PI / 2;
+floor.position.y = -0.02;
+floor.receiveShadow = true;
+scene.add(floor);
+
+// magic-number lanes painted on the floor (as shells.html)
+const laneMat = new THREE.MeshBasicMaterial({ color: new THREE.Color("#151a26").lerp(new THREE.Color("#f2c14e"), 0.42) });
+const labels = [], laneGeo = [];
+function strip(A, B, w, out) {
+  const d = B.clone().sub(A), L = d.length(); d.normalize();
+  const g = new THREE.PlaneGeometry(L, w); g.rotateX(-Math.PI / 2); g.rotateY(-Math.atan2(d.z, d.x));
+  const c = A.clone().addScaledVector(d, L / 2); g.translate(c.x, c.y, c.z); out.push(g);
+}
+function addLabel(txt, p, cls) {
+  const el = document.createElement("div");
+  el.className = "mag" + (cls ? " " + cls : ""); el.innerHTML = txt;
+  document.getElementById("mags").appendChild(el);
+  const l = { el, p, cls }; labels.push(l); return l;
+}
+for (const m of MAGIC) {
+  const zs = NUCS.filter((o) => o.N === m).map((o) => o.Z), ns = NUCS.filter((o) => o.Z === m).map((o) => o.N);
+  if (zs.length) {
+    const lo = Math.min(...zs) - 2, hi = Math.max(...zs) + 2;
+    for (const s of [-0.5, 0.5]) strip(new THREE.Vector3(X(m) + s, 0.01, Zc(lo)), new THREE.Vector3(X(m) + s, 0.01, Zc(hi)), 0.09, laneGeo);
+    addLabel("N=" + m, new THREE.Vector3(X(m), 0, Zc(lo) + 3));
+  }
+  if (ns.length) {
+    const lo = Math.min(...ns) - 2, hi = Math.max(...ns) + 2;
+    for (const s of [-0.5, 0.5]) strip(new THREE.Vector3(X(lo), 0.01, Zc(m) + s), new THREE.Vector3(X(hi), 0.01, Zc(m) + s), 0.09, laneGeo);
+    addLabel("Z=" + m, new THREE.Vector3(X(lo) - 4, 0, Zc(m)));
+  }
+}
+{ const o = new THREE.Mesh(BufferGeometryUtils.mergeGeometries(laneGeo), laneMat); o.userData.noAO = true; scene.add(o); }
+
+// glass columns; a lit core inside the stable nuclei (B/A) or inside the strongest over-binding (residual)
+const geo = new RoundedBoxGeometry(0.92, 1, 0.92, 3, 0.14);
+geo.translate(0, 0.5, 0);
+const mat = new THREE.MeshPhysicalMaterial({
+  transmission: 0.55, thickness: 0.9, ior: 1.46, roughness: 0.06, metalness: 0,
+  clearcoat: 1, clearcoatRoughness: 0.04, specularIntensity: 1, envMapIntensity: 0.8,
+  attenuationColor: "#ffffff", attenuationDistance: 3,
+});
+const mesh = new THREE.InstancedMesh(geo, mat, n);
+mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+mesh.castShadow = mesh.receiveShadow = true;
+scene.add(mesh);
+const coreGeo = new RoundedBoxGeometry(0.46, 1, 0.46, 2, 0.1);
+coreGeo.translate(0, 0.5, 0);
+const core = new THREE.InstancedMesh(coreGeo, new THREE.MeshBasicMaterial({ color: "#ffffff", toneMapped: false }), n);
+core.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+scene.add(core);
+
+const ring = new THREE.Mesh(new THREE.RingGeometry(0.72, 0.9, 40),
+  new THREE.MeshBasicMaterial({ color: "#f2c14e", transparent: true, opacity: 0.95, side: THREE.DoubleSide, toneMapped: false }));
+ring.rotation.x = -Math.PI / 2;
+scene.add(ring);
+const selGeo = new THREE.BoxGeometry(1, 1, 1); selGeo.translate(0, 0.5, 0);
+const selectionOutline = new THREE.LineSegments(new THREE.EdgesGeometry(selGeo), new THREE.LineBasicMaterial({ color: "#f2c14e", toneMapped: false, transparent: true, opacity: 0.9 }));
+selGeo.dispose(); scene.add(selectionOutline);
+// the participants of the chosen reaction: green rings in, amber rings out
+const partRings = new THREE.Group(); scene.add(partRings);
+const ringIn = new THREE.MeshBasicMaterial({ color: "#6fd0a4", transparent: true, opacity: 0.95, side: THREE.DoubleSide, toneMapped: false });
+const ringOut = new THREE.MeshBasicMaterial({ color: "#ff9656", transparent: true, opacity: 0.95, side: THREE.DoubleSide, toneMapped: false });
+
+// ---------- heights and colours
+// B/A: height measured from 5.5 MeV, 6 scene units per MeV, so the 7.6 to 8.8 MeV of the heavy nuclei
+// is a visible relief; the lightest nuclei (B/A below 5.5) are short stubs.
+// Residual: B − B_drop clipped to −8 to +12 MeV, 0.9 units per MeV above a floor at −8, so zero is a plane.
+const KBA = 6, BA0 = 5.5, KR = 0.9, R0 = 8, RMAX = 12;
+const hBA = (ba) => Math.max(0.12, KBA * (ba - BA0));
+const hRes = (r) => KR * (Math.min(RMAX, Math.max(-R0, r)) + R0);
+const STOPS = ["#1c2a4a", "#265c8f", "#2f9ab0", "#6fd0a4", "#e4e98a", "#fff6d6"];
+const STOPC = STOPS.map((c) => new THREE.Color(c));
+const DIV = ["#3f7fe0", "#2f5590", "#3a4256", "#b8603a", "#ff6a3d"];
+const DIVC = DIV.map((c) => new THREE.Color(c));
+function ramp(x, C, out) {
+  x = Math.min(1, Math.max(0, x)) * (C.length - 1);
+  const i = Math.min(C.length - 2, Math.floor(x));
+  return out.copy(C[i]).lerp(C[i + 1], x - i);
+}
+const BA_LO = 7.0, BA_HI = 8.8, RSPAN = 6;
+const hCur = new Float32Array(n), hTo = new Float32Array(n), gCur = new Float32Array(n), gTo = new Float32Array(n);
+const cCur = NUCS.map(() => new THREE.Color()), cTo = NUCS.map(() => new THREE.Color());
+const GREY = new THREE.Color("#59607a"), DIM = new THREE.Color("#3a4052");
+let settling = true;
+function target(first) {
+  for (let i = 0; i < n; i++) {
+    const o = NUCS[i];
+    if (S.h === "ba") {
+      const ba = o.B / o.A;
+      hTo[i] = hBA(ba);
+      ramp((ba - BA_LO) / (BA_HI - BA_LO), STOPC, cTo[i]);
+      gTo[i] = !o.est && STABLE.has(o.Z * 1000 + o.N) ? 0.75 : 0;
+    } else {
+      const r = o.B - B_drop(o.Z, o.N);
+      hTo[i] = hRes(r);
+      ramp((r / RSPAN + 1) / 2, DIVC, cTo[i]);
+      if (!inFit(o)) cTo[i].lerp(DIM, 0.6);
+      gTo[i] = inFit(o) && r > 4 ? Math.min(1, (r - 4) / 5) : 0;
+    }
+    if (o.est) cTo[i].lerp(GREY, 0.65);
+    if (first) { hCur[i] = hTo[i]; cCur[i].copy(cTo[i]); gCur[i] = gTo[i]; }
+  }
+  settling = true;
+  zeroPlane.visible = S.h === "res";
+  valley.visible = S.h === "ba";
+}
+const dummy = new THREE.Object3D(), WHITE = new THREE.Color("#ffffff"), tmpC = new THREE.Color();
+let selIdx = -1;
+function writeInstances() {
+  for (let i = 0; i < n; i++) {
+    const o = NUCS[i], h = hCur[i], fp = o.est ? 0.5 : 1;
+    dummy.position.set(X(o.N), 0, Zc(o.Z));
+    dummy.scale.set(fp, Math.max(1e-4, h), fp);
+    dummy.updateMatrix();
+    mesh.setMatrixAt(i, dummy.matrix);
+    mesh.setColorAt(i, i === selIdx ? WHITE : cCur[i]);
+    const g = gCur[i];
+    if (g > 0.01 && h > 0.3) {
+      dummy.scale.set(1, Math.max(1e-4, h - 0.16), 1); dummy.position.y = 0.04; dummy.updateMatrix();
+      core.setMatrixAt(i, dummy.matrix);
+      tmpC.copy(cCur[i]).multiplyScalar(0.55 + 1.25 * g);
+      core.setColorAt(i, tmpC);
+    } else { dummy.matrix.makeScale(0, 0, 0); core.setMatrixAt(i, dummy.matrix); core.setColorAt(i, cCur[i]); }
+  }
+  mesh.instanceMatrix.needsUpdate = mesh.instanceColor.needsUpdate = true;
+  core.instanceMatrix.needsUpdate = core.instanceColor.needsUpdate = true;
+  if (selIdx >= 0) {
+    const o = NUCS[selIdx], fp = o.est ? 0.5 : 1;
+    selectionOutline.position.set(X(o.N), 0, Zc(o.Z)); selectionOutline.scale.set(fp, hCur[selIdx] + 0.08, fp);
+  }
+}
+function settle(dt) {
+  const k = reduce ? 1 : 1 - Math.exp(-dt / 0.13);
+  let moving = false;
+  for (let i = 0; i < n; i++) {
+    const dh = hTo[i] - hCur[i], dg = gTo[i] - gCur[i];
+    if (Math.abs(dh) > 1e-3 || Math.abs(dg) > 1e-3) { hCur[i] += dh * k; gCur[i] += dg * k; moving = true; } else { hCur[i] = hTo[i]; gCur[i] = gTo[i]; }
+    const c = cCur[i], t = cTo[i];
+    if (Math.abs(c.r - t.r) + Math.abs(c.g - t.g) + Math.abs(c.b - t.b) > 2e-3) { c.lerp(t, k); moving = true; } else c.copy(t);
+  }
+  writeInstances();
+  settling = moving;
+}
+
+// zero plane of the residual: B = B_drop
+let NMAX = 0, ZMAX = 0;
+for (const o of NUCS) { NMAX = Math.max(NMAX, o.N); ZMAX = Math.max(ZMAX, o.Z); }
+const zeroPlane = new THREE.Group();
+{
+  const pts = [], y = KR * R0, x1 = NMAX + 3, z1 = ZMAX + 3;
+  for (let v = 0; v <= x1; v += 10) pts.push(new THREE.Vector3(X(v), y, 3), new THREE.Vector3(X(v), y, -z1));
+  for (let v = 0; v <= z1; v += 10) pts.push(new THREE.Vector3(-3, y, Zc(v)), new THREE.Vector3(x1, y, Zc(v)));
+  const e = new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints(pts), new THREE.LineBasicMaterial({ color: "#9fb8ff", transparent: true, opacity: 0.22, depthWrite: false }));
+  zeroPlane.add(e); zeroPlane.visible = false; scene.add(zeroPlane);
+}
+const zeroLab = addLabel("B = B<sub>drop</sub>", new THREE.Vector3(NMAX + 4, KR * R0, -ZMAX - 2), "drip");
+
+// the valley of the most bound isobars, measured: a glowing path over the column tops, green from the
+// light nuclei up to the top of the ridge (fusion), amber from uranium down to it (fission, alpha decay)
+const valley = new THREE.Group(); scene.add(valley);
+const RIDGE = MEAS.reduce((a, o) => (o.B / o.A > a.B / a.A ? o : a));
+// the most bound measured isobar at each A; above A = 24 its N, Z and B/A averaged over nine neighbouring A
+// (the raw path zigzags between neighbouring isobars); up to A = 24 only the alpha-like A = 4, 8, ..., 24,
+// unsmoothed, so the path does not zigzag across the 4He spike. Drawn above the column tops.
+const VAL_PT = [];
+for (let A = 2; A <= 270; A++) { const iso = MEAS.filter((o) => o.A === A); if (iso.length) VAL_PT[A] = iso.reduce((a, b) => (b.B > a.B ? b : a)); }
+function valleyPath(A0, A1) {
+  const pts = [], step = A0 < A1 ? 1 : -1;
+  for (let A = A0; step > 0 ? A <= A1 : A >= A1; A += step) {
+    if (!VAL_PT[A] || (A > 24 && A !== A1 && (A - A1) % 3) || (A <= 24 && A % 4)) continue;
+    let o;
+    if (A === A1) o = { N: RIDGE.N, Z: RIDGE.Z, ba: RIDGE.B / RIDGE.A };
+    else if (A <= 24) o = { N: VAL_PT[A].N, Z: VAL_PT[A].Z, ba: VAL_PT[A].B / A };
+    else {
+      let sn = 0, sz = 0, sb = 0, k = 0;
+      for (let a = A - 4; a <= A + 4; a++) if (VAL_PT[a]) { sn += VAL_PT[a].N; sz += VAL_PT[a].Z; sb += VAL_PT[a].B / a; k++; }
+      o = { N: sn / k, Z: sz / k, ba: sb / k };
+    }
+    pts.push(new THREE.Vector3(X(o.N), hBA(o.ba) + 1.6, Zc(o.Z)));
+  }
+  return new THREE.CatmullRomCurve3(pts, false, "centripetal");
+}
+for (const [a0, a1, col] of [[4, RIDGE.A, "#6fd0a4"], [238, RIDGE.A, "#ff9656"]]) {
+  const cv = valleyPath(a0, a1);
+  const m = new THREE.MeshBasicMaterial({ color: new THREE.Color(col).multiplyScalar(1.6), toneMapped: false });
+  valley.add(new THREE.Mesh(new THREE.TubeGeometry(cv, 400, 0.32, 12, false), m));
+  const tip = cv.getPoint(1), dir = cv.getTangent(0.985);
+  const cone = new THREE.Mesh(new THREE.ConeGeometry(0.75, 2.2, 20), m);
+  cone.position.copy(tip).addScaledVector(dir, -0.6);
+  cone.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir);
+  valley.add(cone);
+}
+{ // a beam of light over the top of the ridge
+  const h = hBA(RIDGE.B / RIDGE.A);
+  const g = new THREE.CylinderGeometry(0.16, 0.16, 26, 12, 1, true); g.translate(X(RIDGE.N), h + 13, Zc(RIDGE.Z));
+  valley.add(new THREE.Mesh(g, new THREE.MeshBasicMaterial({ color: "#fff2c0", transparent: true, opacity: 0.55, toneMapped: false, depthWrite: false })));
+}
+const valleyLabs = [
+  addLabel("fusion climbs the slope", new THREE.Vector3(X(24), hBA(8.0) + 2, Zc(8)), "big fus"),
+  addLabel("fission, α decay climb back from the heavy side", new THREE.Vector3(X(118), hBA(7.6) + 7, Zc(92)), "big fis"),
+  addLabel(`${nm(RIDGE.Z, RIDGE.N)}: largest B/A`, new THREE.Vector3(X(RIDGE.N), hBA(RIDGE.B / RIDGE.A) + 27, Zc(RIDGE.Z)), "big top"),
+];
+
+// drip lines of the drop, on the floor; and the edge of the measured masses for comparison
+const dripGroup = new THREE.Group(); dripGroup.visible = false; scene.add(dripGroup);
+const dripMat = new THREE.LineBasicMaterial({ color: "#8fd8ff", toneMapped: false });
+const dripLabs = [addLabel("drop: S<sub>n</sub> = 0", new THREE.Vector3(), "drip"), addLabel("drop: S<sub>p</sub> = 0", new THREE.Vector3(), "drip")];
+let DRIP = [];
+function buildDrip() {
+  DRIP = BW.drip(S.c, S.form, ZMAX);
+  for (const c of dripGroup.children) c.geometry.dispose();
+  dripGroup.clear();
+  for (const key of ["nDrip", "pDrip"]) {
+    const pts = [];
+    for (const d of DRIP) { const N = d[key] + (key === "nDrip" ? 0.5 : -0.5); pts.push(new THREE.Vector3(X(N), 0.05, Zc(d.Z) + 0.5), new THREE.Vector3(X(N), 0.05, Zc(d.Z) - 0.5)); }
+    const g = new THREE.BufferGeometry().setFromPoints(pts);
+    dripGroup.add(new THREE.Line(g, dripMat));
+  }
+  const d60 = DRIP.find((d) => d.Z === 60) || DRIP[DRIP.length - 1];
+  dripLabs[0].p.set(X(d60.nDrip) + 7, 0.1, Zc(d60.Z));
+  const d40 = DRIP.find((d) => d.Z === 70) || DRIP[DRIP.length - 1];
+  dripLabs[1].p.set(X(d40.pDrip) - 8, 0.1, Zc(d40.Z));
+}
+
+// ---------- 2D plots
+function setupCanvas(c) {
+  const d = Math.min(devicePixelRatio, 2), w = c.clientWidth, h = c.clientHeight;
+  c.width = w * d; c.height = h * d;
+  const x = c.getContext("2d"); x.setTransform(d, 0, 0, d, 0, 0);
+  return { x, w, h };
+}
+const NICE = [0.1, 0.2, 0.25, 0.5, 1, 2, 2.5, 5, 10, 20, 50];
+// axes with grid; returns the coordinate maps
+function axes(ctx, w, h, xr, yr, xl, magic) {
+  const L = 32, R = 8, Tp = 8, B = 18;
+  const Xp = (v) => L + (v - xr[0]) / (xr[1] - xr[0]) * (w - L - R);
+  const Yp = (v) => Tp + (yr[1] - v) / (yr[1] - yr[0]) * (h - Tp - B);
+  ctx.font = "10px ui-monospace,Menlo,monospace"; ctx.lineWidth = 1;
+  const step = NICE.find((s) => (yr[1] - yr[0]) / s <= 5) || 100;
+  for (let v = Math.ceil(yr[0] / step) * step; v <= yr[1] + 1e-9; v += step) {
+    ctx.strokeStyle = Math.abs(v) < 1e-9 ? "#4a5470" : "#1e2432";
+    ctx.beginPath(); ctx.moveTo(L, Yp(v)); ctx.lineTo(w - R, Yp(v)); ctx.stroke();
+    ctx.fillStyle = "#8a92a6"; ctx.textAlign = "right"; ctx.fillText((+v.toFixed(2)).toString().replace("-", "−"), L - 4, Yp(v) + 3);
+  }
+  const xs = NICE.find((s) => (xr[1] - xr[0]) / s <= 6) || 100;
+  ctx.textAlign = "center";
+  for (let v = Math.ceil(xr[0] / xs) * xs; v <= xr[1]; v += xs) if (Xp(v) < w - R - 18) ctx.fillText(v, Xp(v), h - 5);
+  ctx.textAlign = "right"; ctx.fillText(xl, w - R, h - 5);
+  for (const m of magic || []) {
+    if (m < xr[0] || m > xr[1]) continue;
+    ctx.strokeStyle = "rgba(242,193,78,.45)"; ctx.setLineDash([3, 3]);
+    ctx.beginPath(); ctx.moveTo(Xp(m), Tp); ctx.lineTo(Xp(m), h - B); ctx.stroke(); ctx.setLineDash([]);
+    ctx.fillStyle = "#f2c14e"; ctx.textAlign = "left"; ctx.fillText(m, Xp(m) + 2, Tp + 9);
+  }
+  ctx.save(); ctx.beginPath(); ctx.rect(L, Tp, w - L - R, h - Tp - B); ctx.clip();
+  return { Xp, Yp, L, R, Tp, B };
+}
+const PCOL = { ee: "#a8cdf2", oa: "#9fd7b0", oo: "#ff9656" };
+const par = (o) => (o.A % 2 ? "oa" : o.Z % 2 ? "oo" : "ee");
+let CURVE = [];
+function drawP1() {
+  const cv = document.getElementById("p1"), { x: ctx, w, h } = setupCanvas(cv);
+  const zoom = S.zoom === "zoom";
+  const xr = zoom ? [30, 272] : [0, 272], yr = zoom ? [7.3, 8.9] : [0.8, 9.2];
+  const M = axes(ctx, w, h, xr, yr, "A");
+  const hits = [];
+  for (const o of MEAS) {
+    const ba = o.B / o.A; if (o.A < xr[0] || ba < yr[0]) continue;
+    const px = M.Xp(o.A), py = M.Yp(ba);
+    ctx.fillStyle = PCOL[par(o)]; ctx.globalAlpha = 0.75;
+    ctx.fillRect(px - 1.1, py - 1.1, 2.2, 2.2);
+    hits.push({ px, py, o });
+  }
+  ctx.globalAlpha = 1;
+  ctx.strokeStyle = "#ffffff"; ctx.lineWidth = 1.4; ctx.beginPath();
+  let first = true;
+  for (const [A, b] of CURVE) { if (A < xr[0] || b < yr[0] - 1) { first = true; continue; } if (first) ctx.moveTo(M.Xp(A), M.Yp(b)); else ctx.lineTo(M.Xp(A), M.Yp(b)); first = false; }
+  ctx.stroke();
+  // the top of the ridge, and the two directions in which energy is released
+  const rp = [M.Xp(RIDGE.A), M.Yp(RIDGE.B / RIDGE.A)];
+  ctx.strokeStyle = "#fff6d6"; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.arc(rp[0], rp[1], 4.5, 0, 7); ctx.stroke();
+  ctx.font = "10px ui-monospace,Menlo,monospace"; ctx.fillStyle = "#fff6d6"; ctx.textAlign = "left";
+  const ly = zoom ? rp[1] - 8 : M.Yp(5.4);
+  if (!zoom) { ctx.beginPath(); ctx.moveTo(rp[0], rp[1] + 5); ctx.lineTo(rp[0] + 10, ly - 9); ctx.stroke(); }
+  ctx.fillText(`${RIDGE.A}${ELEM[RIDGE.Z]}, largest B/A ${(RIDGE.B / RIDGE.A).toFixed(3)} MeV`, rp[0] + (zoom ? 6 : 6), ly);
+  ctx.fillStyle = "#6fd0a4"; ctx.fillText("fusion ↗", M.Xp(zoom ? 34 : 22), M.Yp(zoom ? 7.45 : 3.5));
+  ctx.fillStyle = "#ff9656"; ctx.textAlign = "right"; ctx.fillText("↖ fission", M.Xp(268), M.Yp(zoom ? 7.45 : 6.6));
+  const o = selIdx >= 0 ? NUCS[selIdx] : null;
+  if (o && o.A >= xr[0]) { ctx.strokeStyle = "#f2c14e"; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(M.Xp(o.A), M.Yp(o.B / o.A), 5, 0, 7); ctx.stroke(); }
+  ctx.restore();
+  cv._hits = hits;
+}
+function drawRes(id, ax) {
+  const cv = document.getElementById(id), { x: ctx, w, h } = setupCanvas(cv);
+  const xr = ax === "N" ? [0, Math.max(160, NMAX + 2)] : [0, 120], yr = [-12, 16];
+  const M = axes(ctx, w, h, xr, yr, ax, MAGIC);
+  const hits = [];
+  for (const o of MEAS) {
+    const r = o.B - B_drop(o.Z, o.N), v = ax === "N" ? o.N : o.Z;
+    const px = M.Xp(v), py = M.Yp(Math.max(yr[0], Math.min(yr[1], r)));
+    ctx.fillStyle = inFit(o) ? PCOL[par(o)] : "#4a5266"; ctx.globalAlpha = inFit(o) ? 0.6 : 0.45;
+    ctx.fillRect(px - 1, py - 1, 2, 2);
+    hits.push({ px, py, o });
+  }
+  ctx.globalAlpha = 1;
+  const o = selIdx >= 0 ? NUCS[selIdx] : null;
+  if (o) {
+    const r = o.B - B_drop(o.Z, o.N), v = ax === "N" ? o.N : o.Z;
+    ctx.strokeStyle = "#f2c14e"; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(M.Xp(v), M.Yp(Math.max(yr[0], Math.min(yr[1], r))), 5, 0, 7); ctx.stroke();
+  }
+  ctx.restore();
+  cv._hits = hits;
+}
+// waterfall of the five terms per nucleon for the selected nucleus, ending on B_drop/A, with B_exp/A
+function drawP4() {
+  const cv = document.getElementById("p4"), { x: ctx, w, h } = setupCanvas(cv);
+  const o = NUCS[selIdx]; if (!o) return;
+  const t = BW.terms(o.Z, o.N, S.c, S.form).map((v) => v / o.A);
+  let lo = 0, hi = t[0], run = 0;
+  const bars = [];
+  for (let k = 0; k < 5; k++) { const a = run; run += t[k]; bars.push([a, run]); lo = Math.min(lo, run); hi = Math.max(hi, run); }
+  const yr = [Math.min(0, lo) - 0.5, Math.max(hi, o.B / o.A) + 1.2];
+  const L = 32, R = 8, Tp = 8, B = 18;
+  const Yp = (v) => Tp + (yr[1] - v) / (yr[1] - yr[0]) * (h - Tp - B);
+  ctx.font = "10px ui-monospace,Menlo,monospace";
+  const step = NICE.find((s) => (yr[1] - yr[0]) / s <= 5) || 10;
+  for (let v = Math.ceil(yr[0] / step) * step; v <= yr[1]; v += step) {
+    ctx.strokeStyle = Math.abs(v) < 1e-9 ? "#4a5470" : "#1e2432"; ctx.beginPath(); ctx.moveTo(L, Yp(v)); ctx.lineTo(w - R, Yp(v)); ctx.stroke();
+    ctx.fillStyle = "#8a92a6"; ctx.textAlign = "right"; ctx.fillText((+v.toFixed(1)).toString().replace("-", "−"), L - 4, Yp(v) + 3);
+  }
+  const cols = ["#6fd0a4", "#5c9be0", "#e0503a", "#c58cf0", "#f2c14e", "#ffffff"];
+  const names = ["volume", "surface", "Coulomb", "asym.", "pairing", "drop"];
+  const bw = (w - L - R) / 6;
+  bars.push([0, run]);
+  for (let k = 0; k < 6; k++) {
+    const [a, b] = bars[k], x0 = L + k * bw + bw * 0.18, x1 = L + (k + 1) * bw - bw * 0.18;
+    const y0 = Yp(Math.max(a, b)), y1 = Yp(Math.min(a, b));
+    ctx.fillStyle = cols[k]; ctx.globalAlpha = k === 5 ? 0.35 : 0.8;
+    ctx.fillRect(x0, y0, x1 - x0, Math.max(1, y1 - y0)); ctx.globalAlpha = 1;
+    if (k < 5) { ctx.strokeStyle = "#3a4256"; ctx.setLineDash([2, 2]); ctx.beginPath(); ctx.moveTo(x1, Yp(b)); ctx.lineTo(x1 + bw * 0.36, Yp(b)); ctx.stroke(); ctx.setLineDash([]); }
+    ctx.fillStyle = "#c9cdd8"; ctx.textAlign = "center";
+    const v = k < 5 ? t[k] : run;
+    ctx.fillText((k > 0 && k < 5 && v >= 0 ? "+" : "") + v.toFixed(2).replace("-", "−"), (x0 + x1) / 2, Math.max(Tp + 9, y0 - 3));
+    ctx.fillStyle = "#8a92a6"; ctx.fillText(names[k], (x0 + x1) / 2, h - 4);
+  }
+  // measured
+  const ym = Yp(o.B / o.A), x0 = L + 5 * bw + bw * 0.08, x1 = L + 6 * bw - bw * 0.08;
+  ctx.strokeStyle = "#f2c14e"; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(x0, ym); ctx.lineTo(x1, ym); ctx.stroke(); ctx.lineWidth = 1;
+  ctx.fillStyle = "#f2c14e"; ctx.textAlign = "right"; ctx.fillText(`AME2020 ${(o.B / o.A).toFixed(3)}`, x1, Math.min(h - 32, ym + 12));
+  document.getElementById("t4").innerHTML = `The drop's terms for ${nm(o.Z, o.N)}, per nucleon`;
+}
+// mean residual of the fitted nuclei by distance from the drop's valley floor at the same A, and which magic
+// numbers are ridges of the residual in this fit (binding.js: edge, ridges)
+function edgeNote() {
+  const g = BW.edge(T.list, S.c, { amin: S.amin, form: S.form });
+  if (!g.near || !g.pRich) return "";
+  return `Across the valley the residual is not flat: its mean is ${sgn(g.near.mean, 2)} MeV within one proton of the drop's valley floor (${g.near.n} nuclides), ${sgn(g.pRich.mean, 2)} MeV six or more protons above it (${g.pRich.n}, the proton-rich side)${g.nRich ? ` and ${sgn(g.nRich.mean, 2)} MeV six or more below (only ${g.nRich.n}, neutron-rich)` : ""}: the red edges of the landscape.`;
+}
+function ridgeNote() {
+  const R = BW.ridges(T.list, S.c, { amin: S.amin, form: S.form });
+  const lab = (r) => `${r.ax} = ${r.m}`;
+  const yes = R.filter((r) => r.ridge), no = R.filter((r) => !r.ridge);
+  return `Which magic numbers are ridges in this fit (the mean residual along the line ${"N or Z"} = m is the largest among m − 3 to m + 3): ${yes.map(lab).join(", ") || "none"}.${no.length ? ` Not here: ${no.map((r) => `${lab(r)} (peak at ${r.peak})`).join(", ")}.` : ""}`;
+}
+function drawPlots() {
+  drawP1(); drawRes("p2", "N"); drawRes("p3", "Z"); drawP4();
+  document.getElementById("plotNote").innerHTML =
+    `Measured masses only (${MEAS.length} nuclides with A ≥ 2). Top: AME2020 B/A, and the drop's B/A along its valley floor (the integer Z of largest B<sub>drop</sub> at each A, pairing left out: the most bound isobar, not the β-stability line), with the coefficients on the sliders. Middle: B − B<sub>drop</sub>; grey points lie outside the fit (A &lt; ${S.amin}), values beyond the axis sit on its edge. Positive means more bound than the drop; magic numbers are dashed. ${ridgeNote()} ${edgeNote()} Bottom: the five terms added up for the selected nucleus, the dashed steps carrying the running sum; the amber tick is AME2020. Click a point to select its nucleus.`;
+}
+for (const id of ["p1", "p2", "p3"]) {
+  document.getElementById(id).addEventListener("click", (e) => {
+    const H = e.currentTarget._hits; if (!H) return;
+    const r = e.currentTarget.getBoundingClientRect(), px = e.clientX - r.left, py = e.clientY - r.top;
+    let best = null, bd = 8;
+    for (const p of H) { const d = Math.hypot(px - p.px, py - p.py); if (d < bd) { bd = d; best = p; } }
+    if (best) select(best.o.Z, best.o.N);
+  });
+}
+
+// ---------- text panels
+function drawInfo() {
+  const [Z, N] = S.sel, o = T.get(Z, N), A = Z + N;
+  const bd = B_drop(Z, N), r = o.B - bd;
+  const est = o.est ? ' <span class="est">#</span>' : "";
+  document.getElementById("selLab").innerHTML = `Selected: ${nm(Z, N)} (Z = ${Z}, N = ${N})${STABLE.has(Z * 1000 + N) ? " · stable" : ""}`;
+  const unc = o.s >= 0.0005 ? ` ± ${(o.s * 1000).toFixed(o.s < 0.01 ? 2 : 0)} keV` : "";
+  const dz = Z >= 8 ? BW.dripZ(Z, S.c, S.form) : null, iso = MEAS.filter((m) => m.Z === Z).map((m) => m.N);
+  document.getElementById("info").innerHTML = `
+    <dt>B</dt><dd>${o.B.toFixed(3)} MeV${est}${unc}</dd>
+    <dt>B/A</dt><dd>${(o.B / A).toFixed(4)} MeV${est}</dd>
+    <dt>B<sub>drop</sub></dt><dd>${bd.toFixed(3)} MeV</dd>
+    <dt>B − B<sub>drop</sub></dt><dd class="${r >= 0 ? "pos" : "neg"}">${sgn(r, 3)} MeV ${o.est ? "(estimated mass)" : inFit(o) ? "" : `(not in the fit, A &lt; ${S.amin})`}</dd>
+    ${dz ? `<dt>drop bound</dt><dd>N = ${dz.pDrip} to ${dz.nDrip}</dd>` : ""}
+    ${iso.length ? `<dt>measured</dt><dd>N = ${Math.min(...iso)} to ${Math.max(...iso)} (AME2020)</dd>` : ""}`;
+  document.getElementById("toShells").href = `shells.html#${A}${ELEM[Z]}`;
+  const q = S.h === "ba" ? `B/A = ${(o.B / A).toFixed(4)} MeV` : `B − B<sub>drop</sub> = ${sgn(r, 2)} MeV`;
+  document.getElementById("stamp").innerHTML = `<b>${nm(Z, N)}</b><small>${q}</small>`;
+  document.getElementById("selTag").innerHTML = `<b>${nm(Z, N)}</b> · ${q}<br>${o.est ? "estimated mass (#)" : "measured mass"} · AME2020`;
+  document.title = `${A}${ELEM[Z]} binding energy · nuclearjs`;
+}
+function drawLegend() {
+  const el = document.getElementById("legend");
+  if (S.h === "ba") el.innerHTML = `<div>B/A, binding energy per nucleon</div><div class="ramp" style="background:linear-gradient(90deg,${STOPS.join(",")})"></div>
+    <div class="rampl"><span>≤ ${BA_LO}</span><span>${(BA_LO + BA_HI) / 2}</span><span>${BA_HI} MeV</span></div>
+    <div>height from ${BA0} MeV, ${KBA} grid cells per MeV · lit core: stable (NUBASE2020) · narrow grey: estimated mass (#)</div>`;
+  else el.innerHTML = `<div>B − B<sub>drop</sub>: more bound than the drop (red) or less (blue)</div><div class="ramp" style="background:linear-gradient(90deg,${DIV.join(",")})"></div>
+    <div class="rampl"><span>−${RSPAN}</span><span>0</span><span>+${RSPAN} MeV</span></div>
+    <div>height ${KR} cells per MeV above −${R0} MeV, clipped at +${RMAX}; the pale grid is B = B<sub>drop</sub> · lit core: measured, in the fit, above +4 MeV · dimmed: outside the fit</div>`;
+}
+function drawFit() {
+  const ss = BW.sigmaStats(T.list, { amin: S.amin });
+  document.getElementById("sigStat").textContent = `with A ≥ ${S.amin}: median ${(ss.median * 1000).toFixed(1)} keV, ${(100 * ss.above1keV).toFixed(0)} % above 1 keV, largest ${(ss.max * 1000).toFixed(0)} keV`;
+  const f = S.fit, same = S.c.every((v, k) => Math.abs(v - f.c[k]) < 1e-12);
+  const now = BW.rms(T.list, S.c, { amin: S.amin, form: S.form });
+  const bz = BW.BENZAID;
+  let t = `Least squares over <b>${f.n}</b> measured nuclides with A ≥ ${S.amin}: a<sub>v</sub> <b>${f.c[0].toFixed(3)}</b>, a<sub>s</sub> <b>${f.c[1].toFixed(3)}</b>, a<sub>c</sub> <b>${f.c[2].toFixed(4)}</b>, a<sub>a</sub> <b>${f.c[3].toFixed(3)}</b>, a<sub>p</sub> <b>${f.c[4].toFixed(3)}</b> MeV; rms of B − B<sub>drop</sub> <b>${f.rms.toFixed(3)}</b> MeV.`;
+  if (!same) t += ` With the coefficients on the sliders: rms <b>${now.toFixed(3)}</b> MeV over the same nuclides.`;
+  if (S.src === "bz") {
+    const lsq = BW.fit(T.list, { amin: 50, form: "zz" });
+    t += ` <span class="warn">These are Benzaid et al.'s printed A ≥ 50 coefficients (their Eq. (7), Coulomb Z<sup>2</sup>, fitted to AME2016). On the A ≥ 50 nuclides they give rms ${BW.rms(T.list, bz.a50, { amin: 50, form: "zz" }).toFixed(3)} MeV, against ${lsq.rms.toFixed(3)} MeV for the least-squares minimum of the same formula; the gap is the same on AME2016 with their 2166 nuclides (tests/check_binding.py), so the printed set is not the least-squares solution it is described as. Shown as printed, not corrected.</span>`;
+  }
+  document.getElementById("fitout").innerHTML = t;
+}
+// the reactions: initial and final [Z, N, count]; neutrons as [0, 1]
+const REACT = {
+  dt: { i: [[1, 1], [1, 2]], f: [[2, 2], [0, 1]], name: "d + t → <sup>4</sup>He + n", sel: [2, 2], kind: "fus",
+    t: "The fusion reaction of a first-generation fusion reactor. Nearly all of it is the jump in B/A from the deuteron and the triton to the tightly bound α particle." },
+  "3a": { i: [[2, 2, 3]], f: [[6, 6]], name: "3 <sup>4</sup>He → <sup>12</sup>C", sel: [6, 6], kind: "fus",
+    t: "Helium burning in red giants, through the Hoyle state. Small per nucleon, because <sup>4</sup>He already sits high on the slope." },
+  ccne: { i: [[6, 6, 2]], f: [[10, 10], [2, 2]], name: "<sup>12</sup>C + <sup>12</sup>C → <sup>20</sup>Ne + <sup>4</sup>He", sel: [10, 10], kind: "fus",
+    t: "Carbon burning in massive stars, one of its main exits." },
+  u235: { i: [[0, 1], [92, 143]], f: [[54, 86], [38, 56], [0, 1, 2]], name: "n + <sup>235</sup>U → <sup>140</sup>Xe + <sup>94</sup>Sr + 2n", sel: [92, 143], kind: "fis",
+    t: "One of many fission channels, chosen as an example; the fragments are neutron-rich and β-decay further, releasing more energy that is not counted here." },
+  u238a: { i: [[92, 146]], f: [[90, 144], [2, 2]], name: "<sup>238</sup>U → <sup>234</sup>Th + <sup>4</sup>He", sel: [92, 146], kind: "fis",
+    t: "Alpha decay: the heavy side of the ridge is downhill in mass, so emitting the very tightly bound α particle releases energy." },
+};
+function drawQ() {
+  const k = S.react, el = document.getElementById("qout");
+  for (const b of document.querySelectorAll("#react button")) b.setAttribute("aria-pressed", b.dataset.r === k ? "true" : "false");
+  if (!k) { el.innerHTML = `Q = ΣB(after) − ΣB(before), from AME2020 masses (free neutrons have B = 0). Pick a reaction.`; return; }
+  const R = REACT[k], q = BW.Q(T, R.i, R.f);
+  const A = R.i.reduce((s, p) => s + (p[0] + p[1]) * (p[2] || 1), 0);
+  let t = `${R.name}: Q = <b>${q.toFixed(3)} MeV</b>, ${(q / A).toFixed(3)} MeV per nucleon. ${R.t}`;
+  if (k === "u235") {
+    const sym = [[0, 1], [92, 143]], pd = [[46, 72, 2]];
+    t += ` A symmetric split conserving charge, n + <sup>235</sup>U → 2 <sup>118</sup>Pd (no neutrons emitted): the drop with the coefficients on the sliders gives Q = <b>${BW.Qdrop(S.c, S.form, sym, pd).toFixed(2)} MeV</b>, the AME2020 masses <b>${BW.Q(T, sym, pd).toFixed(2)} MeV</b>. Both are for this one split, chosen for its equal charges, not a measured fission channel.`;
+  }
+  el.innerHTML = t;
+}
+function drawRidge() {
+  const top = MEAS.slice().sort((a, b) => b.B / b.A - a.B / a.A).slice(0, 3);
+  const md = MEAS.reduce((a, o) => (o.dA < a.dA ? o : a));
+  const fe = T.get(26, 30), ni = T.get(28, 34);
+  const peak = CURVE.reduce((a, p) => (p[1] > a[1] ? p : a));
+  document.getElementById("ridge").innerHTML = `Largest B/A among measured masses: ${top.map((o) => `${nm(o.Z, o.N)} <b>${(o.B / o.A).toFixed(4)}</b>`).join(", ")} MeV. The lowest mass per nucleon, though, is ${nm(md.Z, md.N)}'s (mass excess <b>${(md.dA / 1000).toFixed(4)}</b> MeV per nucleon, against ${(ni.dA / 1000).toFixed(4)} for <sup>62</sup>Ni): the neutron is heavier than the hydrogen atom, and <sup>62</sup>Ni has the larger neutron fraction (N/A = ${(ni.N / ni.A).toFixed(3)} against ${(fe.N / fe.A).toFixed(3)}). The drop's smooth curve, with the coefficients on the sliders, peaks at A = <b>${peak[0]}</b>.`;
+}
+// ---------- sliders
+const slDiv = document.getElementById("sliders");
+slDiv.innerHTML = KEYS.map((k, i) => `<div class="row"><span>${k}</span><input type="range" id="s${i}" min="${SL[i][0]}" max="${SL[i][1]}" step="${SL[i][2]}"><output id="o${i}"></output></div>`).join("");
+function showSliders() {
+  for (let i = 0; i < 5; i++) { document.getElementById("s" + i).value = S.c[i]; document.getElementById("o" + i).textContent = S.c[i].toFixed(i === 2 ? 4 : 3); }
+  document.getElementById("lsq").setAttribute("aria-pressed", String(S.src === "lsq"));
+  document.getElementById("bzA").setAttribute("aria-pressed", String(S.src === "bz"));
+}
+function modelChanged(full) {
+  CURVE = [];
+  for (let A = 4; A <= 272; A++) CURVE.push([A, BW.curve(A, S.c, S.form)]);
+  if (full) buildDrip();
+  if (S.h === "res") target(false);
+  drawPlots(); drawInfo(); drawFit(); drawQ(); drawRidge();
+}
+for (let i = 0; i < 5; i++) {
+  const s = document.getElementById("s" + i);
+  s.addEventListener("input", () => { S.c = S.c.slice(); S.c[i] = +s.value; S.src = "user"; document.getElementById("o" + i).textContent = S.c[i].toFixed(i === 2 ? 4 : 3); showSliders(); modelChanged(false); });
+  s.addEventListener("change", () => { buildDrip(); drawInfo(); });
+}
+function refit() {
+  S.fit = BW.fit(T.list, { amin: S.amin, form: S.form });
+  S.c = S.fit.c.slice(); S.src = "lsq";
+  showSliders(); modelChanged(true);
+}
+function setSeg(id, v) { for (const b of document.querySelectorAll(`#${id} button`)) b.setAttribute("aria-pressed", b.dataset.v === String(v) ? "true" : "false"); }
+document.getElementById("amin").addEventListener("click", (e) => { const b = e.target.closest("button"); if (!b) return; S.amin = +b.dataset.v; setSeg("amin", S.amin); refit(); if (S.h === "res") target(false); });
+document.getElementById("cmode").addEventListener("click", (e) => { const b = e.target.closest("button"); if (!b) return; S.form = b.dataset.v; setSeg("cmode", S.form); document.getElementById("cform").textContent = S.form === "zz" ? "Z²" : "Z(Z−1)"; refit(); });
+document.getElementById("lsq").addEventListener("click", refit);
+document.getElementById("bzA").addEventListener("click", () => {
+  S.amin = 50; S.form = "zz"; setSeg("amin", 50); setSeg("cmode", "zz"); document.getElementById("cform").textContent = "Z²";
+  S.fit = BW.fit(T.list, { amin: 50, form: "zz" });
+  S.c = BW.BENZAID.a50.slice(); S.src = "bz";
+  showSliders(); modelChanged(true);
+});
+
+// ---------- camera
+const VIEW_DIR = new THREE.Vector3(-0.1, 1.15, 0.95).normalize();
+const camTo = { t: null, p: null };
+function fly(N, Z, d) {
+  const t = new THREE.Vector3(X(N), 4, Zc(Z)), p = t.clone().addScaledVector(VIEW_DIR, innerWidth < 700 ? d * 1.5 : d);
+  camTo.t = t; camTo.p = p;
+  if (reduce) { controls.target.copy(t); camera.position.copy(p); camTo.t = null; }
+}
+
+// ---------- actions
+function select(Z, N) {
+  const i = IDX.get(Z * 1000 + N); if (i == null) return;
+  S.sel = [Z, N]; selIdx = i;
+  ring.position.set(X(N), 0.03, Zc(Z));
+  writeInstances(); drawInfo(); drawPlots();
+  const hash = `#${Z + N}${ELEM[Z]}${S.h === "res" ? "~res" : ""}`;
+  if (location.hash !== hash) history.replaceState(null, "", hash);
+}
+function setH(h) {
+  S.h = h; setSeg("hmode", h);
+  target(false); drawLegend(); drawInfo();
+  for (const l of valleyLabs) l.hidden = h !== "ba";
+  zeroLab.hidden = h !== "res";
+  const [Z, N] = S.sel, hash = `#${Z + N}${ELEM[Z]}${h === "res" ? "~res" : ""}`;
+  if (location.hash !== hash) history.replaceState(null, "", hash);
+}
+function setReact(k) {
+  S.react = k; partRings.clear();
+  if (k) {
+    const R = REACT[k];
+    for (const [list, m] of [[R.i, ringIn], [R.f, ringOut]]) for (const [Z, N] of list) {
+      if (Z + N < 2) continue;
+      const r = new THREE.Mesh(new THREE.RingGeometry(1.0, 1.25, 40), m); r.rotation.x = -Math.PI / 2; r.position.set(X(N), 0.04, Zc(Z)); partRings.add(r);
+    }
+    select(R.sel[0], R.sel[1]);
+    const all = R.i.concat(R.f).filter((p) => p[0] + p[1] >= 2);
+    const nn = all.map((p) => p[1]), zz = all.map((p) => p[0]);
+    fly((Math.min(...nn) + Math.max(...nn)) / 2, (Math.min(...zz) + Math.max(...zz)) / 2, Math.max(40, (Math.max(...nn) - Math.min(...nn)) * 1.3));
+  }
+  drawQ();
+}
+document.getElementById("hmode").addEventListener("click", (e) => { const b = e.target.closest("button"); if (b) setH(b.dataset.v); });
+document.getElementById("react").addEventListener("click", (e) => { const b = e.target.closest("button"); if (b) setReact(S.react === b.dataset.r ? null : b.dataset.r); });
+document.getElementById("zoom").addEventListener("click", (e) => { const b = e.target.closest("button"); if (!b) return; S.zoom = b.dataset.v; setSeg("zoom", S.zoom); drawP1(); });
+const find = document.getElementById("find");
+find.addEventListener("keydown", (e) => {
+  if (e.key !== "Enter") return;
+  const s = find.value.trim().toLowerCase().replace(/\s/g, "");
+  let p = parseNucleus(s);
+  if (!p && SYM[s] != null) {                       // an element: its most bound measured isotope per nucleon
+    const iso = MEAS.filter((o) => o.Z === SYM[s]);
+    if (iso.length) { const o = iso.reduce((a, b) => (b.B / b.A > a.B / a.A ? b : a)); p = { Z: o.Z, N: o.N }; }
+  }
+  if (p && IDX.has(p.Z * 1000 + p.N)) { find.setCustomValidity(""); select(p.Z, p.N); fly(p.N, p.Z, 60); }
+  else { find.setCustomValidity("not in AME2020: try 56Fe, 208Pb or U"); find.reportValidity(); }
+});
+find.addEventListener("input", () => find.setCustomValidity(""));
+
+// click a column (box test on its visible footprint and height, as shells.html)
+const ray = new THREE.Raycaster(), ndc = new THREE.Vector2();
+let down = null;
+renderer.domElement.addEventListener("pointerdown", (e) => { down = e.button === 0 && e.isPrimary ? [e.clientX, e.clientY, e.pointerId] : null; });
+renderer.domElement.addEventListener("pointercancel", () => { down = null; });
+renderer.domElement.addEventListener("pointerup", (e) => {
+  const start = down; down = null;
+  if (!start || e.pointerId !== start[2] || e.button !== 0 || Math.hypot(e.clientX - start[0], e.clientY - start[1]) > 5) return;
+  ndc.set((e.clientX / innerWidth) * 2 - 1, -(e.clientY / innerHeight) * 2 + 1);
+  ray.setFromCamera(ndc, camera);
+  const o = ray.ray.origin, d = ray.ray.direction, oo = [o.x, o.y, o.z], dd = [d.x, d.y, d.z];
+  let best = -1, bt = Infinity;
+  for (let i = 0; i < n; i++) {
+    const h = hCur[i]; if (h < 1e-3) continue;
+    const q = NUCS[i], cx = X(q.N), cz = Zc(q.Z), hw = q.est ? 0.23 : 0.46;
+    const lo = [cx - hw, 0, cz - hw], hi = [cx + hw, h, cz + hw];
+    let t0 = 0, t1 = bt, hit = true;
+    for (let a = 0; a < 3; a++) {
+      if (Math.abs(dd[a]) < 1e-12) { if (oo[a] < lo[a] || oo[a] > hi[a]) { hit = false; break; } continue; }
+      let ta = (lo[a] - oo[a]) / dd[a], tb = (hi[a] - oo[a]) / dd[a];
+      if (ta > tb) [ta, tb] = [tb, ta];
+      t0 = Math.max(t0, ta); t1 = Math.min(t1, tb);
+      if (t0 > t1) { hit = false; break; }
+    }
+    if (hit && t0 < bt) { bt = t0; best = i; }
+  }
+  if (best >= 0) select(NUCS[best].Z, NUCS[best].N);
+});
+
+document.getElementById("dripBtn").addEventListener("click", (e) => { S.drip = !S.drip; dripGroup.visible = S.drip; e.currentTarget.setAttribute("aria-pressed", String(S.drip)); });
+document.getElementById("sceneOnly").addEventListener("click", (e) => {
+  const hidden = document.body.classList.toggle("scene-only"); e.currentTarget.setAttribute("aria-pressed", String(hidden)); e.currentTarget.textContent = hidden ? "show panels · H" : "hide panels · H"; dispatchEvent(new Event("resize"));
+});
+addEventListener("keydown", (e) => { if (e.code === "KeyH" && !e.repeat && !e.ctrlKey && !e.metaKey && !e.altKey && !e.target.closest("input,textarea,[contenteditable]")) { e.preventDefault(); document.getElementById("sceneOnly").click(); } });
+
+// rendering quality
+let quality = innerWidth < 700 ? "low" : "high";
+function applyQuality() {
+  const q = quality === "high";
+  renderer.shadowMap.enabled = q; sun.castShadow = q;
+  mat.transmission = q ? 0.4 : 0; mat.roughness = q ? 0.14 : 0.45; mat.clearcoatRoughness = q ? 0.12 : 0.3;
+  mat.needsUpdate = true; floor.material.needsUpdate = true;
+  const g = q ? GROUND_PRE_ACES : GROUND;
+  scene.background.copy(g); scene.fog.color.copy(g);
+  setSeg("qmode", quality);
+}
+document.getElementById("qmode").addEventListener("click", (e) => { const b = e.target.closest("button"); if (!b) return; quality = b.dataset.v; applyQuality(); });
+applyQuality();
+
+addEventListener("resize", () => {
+  camera.aspect = innerWidth / innerHeight; applyOffset(); camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight); composer.setSize(innerWidth, innerHeight);
+  drawPlots();
+});
+function fromHash(h, first) {
+  h = h.replace(/^#/, "").toLowerCase();
+  const res = /~res$/.test(h);
+  const p = parseNucleus(h.replace(/~res$/, ""));
+  if (res !== (S.h === "res")) setH(res ? "res" : "ba");
+  if (p && IDX.has(p.Z * 1000 + p.N) && (first || p.Z !== S.sel[0] || p.N !== S.sel[1])) { select(p.Z, p.N); fly(p.N, p.Z, 60); return true; }
+  return false;
+}
+addEventListener("hashchange", () => fromHash(location.hash, false));
+
+// ---------- start
+refit();
+target(true);
+drawLegend(); drawRidge(); drawQ();
+document.getElementById("nAll").textContent = n;
+{ const is = BW.isobarStats(T.list); document.getElementById("isoStat").textContent = `${is.nDiff} of ${is.nA} mass numbers`; }
+for (const l of valleyLabs) l.hidden = false;
+zeroLab.hidden = true;
+if (!fromHash(location.hash, true)) { select(RIDGE.Z, RIDGE.N); fly(62, 37, 200); }
+controls.target.copy(camTo.t); camera.position.copy(camTo.p); camTo.t = null;
+writeInstances();
+
+// ---------- loop
+const tmp = new THREE.Vector3();
+let last = performance.now();
+function animate(now) {
+  requestAnimationFrame(animate);
+  const dt = Math.min(0.1, Math.max(0, (now - last) / 1000)); last = now;
+  if (settling) settle(dt);
+  if (camTo.t) {
+    const k = 1 - Math.exp(-dt / 0.35);
+    controls.target.lerp(camTo.t, k); camera.position.lerp(camTo.p, k);
+    if (camera.position.distanceTo(camTo.p) < 0.05) camTo.t = null;
+  }
+  controls.update();
+  ring.material.opacity = 0.95 * (reduce ? 1 : 0.8 + 0.2 * Math.sin(now / 300));
+  if (quality === "high") composer.render(); else renderer.render(scene, camera);
+  if (selIdx >= 0) {
+    const o = NUCS[selIdx];
+    tmp.set(X(o.N), hCur[selIdx] + 1.8, Zc(o.Z)).project(camera);
+    const tag = document.getElementById("selTag"), x = (tmp.x * 0.5 + 0.5) * innerWidth, y = (-tmp.y * 0.5 + 0.5) * innerHeight;
+    const a = document.getElementById("ctl").getBoundingClientRect(), b = document.getElementById("side").getBoundingClientRect();
+    const covered = !document.body.classList.contains("scene-only") && [a, b].some((r) => x > r.left - 90 && x < r.right + 90 && y > r.top && y < r.bottom + 35);
+    tag.style.display = !covered && tmp.z > -1 && tmp.z < 1 && x > 80 && x < innerWidth - 80 && y > 45 && y < innerHeight - 70 ? "block" : "none";
+    tag.style.left = x + "px"; tag.style.top = y + "px";
+  }
+  for (const l of labels) {
+    if (l.hidden || (l.cls === "drip" && l !== zeroLab && !S.drip)) { l.el.style.display = "none"; continue; }
+    tmp.copy(l.p).project(camera);
+    const vis = tmp.z < 1 && Math.abs(tmp.x) < 1 && Math.abs(tmp.y) < 1;
+    l.el.style.display = vis ? "" : "none";
+    if (vis) { l.el.style.left = (tmp.x * 0.5 + 0.5) * innerWidth + "px"; l.el.style.top = (-tmp.y * 0.5 + 0.5) * innerHeight + "px"; }
+  }
+}
+requestAnimationFrame(animate);
+controls.addEventListener("start", () => (camTo.t = null));
+</script>
+<script src="assets/glass.js"></script>
+</body>
+</html>

@@ -1,0 +1,703 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Fusion in stars · nuclearjs</title>
+<link rel="stylesheet" href="assets/glass.css">
+<style>
+body{margin:0}
+:root{
+  color-scheme:dark;
+  --ground:#0b0d12; --line:#262c3a;
+  --ink:#e6e8ee; --muted:#8a92a6; --accent:#f2c14e;
+  --mb:#6fa8ff; --tun:#ff9656; --data:#7fd1b9;
+  --sans:"Avenir Next","Futura","Helvetica Neue","PingFang SC","Noto Sans SC",system-ui,sans-serif;
+  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+}
+html,body{height:100%}
+body{background:var(--ground);color:var(--ink);font-family:var(--sans);overflow:hidden}
+#stage{position:fixed;inset:0}
+#stage canvas{display:block;touch-action:none}
+.panel{position:fixed;border-radius:18px;padding:16px 18px;display:flex;flex-direction:column;gap:12px;overflow:auto;box-sizing:border-box;z-index:2}
+.panel>*{flex-shrink:0}
+#ctl{left:16px;top:calc(16px + env(safe-area-inset-top,0px));width:min(316px,calc(100% - 32px));max-height:calc(100% - 56px)}
+#side{right:16px;top:calc(16px + env(safe-area-inset-top,0px));width:372px;max-height:calc(100% - 32px);gap:9px}
+h1{margin:0;font-size:22px;font-weight:600;letter-spacing:.01em}
+.sub{margin:2px 0 0;color:var(--muted);font-size:13px;line-height:1.45}
+.sub sup,.src sup,.kv sup,.cap sup,.leg sup,table sup{font-size:.7em}
+.grp{display:flex;flex-direction:column;gap:6px}
+.lab{font-size:11px;text-transform:uppercase;letter-spacing:.12em;color:var(--muted)}
+.chips{display:flex;flex-wrap:wrap;gap:5px}
+.chips button{background:none;border:1px solid var(--line);border-radius:4px;color:var(--ink);font:500 12px var(--mono);padding:5px 7px;cursor:pointer}
+.chips button:hover{border-color:var(--muted)}
+.chips button[aria-pressed="true"]{border-color:var(--accent);color:var(--accent)}
+.chips.small button{font-size:11px;padding:4px 7px;color:var(--muted)}
+.seg{display:flex;border:1px solid var(--line);border-radius:4px;overflow:hidden}
+.seg button{flex:1;background:none;border:0;color:var(--muted);font:500 12px var(--mono);padding:6px 4px;cursor:pointer}
+.seg button+button{border-left:1px solid var(--line)}
+.seg button[aria-pressed="true"]{background:#1f2533;color:var(--ink)}
+button:focus-visible,input:focus-visible,summary:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:3px 10px;font:12px var(--mono);font-variant-numeric:tabular-nums}
+.kv dt{color:var(--muted)}.kv dd{margin:0}
+.kv .hi{color:var(--accent)}
+.row{display:flex;gap:8px;align-items:center;font:12px var(--mono);color:var(--muted)}
+.row input[type=range]{flex:1;accent-color:var(--accent);min-width:0}
+.row output{min-width:86px;text-align:right;color:var(--ink);font-variant-numeric:tabular-nums}
+details summary{cursor:pointer;font-size:11px;text-transform:uppercase;letter-spacing:.12em;color:var(--muted);list-style:none}
+details summary::before{content:"▸ ";}
+details[open] summary::before{content:"▾ ";}
+details .grp{margin-top:8px}
+.home{font:12px var(--mono);color:var(--muted);text-decoration:none}.home:hover{color:var(--ink)}
+.src{font-size:11px;color:var(--muted);line-height:1.5}
+.src b{color:var(--ink);font-weight:600}
+.plot{width:100%;height:230px;display:block}
+.cap{display:flex;flex-wrap:wrap;gap:2px 8px;justify-content:space-between;align-items:baseline;font:11px var(--mono);color:var(--muted)}
+.cap b{font:600 13px var(--sans);color:var(--ink)}
+.leg{display:flex;flex-wrap:wrap;gap:3px 11px;font:10.5px var(--mono);color:var(--muted);line-height:1.4}
+.leg i{display:inline-block;width:14px;height:0;border-top:2px solid;vertical-align:middle;margin-right:4px}
+.leg i.b{width:12px;height:8px;border:0;vertical-align:-1px}
+table.pub{width:100%;border-collapse:collapse;font:11px var(--mono);font-variant-numeric:tabular-nums}
+table.pub td{padding:4px 3px;border-bottom:1px solid #191e2a;vertical-align:top;color:var(--ink);line-height:1.4}
+table.pub td:first-child{white-space:nowrap;color:var(--accent)}
+table.pub small{color:var(--muted);font-size:10.5px}
+.axlab{position:fixed;font:500 11px var(--mono);color:#d6deea;pointer-events:none;transform:translate(-50%,-50%);white-space:nowrap;text-shadow:0 0 6px #000,0 0 2px #000;background:rgba(8,10,15,.5);padding:1px 5px;border-radius:4px}
+.axlab.hot{color:var(--accent)}
+.axlab.data{color:var(--data)}
+.axlab.dim{background:none;color:#9aa5bb}
+.axlab small{color:var(--muted);font-size:10px}
+#stamp{position:fixed;left:50%;bottom:calc(22px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);text-align:center;pointer-events:none;width:min(640px,50vw)}
+#stamp b{display:block;font:600 clamp(24px,3.2vw,40px)/1.05 var(--sans);letter-spacing:-.01em}
+#stamp b sup{font-size:.55em}
+#stamp small{display:block;font:500 12px var(--mono);color:var(--muted);margin-top:6px;line-height:1.5}
+.hint{position:fixed;left:16px;bottom:calc(14px + env(safe-area-inset-bottom,0px));font:11px var(--mono);color:var(--muted)}
+@media (max-width:900px){
+  #ctl{max-height:34vh}
+  #side{left:16px;right:16px;width:auto;top:auto;bottom:calc(12px + env(safe-area-inset-bottom,0px));max-height:36vh}
+  #stamp,.hint,.axlab{display:none}
+  .plot{height:200px}
+}
+@media (max-width:560px){.panel{padding:10px 12px;gap:9px}h1{font-size:18px}}
+</style>
+<script data-goatcounter="https://jinleiphys.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
+</head>
+<body>
+
+<div id="stage"></div>
+
+<aside id="ctl" class="panel glass glass-deep" data-glass data-glass-bevel="22" data-glass-scale="42">
+  <div>
+    <a class="home" href="index.html">← nuclearjs</a> &nbsp; <a class="home" href="alpha.html">alpha decay</a> &nbsp; <a class="home" href="neutronstar.html">neutron stars</a>
+    <h1>Fusion in stars</h1>
+    <p class="sub">Two nuclei in a star meet the Coulomb barrier with far too little energy to climb it, and fuse only by tunnelling. The fast tail of the Maxwell-Boltzmann distribution falls with energy, the tunnelling probability rises: their product is the narrow Gamow window. Move the temperature and watch it slide.</p>
+  </div>
+  <div class="grp">
+    <div class="lab">Reaction</div>
+    <div class="chips" id="chips"></div>
+  </div>
+  <div class="grp">
+    <label class="lab" for="ts">Temperature</label>
+    <div class="row"><input id="ts" type="range" min="-2.3" max="0.5" step="0.002"><output id="tout"></output></div>
+    <div class="chips small" id="tchips"></div>
+  </div>
+  <div class="grp">
+    <div class="lab">This pair at this temperature</div>
+    <dl class="kv" id="info"></dl>
+    <p class="src" id="infonote"></p>
+  </div>
+  <div class="grp">
+    <div class="lab">Rendering</div>
+    <div class="seg" id="qmode">
+      <button data-v="high" title="shadows, ambient occlusion, bloom">cinematic</button>
+      <button data-v="low">fast</button>
+    </div>
+    <p class="src" id="vnote"></p>
+  </div>
+</aside>
+
+<aside id="side" class="panel glass glass-deep" data-glass data-glass-bevel="22" data-glass-scale="42">
+  <div class="cap"><b>Stars burn below the data</b><span>c.m. energy, log</span></div>
+  <canvas id="pw" class="plot" aria-label="Gamow windows against the lowest measured energies"></canvas>
+  <div class="leg" id="legw"></div>
+  <div class="cap"><b>Published numbers</b><span>S-factor and lowest direct data</span></div>
+  <table class="pub" id="pub"></table>
+  <details open>
+    <summary>Why underground, and why indirect</summary>
+    <div class="grp src" id="why"></div>
+  </details>
+  <details>
+    <summary>Sources</summary>
+    <div class="grp src" id="srcs"></div>
+  </details>
+</aside>
+
+<div id="labels"></div>
+<div id="stamp"></div>
+<div class="hint">drag to orbit · scroll to zoom · move the temperature</div>
+
+<script src="assets/three-bundle.js"></script>
+<script src="assets/three-post.js"></script>
+<script src="assets/wave-stage.js"></script>
+<script src="assets/stellar.js"></script>
+<script>
+"use strict";
+const R = STELLAR.REACTIONS, BY = STELLAR.BYID;
+const L10 = Math.log10, LN10 = Math.LN10;
+const T9MIN = Math.pow(10, -2.3), T9MAX = Math.pow(10, 0.5);   // 5 MK to 3.2 GK
+
+// ---------- state
+const S = { r: BY["34"], T9: 0.0155 };
+
+// ---------- scene
+const stage = document.getElementById("stage");
+const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.setSize(innerWidth, innerHeight);
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.05;
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+stage.appendChild(renderer.domElement);
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(34, innerWidth / innerHeight, 0.1, 900);
+const SKY = WaveStage.skyGLSL(new THREE.Vector3(-0.45, 0.82, 0.38));
+scene.environment = WaveStage.environment(renderer, SKY);
+scene.fog = new THREE.Fog("#0b0d12", 170, 380);
+// The ground colour #0b0d12 is drawn untouched on the direct path; on the bloom path OutputPass runs it through
+// ACES, so there the background takes the linear colour that ACES (exposure 1.05) maps back to #0b0d12.
+const GROUND = new THREE.Color("#0b0d12");
+const GROUND_PRE_ACES = new THREE.Color().setRGB(0.0115476, 0.0131218, 0.0174740, THREE.LinearSRGBColorSpace);
+scene.background = GROUND.clone();
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true; controls.dampingFactor = 0.08;
+controls.minDistance = 25; controls.maxDistance = 320;
+controls.maxPolarAngle = Math.PI * 0.49;
+const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+const RIG = WaveStage.rig(scene, SKY, 220, 80);
+const POST = WaveStage.post(renderer, scene, camera, [0.32, 0.5, 0.8], { intensity: 0.85, radius: 5, thickness: 3 });
+const composer = POST.composer;
+
+// layout: the barrier at the left, the window surface at the right
+const W = 48, DZ = 34, H = 11;                // window surface: log E across W, log T along DZ, height H
+const AX = 10, AZ = 8;
+const BX = -27, BZ = -12, RD = 15, HB = 17;   // barrier: centre, radius of its disc, height of its top
+const BASE = -1.2;
+scene.add(WaveStage.floor(250, BASE - 0.02, 90, 0.5));
+
+// a luminous camera-facing ribbon through 3D points
+function makeRibbon(color, width, maxPts, glow) {
+  const n = maxPts;
+  const pos = new Float32Array(n * 6), tan = new Float32Array(n * 6), side = new Float32Array(n * 2), al = new Float32Array(n * 2);
+  const g = new THREE.BufferGeometry();
+  g.setAttribute("position", new THREE.BufferAttribute(pos, 3));
+  g.setAttribute("aT", new THREE.BufferAttribute(tan, 3));
+  g.setAttribute("aS", new THREE.BufferAttribute(side, 1));
+  g.setAttribute("aA", new THREE.BufferAttribute(al, 1));
+  const idx = [];
+  for (let i = 0; i < n - 1; i++) { const a = 2 * i; idx.push(a, a + 1, a + 2, a + 2, a + 1, a + 3); }
+  g.setIndex(idx);
+  for (let i = 0; i < n; i++) { side[2 * i] = -1; side[2 * i + 1] = 1; }
+  const m = new THREE.ShaderMaterial({
+    uniforms: { uW: { value: width }, uC: { value: new THREE.Color(color) }, uG: { value: glow == null ? 1 : glow } },
+    vertexShader: `attribute vec3 aT; attribute float aS; attribute float aA; uniform float uW; varying float vS; varying float vA;
+      void main(){ vS = aS; vA = aA; vec4 mv = modelViewMatrix * vec4(position, 1.0);
+        vec3 t = normalize((modelViewMatrix * vec4(aT, 0.0)).xyz + vec3(1e-6));
+        vec3 sd = normalize(cross(t, normalize(-mv.xyz))); mv.xyz += sd * uW * aS; gl_Position = projectionMatrix * mv; }`,
+    fragmentShader: `uniform vec3 uC; uniform float uG; varying float vS; varying float vA;
+      void main(){ float core = exp(-vS * vS * 16.0), halo = exp(-vS * vS * 3.0);
+        vec3 col = (vec3(1.0, 0.98, 0.94) * core * 0.9 + uC * (halo * 0.7 + core * 0.6)) * uG * vA;
+        gl_FragColor = vec4(col, 1.0);
+        #include <tonemapping_fragment>
+        #include <colorspace_fragment>
+      }`,
+    transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
+  });
+  const mesh = new THREE.Mesh(g, m);
+  mesh.frustumCulled = false; mesh.renderOrder = 6; mesh.userData.noAO = true;
+  mesh.set = (pts, alphas) => {
+    const k = Math.min(pts.length, n);
+    for (let i = 0; i < n; i++) {
+      const j = Math.min(i, k - 1), p = pts[j], a = pts[Math.max(0, j - 1)], b = pts[Math.min(k - 1, j + 1)];
+      for (let s = 0; s < 2; s++) {
+        const q = 2 * i + s;
+        pos[3 * q] = p.x; pos[3 * q + 1] = p.y; pos[3 * q + 2] = p.z;
+        tan[3 * q] = b.x - a.x; tan[3 * q + 1] = b.y - a.y; tan[3 * q + 2] = b.z - a.z;
+        al[q] = i < k ? (alphas ? alphas[j] : 1) : 0;
+      }
+    }
+    g.attributes.position.needsUpdate = true; g.attributes.aT.needsUpdate = true; g.attributes.aA.needsUpdate = true;
+  };
+  return mesh;
+}
+
+// ================================================================ the Gamow window over (E, T)
+const NE = 180, NT = 110;
+const surfMat = new THREE.MeshPhysicalMaterial({ color: "#ffffff", vertexColors: true, roughness: 0.42, metalness: 0.05,
+  clearcoat: 0.5, clearcoatRoughness: 0.25, envMapIntensity: 0.85, side: THREE.DoubleSide,
+  roughnessMap: WaveStage.noiseTexture(256, 8, 0.7, 1.0, 5) });
+const SURFU = { uTsel: { value: 0 }, uElow: { value: -99 } };
+surfMat.onBeforeCompile = (sh) => {
+  Object.assign(sh.uniforms, SURFU);
+  sh.vertexShader = sh.vertexShader.replace("#include <common>", "#include <common>\nattribute float aLE; attribute float aLT; varying float vLE; varying float vLT;")
+    .replace("#include <begin_vertex>", "#include <begin_vertex>\nvLE = aLE; vLT = aLT;");
+  sh.fragmentShader = sh.fragmentShader.replace("#include <common>", `#include <common>
+      varying float vLE; varying float vLT; uniform float uTsel, uElow;
+      float gl1(float x, float st){ float f = abs(fract(x / st - 0.5) - 0.5) * st; return 1.0 - smoothstep(0.0, max(1.3 * fwidth(x), 1e-5), f); }`)
+    .replace("#include <color_fragment>", `#include <color_fragment>
+      // engraved decades of energy and temperature; a teal tint where direct data exist (E above the lowest datum)
+      float g = max(gl1(vLE, 1.0) * 0.55, gl1(vLT, 1.0) * 0.45);
+      diffuseColor.rgb *= 1.0 - 0.5 * g;
+      float dat = smoothstep(-0.004, 0.004, vLE - uElow);
+      diffuseColor.rgb = mix(diffuseColor.rgb, diffuseColor.rgb * vec3(0.55, 1.05, 0.95) + vec3(0.0, 0.05, 0.045), dat * 0.85);`)
+    .replace("#include <emissivemap_fragment>", `#include <emissivemap_fragment>
+      float sel = 1.0 - smoothstep(0.0, 2.2 * fwidth(vLT), abs(vLT - uTsel));
+      totalEmissiveRadiance += vec3(1.0, 0.78, 0.36) * 1.6 * sel;`);
+};
+surfMat.customProgramCacheKey = () => "gamowsurf2";
+surfMat.extensions = { derivatives: true };
+const surf = new THREE.Mesh(new THREE.BufferGeometry(), surfMat);
+surf.castShadow = true; surf.receiveShadow = true;
+scene.add(surf);
+const plinthMat = new THREE.MeshStandardMaterial({ color: "#23262d", metalness: 0.9, roughness: 0.42, envMapIntensity: 0.9, roughnessMap: WaveStage.noiseTexture(256, 12, 0.6, 1.0, 21) });
+const plinth = new THREE.Mesh(new RoundedBoxGeometry(W + 5, 1.6, DZ + 5, 4, 0.5), plinthMat);
+plinth.position.set(AX, BASE + 0.8, AZ); plinth.receiveShadow = true; plinth.castShadow = true;
+scene.add(plinth);
+const ridge = makeRibbon("#f2c14e", 0.16, NT + 1, 0.9); scene.add(ridge);
+const cProd = makeRibbon("#ffffff", 0.26, 300, 1.1), cMB = makeRibbon("#6fa8ff", 0.2, 300, 1.0), cP = makeRibbon("#ff9656", 0.2, 300, 1.0);
+cMB.material.depthTest = false; cP.material.depthTest = false; cMB.renderOrder = cP.renderOrder = 8;   // the factors run under the sheet: draw them through it
+scene.add(cProd, cMB, cP);
+// the slice at the chosen temperature: a faint pane of light
+const sliceMat = new THREE.ShaderMaterial({
+  vertexShader: `varying vec2 vU; void main(){ vU = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
+  fragmentShader: `varying vec2 vU; void main(){
+      float e = 1.0 - smoothstep(0.0, 0.02, vU.y);
+      float a = 0.04 * (1.0 - vU.y) * smoothstep(0.0, 0.05, min(vU.x, 1.0 - vU.x)) + 0.35 * e;
+      gl_FragColor = vec4(vec3(0.75, 0.85, 1.0) * a, a);
+      #include <tonemapping_fragment>
+      #include <colorspace_fragment>
+    }`,
+  transparent: true, depthWrite: false, side: THREE.DoubleSide, blending: THREE.AdditiveBlending });
+const slice = new THREE.Mesh(new THREE.PlaneGeometry(W, 1.35 * H), sliceMat);
+slice.renderOrder = 4; slice.userData.noAO = true;
+scene.add(slice);
+// the lowest direct measurement: a glass fence across all temperatures at E = E_low
+const fenceMat = new THREE.ShaderMaterial({
+  vertexShader: `varying vec2 vU; void main(){ vU = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
+  fragmentShader: `varying vec2 vU; void main(){
+      float edge = 1.0 - smoothstep(0.0, 0.03, min(vU.y, 1.0 - vU.y));
+      float a = 0.12 + 0.16 * (1.0 - vU.y) + 0.6 * edge;
+      gl_FragColor = vec4(vec3(0.50, 0.82, 0.72) * a, a);
+      #include <tonemapping_fragment>
+      #include <colorspace_fragment>
+    }`,
+  transparent: true, depthWrite: false, side: THREE.DoubleSide, blending: THREE.AdditiveBlending });
+const fence = new THREE.Mesh(new THREE.PlaneGeometry(DZ, H * 1.1).rotateY(Math.PI / 2), fenceMat);
+fence.renderOrder = 5; fence.userData.noAO = true; scene.add(fence);
+// burning stages along the temperature edge of the plinth
+const stageGrp = new THREE.Group(); scene.add(stageGrp);
+const STAGECOL = { sun: "#f2c14e", he: "#ff9656", co: "#c39bd3", xhe: "#e8667a" };
+
+let EAX = null;                                   // log10 E (MeV) range of the energy axis
+const xOf = (E) => AX - W / 2 + W * (L10(E) - EAX[0]) / (EAX[1] - EAX[0]);
+const zOf = (T9) => AZ + DZ / 2 - DZ * (L10(T9) - L10(T9MIN)) / (L10(T9MAX) - L10(T9MIN));   // hot toward the back
+const COLS = [[0.05, 0.07, 0.13], [0.10, 0.20, 0.42], [0.38, 0.28, 0.42], [0.86, 0.45, 0.20], [1.0, 0.82, 0.42], [1.0, 0.97, 0.86]];
+function ramp(t) {
+  t = Math.max(0, Math.min(1, t)) * (COLS.length - 1);
+  const i = Math.min(COLS.length - 2, Math.floor(t)), f = t - i, a = COLS[i], b = COLS[i + 1];
+  return [a[0] + (b[0] - a[0]) * f, a[1] + (b[1] - a[1]) * f, a[2] + (b[2] - a[2]) * f];
+}
+const tau = (r, T9) => 3 * STELLAR.E0(r, T9) / STELLAR.kT(T9);   // the height of the window is e^-tau
+function buildSurface() {
+  const r = S.r;
+  EAX = [Math.min(L10(STELLAR.E0(r, T9MIN) / 4), L10(0.002)), Math.max(L10(STELLAR.E0(r, T9MAX) * 4), L10((r.Elow || 0.01) * 2.5))];
+  const pos = [], col = [], le = [], lt = [], idx = [];
+  // colour: the absolute height of the window, e^(-3E0/kT), on a log scale across the temperature range,
+  // dimmed away from the ridge by the normalized height
+  const lg0 = -tau(r, T9MIN) / LN10, lg1 = -tau(r, T9MAX) / LN10;
+  for (let j = 0; j <= NT; j++) {
+    const lT = L10(T9MIN) + (L10(T9MAX) - L10(T9MIN)) * j / NT, T9 = Math.pow(10, lT);
+    const a = (-tau(r, T9) / LN10 - lg0) / (lg1 - lg0);
+    for (let i = 0; i <= NE; i++) {
+      const lE = EAX[0] + (EAX[1] - EAX[0]) * i / NE, E = Math.pow(10, lE);
+      const h = STELLAR.window1(r, E, T9), c0 = ramp(0.12 + 0.88 * a), dim = 0.18 + 0.82 * Math.pow(h, 0.6);
+      pos.push(AX - W / 2 + W * i / NE, 0.02 + H * h, zOf(T9));
+      col.push(c0[0] * dim, c0[1] * dim, c0[2] * dim); le.push(lE); lt.push(lT);
+    }
+  }
+  for (let j = 0; j < NT; j++) for (let i = 0; i < NE; i++) { const a = j * (NE + 1) + i, b = a + NE + 1; idx.push(a, b, a + 1, a + 1, b, b + 1); }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3));
+  g.setAttribute("color", new THREE.Float32BufferAttribute(col, 3));
+  g.setAttribute("aLE", new THREE.Float32BufferAttribute(le, 1));
+  g.setAttribute("aLT", new THREE.Float32BufferAttribute(lt, 1));
+  g.setIndex(idx); g.computeVertexNormals();
+  surf.geometry.dispose(); surf.geometry = g;
+  const rp = [];
+  for (let j = 0; j <= NT; j++) { const T9 = Math.pow(10, L10(T9MIN) + (L10(T9MAX) - L10(T9MIN)) * j / NT); rp.push(new THREE.Vector3(xOf(STELLAR.E0(r, T9)), H + 0.12, zOf(T9))); }
+  ridge.set(rp);
+  // the data fence
+  fence.visible = r.Elow != null && L10(r.Elow) < EAX[1];
+  SURFU.uElow.value = r.Elow != null ? L10(r.Elow) : 99;
+  if (fence.visible) fence.position.set(xOf(r.Elow), BASE + 1.6 + H * 0.55, AZ);
+  // stage bands
+  while (stageGrp.children.length) { const c = stageGrp.children[0]; stageGrp.remove(c); c.geometry.dispose(); }
+  for (const st of STELLAR.STAGES) {
+    const z0 = zOf(st.lo), z1 = zOf(st.hi), dz = Math.max(0.5, Math.abs(z0 - z1));
+    const m = new THREE.Mesh(new THREE.BoxGeometry(0.45, 0.12, dz), new THREE.MeshStandardMaterial({ color: STAGECOL[st.id], emissive: STAGECOL[st.id], emissiveIntensity: 0.7, roughness: 0.4 }));
+    m.position.set(AX - W / 2 - 1.6, BASE + 1.7, (z0 + z1) / 2); stageGrp.add(m);
+  }
+}
+function updateSlice() {
+  const r = S.r, T9 = S.T9, z = zOf(T9), e0 = STELLAR.E0(r, T9), kT = STELLAR.kT(T9), EG = STELLAR.EG(r);
+  slice.position.set(AX, 1.35 * H / 2, z);
+  SURFU.uTsel.value = L10(T9);
+  const pp = [], pm = [], pt = [], am = [], ap = [];
+  for (let i = 0; i < 300; i++) {
+    const lE = EAX[0] + (EAX[1] - EAX[0]) * i / 299, E = Math.pow(10, lE), x = AX - W / 2 + W * i / 299;
+    pp.push(new THREE.Vector3(x, 0.05 + H * STELLAR.window1(r, E, T9) + 0.15, z));
+    // the two factors, each divided by its value at E0, so that all three curves meet there
+    const mb = Math.exp(-(E - e0) / kT), pe = Math.exp(-Math.sqrt(EG / E) + Math.sqrt(EG / e0));
+    // only the side of each factor below its value at E0: the falling Maxwell-Boltzmann tail above E0, the
+    // rising tunnelling probability below it; they cross the product's peak at E0
+    pm.push(new THREE.Vector3(x, 0.05 + H * Math.min(mb, 1) + 0.1, z)); am.push(E >= e0 ? 1 : 0);
+    pt.push(new THREE.Vector3(x, 0.05 + H * Math.min(pe, 1) + 0.1, z)); ap.push(E <= e0 ? 1 : 0);
+  }
+  cProd.set(pp); cMB.set(pm, am); cP.set(pt, ap);
+}
+
+// ================================================================ the Coulomb barrier
+const NA = 160, NR = 150;
+const barMat = new THREE.MeshPhysicalMaterial({ color: "#ffffff", vertexColors: true, roughness: 0.5, metalness: 0.12, clearcoat: 0.3, clearcoatRoughness: 0.4,
+  envMapIntensity: 0.9, roughnessMap: WaveStage.noiseTexture(256, 8, 0.6, 1.0, 9) });
+const CUTU = { uCutDir: { value: new THREE.Vector2(0, 1) }, uCutCos: { value: Math.cos(0.95) }, uCen: { value: new THREE.Vector2(BX, BZ) } };
+barMat.onBeforeCompile = (sh) => {
+  Object.assign(sh.uniforms, CUTU);
+  sh.vertexShader = sh.vertexShader.replace("#include <common>", "#include <common>\nvarying vec3 vWp;")
+    .replace("#include <begin_vertex>", "#include <begin_vertex>\nvWp = (modelMatrix * vec4(position, 1.0)).xyz;");
+  sh.fragmentShader = sh.fragmentShader.replace("#include <common>", "#include <common>\nvarying vec3 vWp; uniform vec2 uCutDir, uCen; uniform float uCutCos;")
+    .replace("#include <clipping_planes_fragment>", `#include <clipping_planes_fragment>
+      { vec2 d = vWp.xz - uCen; float l = length(d); if (l > 1e-3 && dot(d / l, uCutDir) > uCutCos && vWp.y > ${(BASE + 0.05).toFixed(2)}) discard; }`);
+};
+barMat.customProgramCacheKey = () => "barcut2";
+const bar = new THREE.Mesh(new THREE.BufferGeometry(), barMat);
+bar.castShadow = true; bar.receiveShadow = true;
+scene.add(bar);
+const capMat = new THREE.MeshStandardMaterial({ color: "#3a2a20", roughness: 0.65, side: THREE.DoubleSide, envMapIntensity: 0.7 });
+const capA = new THREE.Mesh(new THREE.BufferGeometry(), capMat), capB = new THREE.Mesh(new THREE.BufferGeometry(), capMat);
+capA.position.set(BX, 0, BZ); capB.position.set(BX, 0, BZ); capA.castShadow = capB.castShadow = true;
+scene.add(capA, capB);
+const bplinth = new THREE.Mesh(new THREE.CylinderGeometry(RD + 2, RD + 2.4, 1.6, 120),
+  new THREE.MeshStandardMaterial({ color: "#2e323a", metalness: 1.0, roughness: 0.4, roughnessMap: WaveStage.turnedTexture(), envMapIntensity: 1.0 }));
+bplinth.position.set(BX, BASE + 0.8, BZ); bplinth.receiveShadow = true;
+scene.add(bplinth);
+// the energy E0 as a glass sheet; the classically forbidden annulus R < r < b lit
+const lvlMat = new THREE.ShaderMaterial({
+  uniforms: { uR: { value: 1 }, uB: { value: 2 }, uRD: { value: RD } },
+  vertexShader: `varying vec2 vP; varying vec3 vW; void main(){ vP = position.xz; vec4 w = modelMatrix * vec4(position, 1.0); vW = w.xyz; gl_Position = projectionMatrix * viewMatrix * w; }`,
+  fragmentShader: `uniform float uR, uB, uRD; varying vec2 vP; varying vec3 vW;
+    ${SKY.glsl}
+    void main(){
+      float r = length(vP);
+      vec3 v = normalize(cameraPosition - vW);
+      float F = 0.04 + 0.96 * pow(1.0 - abs(v.y), 5.0);
+      vec3 refl = studioSky(reflect(-v, vec3(0.0, sign(v.y), 0.0)));
+      float under = step(uR, r) * step(r, uB);
+      float ring = (1.0 - smoothstep(0.0, 1.5 * fwidth(r), abs(r - uR))) + (1.0 - smoothstep(0.0, 1.5 * fwidth(r), abs(r - uB)));
+      float rim = 1.0 - smoothstep(0.0, 2.0 * fwidth(r), abs(r - uRD + 0.15));
+      vec3 amber = vec3(0.95, 0.76, 0.31);
+      vec3 col = refl * F * 0.6 + amber * (under * 0.14 + 0.9 * ring) + vec3(0.8, 0.9, 1.0) * 0.45 * rim;
+      float a = clamp(0.03 + F * 0.35 + under * 0.14 + 0.9 * ring + 0.45 * rim, 0.0, 1.0);
+      gl_FragColor = vec4(col, a);
+      #include <tonemapping_fragment>
+      #include <colorspace_fragment>
+    }`,
+  transparent: true, depthWrite: false, side: THREE.DoubleSide,
+});
+lvlMat.extensions = { derivatives: true };
+const lvl = new THREE.Mesh(new THREE.CircleGeometry(RD, 160).rotateX(-Math.PI / 2), lvlMat);
+lvl.position.set(BX, 0, BZ); lvl.renderOrder = 3; lvl.userData.noAO = true;
+scene.add(lvl);
+// the two nuclei as clusters of protons (orange) and neutrons (pale blue)
+const nucGeo = new THREE.SphereGeometry(1, 28, 20);
+const matP = new THREE.MeshPhysicalMaterial({ color: "#ff9656", roughness: 0.32, clearcoat: 1, clearcoatRoughness: 0.08, emissive: "#ff9656", emissiveIntensity: 0.12, sheen: 0.5 });
+const matN = new THREE.MeshPhysicalMaterial({ color: "#a8cdf2", roughness: 0.32, clearcoat: 1, clearcoatRoughness: 0.08, emissive: "#a8cdf2", emissiveIntensity: 0.08, sheen: 0.5 });
+function cluster(Z, A) {
+  const g = new THREE.Group(), pts = [];
+  // golden-spiral packing in shells, unit nucleon radius; protons spread among the neutrons
+  for (let i = 0; i < A; i++) {
+    const k = i + 0.5, rr = A === 1 ? 0 : 0.95 * Math.cbrt(k), th = Math.acos(1 - 2 * ((k * 0.618034) % 1)), ph = Math.PI * (1 + Math.sqrt(5)) * k;
+    pts.push(new THREE.Vector3(rr * Math.sin(th) * Math.cos(ph), rr * Math.cos(th), rr * Math.sin(th) * Math.sin(ph)));
+  }
+  pts.forEach((p, i) => { const m = new THREE.Mesh(nucGeo, (Math.floor(i * Z / A + 0.5) !== Math.floor((i + 1) * Z / A + 0.5)) ? matP : matN); m.position.copy(p); m.castShadow = true; g.add(m); });
+  g.userData.r = A === 1 ? 1 : 0.95 * Math.cbrt(A) + 1;
+  return g;
+}
+let target = new THREE.Group(), proj = new THREE.Group();
+scene.add(target, proj);
+const tunnel = makeRibbon("#f2c14e", 0.3, 120, 1.2), outside = makeRibbon("#a8cdf2", 0.22, 160, 0.9), inside = makeRibbon("#f2c14e", 0.16, 60, 0.9);
+scene.add(tunnel, outside, inside);
+let BAR = null;
+const rho = (r) => RD * Math.asinh(r / BAR.R) / Math.asinh(BAR.rout / BAR.R);
+const yOfV = (V) => BASE + 1.6 + HB * Math.max(0, (L10(V) - BAR.l0) / (L10(BAR.VB) - BAR.l0));
+// WKB decay of the amplitude from the turning point b inward to r (point Coulomb, closed form):
+// int_r^b kappa dr = pi eta (2/pi)(arccos sqrt(x) - sqrt(x(1 - x))), x = r/b
+function decades(r, E, rr) { const b = STELLAR.turning(r, E), x = Math.min(1, rr / b); return Math.PI * STELLAR.eta(r, E) * (2 / Math.PI) * (Math.acos(Math.sqrt(x)) - Math.sqrt(x * (1 - x))) / LN10; }
+function buildBarrier() {
+  const r = S.r, Rr = STELLAR.radius(r), VB = STELLAR.barrier(r), Ecold = STELLAR.E0(r, T9MIN);
+  BAR = { R: Rr, VB, rout: 1.35 * STELLAR.turning(r, Ecold), l0: L10(Ecold / 3) };
+  const rings = [], y0 = BASE + 1.6;
+  rings.push([0, y0 + 0.3], [Rr * 0.999, y0 + 0.3], [Rr, yOfV(VB)]);
+  for (let i = 1; i <= NR; i++) { const rr = Rr * Math.pow(BAR.rout / Rr, i / NR); rings.push([rr, yOfV(r.Z1 * r.Z2 * STELLAR.E2 / rr)]); }
+  rings.push([BAR.rout, y0]);
+  const pos = [], col = [], idx = [];
+  for (const [rr, y] of rings) for (let j = 0; j <= NA; j++) {
+    const ph = 2 * Math.PI * j / NA;
+    pos.push(BX + rho(rr) * Math.cos(ph), y, BZ + rho(rr) * Math.sin(ph));
+    const h = (y - y0) / HB, c = rr < Rr ? [0.09, 0.1, 0.12] : [0.12 + 0.55 * h * h, 0.12 + 0.28 * h, 0.16 + 0.04 * h];
+    col.push(c[0], c[1], c[2]);
+  }
+  for (let i = 0; i < rings.length - 1; i++) for (let j = 0; j < NA; j++) { const a = i * (NA + 1) + j, b = a + NA + 1; idx.push(a, a + 1, b, a + 1, b + 1, b); }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3));
+  g.setAttribute("color", new THREE.Float32BufferAttribute(col, 3));
+  g.setIndex(idx); g.computeVertexNormals();
+  bar.geometry.dispose(); bar.geometry = g;
+  const sh = new THREE.Shape();
+  sh.moveTo(0, y0);
+  for (const [rr, y] of rings) sh.lineTo(rho(rr), y);
+  sh.closePath();
+  const cg = new THREE.ShapeGeometry(sh);
+  capA.geometry.dispose(); capA.geometry = cg; capB.geometry = cg;
+  // nuclei: clusters, scaled so that the target fits its crater (sizes not to the radial map)
+  scene.remove(target, proj);
+  const big = r.A1 >= r.A2 ? [r.Z1, r.A1] : [r.Z2, r.A2], small = r.A1 >= r.A2 ? [r.Z2, r.A2] : [r.Z1, r.A1];
+  target = cluster(big[0], big[1]); proj = cluster(small[0], small[1]);
+  const sT = Math.min(1.1, 0.8 * rho(Rr) / target.userData.r);
+  target.scale.setScalar(sT); proj.scale.setScalar(sT);
+  target.position.set(BX, y0 + 0.3 + sT * target.userData.r, BZ);
+  scene.add(target, proj);
+  lvlMat.uniforms.uR.value = rho(Rr);
+}
+let tBounce = 0;
+const cutAz = { v: 0 };
+function updateBarrier(dt) {
+  const r = S.r, E0 = STELLAR.E0(r, S.T9);
+  const above = E0 >= BAR.VB, b = Math.min(BAR.rout, STELLAR.turning(r, E0));
+  const y = above ? yOfV(BAR.VB) + 0.4 : yOfV(E0);
+  lvl.position.y = y;
+  lvlMat.uniforms.uB.value = above ? rho(BAR.R) : rho(b);
+  const az = cutAz.v - 0.95, cx = Math.cos(az), cz = Math.sin(az);
+  tBounce += reduce ? 0 : dt;
+  const ph = (tBounce / 2.6) % 1, s = Math.abs(2 * ph - 1);
+  const rb = rho(b) + proj.scale.x * proj.userData.r * 1.1, rp = rb + (RD * 0.98 - rb) * s;
+  proj.position.set(BX + rp * cx, y + proj.scale.x * proj.userData.r * 0.6, BZ + rp * cz);
+  // the wave: outside b, an oscillation of unit amplitude; inside, the WKB amplitude, drawn linearly in the
+  // number of decades it loses (top: none, bottom: all, reached at R); inside R, what got through, faint
+  const out = [], tin = [], al = [], amp = 1.4, dec = decades(r, E0, BAR.R);
+  for (let i = 0; i < 160; i++) {
+    const rr = b + (BAR.rout * 0.98 - b) * i / 159, q = rho(rr);
+    out.push(new THREE.Vector3(BX + q * cx, y + 0.25 + amp * 0.5 * (1 + Math.cos(10 * (q - rho(b)) - 6 * tBounce)), BZ + q * cz));
+  }
+  for (let i = 0; i < 120; i++) {
+    const rr = BAR.R + (b - BAR.R) * i / 119, q = rho(rr), frac = dec > 0 ? 1 - decades(r, E0, rr) / dec : 1;
+    tin.push(new THREE.Vector3(BX + q * cx, y + 0.25 + amp * Math.max(0, frac), BZ + q * cz));
+    al.push(0.25 + 0.75 * Math.max(0, frac));
+  }
+  const ins = [];
+  for (let i = 0; i < 60; i++) { const q = rho(BAR.R) * i / 59; ins.push(new THREE.Vector3(BX + q * cx, y + 0.25 + 0.18 * (1 + Math.cos(14 * q - 9 * tBounce)), BZ + q * cz)); }
+  if (above) { tunnel.set([new THREE.Vector3(BX, y, BZ)], [0]); inside.set([new THREE.Vector3(BX, y, BZ)], [0]); }
+  else { tunnel.set(tin, al); inside.set(ins, ins.map(() => 0.35)); }
+  outside.set(out);
+  capA.rotation.y = -(cutAz.v + 0.95); capB.rotation.y = -(cutAz.v - 0.95);
+  return { b, above, y, cx, cz };
+}
+
+// ================================================================ labels
+const labels = document.getElementById("labels"), LAB = {};
+function lab(key, cls) {
+  if (!LAB[key]) { const el = document.createElement("div"); el.className = "axlab " + (cls || ""); labels.appendChild(el); LAB[key] = el; }
+  return LAB[key];
+}
+const tmpV = new THREE.Vector3();
+function place(el, x, y, z, html) {
+  tmpV.set(x, y, z).project(camera);
+  const vis = tmpV.z < 1 && Math.abs(tmpV.x) < 1 && Math.abs(tmpV.y) < 1 && html !== "";
+  el.hidden = !vis;
+  if (vis) { el.style.left = (tmpV.x * 0.5 + 0.5) * innerWidth + "px"; el.style.top = (-tmpV.y * 0.5 + 0.5) * innerHeight + "px"; if (html != null && el._h !== html) { el.innerHTML = html; el._h = html; } }
+}
+function fmtE(E) { return E >= 1 ? `${+E.toPrecision(3)} MeV` : E >= 1e-3 ? `${+(E * 1e3).toPrecision(3)} keV` : `${+(E * 1e6).toPrecision(3)} eV`; }
+function fmtT(T9) { return T9 >= 1 ? `${+T9.toPrecision(3)} GK` : `${+(T9 * 1e3).toPrecision(3)} MK`; }
+const supN = (s) => String(s).replace("-", "⁻").replace(/\d/g, (d) => "⁰¹²³⁴⁵⁶⁷⁸⁹"[d]);
+function drawLabels(B) {
+  const r = S.r, e0 = STELLAR.E0(r, S.T9);
+  for (let d = Math.ceil(EAX[0]); d <= Math.floor(EAX[1]); d++) place(lab("e" + d, "dim"), xOf(Math.pow(10, d)), BASE + 0.4, AZ + DZ / 2 + 3.6, fmtE(Math.pow(10, d)));
+  for (const k in LAB) if (k[0] === "e" && /^e-?\d+$/.test(k) && (+k.slice(1) < Math.ceil(EAX[0]) || +k.slice(1) > Math.floor(EAX[1]))) LAB[k].hidden = true;
+  for (const t of [0.01, 0.1, 1]) place(lab("t" + t, "dim"), AX + W / 2 + 3.6, BASE + 1.2, zOf(t), fmtT(t));
+  // the burning stage the chosen temperature lies in (the closest one), labelled at its strip
+  let near = null, dmin = 1e9;
+  for (const st of STELLAR.STAGES) { const d = L10(S.T9) < L10(st.lo) ? L10(st.lo) - L10(S.T9) : L10(S.T9) > L10(st.hi) ? L10(S.T9) - L10(st.hi) : 0; if (d < dmin - 1e-9) { dmin = d; near = st; } }
+  for (const st of STELLAR.STAGES) place(lab("st" + st.id), AX - W / 2 - 4.5, BASE + 2.4, (zOf(st.lo) + zOf(st.hi)) / 2, st === near && dmin < 0.08 ? `<span style="color:${STAGECOL[st.id]}">${st.label}</span>` : "");
+  place(lab("e0", "hot"), xOf(e0), H + 3.4, zOf(S.T9), `E<sub>0</sub> = ${fmtE(e0)} at ${fmtT(S.T9)}`);
+  place(lab("fence", "data"), fence.position.x, BASE + 1.6 + H * 1.15, AZ - DZ / 2, r.Elow != null ? `direct data from ${fmtE(r.Elow)} up` : "");
+  place(lab("nod", "data"), AX + W * 0.25, BASE + 1.6 + H * 1.2, AZ - DZ / 2, r.Elow == null ? "no direct measurement at any energy" : "");
+  // barrier
+  place(lab("vb"), BX, yOfV(BAR.VB) + 2.0, BZ, `V<sub>B</sub> ≈ ${fmtE(BAR.VB)} at R = ${BAR.R.toFixed(1)} fm`);
+  place(lab("b", "hot"), BX + rho(B.b) * B.cx, B.y - 1.4, BZ + rho(B.b) * B.cz, B.above ? "above the barrier" : `turning point b = ${B.b >= 100 ? B.b.toFixed(0) : B.b.toFixed(1)} fm`);
+  const P = -STELLAR.twoPiEta(r, e0) / LN10;
+  place(lab("pen", "hot"), BX + rho(BAR.R) * B.cx, B.y + 2.6, BZ + rho(BAR.R) * B.cz, B.above ? "" : `e<sup>−2πη</sup> = 10<sup>${P.toFixed(1)}</sup>`);
+}
+
+// ================================================================ the plot: windows against the data, all reactions
+function setupCanvas(c) {
+  const d = Math.min(devicePixelRatio, 2), w = c.clientWidth, h = c.clientHeight;
+  c.width = w * d; c.height = h * d;
+  const x = c.getContext("2d"); x.setTransform(d, 0, 0, d, 0, 0);
+  return { x, w, h };
+}
+function drawW() {
+  const { x: ctx, w, h } = setupCanvas(document.getElementById("pw"));
+  const PL = 92, PR = 8, PT = 6, PB = 20, xr = [L10(0.001), L10(10)];
+  const X = (E) => PL + (L10(E) - xr[0]) / (xr[1] - xr[0]) * (w - PL - PR);
+  const rowH = (h - PT - PB) / R.length;
+  ctx.font = "10px ui-monospace,Menlo,monospace";
+  for (const [E, s] of [[0.001, "1 keV"], [0.01, "10"], [0.1, "100"], [1, "1 MeV"], [10, "10"]]) {
+    ctx.strokeStyle = "#1c2230"; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(X(E), PT); ctx.lineTo(X(E), h - PB); ctx.stroke();
+    ctx.fillStyle = "#8a92a6"; ctx.textAlign = "center"; ctx.fillText(s, X(E), h - 6);
+  }
+  R.forEach((r, i) => {
+    const yc = PT + rowH * (i + 0.5), sel = r === S.r;
+    if (sel) { ctx.fillStyle = "rgba(242,193,78,0.07)"; ctx.fillRect(0, yc - rowH / 2, w, rowH); }
+    ctx.fillStyle = sel ? "#f2c14e" : "#c9d2e3"; ctx.textAlign = "right"; ctx.fillText(r.label, PL - 6, yc + 3);
+    // direct data: from the lowest point upward
+    if (r.Elow != null) { ctx.fillStyle = "rgba(127,209,185,0.28)"; ctx.fillRect(X(r.Elow), yc - rowH * 0.3, w - PR - X(r.Elow), rowH * 0.6); ctx.fillStyle = "#7fd1b9"; ctx.fillRect(X(r.Elow) - 1, yc - rowH * 0.3, 2, rowH * 0.6); }
+    else { ctx.fillStyle = "#7fd1b9"; ctx.textAlign = "left"; ctx.fillText("theory only", X(0.3), yc + 3); }
+    // the Coulomb barrier
+    const VB = STELLAR.barrier(r); ctx.strokeStyle = "#8a92a6"; ctx.setLineDash([2, 2]); ctx.beginPath(); ctx.moveTo(X(VB), yc - rowH * 0.42); ctx.lineTo(X(VB), yc + rowH * 0.42); ctx.stroke(); ctx.setLineDash([]);
+    // the window at the stage temperature: E0 +- Delta/2
+    const st = r.id === "c12ag" ? [0.1, 0.4] : [r.T9, r.T9];
+    const lo = STELLAR.E0(r, st[0]) - STELLAR.Delta(r, st[0]) / 2, hi = STELLAR.E0(r, st[1]) + STELLAR.Delta(r, st[1]) / 2;
+    ctx.fillStyle = "#f2c14e"; ctx.globalAlpha = 0.85; ctx.fillRect(X(Math.max(lo, 0.001)), yc - rowH * 0.16, X(hi) - X(Math.max(lo, 0.001)), rowH * 0.32); ctx.globalAlpha = 1;
+    // the window at the chosen temperature, outline
+    const e0 = STELLAR.E0(r, S.T9), dl = STELLAR.Delta(r, S.T9);
+    ctx.strokeStyle = "#ffffff"; ctx.lineWidth = sel ? 1.6 : 0.8; ctx.globalAlpha = sel ? 1 : 0.5;
+    ctx.strokeRect(X(Math.max(e0 - dl / 2, 0.001)), yc - rowH * 0.24, X(e0 + dl / 2) - X(Math.max(e0 - dl / 2, 0.001)), rowH * 0.48); ctx.globalAlpha = 1;
+  });
+  document.getElementById("legw").innerHTML = `<span><i class="b" style="background:#f2c14e"></i>window E<sub>0</sub> ± Δ/2 where the star burns it (Sun's core; ¹²C(α,γ): 0.1 to 0.4 GK)</span><span><i class="b" style="background:rgba(127,209,185,.45)"></i>energies above the lowest direct datum (the data cover parts of this range, with gaps)</span><span><i class="b" style="border:1px solid #fff;background:none"></i>window at ${fmtT(S.T9)}</span><span><i class="d" style="border-color:#8a92a6;border-top-style:dashed"></i>V<sub>B</sub></span>`;
+}
+
+// ================================================================ text
+function drawInfo(B) {
+  const r = S.r, e0 = STELLAR.E0(r, S.T9), dl = STELLAR.Delta(r, S.T9), kT = STELLAR.kT(S.T9), EG = STELLAR.EG(r);
+  const P = STELLAR.twoPiEta(r, e0) / LN10, VB = STELLAR.barrier(r);
+  let rows = `<dt>kT</dt><dd>${fmtE(kT)}</dd>
+    <dt>E<sub>G</sub></dt><dd>2μc²(παZ₁Z₂)² = ${fmtE(EG)}</dd>
+    <dt>E<sub>0</sub></dt><dd class="hi">${fmtE(e0)} = ${(e0 / kT).toFixed(1)} kT</dd>
+    <dt>Δ</dt><dd>${fmtE(dl)} <span style="color:var(--muted)">(full 1/e width)</span></dd>
+    <dt>V<sub>B</sub></dt><dd>≈ ${fmtE(VB)}; E<sub>0</sub>/V<sub>B</sub> = ${(e0 / VB).toPrecision(2)}</dd>
+    <dt>η(E<sub>0</sub>)</dt><dd>${STELLAR.eta(r, e0).toFixed(2)}; e<sup>−2πη</sup> = 10<sup>−${P.toFixed(1)}</sup></dd>
+    <dt>b</dt><dd>Z₁Z₂e²/E<sub>0</sub> = ${B.b >= 100 ? B.b.toFixed(0) : B.b.toFixed(1)} fm, R = ${STELLAR.radius(r).toFixed(1)} fm</dd>`;
+  if (r.Elow != null) {
+    const d = STELLAR.log10SigmaRatio(r, e0, r.Elow);
+    rows += `<dt>lowest data</dt><dd>${fmtE(r.Elow)} = ${(r.Elow / e0).toPrecision(2)} E<sub>0</sub></dd>`;
+    rows += e0 < r.Elow ? `<dt>σ(E<sub>0</sub>)</dt><dd class="hi">10<sup>${d.toFixed(1)}</sup> × σ at the lowest datum, S held fixed</dd>` : `<dt>σ(E<sub>0</sub>)</dt><dd>the data reach below E<sub>0</sub> here</dd>`;
+  } else rows += `<dt>lowest data</dt><dd>none: theory only</dd>`;
+  document.getElementById("info").innerHTML = rows;
+  document.getElementById("infonote").innerHTML = `μ = A₁A₂/(A₁+A₂) u. E<sub>0</sub> = (E<sub>G</sub>(kT)²/4)<sup>1/3</sup> and Δ = 4(E<sub>0</sub>kT/3)<sup>1/2</sup> (Solar Fusion II, Eq. (8); deBoer et al. 2017, Eqs. (4), (5)); 2πη = (E<sub>G</sub>/E)<sup>1/2</sup>. V<sub>B</sub> = Z₁Z₂e²/R with R = 1.2(A₁<sup>1/3</sup> + A₂<sup>1/3</sup>) fm is an estimate of the barrier top. The σ ratio is e<sup>−2πη</sup>/E at the two energies, the S-factor held equal: how much rarer events are where the star burns.`;
+  document.getElementById("tout").textContent = fmtT(S.T9);
+  document.getElementById("stamp").innerHTML = `<b>${r.label}</b><small>${fmtT(S.T9)} · E<sub>0</sub> = ${fmtE(e0)} · Δ = ${fmtE(dl)} · tunnelling 10<sup>−${P.toFixed(1)}</sup></small>`;
+}
+function drawStatic() {
+  document.getElementById("pub").innerHTML = R.map((r) => `<tr><td>${r.label}</td><td>${r.S}<br><small>${r.Ssrc}</small><br><small>${r.low}</small></td></tr>`).join("");
+  document.getElementById("why").innerHTML = `
+    <span>At the energies where stars burn, a cross section falls as e<sup>−2πη</sup>: for ³He + ⁴He by ${(-STELLAR.log10SigmaRatio(BY['34'], STELLAR.E0(BY['34'], 0.0155), 1.0)).toFixed(0)} orders of magnitude between 1 MeV and the solar Gamow peak (S held fixed). At the Earth's surface cosmic rays bury the few events per day such a cross section gives. <b>Underground</b> laboratories cut that background by orders of magnitude: LUNA under Gran Sasso, then JUNA, CASPAR and Felsenkeller (Solar Fusion III, Sec. XIV.B). LUNA took ³He + ³He down to 16 keV, the lower edge of the solar Gamow peak, and ¹⁴N(p,γ) to 70 keV (Solar Fusion II); for most reactions the star still burns below the lowest point, and S(E) is carried down by a model (R-matrix, potential model, halo EFT).</span>
+    <span><b>Indirect methods</b> trade the low-energy measurement for a different reaction plus reaction theory, with systematic errors of a different kind (Solar Fusion III, Sec. XIV.C). <b>ANC</b>: where radiative capture at very low energy is peripheral (it is for some reactions, not in general), it is fixed by the asymptotic normalization of the final bound state, which a transfer reaction measures through the DWBA; applied to ³He(α,γ)⁷Be. <b>Trojan Horse</b>: the two-body reaction is reached inside a three-body reaction in quasi-free kinematics, above the barrier, with a spectator carrying the extra momentum; Solar Fusion III describes it as giving the cross section without extrapolation, with the modified R-matrix for broad resonances. For ¹²C(α,γ)¹⁶O, data stop near 1 MeV while helium burning needs 300 keV; the subthreshold states of ¹⁶O, constrained by α-transfer ANCs, carry the extrapolation (deBoer et al. 2017).</span>
+    <span>How far one should trust an indirect normalization is still argued case by case; this page states each method as its review does and does not rank them.</span>`;
+  document.getElementById("srcs").innerHTML = `
+    <span><b>Solar Fusion III</b>: Acharya et al., Rev. Mod. Phys. (2025), arXiv:2405.06470: Table I (S(0) list), Eq. (8) (S₁₁), Eq. (15) (S₃₄), Table V (S₃₄ data ranges), Sec. IX (S₁₇ = 20.5(7) eV b), Sec. X (S₁,₁₄ total 1.68 ± 0.14 keV b), supplementary S₁₇ data tables (Hammache et al. 2001, lowest point 111.7 keV), Secs. XIII.A, XIV.B, XIV.C.</span>
+    <span><b>Solar Fusion II</b>: Adelberger et al., Rev. Mod. Phys. 83, 195 (2011), arXiv:1004.2318: Eq. (8) and the definitions under it (E<sub>0</sub>, Δ, A); Tc ≈ 15.5×10⁶ K, ρc ≈ 153 g/cm³; the LUNA ³He + ³He data to 16 keV (Bonetti et al. 1999) and ¹⁴N(p,γ) data from 70 keV (Bemmerer et al. 2006, Lemut et al. 2006).</span>
+    <span><b>deBoer et al.</b>, Rev. Mod. Phys. 89, 035007 (2017), arXiv:1709.03144: Eqs. (4), (5); Table I (burning stages and temperatures); Table IV (S(300 keV)); Fig. 3 caption (lowest measurements near 1 MeV).</span>`;
+}
+
+// ================================================================ updates
+function setReaction(id) {
+  S.r = BY[id] || BY["34"];
+  buildSurface(); buildBarrier();
+  for (const b of document.querySelectorAll("#chips button")) b.setAttribute("aria-pressed", b.dataset.id === S.r.id ? "true" : "false");
+  setT(S.T9);
+}
+let lastB = null;
+function setT(T9) {
+  S.T9 = Math.min(T9MAX, Math.max(T9MIN, T9));
+  document.getElementById("ts").value = L10(S.T9);
+  updateSlice();
+  lastB = updateBarrier(0);
+  drawInfo(lastB); drawW();
+  for (const b of document.querySelectorAll("#tchips button")) b.setAttribute("aria-pressed", Math.abs(L10(+b.dataset.t) - L10(S.T9)) < 1e-3 ? "true" : "false");
+  setHash();
+}
+function setHash() {
+  const h = `#${S.r.id}@${+S.T9.toPrecision(4)}`;
+  if (location.hash !== h) history.replaceState(null, "", h);
+}
+function parseHash() {
+  const m = location.hash.slice(1).match(/^([a-z0-9]+)(?:@([0-9.eE+-]+))?$/);
+  if (!m || !BY[m[1]]) return null;
+  return { id: m[1], T9: m[2] && isFinite(+m[2]) && +m[2] > 0 ? +m[2] : null };
+}
+document.getElementById("chips").innerHTML = R.map((r) => `<button data-id="${r.id}">${r.label}</button>`).join("");
+document.getElementById("tchips").innerHTML = STELLAR.STAGES.map((s) => `<button data-t="${s.T9}" title="${s.src}">${s.label}${s.lo !== s.hi ? ` ${fmtT(s.T9)}` : ""}</button>`).join("");
+document.getElementById("chips").addEventListener("click", (e) => { const b = e.target.closest("button"); if (!b) return; const r = BY[b.dataset.id]; S.T9 = r.T9; setReaction(r.id); });
+document.getElementById("tchips").addEventListener("click", (e) => { const b = e.target.closest("button"); if (b) setT(+b.dataset.t); });
+let pend = false;
+document.getElementById("ts").addEventListener("input", () => {
+  if (pend) return; pend = true;
+  requestAnimationFrame(() => { pend = false; setT(Math.pow(10, +document.getElementById("ts").value)); });
+});
+addEventListener("hashchange", () => { const h = parseHash(); if (!h) return; if (h.T9) S.T9 = h.T9; if (h.id !== S.r.id) setReaction(h.id); else setT(S.T9); });
+addEventListener("resize", () => {
+  camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight); composer.setSize(innerWidth, innerHeight);
+  fitCamera(); drawW();
+});
+let quality = innerWidth < 700 ? "low" : "high";
+function applyQuality() {
+  const g = quality === "high" ? GROUND_PRE_ACES : GROUND;
+  scene.background.copy(g); scene.fog.color.copy(g);
+  renderer.shadowMap.enabled = quality === "high";
+  RIG.key.castShadow = quality === "high";
+  for (const b of document.querySelectorAll("#qmode button")) b.setAttribute("aria-pressed", b.dataset.v === quality ? "true" : "false");
+  document.getElementById("vnote").innerHTML = `<b>Right</b>: the window e<sup>−E/kT − √(E<sub>G</sub>/E)</sup> over energy (across) and temperature (front to back, ${fmtT(T9MIN)} to ${fmtT(T9MAX)}), both logarithmic. Each row is divided by its own maximum, so all rows peak at the same height; the colour carries what that hides, the absolute height e<sup>−3E<sub>0</sub>/kT</sup>, on a log scale (dark: tiny). Amber ridge: E<sub>0</sub>(T). Lit slice: the chosen temperature, with the falling tail e<sup>−E/kT</sup> (blue, above E<sub>0</sub>) and the rising e<sup>−2πη</sup> (orange, below E<sub>0</sub>), each divided by its value at E<sub>0</sub>; their product is the white window. Teal fence and tint: energies with direct data. Strips at the left edge: burning stages. <b>Left</b>: the Coulomb barrier of this pair, cut open toward you; height logarithmic in energy, radius on an asinh scale (linear inside R, logarithmic far out). Glass sheet: E<sub>0</sub>; lit annulus: the forbidden region R &lt; r &lt; b. The wave decays inside the barrier by the WKB amplitude, drawn linearly in the decades it loses; nuclei are clusters of nucleons, not to the radial scale, and the motion is not to time. Materials and glow are presentation.`;
+}
+document.getElementById("qmode").addEventListener("click", (e) => { const b = e.target.closest("button"); if (!b) return; quality = b.dataset.v; applyQuality(); });
+
+function fitCamera() {
+  const wide = innerWidth / innerHeight;
+  const d = wide > 1.2 ? 150 : 300;
+  controls.target.set(wide > 1.2 ? -1 : -8, 1, -1);
+  camera.position.set(10, 92, 120).normalize().multiplyScalar(d).add(controls.target);
+}
+drawStatic();
+applyQuality();
+{
+  const h = parseHash();
+  if (h && h.T9) S.T9 = h.T9; else if (h) S.T9 = BY[h.id].T9;
+  setReaction(h ? h.id : "34");
+}
+fitCamera();
+
+let last = performance.now();
+function animate(now) {
+  requestAnimationFrame(animate);
+  const dt = Math.min(0.1, Math.max(0, (now - last) / 1000)); last = now;
+  controls.update();
+  cutAz.v = Math.atan2(camera.position.z - BZ, camera.position.x - BX);
+  CUTU.uCutDir.value.set(Math.cos(cutAz.v), Math.sin(cutAz.v));
+  lastB = updateBarrier(dt);
+  if (quality === "high") composer.render(); else renderer.render(scene, camera);
+  drawLabels(lastB);
+}
+requestAnimationFrame(animate);
+</script>
+<script src="assets/glass.js"></script>
+</body>
+</html>

@@ -1,0 +1,895 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Big-Bang nucleosynthesis · nuclearjs</title>
+<link rel="stylesheet" href="assets/glass.css">
+<style>
+body{margin:0}
+:root{
+  color-scheme:dark;
+  --ground:#0b0d12; --line:#262c3a;
+  --ink:#e6e8ee; --muted:#8a92a6; --accent:#f2c14e;
+  --yp:#e17be8; --dh:#6fa8ff; --he3:#ff7a6b; --li:#7fd17a; --planck:#f2c14e;
+  --sans:"Avenir Next","Futura","Helvetica Neue","PingFang SC","Noto Sans SC",system-ui,sans-serif;
+  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+}
+html,body{height:100%}
+body{background:var(--ground);color:var(--ink);font-family:var(--sans);overflow:hidden}
+#stage{position:fixed;inset:0}
+#stage canvas{display:block;touch-action:none}
+.panel{position:fixed;border-radius:18px;padding:16px 18px;display:flex;flex-direction:column;gap:12px;overflow:auto;box-sizing:border-box;z-index:2}
+.panel>*{flex-shrink:0}
+#ctl{left:16px;top:calc(16px + env(safe-area-inset-top,0px));width:min(330px,calc(100% - 32px));max-height:calc(100% - 56px)}
+#side{right:16px;top:calc(16px + env(safe-area-inset-top,0px));width:392px;max-height:calc(100% - 32px);gap:9px}
+h1{margin:0;font-size:22px;font-weight:600;letter-spacing:.01em}
+.sub{margin:2px 0 0;color:var(--muted);font-size:13px;line-height:1.45}
+.sub sup,.src sup,.kv sup,.cap sup,.leg sup,table sup{font-size:.7em}
+.grp{display:flex;flex-direction:column;gap:6px}
+.lab{font-size:11px;text-transform:uppercase;letter-spacing:.12em;color:var(--muted)}
+.chips{display:flex;flex-wrap:wrap;gap:5px}
+.chips button{background:none;border:1px solid var(--line);border-radius:4px;color:var(--ink);font:500 12px var(--mono);padding:5px 7px;cursor:pointer}
+.chips button:hover{border-color:var(--muted)}
+.chips button[aria-pressed="true"]{border-color:var(--accent);color:var(--accent)}
+.chips.small button{font-size:11px;padding:4px 7px;color:var(--muted)}
+.seg{display:flex;border:1px solid var(--line);border-radius:4px;overflow:hidden}
+.seg button{flex:1;background:none;border:0;color:var(--muted);font:500 12px var(--mono);padding:6px 4px;cursor:pointer}
+.seg button+button{border-left:1px solid var(--line)}
+.seg button[aria-pressed="true"]{background:#1f2533;color:var(--ink)}
+button:focus-visible,input:focus-visible,summary:focus-visible,canvas:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:3px 10px;font:12px var(--mono);font-variant-numeric:tabular-nums}
+.kv dt{color:var(--muted)}.kv dd{margin:0}
+.kv .hi{color:var(--accent)}
+.kv small{color:var(--muted)}
+.row{display:flex;gap:8px;align-items:center;font:12px var(--mono);color:var(--muted)}
+.row input[type=range]{flex:1;accent-color:var(--accent);min-width:0}
+.row output{min-width:86px;text-align:right;color:var(--ink);font-variant-numeric:tabular-nums}
+button.play{background:none;border:1px solid var(--line);border-radius:4px;color:var(--accent);font:500 12px var(--mono);padding:4px 8px;cursor:pointer;min-width:58px}
+details summary{cursor:pointer;font-size:11px;text-transform:uppercase;letter-spacing:.12em;color:var(--muted);list-style:none}
+details summary::before{content:"▸ ";}
+details[open] summary::before{content:"▾ ";}
+details .grp{margin-top:8px}
+.home{font:12px var(--mono);color:var(--muted);text-decoration:none}.home:hover{color:var(--ink)}
+.src{font-size:11px;color:var(--muted);line-height:1.5;margin:0}
+.src b{color:var(--ink);font-weight:600}
+.src q{color:#c9d2e3}
+.plot{width:100%;height:440px;display:block;cursor:crosshair}
+.cap{display:flex;flex-wrap:wrap;gap:2px 8px;justify-content:space-between;align-items:baseline;font:11px var(--mono);color:var(--muted)}
+.cap b{font:600 13px var(--sans);color:var(--ink)}
+.leg{display:flex;flex-wrap:wrap;gap:3px 11px;font:10.5px var(--mono);color:var(--muted);line-height:1.4}
+.leg i{display:inline-block;width:14px;height:0;border-top:2px solid;vertical-align:middle;margin-right:4px}
+.leg i.box{height:8px;border:1px solid;border-top-width:1px;background:rgba(255,255,255,.08)}
+table.pub{width:100%;border-collapse:collapse;font:11px var(--mono);font-variant-numeric:tabular-nums}
+table.pub th{font-weight:500;color:var(--muted);text-align:right;padding:3px 3px;border-bottom:1px solid #262c3a}
+table.pub th:first-child{text-align:left}
+table.pub td{padding:3px 3px;border-bottom:1px solid #191e2a;vertical-align:top;color:var(--ink);line-height:1.35;text-align:right}
+table.pub td:first-child{text-align:left;white-space:nowrap}
+table.pub tr.on td{color:var(--accent)}
+table.pub small{color:var(--muted);font-size:10px}
+table.pub .bar{display:inline-block;height:7px;background:#6fa8ff;border-radius:2px;vertical-align:middle}
+.axlab{position:fixed;font:500 11px var(--mono);color:#d6deea;pointer-events:none;transform:translate(-50%,-50%);white-space:nowrap;text-shadow:0 0 6px #000,0 0 2px #000;background:rgba(8,10,15,.55);padding:1px 6px;border-radius:4px;line-height:1.35;text-align:center}
+.axlab.hot{color:var(--accent)}
+.axlab.dim{background:none;color:#8f9ab0}
+.axlab.gap{background:none;color:#e88a8a}
+.axlab.arc{background:none;font-size:10.5px}
+.axlab small{color:var(--muted);font-size:10px;display:block}
+#stamp{position:fixed;left:50%;bottom:calc(22px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);text-align:center;pointer-events:none;width:min(680px,44vw)}
+#stamp .clock{display:block;font:500 13px var(--mono);color:var(--accent);letter-spacing:.04em}
+#stamp b{display:block;font:600 clamp(20px,2.4vw,32px)/1.1 var(--sans);letter-spacing:-.01em;margin-top:4px}
+#stamp small{display:block;font:500 12px var(--mono);color:var(--muted);margin-top:6px;line-height:1.5}
+.hint{position:fixed;left:16px;bottom:calc(14px + env(safe-area-inset-bottom,0px));font:11px var(--mono);color:var(--muted)}
+@media (max-width:900px){
+  #ctl{max-height:34vh}
+  #side{left:16px;right:16px;width:auto;top:auto;bottom:calc(12px + env(safe-area-inset-bottom,0px));max-height:36vh}
+  #stamp,.hint,.axlab{display:none}
+}
+@media (max-width:560px){.panel{padding:10px 12px;gap:9px}h1{font-size:18px}}
+</style>
+<script data-goatcounter="https://jinleiphys.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
+</head>
+<body>
+
+<div id="stage"></div>
+
+<aside id="ctl" class="panel glass glass-deep" data-glass data-glass-bevel="22" data-glass-scale="42">
+  <div>
+    <a class="home" href="index.html">← nuclearjs</a> &nbsp; <a class="home" href="hburning.html">Hydrogen burning</a> &nbsp; <a class="home" href="nucleosynthesis.html">s and r process</a>
+    <h1>Big-Bang nucleosynthesis</h1>
+    <p class="sub">In its first minutes the universe was a hot, expanding gas of photons, electrons, positrons, neutrinos and a trace of neutrons and protons. As it cooled, the weak interactions let go of the neutron-to-proton ratio, the neutrons began to decay, and the photons kept breaking every deuteron apart until it was cool enough for deuterons to survive. Then almost every neutron left ended in ⁴He, with traces of D, ³He and ⁷Li.</p>
+  </div>
+  <div class="grp">
+    <label class="lab" for="ts">Time</label>
+    <div class="row"><button class="play" id="play" aria-pressed="true">pause</button><input id="ts" type="range" min="0" max="1" step="0.0005"><output id="tout"></output></div>
+    <div class="chips small" id="tchips"></div>
+  </div>
+  <div class="grp">
+    <label class="lab" for="es">Baryon-to-photon ratio <span style="text-transform:none">η</span></label>
+    <div class="row"><input id="es" type="range" min="0" max="1" step="0.0005"><output id="eout"></output></div>
+    <div class="chips small" id="echips"></div>
+  </div>
+  <div class="grp">
+    <div class="lab">One-line estimates at this moment</div>
+    <dl class="kv" id="info"></dl>
+    <p class="src" id="infonote"></p>
+  </div>
+  <div class="grp">
+    <div class="lab">Light the network by</div>
+    <div class="seg" id="lit">
+      <button data-v="now" title="the reactions running at this moment">now</button>
+      <button data-v="yp" title="sensitivity of Y_p to each rate">Y<sub>p</sub></button>
+      <button data-v="dh" title="sensitivity of D/H to each rate">D/H</button>
+      <button data-v="he3" title="sensitivity of 3He/H to each rate">³He</button>
+      <button data-v="li" title="sensitivity of 7Li/H to each rate">⁷Li</button>
+    </div>
+    <p class="src" id="litnote"></p>
+  </div>
+  <div class="grp">
+    <div class="lab">Rendering</div>
+    <div class="seg" id="qmode">
+      <button data-v="high" title="bloom, ambient occlusion">cinematic</button>
+      <button data-v="low">fast</button>
+    </div>
+    <p class="src" id="vnote"></p>
+  </div>
+</aside>
+
+<aside id="side" class="panel glass glass-deep" data-glass data-glass-bevel="22" data-glass-scale="42">
+  <div class="cap"><b>Light elements against η</b><span>the "Schramm plot"</span></div>
+  <canvas id="ps" class="plot" tabindex="0" aria-label="Predicted primordial abundances of 4He, D, 3He and 7Li against the baryon-to-photon ratio, with observations and the Planck band; click to choose eta"></canvas>
+  <div class="leg" id="legs"></div>
+  <table class="pub" id="abtab"></table>
+  <p class="src" id="abnote"></p>
+  <details open>
+    <summary>The lithium problem</summary>
+    <div class="grp src" id="lith"></div>
+  </details>
+  <details open>
+    <summary>d(p,γ)³He and LUNA</summary>
+    <div class="grp src" id="luna"></div>
+  </details>
+  <details>
+    <summary>Sources</summary>
+    <div class="grp src" id="srcs"></div>
+  </details>
+</aside>
+
+<div id="labels"></div>
+<div id="stamp"></div>
+<div class="hint">drag to orbit · scroll to zoom · scrub the time</div>
+
+<script src="assets/three-bundle.js"></script>
+<script src="assets/three-post.js"></script>
+<script src="assets/wave-stage.js"></script>
+<script src="assets/shells-data.js"></script>
+<script src="assets/bbn-data.js"></script>
+<script src="assets/bbn.js"></script>
+<script>
+"use strict";
+const D = BBN_DATA, L10 = Math.log10;
+BBN.init(window.AME, D);
+const TMAX = 3, TMIN = 0.02;                       // MeV, the time slider runs from 3 MeV down to 20 keV
+const EMIN = 1, EMAX = 10;                         // eta_10 range of the published curves
+const KELVIN = 1.160451812e10;                     // K per MeV (CODATA 2018 k_B)
+const MEV = BBN.ME;
+const ETA_PLANCK = +BBN.eta10(D.planck.omega[0], BBN.curve("yp", D.planck.eta10[0] * 1e-10)[1]).toFixed(3);
+
+// ---------- state
+const S = { s: 0, eta10: ETA_PLANCK, play: true, lit: "now" };
+const T_of_s = (s) => TMAX * Math.pow(TMIN / TMAX, s);
+const s_of_T = (T) => Math.log(T / TMAX) / Math.log(TMIN / TMAX);
+const curT = () => T_of_s(S.s);
+const eta = () => S.eta10 * 1e-10;
+let EST = null;                                    // the estimates that depend only on eta
+function estimates() {
+  const e = eta(), Ts = BBN.Tsaha(e), Tp = BBN.Tpdg(e), Tf = BBN.Tf();
+  EST = { Ts, Tp, Tf, YpS: BBN.YpEst(Ts), YpP: BBN.YpEst(Tp), tS: BBN.tOfT(Ts), tP: BBN.tOfT(Tp), tf: BBN.tOfT(Tf) };
+  // the scene breaks the bottleneck at PDG's criterion, eta^-1 exp(-B_d/T) = 1
+  EST.Tb = Tp; EST.tb = EST.tP; EST.Xnb = BBN.Xn(Tp);
+}
+
+// ---------- scene
+const stage = document.getElementById("stage");
+const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.setSize(innerWidth, innerHeight);
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.05;
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+stage.appendChild(renderer.domElement);
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(34, innerWidth / innerHeight, 0.1, 900);
+const SKY = WaveStage.skyGLSL(new THREE.Vector3(-0.45, 0.82, 0.38));
+scene.environment = WaveStage.environment(renderer, SKY);
+scene.fog = new THREE.Fog("#0b0d12", 190, 420);
+// the ground colour #0b0d12 directly; on the bloom path the linear colour that ACES (exposure 1.05) maps back to it
+const GROUND = new THREE.Color("#0b0d12");
+const GROUND_PRE_ACES = new THREE.Color().setRGB(0.0115476, 0.0131218, 0.0174740, THREE.LinearSRGBColorSpace);
+scene.background = GROUND.clone();
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true; controls.dampingFactor = 0.08;
+controls.minDistance = 30; controls.maxDistance = 300;
+controls.maxPolarAngle = Math.PI * 0.49;
+const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+const RIG = WaveStage.rig(scene, SKY, 220, 70);
+const POST = WaveStage.post(renderer, scene, camera, [0.55, 0.55, 0.72], { intensity: 0.85, radius: 5, thickness: 3 });
+const composer = POST.composer;
+const BASE = -1.2;
+scene.add(WaveStage.floor(260, BASE - 0.02, 70, 0.5));
+
+// soft additive glow sprite
+const GLOWTEX = (() => {
+  const c = document.createElement("canvas"); c.width = c.height = 128;
+  const x = c.getContext("2d"), g = x.createRadialGradient(64, 64, 0, 64, 64, 64);
+  g.addColorStop(0, "rgba(255,255,255,1)"); g.addColorStop(0.18, "rgba(255,255,255,0.55)"); g.addColorStop(0.5, "rgba(255,255,255,0.12)"); g.addColorStop(1, "rgba(255,255,255,0)");
+  x.fillStyle = g; x.fillRect(0, 0, 128, 128);
+  return new THREE.CanvasTexture(c);
+})();
+function glow(color, size) {
+  const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: GLOWTEX, color, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending }));
+  s.scale.setScalar(size); s.renderOrder = 7; s.userData.noAO = true;
+  return s;
+}
+function rnd(seed) { const x = Math.sin(seed * 127.1 + 311.7) * 43758.5453; return x - Math.floor(x); }
+
+// ================================================================ the network on the (N, Z) plane
+const G = 9.5;                                     // tile pitch
+const NR = 0.5;
+const nucGeo = new THREE.SphereGeometry(NR, 26, 18);
+const matP = new THREE.MeshPhysicalMaterial({ color: "#e8574f", roughness: 0.3, clearcoat: 1, clearcoatRoughness: 0.08, emissive: "#e8574f", emissiveIntensity: 0.14, sheen: 0.5 });
+const matN = new THREE.MeshPhysicalMaterial({ color: "#5b8fe6", roughness: 0.3, clearcoat: 1, clearcoatRoughness: 0.08, emissive: "#5b8fe6", emissiveIntensity: 0.1, sheen: 0.5 });
+function cluster(Z, A) {                          // golden-spiral packing, protons spread among the neutrons
+  const g = new THREE.Group();
+  for (let i = 0; i < A; i++) {
+    const k = i + 0.5, rr = A === 1 ? 0 : 1.05 * NR * Math.cbrt(k), th = Math.acos(1 - 2 * ((k * 0.618034) % 1)), ph = Math.PI * (1 + Math.sqrt(5)) * k;
+    const m = new THREE.Mesh(nucGeo, (Math.floor(i * Z / A + 0.5) !== Math.floor((i + 1) * Z / A + 0.5)) ? matP : matN);
+    m.position.set(rr * Math.sin(th) * Math.cos(ph), rr * Math.cos(th), rr * Math.sin(th) * Math.sin(ph)); m.castShadow = true; g.add(m);
+  }
+  g.userData.r = A === 1 ? NR : 1.05 * NR * Math.cbrt(A) + NR;
+  return g;
+}
+// stations [key, N, Z]; gaps: the unbound A = 5 and A = 8 nuclei (NUBASE2020 half-lives)
+const STATIONS = [["n", 1, 0], ["p", 0, 1], ["d", 1, 1], ["t", 2, 1], ["he3", 1, 2], ["he4", 2, 2], ["li7", 4, 3], ["be7", 3, 4]];
+const GAPS = [["he5", 3, 2, "⁵He"], ["li5", 2, 3, "⁵Li"], ["be8", 4, 4, "⁸Be"]];
+const HL = { n: D.halflife.n[1], t: D.halflife.h3[1], be7: D.halflife.be7[1] };
+const NAME = { n: "n", p: "p (¹H)", d: "d (²H)", t: "t (³H)", he3: "³He", he4: "⁴He", li7: "⁷Li", be7: "⁷Be" };
+const xOf = (N) => (N - 2) * G, zOf = (Z) => -(Z - 2) * G;
+const W = 5 * G;
+const world = new THREE.Group(); scene.add(world);
+const plinth = new THREE.Mesh(new RoundedBoxGeometry(W + 4, 1.4, W + 4, 4, 0.5),
+  new THREE.MeshStandardMaterial({ color: "#1d2027", metalness: 0.85, roughness: 0.45, envMapIntensity: 0.9, roughnessMap: WaveStage.noiseTexture(256, 12, 0.6, 1.0, 21) }));
+plinth.position.set(0, BASE + 0.7, 0); plinth.receiveShadow = true; plinth.castShadow = true; world.add(plinth);
+{
+  const gl = [];
+  for (let N = 0; N <= 5; N++) gl.push(xOf(N - 0.5), BASE + 1.42, -W / 2, xOf(N - 0.5), BASE + 1.42, W / 2);
+  for (let Z = 0; Z <= 5; Z++) gl.push(-W / 2, BASE + 1.42, zOf(Z - 0.5), W / 2, BASE + 1.42, zOf(Z - 0.5));
+  const gg = new THREE.BufferGeometry(); gg.setAttribute("position", new THREE.Float32BufferAttribute(gl, 3));
+  const grid = new THREE.LineSegments(gg, new THREE.LineBasicMaterial({ color: "#39404f", transparent: true, opacity: 0.8 }));
+  grid.userData.noAO = true; world.add(grid);
+}
+function tileTexture(sym, sub, col) {
+  const c = document.createElement("canvas"); c.width = c.height = 256;
+  const x = c.getContext("2d");
+  x.textAlign = "center"; x.textBaseline = "middle";
+  x.fillStyle = col || "#dfe6f2"; x.font = "600 60px Avenir Next, Helvetica Neue, sans-serif"; x.fillText(sym, 128, 182);
+  x.fillStyle = "#8a92a6"; x.font = "500 24px ui-monospace, Menlo, monospace"; x.fillText(sub, 128, 228);
+  const t = new THREE.CanvasTexture(c); t.anisotropy = 4; t.colorSpace = THREE.SRGBColorSpace;
+  return t;
+}
+const C = {}, halos = {}, clusters = {};
+for (const [k, N, Z] of STATIONS) {
+  const [Zn, A] = BBN.NUC[k], unstable = !!HL[k];
+  const tile = new THREE.Mesh(new RoundedBoxGeometry(G * 0.86, 0.6, G * 0.86, 3, 0.25),
+    new THREE.MeshPhysicalMaterial({ color: unstable ? "#3b2d27" : "#272c37", roughness: 0.35, metalness: 0.2, clearcoat: 0.7, clearcoatRoughness: 0.2, envMapIntensity: 0.9 }));
+  tile.position.set(xOf(N), BASE + 1.7, zOf(Z)); tile.castShadow = tile.receiveShadow = true; world.add(tile);
+  const face = new THREE.Mesh(new THREE.PlaneGeometry(G * 0.8, G * 0.8).rotateX(-Math.PI / 2),
+    new THREE.MeshBasicMaterial({ map: tileTexture(NAME[k].split(" ")[0], ""), transparent: true, depthWrite: false }));
+  face.position.set(xOf(N), BASE + 2.02, zOf(Z)); face.renderOrder = 2; face.userData.noAO = true; world.add(face);
+  const cl = cluster(Zn, A), y = BASE + 2.0 + cl.userData.r + 0.5;
+  cl.position.set(xOf(N), y, zOf(Z) - 1.5); world.add(cl); clusters[k] = cl;
+  C[k] = new THREE.Vector3(xOf(N), y, zOf(Z) - 1.5);
+  const h = new THREE.Mesh(new THREE.RingGeometry(G * 0.36, G * 0.41, 64).rotateX(-Math.PI / 2),
+    new THREE.MeshBasicMaterial({ color: "#f2c14e", transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending }));
+  h.position.set(xOf(N), BASE + 2.06, zOf(Z)); h.renderOrder = 3; h.userData.noAO = true; world.add(h); halos[k] = h;
+}
+for (const [k, N, Z, sym] of GAPS) {
+  const tile = new THREE.Mesh(new RoundedBoxGeometry(G * 0.86, 0.3, G * 0.86, 3, 0.12),
+    new THREE.MeshPhysicalMaterial({ color: "#5a1d22", roughness: 0.15, transmission: 0.4, thickness: 0.6, transparent: true, opacity: 0.55, emissive: "#7a1f28", emissiveIntensity: 0.35 }));
+  tile.position.set(xOf(N), BASE + 1.55, zOf(Z)); world.add(tile);
+  const face = new THREE.Mesh(new THREE.PlaneGeometry(G * 0.8, G * 0.8).rotateX(-Math.PI / 2),
+    new THREE.MeshBasicMaterial({ map: tileTexture(sym, "", "#e88a8a"), transparent: true, depthWrite: false, opacity: 0.9 }));
+  face.position.set(xOf(N), BASE + 1.75, zOf(Z)); face.renderOrder = 2; face.userData.noAO = true; world.add(face);
+}
+// arcs: one per reaction, from the main target to the main product; parallel arcs (d -> 3He twice, 7Be -> 4He twice) bend apart
+const KIND = { ndec: "weak", pn: "cap", dpg: "cap", he3ag: "cap", tag: "cap", ddn: "tr", ddp: "tr", he3np: "tr", be7np: "tr", he3dp: "burn", tdn: "burn", li7pa: "burn", be7na: "burn", be7dp: "burn" };
+const KCOL = { weak: "#c39bd3", cap: "#f2c14e", tr: "#7fd1b9", burn: "#ff7aa8" };
+const KLAB = { weak: "β⁻ decay", cap: "radiative capture", tr: "nucleon transfer", burn: "to ⁴He" };
+const ARCV = `varying float vU; void main(){ vU = uv.x; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`;
+const ARCF = `uniform vec3 uC; uniform float uT, uOn; varying float vU;
+  void main(){
+    float dash = smoothstep(0.55, 1.0, fract(vU * 6.0 - uT * (0.5 + 1.6 * uOn)));
+    float a = 0.06 + 0.42 * uOn + dash * (0.07 + 0.8 * uOn);
+    gl_FragColor = vec4(uC * a, a);
+    #include <tonemapping_fragment>
+    #include <colorspace_fragment>
+  }`;
+const ARCS = {};
+{
+  const seen = {};
+  for (const id in BBN.REACT) {
+    const r = BBN.REACT[id], A = C[r.from], B = C[r.to], key = r.from + ">" + r.to;
+    const nth = seen[key] = (seen[key] || 0) + 1;
+    const d = B.clone().sub(A), L = d.length(), mid = A.clone().add(B).multiplyScalar(0.5);
+    mid.y += 1.6 + 0.2 * L;
+    const sgn = nth === 1 ? 1 : -1.6;
+    mid.add(new THREE.Vector3(-d.z, 0, d.x).normalize().multiplyScalar(0.09 * L * sgn));
+    const curve = new THREE.QuadraticBezierCurve3(A.clone(), mid, B.clone());
+    const u = { uC: { value: new THREE.Color(KCOL[KIND[id]]) }, uT: { value: 0 }, uOn: { value: 0 } };
+    const m = new THREE.ShaderMaterial({ uniforms: u, vertexShader: ARCV, fragmentShader: ARCF, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending });
+    const tube = new THREE.Mesh(new THREE.TubeGeometry(curve, 64, 0.26, 10, false), m);
+    tube.renderOrder = 5; tube.userData.noAO = true; world.add(tube);
+    const tEnd = Math.max(0.5, 1 - (clusters[r.to].userData.r + 0.8) / curve.getLength());
+    const cone = new THREE.Mesh(new THREE.ConeGeometry(0.5, 1.3, 16), new THREE.MeshBasicMaterial({ color: KCOL[KIND[id]], transparent: true, opacity: 0.5, depthWrite: false }));
+    cone.position.copy(curve.getPointAt(tEnd)); cone.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), curve.getTangentAt(tEnd)); cone.userData.noAO = true;
+    world.add(cone);
+    ARCS[id] = { curve, u, cone, tube, on: 0 };
+  }
+}
+
+// ================================================================ the universe: a comoving ball of plasma
+// The ball's radius grows as the gas cools (a ∝ 1/T, drawn compressed: not to scale). Inside: photons (points whose
+// colour cools with T), e+- pairs (they fade when T falls below m_e), and NB baryons as nucleons: which of them are
+// neutrons follows the one-line n/p model of the panel; below the bottleneck temperature they gather into 4He.
+const UNI = new THREE.Group(); scene.add(UNI);
+const UY = 17, UZ = -54;                           // centre of the ball
+UNI.position.set(0, UY, UZ);
+const radius = (T) => 9.5 * Math.pow(TMAX / T, 0.1);
+// photons
+const NPH = 7000, NEE = 1600;
+function cloud(n, size, seed) {
+  const pos = new Float32Array(n * 3), home = new Float32Array(n * 3), vel = new Float32Array(n * 3), a = new Float32Array(n);
+  for (let i = 0; i < n; i++) {
+    const r = Math.cbrt(rnd(seed + i * 3.1)), th = Math.acos(1 - 2 * rnd(seed + i * 5.7)), ph = 2 * Math.PI * rnd(seed + i * 7.3);
+    home[3 * i] = r * Math.sin(th) * Math.cos(ph); home[3 * i + 1] = r * Math.cos(th); home[3 * i + 2] = r * Math.sin(th) * Math.sin(ph);
+    const vt = Math.acos(1 - 2 * rnd(seed + i * 9.1)), vp = 2 * Math.PI * rnd(seed + i * 11.3);
+    vel[3 * i] = Math.sin(vt) * Math.cos(vp); vel[3 * i + 1] = Math.cos(vt); vel[3 * i + 2] = Math.sin(vt) * Math.sin(vp);
+    a[i] = 0.5 + 0.5 * rnd(seed + i * 13.7);
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute("position", new THREE.BufferAttribute(pos, 3)); g.setAttribute("aA", new THREE.BufferAttribute(a, 1));
+  const m = new THREE.ShaderMaterial({
+    uniforms: { uPix: { value: 600 }, uSize: { value: size }, uCol: { value: new THREE.Vector3(1, 1, 1) }, uGain: { value: 1 } },
+    vertexShader: `attribute float aA; uniform float uPix, uSize; varying float vA;
+      void main(){ vA = aA; vec4 mv = modelViewMatrix * vec4(position, 1.0); gl_Position = projectionMatrix * mv;
+        gl_PointSize = aA > 0.0 ? max(1.2, uSize * uPix / -mv.z) : 0.0; }`,
+    fragmentShader: `uniform vec3 uCol; uniform float uGain; varying float vA; void main(){ vec2 d = gl_PointCoord - 0.5; float r2 = dot(d, d); if (r2 > 0.25) discard;
+        float a = exp(-r2 * 14.0) * vA * uGain; gl_FragColor = vec4(uCol * a, a);
+        #include <tonemapping_fragment>
+        #include <colorspace_fragment>
+      }`,
+    transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
+  });
+  const p = new THREE.Points(g, m); p.frustumCulled = false; p.userData.noAO = true; UNI.add(p);
+  return { p, pos, home, vel, a, g, m, n, base: a.slice() };
+}
+const PH = cloud(NPH, 0.32, 1.7), EE = cloud(NEE, 0.26, 91.3);
+// a faint shell that marks the comoving boundary
+const shell = new THREE.Mesh(new THREE.SphereGeometry(1, 64, 40), new THREE.ShaderMaterial({
+  uniforms: { uC: { value: new THREE.Color(1, 0.8, 0.5) }, uG: { value: 0.5 } },
+  vertexShader: `varying vec3 vN, vV; void main(){ vec4 mv = modelViewMatrix * vec4(position, 1.0); vN = normalize(normalMatrix * normal); vV = normalize(-mv.xyz); gl_Position = projectionMatrix * mv; }`,
+  fragmentShader: `uniform vec3 uC; uniform float uG; varying vec3 vN, vV; void main(){ float f = pow(1.0 - abs(dot(vN, vV)), 3.0); vec3 c = uC * f * uG; gl_FragColor = vec4(c, f * uG);
+    #include <tonemapping_fragment>
+    #include <colorspace_fragment>
+  }`,
+  transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.FrontSide,
+}));
+shell.userData.noAO = true; UNI.add(shell);
+const core = glow("#ffffff", 30); UNI.add(core);
+// baryons
+const NB = 200;
+const bGeo = new THREE.SphereGeometry(0.42, 18, 12);
+const bMat = new THREE.MeshPhysicalMaterial({ roughness: 0.3, clearcoat: 1, clearcoatRoughness: 0.1, emissiveIntensity: 0.25 });
+const BAR = new THREE.InstancedMesh(bGeo, bMat, NB);
+BAR.instanceMatrix.setUsage(THREE.DynamicDrawUsage); BAR.castShadow = false; UNI.add(BAR);
+const COLP = new THREE.Color("#e8574f"), COLN = new THREE.Color("#5b8fe6");
+const BH = [], BU = [], BPH = [], BRATE = [];
+{
+  const order = [...Array(NB).keys()].sort((a, b) => rnd(a * 1.37 + 0.2) - rnd(b * 1.37 + 0.2));
+  for (let i = 0; i < NB; i++) {
+    const r = 0.86 * Math.cbrt(rnd(i * 2.3 + 5)), th = Math.acos(1 - 2 * rnd(i * 4.1 + 6)), ph = 2 * Math.PI * rnd(i * 6.7 + 7);
+    BH.push(new THREE.Vector3(r * Math.sin(th) * Math.cos(ph), r * Math.cos(th), r * Math.sin(th) * Math.sin(ph)));
+    BU.push((order.indexOf(i) + 0.5) / NB);         // the rank that decides when this nucleon is a neutron
+    BPH.push(rnd(i * 8.9 + 1)); BRATE.push(0.6 + 0.8 * rnd(i * 3.3 + 2));
+  }
+}
+const flashes = [];
+for (let i = 0; i < 24; i++) { const f = glow("#ffffff", 1); f.visible = false; UNI.add(f); flashes.push({ s: f, t: 9 }); }
+let flashK = 0;
+function flash(p, color, size) { const f = flashes[flashK++ % flashes.length]; f.s.position.copy(p); f.s.material.color.set(color); f.size = size; f.t = 0; f.s.visible = true; }
+
+// ================================================================ the state of the baryons at (T, clock)
+const prevKind = new Array(NB).fill(-1);
+const dummy = new THREE.Object3D(), tmp = new THREE.Vector3(), tmp2 = new THREE.Vector3();
+let PAIR = null;                                   // for each neutron rank, its partner proton, recomputed when eta changes
+function photonColour(T) {                         // presentation: white-blue when hot, through yellow to deep orange
+  const x = Math.max(0, Math.min(1, (L10(T) - L10(TMIN)) / (L10(TMAX) - L10(TMIN))));
+  const stops = [[0, [1.0, 0.32, 0.12]], [0.3, [1.0, 0.55, 0.22]], [0.55, [1.0, 0.85, 0.55]], [0.8, [0.95, 0.95, 1.0]], [1, [0.7, 0.82, 1.0]]];
+  for (let i = 0; i < stops.length - 1; i++) if (x <= stops[i + 1][0]) { const f = (x - stops[i][0]) / (stops[i + 1][0] - stops[i][0]); return stops[i][1].map((v, k) => v + f * (stops[i + 1][1][k] - v)); }
+  return stops[stops.length - 1][1];
+}
+// which nucleons are neutrons, bound, and where they sit
+function baryonState(T, clock) {
+  const Tf = EST.Tf, Ts = EST.Tb;
+  const Xn = T >= Ts ? BBN.Xn(T) : EST.Xnb;
+  const kind = new Array(NB);                      // 0 p, 1 n
+  for (let i = 0; i < NB; i++) {
+    let u = BU[i];
+    // above freeze-out the weak interactions turn n into p and back: the rank wanders with time
+    if (T >= Tf) u = (u + 0.61803 * Math.floor(clock * BRATE[i] * 1.6 * Math.pow(T / Tf, 2) + BPH[i] * 7)) % 1;
+    kind[i] = u < Xn ? 1 : 0;
+  }
+  return { kind, Xn };
+}
+// 4He assembly: the neutrons (ranked) pair up; each pair takes the two nearest free protons
+function buildPairs() {
+  const Xn = EST.Xnb, neut = [], prot = [];
+  for (let i = 0; i < NB; i++) (BU[i] < Xn ? neut : prot).push(i);
+  neut.sort((a, b) => BU[a] - BU[b]);
+  const used = new Set(), groups = [], partner = {};
+  // deuteron partners in the bottleneck: the nearest proton to each neutron
+  for (const n of neut) { let best = -1, bd = 1e9; for (const p of prot) { const d = BH[n].distanceToSquared(BH[p]); if (d < bd) { bd = d; best = p; } } partner[n] = best; }
+  for (let j = 0; j + 1 < neut.length; j += 2) {
+    const a = neut[j], b = neut[j + 1], mid = BH[a].clone().add(BH[b]).multiplyScalar(0.5);
+    const ps = prot.filter((p) => !used.has(p)).sort((p, q) => BH[p].distanceToSquared(mid) - BH[q].distanceToSquared(mid)).slice(0, 2);
+    ps.forEach((p) => used.add(p));
+    const members = [a, ps[0], b, ps[1]];
+    const c = members.reduce((s, i) => s.add(BH[i]), new THREE.Vector3()).multiplyScalar(0.25);
+    groups.push({ members, c });
+  }
+  const odd = neut.length % 2 ? neut[neut.length - 1] : -1;   // a neutron left without a partner neutron: it stays free
+  PAIR = { groups, partner, odd, neut: new Set(neut) };
+}
+const TET = [[1, 1, 1], [-1, -1, 1], [-1, 1, -1], [1, -1, -1]].map((v) => new THREE.Vector3(...v).normalize().multiplyScalar(0.44));   // world units
+let lastT = null;
+function updateUniverse(T, clock, dt) {
+  const R = radius(T);
+  UNI.scale.setScalar(1);
+  // photons and pairs
+  const col = photonColour(T), heat = Math.min(1, 0.35 + 0.65 * Math.pow(T / TMAX, 0.25));
+  PH.m.uniforms.uCol.value.set(col[0] * 1.6, col[1] * 1.6, col[2] * 1.6); PH.m.uniforms.uGain.value = 0.55 + 0.45 * heat;
+  const ef = T >= MEV ? 1 : Math.min(1, Math.pow(MEV / T, 1.5) * Math.exp(1 - MEV / T));     // e+- fading (presentation)
+  EE.m.uniforms.uCol.value.set(0.55, 1.25, 0.75); EE.m.uniforms.uGain.value = ef;
+  const sp = reduce ? 0 : 1;
+  for (const c of [PH, EE]) {
+    const v = c === PH ? 0.9 : 0.35;
+    for (let i = 0; i < c.n; i++) {
+      // each point drifts and wraps around inside the unit ball
+      let x = c.home[3 * i] + c.vel[3 * i] * v * clock * 0.05 * sp, y = c.home[3 * i + 1] + c.vel[3 * i + 1] * v * clock * 0.05 * sp, z = c.home[3 * i + 2] + c.vel[3 * i + 2] * v * clock * 0.05 * sp;
+      const r2 = x * x + y * y + z * z;
+      if (r2 > 1) { const f = ((Math.sqrt(r2) + 1) % 2) - 1; const s = f / Math.sqrt(r2); x *= s; y *= s; z *= s; }
+      c.pos[3 * i] = x * R; c.pos[3 * i + 1] = y * R; c.pos[3 * i + 2] = z * R;
+    }
+    c.g.attributes.position.needsUpdate = true;
+  }
+  shell.scale.setScalar(R * 1.04);
+  shell.material.uniforms.uC.value.setRGB(col[0], col[1] * 0.9, col[2] * 0.8); shell.material.uniforms.uG.value = 0.35 + 0.4 * heat;
+  core.material.color.setRGB(col[0], col[1], col[2]); core.material.opacity = 0.18 + 0.3 * heat; core.scale.setScalar(R * 2.6);
+  // baryons
+  const st = baryonState(T, clock), Ts = EST.Tb;
+  const asm = T >= Ts ? 0 : Math.min(1, Math.max(0, (L10(Ts) - L10(T)) / (L10(Ts) - L10(Ts * 0.72))));
+  const ease = asm * asm * (3 - 2 * asm);
+  // share of time a deuteron survives: 1 / (1 + photons above B_d per baryon), one half at the PDG criterion
+  const q = T > Ts * 3.2 || T < Ts ? 0 : 1 / (1 + Math.exp(-BBN.Bd() / T) / eta());
+  const jig = 0.05 * Math.sqrt(T / TMAX) + 0.012;
+  const target = new Array(NB);
+  for (let i = 0; i < NB; i++) {
+    const w = reduce ? 0 : 1;
+    target[i] = tmp.set(BH[i].x + w * jig * Math.sin(clock * 2.1 * BRATE[i] + i), BH[i].y + w * jig * Math.sin(clock * 1.7 * BRATE[i] + 2 * i), BH[i].z + w * jig * Math.cos(clock * 1.9 * BRATE[i] + 3 * i)).clone();
+  }
+  // the bottleneck: each neutron spends a share q of the time bound to its nearest proton; when it is knocked loose, a photon flash
+  const boundNow = new Set();
+  if (q > 0 && PAIR) {
+    for (const n of PAIR.neut) {
+      if (st.kind[n] !== 1) continue;
+      const p = PAIR.partner[n], on = ((clock * 0.45 * BRATE[n] + BPH[n]) % 1) < q;
+      if (on) { const mid = target[n].clone().add(target[p]).multiplyScalar(0.5); const dir = target[n].clone().sub(target[p]).normalize().multiplyScalar(0.4 / R); target[n].copy(mid).add(dir); target[p].copy(mid).sub(dir); boundNow.add(n); }
+      if (BAR.userData.bound && BAR.userData.bound.has(n) && !on && !reduce) flash(target[n].clone().multiplyScalar(R), new THREE.Color(col[0], col[1], col[2]), 2.2);
+    }
+  }
+  BAR.userData.bound = boundNow;
+  // 4He: members move to a tetrahedron around the group centre
+  if (ease > 0 && PAIR) {
+    for (const g of PAIR.groups) g.members.forEach((m, k) => { tmp2.copy(TET[k]).multiplyScalar(1 / R).add(g.c); target[m].lerp(tmp2, ease); });
+  }
+  for (let i = 0; i < NB; i++) {
+    let k = st.kind[i];
+    if (T < Ts && PAIR && i === PAIR.odd) k = 1;
+    if (prevKind[i] !== -1 && prevKind[i] !== k && lastT !== null && !reduce) flash(target[i].clone().multiplyScalar(R), k ? "#9ec0ff" : "#c39bd3", 1.4);
+    prevKind[i] = k;
+    dummy.position.copy(target[i]).multiplyScalar(R); dummy.scale.setScalar(1); dummy.updateMatrix();
+    BAR.setMatrixAt(i, dummy.matrix); BAR.setColorAt(i, k ? COLN : COLP);
+  }
+  BAR.instanceMatrix.needsUpdate = true; if (BAR.instanceColor) BAR.instanceColor.needsUpdate = true;
+  for (const f of flashes) { if (f.t > 1) { f.s.visible = false; continue; } f.t += dt * 2.2; f.s.material.opacity = Math.max(0, 1 - f.t); f.s.scale.setScalar(f.size * (0.6 + f.t)); }
+  lastT = T;
+  return { q, ef, ease, Xn: st.Xn };
+}
+
+// ================================================================ what the network shows
+function arcActivity(T) {
+  const Ts = EST.Tb, t = BBN.tOfT(T), tS = EST.tb;
+  const on = {};
+  for (const id in ARCS) on[id] = 0;
+  on.ndec = T < EST.Tf ? (T > Ts ? 1 : 0.25) : 0.35;          // free decay after freeze-out; it goes on for the leftover neutrons
+  if (T < Ts * 3.2 && T >= Ts) on.pn = 0.35 + 0.65 * Math.abs(Math.sin(performance.now() / 300));   // formed and broken
+  if (T < Ts) {
+    // fusion runs once the bottleneck breaks, then fades over a few times the onset time (presentation)
+    const f = Math.max(0, 1 - Math.log(t / tS) / Math.log(12));
+    for (const id in ARCS) if (id !== "ndec") on[id] = f;
+  }
+  return on;
+}
+function sensActivity(sp) {
+  const col = { yp: 0, dh: 1, he3: 2, li: 3 }[sp], on = {};
+  let mx = 0;
+  for (const id in ARCS) mx = Math.max(mx, Math.abs(D.sens[BBN.REACT[id].sens][col]));
+  for (const id in ARCS) on[id] = Math.abs(D.sens[BBN.REACT[id].sens][col]) / mx;
+  return on;
+}
+
+// ================================================================ labels
+const labels = document.getElementById("labels"), LAB = {};
+function lab(key, cls) {
+  if (!LAB[key]) { const el = document.createElement("div"); el.className = "axlab " + (cls || ""); labels.appendChild(el); LAB[key] = el; }
+  LAB[key].className = "axlab " + (cls || "");
+  return LAB[key];
+}
+const tmpV = new THREE.Vector3();
+function place(el, x, y, z, html) {
+  tmpV.set(x, y, z).project(camera);
+  const vis = tmpV.z < 1 && Math.abs(tmpV.x) < 1 && Math.abs(tmpV.y) < 1 && html !== "";
+  el.hidden = !vis;
+  if (vis) { el.style.left = (tmpV.x * 0.5 + 0.5) * innerWidth + "px"; el.style.top = (-tmpV.y * 0.5 + 0.5) * innerHeight + "px"; if (html != null && el._h !== html) { el.innerHTML = html; el._h = html; } }
+}
+const SUP = "⁰¹²³⁴⁵⁶⁷⁸⁹";
+const sup = (n) => String(n).replace("-", "⁻").replace(/\d/g, (d) => SUP[d]);
+function sci(v, p) {
+  if (!isFinite(v)) return "?";
+  if (v === 0) return "0";
+  const e = Math.floor(L10(Math.abs(v))), m = v / Math.pow(10, e);
+  if (e >= -2 && e <= 3) return (+v.toPrecision(p || 2)).toString();
+  return `${m.toFixed((p || 2) - 1)} × 10${sup(e)}`;
+}
+function fmtT(t) { return t < 1 ? `${+t.toPrecision(2)} s` : t < 120 ? `${+t.toPrecision(3)} s` : `${+t.toPrecision(3)} s (${+(t / 60).toPrecision(2)} min)`; }
+let ON = {};
+function drawLabels() {
+  for (const [k] of STATIONS) {
+    const c = C[k], hot = ON["_" + k];
+    place(lab("n" + k, hot ? "hot" : ""), c.x, c.y + clusters[k].userData.r + 1.5, c.z, NAME[k] + (HL[k] ? `<small>T½ ${HL[k]}</small>` : ""));
+  }
+  for (const [k, N, Z, sym] of GAPS) place(lab("g" + k, "gap"), xOf(N), BASE + 2.4, zOf(Z) - G * 0.3, `${sym} unbound<small>T½ ${D.halflife[k][1]}</small>`);
+  // arc labels: in "now" mode only while few reactions run (otherwise the table of Q values is in the arcs' title), in
+  // sensitivity mode the four largest |alpha|
+  const nOn = Object.values(ARCS).filter((a) => a.on > 0.3).length;
+  const col = { yp: 0, dh: 1, he3: 2, li: 3 }[S.lit];
+  const top4 = S.lit === "now" ? null : Object.keys(ARCS).sort((a, b) => Math.abs(D.sens[BBN.REACT[b].sens][col]) - Math.abs(D.sens[BBN.REACT[a].sens][col])).slice(0, 4);
+  for (const id in ARCS) {
+    const a = ARCS[id], m = a.curve.getPointAt(0.5), r = BBN.REACT[id];
+    let txt = "";
+    if (S.lit === "now") txt = a.on > 0.3 && nOn <= 3 ? `${r.lab} <small>Q = ${BBN.Q(id).toFixed(3)} MeV</small>` : "";
+    else { const al = (id === "ndec" ? -1 : 1) * D.sens[r.sens][col]; txt = top4.includes(id) && Math.abs(al) > 0 ? `${r.lab} <small>α = ${al.toFixed(3)}</small>` : ""; }
+    place(lab("a" + id, "arc " + (a.on > 0.6 ? "hot" : "dim")), m.x, m.y + 0.9, m.z, txt);
+  }
+  for (let N = 0; N <= 4; N++) place(lab("xN" + N, "dim"), xOf(N), BASE + 1.4, W / 2 + 3.4, `N = ${N}`);
+  for (let Z = 0; Z <= 4; Z++) place(lab("xZ" + Z, "dim"), -W / 2 - 4.4, BASE + 1.4, zOf(Z), `Z = ${Z}`);
+  const R = radius(curT());
+  place(lab("uni", "dim"), 0, UY + R + 2.6, UZ, `the universe, a comoving patch<small>radius grows as 1/T (compressed); ${NB} baryons drawn among the photons</small>`);
+}
+
+// ================================================================ panels
+function setupCanvas(c) {
+  const d = Math.min(devicePixelRatio, 2), w = c.clientWidth, h = c.clientHeight;
+  c.width = w * d; c.height = h * d;
+  const x = c.getContext("2d"); x.setTransform(d, 0, 0, d, 0, 0);
+  return { x, w, h };
+}
+// the Schramm plot: three stacked panels, eta from 1e-10 to 1e-9 (log), the published bands
+const PANELS = [
+  { sp: ["yp"], lo: 0.225, hi: 0.262, log: false, h: 0.3, ticks: [0.23, 0.24, 0.25, 0.26], lab: "Y<sub>p</sub>", name: "Y_p" },
+  { sp: ["dh", "he3"], lo: -5.5, hi: -3, log: true, h: 0.4, ticks: [-5, -4, -3], name: "D/H, ³He/H" },
+  { sp: ["li"], lo: -10.25, hi: -8.85, log: true, h: 0.3, ticks: [-10, -9], name: "⁷Li/H" },
+];
+const SCOL = { yp: "#e17be8", dh: "#6fa8ff", he3: "#ff7a6b", li: "#7fd17a" };
+let PS = null;
+function drawSchramm() {
+  const cv = document.getElementById("ps"), { x: ctx, w, h } = setupCanvas(cv);
+  const PL = 46, PR = 8, PT = 22, PB = 26, GAP = 0;
+  const X = (e10) => PL + (L10(e10) - 0) / 1 * (w - PL - PR);
+  const Hs = h - PT - PB;
+  ctx.font = "10px ui-monospace,Menlo,monospace";
+  let y0 = PT;
+  const frames = [];
+  for (const P of PANELS) {
+    const ph = P.h * Hs, top = y0, bot = y0 + ph;
+    const Y = (v) => { const u = P.log ? L10(v) : v; return bot - (u - P.lo) / (P.hi - P.lo) * ph; };
+    frames.push({ P, top, bot, Y });
+    // frame and grid
+    ctx.strokeStyle = "#262c3a"; ctx.strokeRect(PL + 0.5, top + 0.5, w - PL - PR - 1, ph - 1);
+    for (const t of P.ticks) { const yy = P.log ? bot - (t - P.lo) / (P.hi - P.lo) * ph : Y(t); ctx.strokeStyle = "#1a1f2b"; ctx.beginPath(); ctx.moveTo(PL, yy); ctx.lineTo(w - PR, yy); ctx.stroke(); ctx.fillStyle = "#8a92a6"; ctx.textAlign = "right"; ctx.fillText(P.log ? `10${sup(t)}` : t.toFixed(2), PL - 4, yy + 3); }
+    for (let e = 1; e <= 10; e++) { ctx.strokeStyle = e === 1 || e === 10 ? "#262c3a" : "#161b26"; ctx.beginPath(); ctx.moveTo(X(e), top); ctx.lineTo(X(e), bot); ctx.stroke(); }
+    ctx.save(); ctx.beginPath(); ctx.rect(PL, top, w - PL - PR, ph); ctx.clip();
+    // Planck band (vertical)
+    const pe = planckEta();
+    ctx.fillStyle = "rgba(242,193,78,0.16)"; ctx.fillRect(X(pe[0] - pe[1]), top, X(pe[0] + pe[1]) - X(pe[0] - pe[1]), ph);
+    // observations (horizontal bands)
+    for (const sp of P.sp) {
+      const o = D.obs[sp]; if (!o) continue;
+      ctx.fillStyle = "rgba(255,255,255,0.09)"; ctx.fillRect(PL, Y(o[0] + o[1]), w - PL - PR, Y(o[0] - o[1]) - Y(o[0] + o[1]));
+      ctx.setLineDash([4, 3]); ctx.strokeStyle = SCOL[sp] + "aa"; ctx.beginPath(); ctx.moveTo(PL, Y(o[0])); ctx.lineTo(w - PR, Y(o[0])); ctx.stroke(); ctx.setLineDash([]);
+    }
+    // bands and central lines
+    for (const sp of P.sp) {
+      const rows = D.curves[sp];
+      ctx.fillStyle = SCOL[sp] + "66"; ctx.beginPath();
+      rows.forEach((r, i) => { const xx = X(Math.pow(10, r[0] + 10)); i ? ctx.lineTo(xx, Y(r[3])) : ctx.moveTo(xx, Y(r[3])); });
+      for (let i = rows.length - 1; i >= 0; i--) ctx.lineTo(X(Math.pow(10, rows[i][0] + 10)), Y(rows[i][1]));
+      ctx.closePath(); ctx.fill();
+      ctx.strokeStyle = SCOL[sp]; ctx.lineWidth = 1.4; ctx.beginPath();
+      rows.forEach((r, i) => { const xx = X(Math.pow(10, r[0] + 10)); i ? ctx.lineTo(xx, Y(r[2])) : ctx.moveTo(xx, Y(r[2])); });
+      ctx.stroke(); ctx.lineWidth = 1;
+    }
+    // chosen eta
+    ctx.strokeStyle = "#ffffff"; ctx.beginPath(); ctx.moveTo(X(S.eta10), top); ctx.lineTo(X(S.eta10), bot); ctx.stroke();
+    for (const sp of P.sp) { const c = BBN.curve(sp, eta()); if (c) { ctx.fillStyle = SCOL[sp]; ctx.beginPath(); ctx.arc(X(S.eta10), Y(c[1]), 3.4, 0, 2 * Math.PI); ctx.fill(); } }
+    ctx.restore();
+    // panel names
+    ctx.textAlign = "left"; ctx.font = "600 11px Avenir Next, Helvetica Neue, sans-serif";
+    let nx = PL + 6;
+    for (const sp of P.sp) { ctx.fillStyle = SCOL[sp]; const nm = { yp: "⁴He  Y_p", dh: "D/H", he3: "³He/H", li: "⁷Li/H" }[sp]; ctx.fillText(nm, nx, top + 13); nx += ctx.measureText(nm).width + 12; }
+    ctx.font = "10px ui-monospace,Menlo,monospace";
+    y0 = bot + GAP;
+  }
+  // eta axis below, Omega_b h^2 above
+  ctx.fillStyle = "#8a92a6"; ctx.textAlign = "center";
+  for (const e of [1, 2, 3, 5, 10]) ctx.fillText(`${e}`, X(e), h - PB + 12);
+  ctx.fillText("η × 10¹⁰", (PL + w - PR) / 2, h - 3);
+  const Yfix = D.single.yp;
+  for (const om of [0.005, 0.01, 0.02, 0.03]) { const e = BBN.eta10(om, Yfix); if (e < 1 || e > 10) continue; ctx.strokeStyle = "#8a92a6"; ctx.beginPath(); ctx.moveTo(X(e), PT); ctx.lineTo(X(e), PT - 4); ctx.stroke(); ctx.fillText(`${om}`, X(e), PT - 7); }
+  ctx.textAlign = "right"; ctx.fillText("Ω_b h²", PL - 4, PT - 7);
+  PS = { X, PL, PR, w, frames };
+  // legend
+  document.getElementById("legs").innerHTML = `<span><i style="border-color:#e17be8"></i>BBN prediction, 1σ band (Yeh, Olive, Fields 2021, Fig. 11)</span><span><i class="box" style="border-color:#f2c14e;background:rgba(242,193,78,.25)"></i>Planck 2018: η<sub>10</sub> = ${planckEta()[0].toFixed(3)} ± ${planckEta()[1].toFixed(3)}</span><span><i style="border-color:#aaa;border-top-style:dashed"></i>observed ± 1σ (PDG 2024; none for ³He)</span>`;
+}
+// the Planck band in eta_10: Omega_b h^2 converted with FOYY's relation, at the Y_p of the curve there
+function planckEta() {
+  const om = D.planck.omega, Y = BBN.curve("yp", D.planck.eta10[0] * 1e-10)[1];
+  const c = BBN.eta10(om[0], Y);
+  return [c, BBN.eta10(om[0] + om[1], Y) - c];
+}
+function pull(p, sp, o) { return (p[1] - o[0]) / Math.sqrt(Math.pow((p[2] - p[0]) / 2, 2) + o[1] * o[1]); }
+function drawTable() {
+  const e = eta();
+  const F = { yp: (v) => v.toFixed(4), dh: (v) => (v * 1e5).toFixed(3), he3: (v) => (v * 1e5).toFixed(3), li: (v) => (v * 1e10).toFixed(2) };
+  const U = { yp: "", dh: "10⁻⁵", he3: "10⁻⁵", li: "10⁻¹⁰" };
+  let t = `<tr><th>at η<sub>10</sub> = ${S.eta10.toFixed(3)}</th><th>BBN ± 1σ</th><th>observed</th><th>diff / σ</th><th></th></tr>`;
+  for (const [sp, nm] of [["yp", "Y<sub>p</sub>"], ["dh", "D/H"], ["he3", "³He/H"], ["li", "⁷Li/H"]]) {
+    const p = BBN.curve(sp, e), o = D.obs[sp];
+    const pr = p ? `${F[sp](p[1])} <small>± ${F[sp]((p[2] - p[0]) / 2)}</small>` : "";
+    const ob = o ? `${F[sp](o[0])} <small>± ${F[sp](o[1])}</small>` : "<small>no primordial value</small>";
+    const pl = p && o ? pull(p, sp, o).toFixed(1) : "";
+    t += `<tr class="${sp === "li" ? "on" : ""}"><td>${nm}</td><td>${pr}</td><td>${ob}</td><td>${pl}</td><td><small>${U[sp]}</small></td></tr>`;
+  }
+  document.getElementById("abtab").innerHTML = t;
+  const sg = D.single;
+  document.getElementById("abnote").innerHTML = `BBN: the bands of Yeh, Olive and Fields (JCAP 03 (2021) 046, Fig. 11; N<sub>ν</sub> = 3, τ<sub>n</sub> = ${D.pdg.tau_n[0]} s, the d(p,γ)³He rate including LUNA), read from the vector drawing of the published figure and interpolated in log η; the 1σ shown is half the band. At η<sub>10</sub> = ${sg.eta10} their Table VII gives Y<sub>p</sub> = ${sg.yp}, D/H = ${(sg.dh * 1e5).toFixed(3)}, ³He/H = ${(sg.he3 * 1e5).toFixed(3)} × 10⁻⁵, ⁷Li/H = ${(sg.li * 1e10).toFixed(3)} × 10⁻¹⁰ (central rates). Observed: the recommended primordial values of PDG 2024 (Eqs. (24.2) to (24.4)): D/H from 11 quasar absorbers, Y<sub>p</sub> from metal-poor H II regions, ⁷Li/H from the Spite plateau of halo stars; for ³He PDG finds it <q>inappropriate to use ³He</q> as a cosmological probe. diff / σ: (BBN − observed) over both 1σ in quadrature, a Gaussian comparison done here. Planck: Ω<sub>b</sub>h² = ${D.planck.omega[0]} ± ${D.planck.omega[1]} (TT, TE, EE + lowE + lensing, as quoted by PDG 2024), converted with η<sub>10</sub> = ${D.conv.k} Ω<sub>b</sub>h² [1 − ${(D.conv.beta * 1e3).toFixed(3)} × 10⁻³ (Y<sub>p</sub> − ${D.conv.Ystar})]⁻¹ (Fields et al. 2020, Appendix, T<sub>0</sub> = ${D.conv.T0} K); PDG prints η<sub>10</sub> = ${D.planck.eta10[0]} ± ${D.planck.eta10[1]}. Click or drag on the plot to move η.`;
+}
+function drawInfo(T, uni) {
+  const e = eta(), t = BBN.tOfT(T), N = BBN.Nof(T), np = BBN.np(uni ? uni.Xn : BBN.Xn(T));
+  const ph = Math.exp(-BBN.Bd() / T) / e, sahaR = Math.exp(BBN.lnSaha(T, e));
+  const pY = BBN.curve("yp", e);
+  const phase = T >= EST.Tf ? `e<sup>−Δm/T</sup>, weak equilibrium` : T >= EST.Tb ? `frozen at 1/${Math.round(1 / D.pdg.np_fr)}, then decaying` : `bound in ⁴He from here on`;
+  document.getElementById("info").innerHTML = `
+    <dt>T</dt><dd>${T.toPrecision(3)} MeV <small>(${sci(T * KELVIN, 2)} K)</small></dd>
+    <dt>t ≈</dt><dd>${fmtT(t)} <small>N = ${N.toFixed(2)}${Math.abs(T / MEV - 1) < 0.5 ? ", near m<sub>e</sub>: rough" : ""}</small></dd>
+    <dt>n/p</dt><dd class="hi">${np.toFixed(3)} <small>${phase}</small></dd>
+    <dt>γ above B<sub>d</sub></dt><dd>η⁻¹e<sup>−B<sub>d</sub>/T</sup> = ${sci(ph, 2)} per baryon</dd>
+    <dt>Saha</dt><dd>X<sub>d</sub>/(X<sub>n</sub>X<sub>p</sub>) = ${sci(sahaR, 2)}</dd>
+    <dt>bottleneck</dt><dd class="hi">${EST.Tp.toFixed(4)} MeV <small>(PDG criterion, t ≈ ${EST.tP.toFixed(0)} s; the scene uses this)</small></dd>
+    <dt>Y<sub>p</sub> ≈</dt><dd>${EST.YpP.toFixed(3)} <small>one line</small>; published ${pY ? pY[1].toFixed(4) : "?"}</dd>
+    <dt>Saha row</dt><dd>${EST.Ts.toFixed(4)} MeV, t ≈ ${EST.tS.toFixed(0)} s, Y<sub>p</sub> ≈ ${EST.YpS.toFixed(3)} <small>(X<sub>d</sub> = X<sub>n</sub>X<sub>p</sub>: this page's choice, not from a source)</small></dd>`;
+  const P = D.pdg;
+  const npf = D.pdg.np_fr, nps = D.pdg.np_start, dt67 = BBN.decayTime(npf, nps), tOn = pY ? BBN.onsetFor(pY[1]) : NaN;
+  const sus = Math.exp(P.Q / 1);                   // n/p = 1/sus at PDG's T_fr = 1 MeV
+  document.getElementById("infonote").innerHTML = `All estimates, each one line. Δm = m<sub>n</sub> − m<sub>p</sub> = Q<sub>β</sub>(n) + m<sub>e</sub> = ${BBN.dMnp().toFixed(4)} MeV and B<sub>d</sub> = ${BBN.Bd().toFixed(4)} MeV from AME2020 masses (PDG: ${P.Q} and ${P.Bd} MeV). n/p = e<sup>−Δm/T</sup> until it freezes, then free decay, X<sub>n</sub> ∝ e<sup>−t/τ</sup>, τ<sub>n</sub> = ${P.tau_n[0]} s, Y<sub>p</sub> = 2(n/p)/(1 + n/p) (PDG Eq. (24.1)). <b>Suspect source statement</b>: PDG gives freeze-out at T<sub>fr</sub> ≃ 1 MeV and n/p ≃ 1/${Math.round(1 / npf)} there, but e<sup>−${P.Q}/1</sup> = 1/${sus.toFixed(2)}. Kept here: n/p = 1/${Math.round(1 / npf)}, the number that sets Y<sub>p</sub> and goes with PDG's 1/${Math.round(1 / nps)} and Y<sub>p</sub> ≈ ${P.Yp_approx}, so T<sub>f</sub> = Δm/ln ${Math.round(1 / npf)} = ${EST.Tf.toFixed(3)} MeV (t ≈ ${EST.tf.toFixed(2)} s); the "T = 1 MeV" chip only marks PDG's stated scale. Going from 1/${Math.round(1 / npf)} to 1/${Math.round(1 / nps)} takes τ ln(X<sub>1/${Math.round(1 / npf)}</sub>/X<sub>1/${Math.round(1 / nps)}</sub>) = ${dt67.toFixed(1)} s of decay, onset near t ≈ ${(EST.tf + dt67).toFixed(0)} s, which is where PDG's criterion η⁻¹e<sup>−B<sub>d</sub>/T</sup> = 1, T = B<sub>d</sub>/ln(1/η) (PDG: T ≃ ${P.T_pdg} MeV) puts it (${EST.tP.toFixed(0)} s); reproducing the published ${pY ? pY[1].toFixed(4) : "?"} from 1/${Math.round(1 / npf)} would need the onset at t ≈ ${tOn.toFixed(0)} s (T ≈ ${BBN.TofT(tOn).toFixed(3)} MeV). The Saha row, X<sub>d</sub> = X<sub>n</sub>X<sub>p</sub> for n + p ⇌ d + γ, is a criterion chosen for this page, not taken from a source; it comes later and leaves too few neutrons. Clock: t T² = ${BBN.C_tT2.toFixed(3)} N<sup>−1/2</sup> s MeV² (PDG Eq. (22.43), printed ${D.cosmo.tT2} in Eq. (22.44)), N = 43/4 with e<sup>±</sup>, ${BBN.N_COLD.toFixed(3)} after they annihilate (Eq. (22.57)); the switch at T = m<sub>e</sub> is crude.`;
+}
+function drawStatic() {
+  const R = D.rates, B = D.budget;
+  // the PDG numbers quoted with the lithium problem, and what they give by plain arithmetic
+  const lp = D.pdg.li_pred, lo = [D.obs.li[0] * 1e10, D.obs.li[1] * 1e10];
+  const lRatio = lp[0] / lo[0], lSig = (lp[0] - lo[0]) / Math.hypot(lp[1], lo[1]);
+  const lb = BBN.curve("li", ETA_PLANCK * 1e-10), lbRel = (lb[2] - lb[0]) / 2 / lb[1], lbPull = pull(lb, "li", D.obs.li);
+  document.getElementById("lith").innerHTML = `
+    <span>PDG 2024 (Sec. 24.5): the predicted Li/H|<sub>p</sub> = (${D.pdg.li_pred[0]} ± ${D.pdg.li_pred[1]}) × 10⁻¹⁰ (Fields et al. 2020) <q>is a factor ${D.pdg.li_factor} higher than</q> the Spite-plateau value (${(D.obs.li[0] * 1e10).toFixed(1)} ± ${(D.obs.li[1] * 1e10).toFixed(1)}) × 10⁻¹⁰, <q>a ${D.pdg.li_sigma} σ discrepancy</q>. <b>Flag</b>: from the two numbers as quoted, the ratio is ${lRatio.toFixed(2)} and the difference ${lSig.toFixed(2)} σ (errors in quadrature), not ${D.pdg.li_factor} and ${D.pdg.li_sigma}; the ${lbPull.toFixed(1)} σ in the table above, at η<sub>10</sub> = ${ETA_PLANCK.toFixed(3)}, comes from different inputs (the Yeh et al. band and the same plateau value). Meanwhile D/H and ⁴He agree with BBN at the Planck η. With the LUNA-era d(p,γ)³He rate Yeh, Olive and Fields (2021) find ⁷Li/H = (${R.yof.li[0].toFixed(2)} ± ${R.yof.li[1].toFixed(2)}) × 10⁻¹⁰, <q>thus worsening the lithium problem (slightly)</q>; their text calls ⁷Li the least certain prediction, <q>approximately ${D.yofRel.li}%</q>; their plotted band at η<sub>10</sub> = ${ETA_PLANCK.toFixed(3)} is ±${(100 * lbRel).toFixed(1)} % and their table gives ${R.yof.li[1]}/${R.yof.li[0]} = ${(100 * R.yof.li[1] / R.yof.li[0]).toFixed(1)} %, so the 13 % reads low.</span>
+    <span>The review lists both kinds of explanation. On the observing side, <q>the suggested primordial ⁷Li abundance should be considered a lower bound rather than a measure</q>, since the stars may have destroyed some of their lithium (diffusion, mixing, pre-main-sequence depletion). On the physics side, nuclear fixes through missed resonances have been searched for, <q>making a nuclear fix increasingly unlikely</q>, and models of new physics during BBN are constrained by the precise D/H. Its conclusion: <q>The cosmological lithium problem remains an unresolved issue in BBN.</q> Mass 7 is made mainly through ³He(α,γ)⁷Be (PDG); ⁷Be is unstable (T½ ${D.halflife.be7[1]}, NUBASE2020) and decays to ⁷Li by electron capture (decay mode ${D.be7mode}, NUBASE2020).</span>`;
+  const mx = Math.max(...B.map((r) => r[1]));
+  const brows = B.map((r) => `<tr><td>${r[0]}</td><td>${r[1].toFixed(3)}</td><td><span class="bar" style="width:${(110 * r[1] / mx).toFixed(0)}px;background:${r[0] === "all" ? "#8a92a6" : r[0].startsWith("d(p") ? "#f2c14e" : "#6fa8ff"}"></span></td></tr>`).join("");
+  document.getElementById("luna").innerHTML = `
+    <span>Deuterium is the baryometer: D/H falls steeply with η (Fields et al. 2020 give D/H ∝ η<sup>${D.sens.eta[1]}</sup> near the Planck value), so its prediction is only as good as the reactions that burn deuterium. In the BBN energy window the LUNA collaboration, deep under Gran Sasso, measured d(p,γ)³He (Mossa et al., Nature 587, 210 (2020)). Yeh, Olive and Fields (2021): <q>The measured LUNA cross section shows a slight increase compared to earlier measurements in the BBN energy range, but remains significantly below the theoretical calculations.</q></span>
+    <table class="pub"><tr><th>d(p,γ)³He rate</th><th>D/H × 10⁵ (BBN + CMB)</th></tr>
+      <tr><td>before LUNA (FOYY 2020)</td><td>${R.foyy.dh[0].toFixed(3)} ± ${R.foyy.dh[1].toFixed(3)}</td></tr>
+      <tr><td>theoretical rate</td><td>${R.theory.dh[0].toFixed(3)} ± ${R.theory.dh[1].toFixed(3)}</td></tr>
+      <tr><td>LUNA global average (Mossa et al. 2020)</td><td>${R.luna.dh[0].toFixed(3)} ± ${R.luna.dh[1].toFixed(3)}</td></tr>
+      <tr class="on"><td>world average with LUNA</td><td>${R.yof.dh[0].toFixed(3)} ± ${R.yof.dh[1].toFixed(3)}</td></tr>
+      <tr><td>observed (YOF's mean of 11)</td><td>${(D.yofObs.dh[0] * 1e5).toFixed(2)} ± ${(D.yofObs.dh[1] * 1e5).toFixed(2)}</td></tr></table>
+    <span>Where the D/H uncertainty now comes from (Yeh, Olive, Fields 2021, at η<sub>10</sub> = ${D.single.eta10}; ×10⁻⁵, each reaction alone): d(p,γ)³He is no longer the main term; d(d,n)³He and d(d,p)t are.</span>
+    <table class="pub"><tr><th>reaction</th><th>σ(D/H)</th><th></th></tr>${brows}</table>`;
+  document.getElementById("srcs").innerHTML = `
+    <span><b>BBN bands</b>: T.-H. Yeh, K. A. Olive, B. D. Fields, <i>The impact of new d(p,γ)³He rates on Big Bang Nucleosynthesis</i>, JCAP 03 (2021) 046, arXiv:2011.13874: Fig. 11 (read from the vector PDF in the arXiv source; tick-calibrated, its top axis gives η<sub>10</sub> = ${D.conv.fig} Ω<sub>b</sub>h²), Table VII, the D/H and Y<sub>p</sub>, Li/H tables for each d(p,γ)³He rate, the D/H error budget.</span>
+    <span><b>η ↔ Ω<sub>b</sub>h², sensitivities</b>: B. D. Fields, K. A. Olive, T.-H. Yeh, C. Young, <i>Big-Bang Nucleosynthesis after Planck</i>, JCAP 03 (2020) 010, arXiv:1912.01132: Appendix (the conversion), the table of log-derivatives α = ∂ln X/∂ln p at η<sub>10</sub> = ${D.sensEta10} (the network colouring), the Spite-plateau Li/H.</span>
+    <span><b>Review</b>: B. D. Fields, P. Molaro, S. Sarkar, <i>Big-Bang Nucleosynthesis</i>, and K. A. Olive, J. A. Peacock, <i>Big-Bang Cosmology</i>, in S. Navas et al. (Particle Data Group), Phys. Rev. D 110, 030001 (2024): n/p, freeze-out, the bottleneck criterion, Eq. (24.1), the recommended abundances, the lithium problem, τ<sub>n</sub> = ${D.pdg.tau_n[0]} ± ${D.pdg.tau_n[1]} s, Planck's Ω<sub>b</sub>h²; Eqs. (22.43), (22.44), (22.57) and the N(T) table.</span>
+    <span><b>Masses</b>: AME2020, Wang et al., Chin. Phys. C 45, 030003 (2021) (every Q and B<sub>d</sub>). <b>Half-lives</b>: NUBASE2020, Kondev et al., Chin. Phys. C 45, 030001 (2021): n ${D.halflife.n[1]} (so τ = ${(D.halflife.n[0] / Math.LN2).toFixed(1)} s; the page uses PDG's ${D.pdg.tau_n[0]} s, the value the plotted calculation assumes), ³H ${D.halflife.h3[1]}, ⁷Be ${D.halflife.be7[1]}, ⁵He ${D.halflife.he5[1]}, ⁵Li ${D.halflife.li5[1]}, ⁸Be ${D.halflife.be8[1]}.</span>
+    <span><b>LUNA</b>: V. Mossa et al., Nature 587, 210 (2020), as described and used by Yeh, Olive and Fields (2021); the Nature paper itself was not opened.</span>
+    <span><b>Constants</b>: CODATA 2018 (m<sub>e</sub>, u, ħ, G, k<sub>B</sub>).</span>`;
+}
+const EPOCH = [];
+function stampText(T, uni) {
+  const t = BBN.tOfT(T), np = BBN.np(uni.Xn);
+  let head, body;
+  if (T > 1) { head = "Neutrons and protons in weak equilibrium"; body = `n + ν ⇌ p + e⁻, n + e⁺ ⇌ p + ν̄ keep n/p = e<sup>−Δm/T</sup> = ${np.toFixed(3)}`; }
+  else if (T >= EST.Tf) { head = "The weak interactions are letting go"; body = `their rate falls faster than the expansion rate; n/p = ${np.toFixed(3)}, freezing near T ≈ ${EST.Tf.toFixed(2)} MeV`; }
+  else if (T >= EST.Tb * 3.2) { head = T > MEV / 3 ? "Neutrons decay; e± begin to annihilate" : "Neutrons decay while the photons wait"; body = `n/p = ${np.toFixed(3)} and falling (τ<sub>n</sub> = ${D.pdg.tau_n[0]} s); ${T < MEV ? "the e± energy heats the photons, not the decoupled neutrinos" : "freeze-out is over"}`; }
+  else if (T >= EST.Tb) { const ph = Math.exp(-BBN.Bd() / T) / eta(); head = "The deuterium bottleneck"; body = `photons above B<sub>d</sub> = ${BBN.Bd().toFixed(2)} MeV per baryon: η⁻¹e<sup>−B<sub>d</sub>/T</sup> = ${sci(ph, 2)}; deuterons break up about as fast as they form until this falls to 1`; }
+  else if (t < 3 * EST.tb) { const pY = BBN.curve("yp", eta()); head = "The bottleneck breaks: neutrons end in ⁴He"; body = `PDG criterion T ≈ ${EST.Tb.toFixed(3)} MeV (t ≈ ${EST.tb.toFixed(0)} s); nothing stable at A = 5 or 8 to build on; Y<sub>p</sub> ≈ ${EST.YpP.toFixed(3)} one line, ${pY ? pY[1].toFixed(4) : "?"} published`; }
+  else { const p = (sp) => BBN.curve(sp, eta()); head = "The light elements are fixed"; body = `published at η<sub>10</sub> = ${S.eta10.toFixed(2)}: Y<sub>p</sub> = ${p("yp")[1].toFixed(4)}, D/H = ${sci(p("dh")[1], 3)}, ³He/H = ${sci(p("he3")[1], 3)}, ⁷Li/H = ${sci(p("li")[1], 3)}`; }
+  document.getElementById("stamp").innerHTML = `<span class="clock">T = ${T.toPrecision(3)} MeV · t ≈ ${fmtT(t)}</span><b>${head}</b><small>${body}</small>`;
+}
+
+// ================================================================ controls
+function buildChips() {
+  const ch = [[1, "T = 1 MeV (PDG's T_fr)"], [EST.Tf, `n/p = 1/6: ${EST.Tf.toFixed(2)} MeV`], [MEV, "T = mₑc²"], [EST.Tb * 3.2, "bottleneck"], [EST.Tb, `breaks ${EST.Tb.toFixed(3)} MeV`], [BBN.TofT(D.pdg.t_fixed), `t = ${D.pdg.t_fixed} s`], [TMIN, "end"]];
+  document.getElementById("tchips").innerHTML = ch.map(([T, s]) => `<button data-s="${s_of_T(T).toFixed(5)}">${s}</button>`).join("");
+  const ec = [[ETA_PLANCK, `Planck ${ETA_PLANCK.toFixed(2)}`], [D.planck.noBBN_eta10[0], `CMB without BBN ${D.planck.noBBN_eta10[0]}`], [3, "η₁₀ = 3"], [9, "η₁₀ = 9"]];
+  document.getElementById("echips").innerHTML = ec.map(([v, s]) => `<button data-e="${v}" aria-pressed="${Math.abs(v - S.eta10) < 1e-6}">${s}</button>`).join("");
+}
+const e_of_x = (x) => EMIN * Math.pow(EMAX / EMIN, x), x_of_e = (e) => Math.log(e / EMIN) / Math.log(EMAX / EMIN);
+function setEta(v, keepHash) {
+  if (!(v >= EMIN && v <= EMAX)) return;
+  S.eta10 = v; estimates(); buildPairs(); buildChips();
+  document.getElementById("es").value = x_of_e(v);
+  document.getElementById("eout").innerHTML = `η<sub>10</sub> = ${v.toFixed(3)}`;
+  drawSchramm(); drawTable(); applyQuality(); refreshText();
+  if (!keepHash) setHash();
+}
+// the text panels at the current moment (also redrawn by the animation loop)
+function refreshText() {
+  if (!EST) return;
+  const T = curT(), uni = { Xn: T >= EST.Tb ? BBN.Xn(T) : EST.Xnb };
+  drawInfo(T, uni); stampText(T, uni); document.getElementById("tout").textContent = `${T.toPrecision(3)} MeV`;
+}
+function setS(s, keepHash) {
+  S.s = Math.min(1, Math.max(0, s));
+  document.getElementById("ts").value = S.s;
+  refreshText();
+  if (!keepHash) setHash();
+}
+function setPlay(p) { S.play = p; const b = document.getElementById("play"); b.textContent = p ? "pause" : "play"; b.setAttribute("aria-pressed", p ? "true" : "false"); if (!p) setHash(); }
+function setLit(v) {
+  S.lit = ["now", "yp", "dh", "he3", "li"].includes(v) ? v : "now";
+  for (const b of document.querySelectorAll("#lit button")) b.setAttribute("aria-pressed", b.dataset.v === S.lit ? "true" : "false");
+  document.getElementById("litnote").innerHTML = S.lit === "now"
+    ? `Arcs light up when their reactions run: neutron decay after freeze-out, p(n,γ)d flickering through the bottleneck, the rest once it breaks. Colours: β decay violet, radiative capture amber, nucleon transfer teal, reactions ending in ⁴He pink. Labels: Q from AME2020.`
+    : `Arc brightness: |α|, α = ∂ ln X / ∂ ln (rate) for X = ${{ yp: "Y<sub>p</sub>", dh: "D/H", he3: "³He/H", li: "⁷Li/H" }[S.lit]} at η<sub>10</sub> = ${D.sensEta10} (Fields et al. 2020, sensitivity table; the n-decay arc shows α with respect to the decay rate 1/τ<sub>n</sub>, the negative of the published τ<sub>n</sub> entry). For comparison, η itself: α = ${D.sens.eta[{ yp: 0, dh: 1, he3: 2, li: 3 }[S.lit]]}.`;
+  setHash();
+}
+function setHash() {
+  if (!EST) return;
+  const t = BBN.tOfT(curT());
+  const h = `#eta=${+S.eta10.toFixed(3)}&t=${+t.toPrecision(3)}${S.lit !== "now" ? "&lit=" + S.lit : ""}`;
+  if (location.hash !== h) history.replaceState(null, "", h);
+}
+function parseHash() {
+  let s;
+  try { s = decodeURIComponent(location.hash.slice(1)); } catch (e) { return null; }
+  const out = {};
+  for (const part of s.split(/[&,;]/)) {
+    const m = part.match(/^(eta|t|T|lit)=([0-9.eE+-]+|now|yp|dh|he3|li)$/);
+    if (!m) continue;
+    if (m[1] === "lit") { if (/^(now|yp|dh|he3|li)$/.test(m[2])) out.lit = m[2]; continue; }
+    const v = +m[2];
+    if (!isFinite(v) || v <= 0) continue;
+    if (m[1] === "eta") { const e10 = v < 1e-5 ? v * 1e10 : v; if (e10 >= EMIN && e10 <= EMAX) out.eta = e10; }
+    if (m[1] === "t") { const T = BBN.TofT(v); if (T >= TMIN && T <= TMAX) out.T = T; }
+    if (m[1] === "T" && v >= TMIN && v <= TMAX) out.T = v;
+  }
+  return Object.keys(out).length ? out : null;
+}
+function applyHash(h) {
+  if (h.eta) setEta(h.eta, true);
+  if (h.T) { setS(s_of_T(h.T), true); setPlay(false); }
+  if (h.lit) setLit(h.lit);
+}
+document.getElementById("play").addEventListener("click", () => { if (!S.play && S.s >= 1) setS(0, true); setPlay(!S.play); });
+document.getElementById("ts").addEventListener("input", (e) => { setPlay(false); setS(+e.target.value); });
+document.getElementById("es").addEventListener("input", (e) => setEta(+e_of_x(+e.target.value).toFixed(3)));
+document.getElementById("tchips").addEventListener("click", (e) => { const b = e.target.closest("button"); if (b) { setPlay(false); setS(+b.dataset.s); } });
+document.getElementById("echips").addEventListener("click", (e) => { const b = e.target.closest("button"); if (b) setEta(+b.dataset.e); });
+document.getElementById("lit").addEventListener("click", (e) => { const b = e.target.closest("button"); if (b) setLit(b.dataset.v); });
+{
+  const cv = document.getElementById("ps");
+  let drag = false;
+  const pick = (ev) => { if (!PS) return; const r = cv.getBoundingClientRect(), x = ev.clientX - r.left; const e10 = Math.pow(10, (x - PS.PL) / (PS.w - PS.PL - PS.PR)); if (e10 >= EMIN && e10 <= EMAX) setEta(+e10.toFixed(3)); };
+  cv.addEventListener("pointerdown", (e) => { drag = true; cv.setPointerCapture(e.pointerId); pick(e); });
+  cv.addEventListener("pointermove", (e) => { if (drag) pick(e); });
+  cv.addEventListener("pointerup", () => { drag = false; });
+  cv.addEventListener("keydown", (e) => { if (e.key === "ArrowLeft" || e.key === "ArrowRight") { e.preventDefault(); setEta(Math.min(EMAX, Math.max(EMIN, +(S.eta10 * (e.key === "ArrowRight" ? 1.02 : 1 / 1.02)).toFixed(3)))); } });
+}
+addEventListener("hashchange", () => { const h = parseHash(); if (h) applyHash(h); });
+addEventListener("resize", () => {
+  camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight); composer.setSize(innerWidth, innerHeight);
+  PH.m.uniforms.uPix.value = EE.m.uniforms.uPix.value = innerHeight / (2 * Math.tan(camera.fov * Math.PI / 360));
+  fitCamera(); drawSchramm();
+});
+let quality = innerWidth < 700 ? "low" : "high";
+function applyQuality() {
+  const g = quality === "high" ? GROUND_PRE_ACES : GROUND;
+  scene.background.copy(g); scene.fog.color.copy(g);
+  renderer.shadowMap.enabled = quality === "high";
+  RIG.key.castShadow = quality === "high";
+  for (const b of document.querySelectorAll("#qmode button")) b.setAttribute("aria-pressed", b.dataset.v === quality ? "true" : "false");
+  document.getElementById("vnote").innerHTML = `Above: a comoving patch of the early universe. Photons are the points whose colour cools with the temperature (presentation: they were γ and X rays), e<sup>±</sup> pairs the green points that fade below m<sub>e</sub>c², and ${NB} nucleons are drawn among them, protons red, neutrons blue; which are neutrons follows the one-line n/p model, flashes mark a conversion or a photon breaking a deuteron. At the chosen η there are ${sci(1 / eta(), 2)} photons per baryon. Below: the reaction network on the (N, Z) plane, with the unbound A = 5 and A = 8 nuclei (red) that stop it. ⁶Li (stable, A = 6) is left off the board: the network follows the reactions of the Fields et al. sensitivity table, which has none for it, and PDG notes that <q>BBN production of ⁶Li is negligible</q>. Sizes, distances and the pace of the animation are not to scale.`;
+}
+document.getElementById("qmode").addEventListener("click", (e) => { const b = e.target.closest("button"); if (!b) return; quality = b.dataset.v; applyQuality(); });
+
+function fitCamera() {
+  const wide = innerWidth / innerHeight;
+  const d = wide > 1.2 ? 146 : 230;
+  controls.target.set(0, -2, -18);
+  camera.position.set(0.04, 0.5, 0.86).normalize().multiplyScalar(d).add(controls.target);
+}
+
+// ================================================================ start
+const HASH0 = parseHash();
+estimates(); buildPairs();
+drawStatic(); applyQuality(); buildChips();
+setEta(ETA_PLANCK, true); setLit("now");
+if (HASH0) applyHash(HASH0);
+setS(S.s, true);
+PH.m.uniforms.uPix.value = EE.m.uniforms.uPix.value = innerHeight / (2 * Math.tan(camera.fov * Math.PI / 360));
+fitCamera();
+setHash();
+
+let last = performance.now(), clock = 0, hold = 0, infoTick = 0;
+const PLAY_SECONDS = 36;                            // one pass from 3 MeV to 20 keV
+function animate(now) {
+  requestAnimationFrame(animate);
+  const dt = Math.min(0.1, Math.max(0, (now - last) / 1000)); last = now;
+  clock += reduce ? 0 : dt;
+  if (S.play) {
+    if (S.s >= 1) { hold += dt; if (hold > 4) { hold = 0; setS(0, true); for (let i = 0; i < NB; i++) prevKind[i] = -1; } }
+    else {
+      // slower through the freeze-out and the bottleneck
+      const T = curT(), slow = (Math.abs(L10(T / EST.Tf)) < 0.12 || (T < EST.Tb * 3.2 && T > EST.Tb * 0.7)) ? 0.45 : 1;
+      setS(S.s + dt / PLAY_SECONDS * slow, true);
+    }
+  }
+  const T = curT();
+  controls.update();
+  const uni = updateUniverse(T, clock, dt);
+  // the network
+  const on = S.lit === "now" ? arcActivity(T) : sensActivity(S.lit);
+  for (const id in ARCS) { const a = ARCS[id]; a.on += ((on[id] || 0) - a.on) * Math.min(1, dt * 6); a.u.uOn.value = a.on; a.u.uT.value = clock; a.cone.material.opacity = 0.15 + 0.75 * a.on; }
+  // rings: the nuclei being made now (n and p always exist; d flickers through the bottleneck)
+  const made = T < EST.Tb && BBN.tOfT(T) < 12 * EST.tb, present = { d: T < EST.Tb * 3.2 && (T >= EST.Tb || made) ? 1 : 0, t: made, he3: made, he4: made, li7: made, be7: made };
+  for (const k in halos) { halos[k].material.opacity += ((present[k] ? 0.42 : 0) - halos[k].material.opacity) * Math.min(1, dt * 4); ON["_" + k] = !!present[k]; }
+  infoTick += dt;
+  if (infoTick > 0.12 || !S.play) { infoTick = 0; drawInfo(T, uni); stampText(T, uni); document.getElementById("tout").textContent = `${T.toPrecision(3)} MeV`; }
+  if (quality === "high") composer.render(); else renderer.render(scene, camera);
+  drawLabels();
+}
+requestAnimationFrame(animate);
+</script>
+<script src="assets/glass.js"></script>
+</body>
+</html>

@@ -1,0 +1,88 @@
+:root{--glass-tint:linear-gradient(176deg,rgba(158,202,255,0.070) 0%,rgba(110,158,224,0.018) 58%,rgba(150,195,255,0.040) 100%);--glass-deep:rgba(7,12,22,0.58)}
+/* ================= liquid glass material =================
+   Not a blur under a white veil: that combination reliably reads as
+   plastic. Each panel carries a height field, flat across the face and
+   quintic across the rim, and assets/glass.js encodes the GRADIENT of
+   that field into an feDisplacementMap. The backdrop is therefore
+   compressed at the rim the way a plano-convex slab compresses it, and
+   left alone in the middle where the surface is genuinely planar, so
+   text behind the panel stays readable.
+
+   The blur is duplicated across BOTH rules deliberately. An engine that
+   parses url() without executing the referenced filter still applies the
+   override, and what survives is blur + saturate, the baseline look.
+   Moving the blur into the SVG chain would silently delete it there.
+
+   saturate() above 1 is doing real work: glass concentrates colour as it
+   bends light, and a pure blur desaturates and reads as fog. */
+.glass {
+  /* A lens shows the background, displaced and slightly magnified. A
+     heavy blur erases it and the panel goes back to reading as frosted
+     film, so the blur here is deliberately light: just enough to separate
+     the panel from the page, not enough to destroy the contours the rim
+     is bending. */
+  --glass-blur: 7px;
+  --glass-sat: 1.7;
+  position: relative;
+  background: var(--glass-tint);
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-sat));
+          backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-sat));
+  /* Thickness: a lit top edge, a shaded bottom edge, and an inner
+     vignette that reads as the body of the pane sitting above the page. */
+  box-shadow:
+    inset 0 1.5px 0 rgba(210, 234, 255, 0.26),
+    inset 0 -1.5px 0 rgba(0, 0, 0, 0.34),
+    inset 0 0 26px rgba(4, 8, 16, 0.26),
+    0 18px 46px rgba(0, 0, 0, 0.34);
+}
+@supports (backdrop-filter: url(#lg)) {
+  .glass {
+    -webkit-backdrop-filter: blur(var(--glass-blur)) var(--glass-url,) saturate(var(--glass-sat));
+            backdrop-filter: blur(var(--glass-blur)) var(--glass-url,) saturate(var(--glass-sat));
+  }
+}
+/* A real bevel under a few lights is bright in two arcs and nearly dark
+   elsewhere. A uniform bright border is the strongest plastic tell there
+   is, so the rim is a conic gradient masked to the border ring only. */
+.glass::after {
+  content: ""; position: absolute; inset: 0; border-radius: inherit;
+  padding: 1.8px;
+  background: conic-gradient(from 202deg,
+    rgba(190, 222, 255, .02) 0deg,
+    rgba(214, 238, 255, .68) 52deg,
+    rgba(190, 222, 255, .10) 118deg,
+    rgba(190, 222, 255, .02) 178deg,
+    rgba(255, 206, 152, .46) 244deg,
+    rgba(255, 206, 152, .06) 302deg,
+    rgba(190, 222, 255, .02) 360deg);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+          mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+          mask-composite: exclude;
+  pointer-events: none;
+}
+/* Panels carrying small text get a dark body instead of a tint. The tell
+   is a WHITE veil over the backdrop, not a dark one. */
+.glass-deep { background: var(--glass-deep); }
+.glass-warm { background: rgba(255, 160, 40, 0.075); }
+.glass-warm::after {
+  background: conic-gradient(from 208deg,
+    rgba(255, 190, 120, 0) 0deg,
+    rgba(255, 214, 165, .52) 66deg,
+    rgba(255, 190, 120, .05) 148deg,
+    rgba(190, 222, 255, .26) 246deg,
+    rgba(255, 190, 120, 0) 360deg);
+}
+/* Full bleed bars have no corners to catch light, so the conic ring is
+   replaced by a single lit hairline along the bottom edge. */
+.glass-bar::after {
+  padding: 0; inset: auto 0 0 0; height: 1px; border-radius: 0;
+  background: linear-gradient(90deg,
+    transparent, rgba(190, 222, 255, .32) 18%,
+    rgba(255, 200, 140, .20) 64%, transparent);
+  -webkit-mask: none; mask: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  /* The displacement is static, so it stays; only motion is dropped. */
+  .glass { --glass-blur: 9px; }
+}

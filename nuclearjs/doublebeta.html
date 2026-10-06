@@ -1,0 +1,967 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Double beta decay · nuclearjs</title>
+<link rel="stylesheet" href="assets/glass.css">
+<style>
+body{margin:0}
+:root{
+  color-scheme:dark;
+  --ground:#0b0d12; --line:#262c3a;
+  --ink:#e6e8ee; --muted:#8a92a6; --accent:#f2c14e;
+  --em:#7fd4ff; --nu:#c8b8ff; --odd:#5aa7e6; --even:#f2c14e; --bb:#ff7ab6;
+  --sans:"Avenir Next","Futura","Helvetica Neue","PingFang SC","Noto Sans SC",system-ui,sans-serif;
+  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+}
+html,body{height:100%}
+body{background:var(--ground);color:var(--ink);font-family:var(--sans);overflow:hidden}
+#stage{position:fixed;inset:0}
+#stage canvas{display:block;touch-action:none}
+.panel{position:fixed;border-radius:18px;padding:16px 18px;display:flex;flex-direction:column;gap:12px;overflow:auto;box-sizing:border-box;z-index:2}
+.panel>*{flex-shrink:0}
+#ctl{left:16px;top:calc(16px + env(safe-area-inset-top,0px));width:min(330px,calc(100% - 32px));max-height:calc(100% - 60px)}
+#side{right:16px;top:calc(16px + env(safe-area-inset-top,0px));width:372px;max-height:calc(100% - 32px);gap:9px}
+h1{margin:0;font-size:22px;font-weight:600;letter-spacing:.01em}
+h1 sup{font-size:.6em}
+.sub{margin:2px 0 0;color:var(--muted);font-size:13px;line-height:1.45}
+.sub sup,.src sup{font-size:.7em}
+.grp{display:flex;flex-direction:column;gap:6px}
+.lab{font-size:11px;text-transform:uppercase;letter-spacing:.12em;color:var(--muted)}
+.seg{display:flex;border:1px solid var(--line);border-radius:4px;overflow:hidden}
+.seg button{flex:1;background:none;border:0;color:var(--muted);font:500 12px var(--mono);padding:6px 4px;cursor:pointer}
+.seg button+button{border-left:1px solid var(--line)}
+.seg button[aria-pressed="true"]{background:#1f2533;color:var(--ink)}
+button:focus-visible,input:focus-visible,summary:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chips button{background:#161a24;border:1px solid var(--line);border-radius:4px;color:var(--ink);font:12px var(--mono);padding:5px 8px;cursor:pointer}
+.chips button:hover{border-color:var(--muted)}
+.chips button[aria-pressed="true"]{border-color:var(--bb);color:#fff;background:#2a1d2a}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:3px 10px;font:12px var(--mono);font-variant-numeric:tabular-nums}
+.kv dt{color:var(--muted)}.kv dd{margin:0}
+.kv .hi{color:var(--accent)}
+.kv .m{color:var(--muted)}
+.kv .no{color:#ff8a6b}
+details summary{cursor:pointer;font-size:11px;text-transform:uppercase;letter-spacing:.12em;color:var(--muted);list-style:none}
+details summary::before{content:"▸ ";}
+details[open] summary::before{content:"▾ ";}
+details .grp{margin-top:8px}
+.home{font:12px var(--mono);color:var(--muted);text-decoration:none}.home:hover{color:var(--ink)}
+.src{font-size:11px;color:var(--muted);line-height:1.45}
+.src a{color:var(--muted)}
+.warn{font-size:12px;color:var(--accent);line-height:1.4;margin:0}
+.plot{width:100%;height:150px;display:block;cursor:crosshair}
+.plot.tall{height:180px}
+.cap{display:flex;justify-content:space-between;align-items:baseline;font:11px var(--mono);color:var(--muted);gap:8px}
+.cap b{font:600 13px var(--sans);color:var(--ink)}
+.leg{display:flex;flex-wrap:wrap;gap:4px 12px;font:11px var(--mono);color:var(--muted)}
+.leg i{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:5px;vertical-align:0}
+.leg i.ln{width:14px;height:2px;border-radius:0;vertical-align:3px}
+.row{display:flex;align-items:center;gap:8px;font:12px var(--mono)}
+.row input[type=range]{flex:1;accent-color:var(--bb)}
+.row output{min-width:86px;text-align:right;color:var(--ink)}
+.big{font:12px var(--mono);line-height:1.5}
+.big b{color:var(--accent);font-weight:600}
+.axlab{position:fixed;font:500 11px var(--mono);color:#c9d6ea;pointer-events:none;transform:translate(-50%,-50%);opacity:.85;white-space:nowrap;text-shadow:0 0 6px #0b0d12}
+.axlab.par{color:var(--bb);font-weight:600;opacity:1;font-size:12px}
+.axlab.dau{color:var(--accent);font-weight:600;opacity:1;font-size:12px}
+.axlab.q{color:#ffe7a8;opacity:.95}
+.axlab.x{color:#ff8a6b}
+.axlab.ax{color:var(--muted)}
+.axlab.par2{color:var(--even)}.axlab.par1{color:var(--odd)}
+#stamp{position:fixed;left:50%;bottom:calc(26px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);text-align:center;pointer-events:none}
+#stamp b{display:block;font:600 clamp(28px,4.2vw,50px)/1 var(--sans);letter-spacing:-.01em}
+#stamp b sup{font-size:.55em}
+#stamp small{display:block;font:500 12px var(--mono);color:var(--muted);margin-top:6px}
+.hint{position:fixed;left:16px;bottom:calc(14px + env(safe-area-inset-bottom,0px));font:11px var(--mono);color:var(--muted)}
+@media (max-width:900px){
+  #ctl{max-height:42vh}
+  #side{left:16px;right:16px;width:auto;top:auto;bottom:calc(12px + env(safe-area-inset-bottom,0px));max-height:44vh}
+  #stamp,.hint,.axlab{display:none}
+}
+@media (max-width:560px){.panel{padding:10px 12px;gap:9px}h1{font-size:18px}}
+</style>
+<script data-goatcounter="https://jinleiphys.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
+</head>
+<body>
+
+<div id="stage"></div>
+
+<aside id="ctl" class="panel glass glass-deep" data-glass data-glass-bevel="22" data-glass-scale="42">
+  <div>
+    <a class="home" href="index.html">← nuclearjs</a> &nbsp; <a class="home" href="beta.html">beta decay</a> &nbsp; <a class="home" href="binding.html">binding energy</a> &nbsp; <a class="home" href="https://vibeinscience.com/nuclides.html">chart</a>
+    <h1 id="title">Double beta decay</h1>
+    <p class="sub">Pairing makes even-even nuclei lighter than their odd-odd neighbours, so along an even mass number the masses lie on two parabolas. For most candidates here the even-even parent lies below its odd-odd neighbour and above the next even-even nucleus: a single β step would climb, two at once go down. In <sup>48</sup>Ca and <sup>96</sup>Zr the single step is open by energy but strongly hindered by the change of spin. Two neutrons become two protons, with two antineutrinos (2νββ) or, if the neutrino is its own antiparticle, with none (0νββ, never seen). 2νββ is measured in all eleven nuclei listed: in counting experiments for most, through the geochemical <sup>130</sup>Te/<sup>128</sup>Te ratio for <sup>128</sup>Te, and in a single radiochemical experiment for <sup>238</sup>U, which counts the daughter atoms and so cannot tell the 2ν from the 0ν mode.</p>
+  </div>
+  <div class="grp">
+    <div class="lab">Candidate</div>
+    <div class="chips" id="chips"></div>
+  </div>
+  <div class="grp">
+    <div class="lab">Decay drawn</div>
+    <div class="seg" id="mode">
+      <button data-v="2nu" title="two electrons and two antineutrinos">2νββ</button>
+      <button data-v="0nu" title="two electrons only: lepton number changes by two">0νββ (hypothetical)</button>
+    </div>
+  </div>
+  <div class="grp">
+    <div class="lab">This candidate</div>
+    <dl class="kv" id="info"></dl>
+    <p class="warn" id="warn" hidden></p>
+  </div>
+  <div class="grp">
+    <div class="lab">Detector resolution (FWHM at Q)</div>
+    <div class="row"><input id="res" type="range" min="-1.3" max="1.176" step="0.001" aria-label="FWHM in percent, log scale"><output id="reso"></output></div>
+    <div class="chips" id="rchips"></div>
+  </div>
+  <div class="grp">
+    <div class="lab">Rate ratio Γ<sub>0ν</sub> / Γ<sub>2ν</sub></div>
+    <div class="row"><input id="ratio" type="range" min="-9" max="-1" step="0.01" aria-label="log10 of the rate ratio"><output id="ratioo"></output></div>
+    <div class="chips"><button id="atlim" type="button">at the best 0νββ limit</button></div>
+  </div>
+  <div class="grp">
+    <div class="lab">2νββ shape</div>
+    <div class="seg" id="shape">
+      <button data-v="pr" title="Primakoff-Rosen closed form">Primakoff-Rosen</button>
+      <button data-v="fermi" title="F0 L0 of beta.html for each electron">F₀L₀ per electron</button>
+    </div>
+  </div>
+  <div class="grp">
+    <div class="lab">0νββ half-life from m<sub>ββ</sub></div>
+    <div class="row">m<sub>ββ</sub><input id="mbbs" type="range" min="0" max="3" step="0.005" aria-label="m_bb in meV, log scale"><output id="mbbo"></output></div>
+    <div class="row">M<sup>0ν</sup><input id="mnme" type="range" min="1" max="7" step="0.01" aria-label="nuclear matrix element"><output id="mnmeo"></output></div>
+    <div class="big" id="t0nu"></div>
+  </div>
+  <div class="grp">
+    <div class="lab">Decays drawn</div>
+    <div class="chips" id="evc"><button id="replay" type="button">next decay</button><button id="more" type="button">+1000 to the histogram</button><button id="clear" type="button">clear</button></div>
+  </div>
+  <div class="grp">
+    <div class="lab">Rendering</div>
+    <div class="seg" id="qmode">
+      <button data-v="high" title="shadows, ambient occlusion, bloom">cinematic</button>
+      <button data-v="low">fast</button>
+    </div>
+    <p class="src" id="drawn"></p>
+  </div>
+  <details>
+    <summary>Model, exactly</summary>
+    <div class="grp src" id="model"></div>
+  </details>
+  <div class="src" id="sources"></div>
+</aside>
+
+<aside id="side" class="panel glass glass-deep" data-glass data-glass-bevel="22" data-glass-scale="42">
+  <div class="cap"><b>Summed electron energy</b><span>each shape to unit area</span></div>
+  <canvas id="ps" class="plot" aria-label="summed electron spectrum"></canvas>
+  <div class="leg" id="legs"></div>
+  <div class="cap"><b>Near Q<sub>ββ</sub></b><span id="pzcap">per decay per keV, log</span></div>
+  <canvas id="pz" class="plot" aria-label="spectrum near the Q value"></canvas>
+  <div class="leg" id="legz"></div>
+  <div class="src" id="znote"></div>
+  <div class="cap"><b>Half-lives</b><span>yr; arrows: 0νββ lower limits</span></div>
+  <canvas id="pt" class="plot tall" aria-label="half-lives"></canvas>
+  <div class="leg" id="legt"></div>
+  <div class="src" id="tnote"></div>
+  <div class="cap"><b>0νββ half-life and m<sub>ββ</sub></b><span id="prcap"></span></div>
+  <canvas id="pr" class="plot" aria-label="0nu half-life against m_bb"></canvas>
+  <div class="src" id="rnote"></div>
+  <div class="cap"><b>m<sub>ββ</sub> and the lightest neutrino</b><span>eV, log-log</span></div>
+  <canvas id="pm" class="plot tall" aria-label="m_bb against the lightest neutrino mass"></canvas>
+  <div class="leg" id="legm"></div>
+  <div class="src" id="mnote"></div>
+</aside>
+
+<div id="labels"></div>
+<div id="stamp"></div>
+<div class="hint">drag to orbit · scroll to zoom · click a column or a point</div>
+
+<script src="assets/three-bundle.js"></script>
+<script src="assets/three-post.js"></script>
+<script src="assets/wave-stage.js"></script>
+<script src="assets/nubase.js"></script>
+<script src="assets/shells-data.js"></script>
+<script src="assets/betadecay.js"></script>
+<script src="assets/doublebeta.js"></script>
+<script src="assets/doublebeta-data.js"></script>
+<script>
+"use strict";
+// ---------- data
+const DB = window.DBB, DM = window.DBMATH, ME = DM.ME;
+const MAP = DM.ameMap(window.AME);
+const ROW = new Map(), ELEM = {};
+for (const r of window.NUC) { ROW.set(r[0] + "," + r[1], r); ELEM[r[0]] = r[2]; }
+const CAND = new Map(DB.cands.map((c) => [c.key, c]));
+const KEYS = DB.cands.map((c) => c.key);
+const sup = (s) => `<sup>${s}</sup>`;
+const nm = (Z, A) => `${sup(A)}${ELEM[Z]}`;
+const SUPD = { "0": "⁰", "1": "¹", "2": "²", "3": "³", "4": "⁴", "5": "⁵", "6": "⁶", "7": "⁷", "8": "⁸", "9": "⁹", "-": "⁻" };
+const supNum = (n) => String(n).split("").map((c) => SUPD[c] || c).join("");
+function sci(x, d = 2) {               // 3.8×10²⁶
+  if (!(x > 0) || !isFinite(x)) return "n/a";
+  const e = Math.floor(Math.log10(x) + 1e-12), m = x / Math.pow(10, e);
+  return `${+m.toPrecision(d)}×10${supNum(e)}`;
+}
+const fx = (x, n = 3) => (x == null || !isFinite(x) ? "n/a" : x.toFixed(n));
+const sgn = (x, n) => (x >= 0 ? "+" : "−") + Math.abs(x).toFixed(n);
+// the RMP M_0nu range of an isotope (all methods)
+function nmeRange(iso) {
+  let lo = Infinity, hi = 0;
+  for (const r of DB.nme) { const v = r.vals[iso]; if (!r.minmax && v) for (const x of v) { lo = Math.min(lo, x); hi = Math.max(hi, x); } }
+  return lo < Infinity ? [lo, hi] : null;
+}
+const limitsOf = (k) => DB.limits.filter((l) => l.iso === k);
+const bestLimit = (k) => limitsOf(k).filter((l) => l.latest).sort((a, b) => b.T - a.T)[0] || null;
+const T2 = (c) => c.bar.T[0] * Math.pow(10, c.bar.T[3]);
+const yearOf = (cite) => (cite.match(/\((\d{4})\)/) || [])[1] || "";
+const GA = 1.27;   // the value stated by the experiments listed in GA_EXP (their texts, see the data file); the page uses it for all
+const GA_EXP = [...new Set(DB.limits.filter((l) => l.gA).map((l) => `${l.exp} ${yearOf(l.cite)}`))];
+
+// ---------- state
+const S = { key: "76Ge", mode: "2nu", res: 0.12, logr: null, shape: "pr", logm: Math.log10(20), M: null, hist: new Float64Array(66), nEv: 0, sp: null, dec: null };
+const KNEE = 8, CAP = 1.8;
+
+// ---------- scene
+const stage = document.getElementById("stage");
+const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance", preserveDrawingBuffer: true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.setSize(innerWidth, innerHeight);
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.05;
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+stage.appendChild(renderer.domElement);
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(34, innerWidth / innerHeight, 0.1, 500);
+const SKY = WaveStage.skyGLSL(new THREE.Vector3(-0.45, 0.8, 0.5));
+scene.environment = WaveStage.environment(renderer, SKY);
+scene.fog = new THREE.Fog("#0b0d12", 60, 140);
+// the ground colour that ACES (exposure 1.05) maps back to #0b0d12 on the bloom path (see alpha.html, beta.html)
+const GROUND = new THREE.Color("#0b0d12");
+const GROUND_PRE_ACES = new THREE.Color().setRGB(0.0115476, 0.0131218, 0.0174740, THREE.LinearSRGBColorSpace);
+scene.background = GROUND.clone();
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true; controls.dampingFactor = 0.08;
+controls.minDistance = 8; controls.maxDistance = 110; controls.maxPolarAngle = Math.PI * 0.49;
+const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+controls.autoRotate = false;
+const RIG = WaveStage.rig(scene, SKY, 110, 16);
+scene.add(WaveStage.floor(60, -0.36, 14, 0.85));
+
+const DX = 1.45;                       // spacing of the columns along Z
+const NMAX = 24;
+const tileMat = new THREE.MeshStandardMaterial({ color: "#23272f", metalness: 0.9, roughness: 0.42, roughnessMap: WaveStage.noiseTexture(256, 8, 0.6, 1.0, 5), envMapIntensity: 0.9 });
+const tiles = new THREE.InstancedMesh(new RoundedBoxGeometry(1.32, 0.34, 1.32, 2, 0.06).translate(0, -0.17, 0), tileMat, NMAX);
+tiles.receiveShadow = tiles.castShadow = true; scene.add(tiles);
+const colGeo = new RoundedBoxGeometry(1.0, 1, 1.0, 3, 0.12); colGeo.translate(0, 0.5, 0);
+const colMat = new THREE.MeshPhysicalMaterial({ color: "#ffffff", roughness: 0.3, metalness: 0.0, clearcoat: 0.7, clearcoatRoughness: 0.2, envMapIntensity: 0.9,
+  transmission: 0.0, roughnessMap: WaveStage.noiseTexture(256, 12, 0.7, 1.0, 21) });
+const cols = new THREE.InstancedMesh(colGeo, colMat, NMAX);
+cols.castShadow = cols.receiveShadow = true; cols.instanceMatrix.setUsage(THREE.DynamicDrawUsage); scene.add(cols);
+const coreMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(1.6, 1.25, 0.6), toneMapped: false });
+const cores = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.26, 0.26, 0.06, 32), coreMat, NMAX);
+cores.userData.noAO = true; scene.add(cores);
+const CELL = [];                           // {Z, h (MeV), y, est}
+const glowMat = (c, op) => new THREE.MeshBasicMaterial({ color: c, toneMapped: false, transparent: op < 1, opacity: op });
+// the two parabolas
+const parE = new THREE.Mesh(new THREE.BufferGeometry(), glowMat(new THREE.Color(1.7, 1.25, 0.45), 0.95));
+const parO = new THREE.Mesh(new THREE.BufferGeometry(), glowMat(new THREE.Color(0.55, 1.15, 2.0), 0.95));
+parE.userData.noAO = parO.userData.noAO = true; scene.add(parE, parO);
+const arrows = new THREE.Group(); scene.add(arrows);
+// rings on the plinths: parent (pink) and daughter (gold); a pulse on the intermediate column top
+const ringGeo = new THREE.RingGeometry(0.74, 0.9, 64).rotateX(-Math.PI / 2);
+const parRing = new THREE.Mesh(ringGeo, glowMat(new THREE.Color(2.0, 0.8, 1.4), 1)); parRing.material.side = THREE.DoubleSide;
+const dauRing = new THREE.Mesh(ringGeo, glowMat(new THREE.Color(1.9, 1.5, 0.6), 1)); dauRing.material.side = THREE.DoubleSide;
+parRing.userData.noAO = dauRing.userData.noAO = true; scene.add(parRing, dauRing);
+const midHalo = new THREE.Mesh(new THREE.TorusGeometry(0.62, 0.05, 12, 64).rotateX(Math.PI / 2), glowMat(new THREE.Color(0.7, 1.4, 2.4), 0.0));
+midHalo.userData.noAO = true; scene.add(midHalo);
+
+const xOf = (Z) => (Z - S.Z0) * DX;
+function yOf(hMeV) { const y = Math.max(0, hMeV) * S.sV; return y <= KNEE ? y : KNEE + CAP * (1 - Math.exp(-(y - KNEE) / CAP)); }
+const BASE = 0.16;
+const topY = (Z) => { const c = CELL.find((e) => e.Z === Z); return c ? c.y : null; };
+
+function buildScene() {
+  const c = S.c, A = c.A, ip = DM.isobarPoints(MAP, A, 5);
+  S.fit = DM.fitIsobar(ip.pts); S.dmin = ip.dmin; S.zfloor = ip.zfloor;
+  S.Z0 = c.Z + 1;
+  // vertical scale: the parent, the intermediate, the daughter and one more either side to 7.5 units
+  let ref = 0;
+  for (let Z = c.Z - 1; Z <= c.Z + 3; Z++) { const d = DM.delta(MAP, Z, A); if (d != null) ref = Math.max(ref, (d - S.dmin) / 1000); }
+  S.sV = 6 / Math.max(ref, 1.5);
+  const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), col = new THREE.Color();
+  CELL.length = 0;
+  let k = 0, kc = 0;
+  for (let Z = c.Z - 4; Z <= c.Z + 6; Z++) {
+    const r = MAP.get(Z + "," + A);
+    if (!r) continue;
+    const h = (r.d - S.dmin) / 1000, y = BASE + yOf(h), w = r.est ? 0.55 : 1;
+    m4.compose(new THREE.Vector3(xOf(Z), 0, 0), q, new THREE.Vector3(w, y, w)); cols.setMatrixAt(k, m4);
+    const nb = ROW.get(Z + "," + (A - Z)), stable = nb && (nb[4] === "stable" || nb[3] > 25);
+    col.set(r.est ? "#3c4152" : Z % 2 ? "#4f8fd0" : "#e3ad43");
+    if (Z === c.Z) col.set("#e070a8");
+    if ((h * S.sV) > KNEE) col.lerp(new THREE.Color("#8d94a2"), 0.55);
+    cols.setColorAt(k, col);
+    m4.compose(new THREE.Vector3(xOf(Z), 0, 0), q, new THREE.Vector3(1, 1, 1)); tiles.setMatrixAt(k, m4);
+    if (stable && !r.est) { m4.compose(new THREE.Vector3(xOf(Z), y + 0.005, 0), q, new THREE.Vector3(1, 1, 1)); cores.setMatrixAt(kc++, m4); }
+    CELL.push({ Z, h, y, est: r.est });
+    k++;
+  }
+  cols.count = tiles.count = k; cores.count = kc;
+  for (const o of [cols, tiles, cores]) { o.instanceMatrix.needsUpdate = true; o.computeBoundingSphere(); }
+  if (cols.instanceColor) cols.instanceColor.needsUpdate = true;
+  // parabolas over the drawn range, each through the column tops of its parity class (front face)
+  const zs = CELL.map((e) => e.Z), z0 = Math.min(...zs) - 0.35, z1 = Math.max(...zs) + 0.35;
+  for (const [mesh, odd] of [[parE, false], [parO, true]]) {
+    const pts = [];
+    for (let i = 0; i <= 120; i++) {
+      const Z = z0 + (z1 - z0) * i / 120, h = (DM.parabola(S.fit, Z, odd) - S.dmin) / 1000;
+      pts.push(new THREE.Vector3(xOf(Z), BASE + yOf(h) + 0.04, 0.58));
+    }
+    mesh.geometry.dispose();
+    mesh.geometry = new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 240, 0.045, 10, false);
+  }
+  buildArrows();
+  parRing.position.set(xOf(c.Z), 0.012, 0); dauRing.position.set(xOf(c.Z + 2), 0.012, 0);
+  midHalo.position.set(xOf(c.Z + 1), topY(c.Z + 1) + 0.06, 0);
+}
+function arc(a, b, lift) { const mid = a.clone().lerp(b, 0.5); mid.y = Math.max(a.y, b.y) + lift; return new THREE.QuadraticBezierCurve3(a, mid, b); }
+function addArrow(curve, mat, r, head) {
+  const t = new THREE.Mesh(new THREE.TubeGeometry(curve, 60, r, 10, false), mat);
+  const tip = curve.getPoint(1), dir = curve.getTangent(1);
+  const cone = new THREE.Mesh(new THREE.ConeGeometry(head, head * 2.4, 20), mat);
+  cone.position.copy(tip).addScaledVector(dir, -head * 0.8); cone.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir);
+  t.userData.noAO = cone.userData.noAO = true;
+  arrows.add(t, cone);
+}
+const MAT = {
+  bb: glowMat(new THREE.Color(2.2, 1.0, 1.6), 1),
+  open: glowMat(new THREE.Color(1.9, 1.35, 0.5), 0.9),
+  shut: glowMat(new THREE.Color(1.9, 0.55, 0.38), 0.85),
+  thin: glowMat(new THREE.Color(0.6, 0.62, 0.7), 0.55),
+};
+function buildArrows() {
+  for (const o of [...arrows.children]) { o.geometry.dispose(); arrows.remove(o); }
+  const c = S.c, Zp = c.Z;
+  const yp = topY(Zp), yi = topY(Zp + 1), yd = topY(Zp + 2);
+  // the double step, high over the intermediate column
+  S.bbCurve = arc(new THREE.Vector3(xOf(Zp), yp + 0.45, 0), new THREE.Vector3(xOf(Zp + 2), yd + 0.4, 0), Math.max(1.6, (yi - Math.max(yp, yd)) + 1.9));
+  addArrow(S.bbCurve, MAT.bb, 0.075, 0.2);
+  // the single step parent -> Z + 1 and the step Z + 1 -> Z + 2, at the column tops, slightly in front
+  const qb = DM.qb(MAP, c.A > 0 ? Zp : Zp, c.A);
+  const s1 = arc(new THREE.Vector3(xOf(Zp) + 0.2, yp + 0.25, 0.25), new THREE.Vector3(xOf(Zp + 1) - 0.2, yi + 0.25, 0.25), 0.5);
+  addArrow(s1, qb > 0 ? MAT.open : MAT.shut, 0.04, 0.12);
+  S.s1mid = s1.getPoint(0.5);
+  const s2 = arc(new THREE.Vector3(xOf(Zp + 1) + 0.2, yi + 0.25, 0.25), new THREE.Vector3(xOf(Zp + 2) - 0.2, yd + 0.25, 0.25), 0.4);
+  addArrow(s2, MAT.thin, 0.03, 0.1);
+  // the other members: one thin step to the lighter neighbour (the beta direction), for orientation
+  for (const e of CELL) {
+    if (e.Z >= Zp && e.Z <= Zp + 2) continue;
+    const nb = [e.Z - 1, e.Z + 1].map((Z) => CELL.find((x) => x.Z === Z)).filter(Boolean).filter((x) => x.h < e.h).sort((a, b) => a.h - b.h)[0];
+    if (!nb) continue;
+    const dir = Math.sign(nb.Z - e.Z);
+    addArrow(arc(new THREE.Vector3(xOf(e.Z) + 0.2 * dir, e.y + 0.2, 0.25), new THREE.Vector3(xOf(nb.Z) - 0.2 * dir, nb.y + 0.2, 0.25), 0.35), MAT.thin, 0.022, 0.08);
+  }
+}
+
+// ---------- the event: parent, two electrons, two antineutrinos (2nu), recoiling daughter gliding along the double step
+const ev = new THREE.Group(); scene.add(ev);
+const nucMat = new THREE.MeshPhysicalMaterial({ color: "#ff9ccd", roughness: 0.28, clearcoat: 1, clearcoatRoughness: 0.08, emissive: "#ff5fa8", emissiveIntensity: 0.18, sheen: 0.5, sheenColor: new THREE.Color("#ffe0f0") });
+const dauMat = new THREE.MeshPhysicalMaterial({ color: "#ffd98a", roughness: 0.28, clearcoat: 1, clearcoatRoughness: 0.08, emissive: "#f2c14e", emissiveIntensity: 0.15, sheen: 0.5, sheenColor: new THREE.Color("#fff3d0") });
+const parent = new THREE.Mesh(new THREE.SphereGeometry(0.42, 48, 32), nucMat);
+const daughter = new THREE.Mesh(new THREE.SphereGeometry(0.42, 48, 32), dauMat);
+parent.castShadow = daughter.castShadow = true;
+const eMat = glowMat(new THREE.Color(0.9, 2.2, 3.0), 1), nMat = glowMat(new THREE.Color(1.4, 1.2, 2.4), 0.85);
+const el = [0, 1].map(() => new THREE.Mesh(new THREE.SphereGeometry(0.12, 24, 16), eMat));
+const nus = [0, 1].map(() => new THREE.Mesh(new THREE.SphereGeometry(0.08, 20, 12), nMat));
+ev.add(parent, daughter, ...el, ...nus);
+// trails: a short line strip behind each lepton
+const TRAIL = 26;
+function trail(color, op) {
+  const g = new THREE.BufferGeometry(); g.setAttribute("position", new THREE.BufferAttribute(new Float32Array(TRAIL * 3), 3));
+  const l = new THREE.Line(g, new THREE.LineBasicMaterial({ color, transparent: true, opacity: op, toneMapped: false }));
+  l.userData.noAO = true; l.frustumCulled = false; return l;
+}
+const trE = [trail(new THREE.Color(0.8, 1.9, 2.6), 0.75), trail(new THREE.Color(0.8, 1.9, 2.6), 0.75)];
+const trN = [trail(new THREE.Color(1.2, 1.0, 2.0), 0.4), trail(new THREE.Color(1.2, 1.0, 2.0), 0.4)];
+ev.add(...trE, ...trN);
+function arrow(color, op) {
+  const g = new THREE.Group(), m = new THREE.MeshBasicMaterial({ color, toneMapped: false, transparent: true, opacity: op });
+  const shaft = new THREE.Mesh(new THREE.CylinderGeometry(1, 1, 1, 12).translate(0, 0.5, 0), m);
+  const head = new THREE.Mesh(new THREE.ConeGeometry(1, 1, 16).translate(0, 0.5, 0), m);
+  g.add(shaft, head); g.userData = { shaft, head, m, op }; g.traverse((o) => (o.userData.noAO = true)); return g;
+}
+const arE = [arrow(new THREE.Color(0.9, 2.0, 2.8), 0.85), arrow(new THREE.Color(0.9, 2.0, 2.8), 0.85)];
+const arN = [arrow(new THREE.Color(1.3, 1.1, 2.2), 0.5), arrow(new THREE.Color(1.3, 1.1, 2.2), 0.5)];
+const arR = arrow(new THREE.Color(2.2, 1.6, 0.8), 0.9);
+ev.add(...arE, ...arN, arR);
+function setArrow(a, dir, len, rad) {
+  const h = Math.min(len * 0.35, 0.34), s = Math.max(len - h, 1e-4);
+  a.userData.shaft.scale.set(rad, s, rad);
+  a.userData.head.scale.set(rad * 2.6, h, rad * 2.6); a.userData.head.position.y = s;
+  if (dir.lengthSq() > 0) a.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir.clone().normalize());
+  a.visible = len > 1e-3;
+}
+const E = { t: 0, period: 5.6, cur: null };
+const rnd = () => Math.random();
+function isoDir() { const u = 2 * rnd() - 1, ph = 2 * Math.PI * rnd(), s = Math.sqrt(1 - u * u); return new THREE.Vector3(s * Math.cos(ph), u, s * Math.sin(ph)); }
+const pOf = (T) => Math.sqrt(T * (T + 2 * ME));
+function gauss() { let u = 0; while (u === 0) u = rnd(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * rnd()); }
+// one sampled decay: energies from the computed spectrum (2nu) or the line (0nu), split as stated in the model
+function sampleEvent() {
+  const Q = S.Q;
+  let K, T, Nn = [0, 0];
+  if (S.mode === "2nu") { K = S.smp(rnd); T = DM.splitElectrons(K, rnd); Nn = DM.splitNeutrinos(Q - K, rnd); }
+  else { K = Q; T = DM.splitElectrons(Q, rnd); }
+  const pe = T.map((t) => isoDir().multiplyScalar(pOf(t))), pn = Nn.map((e) => isoDir().multiplyScalar(e));
+  const pr = pe[0].clone().add(pe[1]).add(pn[0]).add(pn[1]).negate();
+  return { K, T, Nn, pe, pn, pr, Kmeas: K + gauss() * S.sigma };
+}
+function addHist(Km) {
+  const b = Math.floor(Km / (1.1 * S.Q) * S.hist.length);
+  if (b >= 0 && b < S.hist.length) S.hist[b]++;
+  S.nEv++;
+}
+function newEvent() { E.cur = sampleEvent(); E.t = 0; addHist(E.cur.Kmeas); drawSpectrum(); }
+function updateEvent(dt) {
+  const c = S.c, y0 = topY(c.Z);
+  ev.visible = !!(E.cur && y0 != null);
+  if (!ev.visible) return;
+  E.t += reduce ? 0 : dt;
+  if (E.t > E.period) newEvent();
+  const cur = E.cur, t = E.t;
+  const P0 = S.bbCurve.getPoint(0).clone().add(new THREE.Vector3(0, 0.55, 0));
+  const pmax = Math.max(pOf(S.Q), S.Q), sc = 5.0 / pmax;
+  const tD = 0.9, tF = 2.5, tG = 4.4;
+  parent.visible = t < tD; parent.position.copy(P0); parent.scale.setScalar(t < tD ? 1 + 0.06 * Math.sin(t * 22) * (t / tD) : 1);
+  const f = Math.min(1, Math.max(0, (t - tD) / (tF - tD))), ease = 1 - Math.pow(1 - f, 2);
+  const fade = t < tF ? 1 : Math.max(0, 1 - (t - tF) / 1.0);
+  for (let i = 0; i < 2; i++) {
+    const show = t >= tD && fade > 0;
+    el[i].visible = show; el[i].position.copy(P0).addScaledVector(cur.pe[i], sc * ease);
+    const nshow = show && S.mode === "2nu";
+    nus[i].visible = nshow; nus[i].position.copy(P0).addScaledVector(cur.pn[i], sc * ease);
+    for (const [tr, p, on] of [[trE[i], cur.pe[i], show], [trN[i], cur.pn[i], nshow]]) {
+      tr.visible = on;
+      if (!on) continue;
+      const a = tr.geometry.attributes.position;
+      for (let j = 0; j < TRAIL; j++) { const s = ease * j / (TRAIL - 1); a.setXYZ(j, P0.x + p.x * sc * s, P0.y + p.y * sc * s, P0.z + p.z * sc * s); }
+      a.needsUpdate = true; tr.material.opacity = (tr === trE[i] ? 0.75 : 0.4) * fade;
+    }
+    arE[i].position.copy(P0); arN[i].position.copy(P0);
+    setArrow(arE[i], cur.pe[i], cur.pe[i].length() * sc * ease, 0.032); arE[i].visible = show;
+    setArrow(arN[i], cur.pn[i], cur.pn[i].length() * sc * ease, 0.022); arN[i].visible = nshow;
+    arE[i].userData.m.opacity = 0.85 * fade; arN[i].userData.m.opacity = 0.5 * fade;
+  }
+  nMat.opacity = 0.85 * fade;
+  daughter.visible = t >= tD;
+  const rec = P0.clone().addScaledVector(cur.pr, sc * ease);
+  arR.position.copy(P0); setArrow(arR, cur.pr, cur.pr.length() * sc * ease, 0.05); arR.visible = t >= tD && fade > 0; arR.userData.m.opacity = 0.9 * fade;
+  if (t < tF) daughter.position.copy(rec);
+  else {
+    // the glide along the double step: over the intermediate column (no stop there), down to the daughter
+    const g = Math.min(1, (t - tF) / (tG - tF)), s = g * g * (3 - 2 * g);
+    const p = S.bbCurve.getPoint(s).add(new THREE.Vector3(0, 0.55 * (1 - s) + 0.5 * s, 0));
+    daughter.position.copy(rec.clone().lerp(p, Math.min(1, s * 4)));
+    if (s >= 0.25) daughter.position.copy(p);
+  }
+  // the intermediate odd-odd column lights as the daughter passes over it
+  const pass = t > tF ? Math.exp(-Math.pow(((t - tF) / (tG - tF) - 0.5) / 0.14, 2)) : 0;
+  midHalo.material.opacity = 0.95 * pass;
+}
+const POST = WaveStage.post(renderer, scene, camera, [0.45, 0.45, 0.78], { intensity: 0.9, radius: 2.5, thickness: 2 });
+const composer = POST.composer;
+
+// ---------- the selected candidate
+function setCandidate(key, mode, res) {
+  const c = CAND.get(key);
+  if (!c) return false;
+  const changed = !S.c || S.c.key !== key, oldRes = S.res;
+  S.key = key; S.c = c; if (mode === "2nu" || mode === "0nu") S.mode = mode;
+  if (res != null && isFinite(res) && res >= 0.05 && res <= 15) S.res = res;
+  S.Q = DM.qbb(MAP, c.Z, c.A) / 1000;
+  if (changed) {
+    const bl = bestLimit(key);
+    S.logr = bl ? Math.log10(T2(c) / bl.T) : -6;
+    const nr = nmeRange(key);
+    S.M = nr ? (nr[0] + nr[1]) / 2 : null;
+    buildScene();
+    S.hist.fill(0); S.nEv = 0;
+    // the view: from the front, a little from the parent's side, looking at the middle of the three columns
+    controls.target.set(0, 3.0, 0);
+    camera.position.set(-5.5, 9.5, 31);
+  }
+  if (S.res !== oldRes) { S.hist.fill(0); S.nEv = 0; }   // the histogram holds one detector response at a time
+  computeSpectrum();
+  syncControls();
+  newEvent();
+  drawInfo(); drawAll(); placeLabels();
+  const hash = "#" + key + (S.mode === "0nu" ? "/0nu" : "") + (Math.abs(S.res - 0.12) > 1e-9 ? "@" + +S.res.toPrecision(4) : "");
+  if (location.hash !== hash) history.replaceState(null, "", hash);
+  document.title = `${key} double beta decay · nuclearjs`;
+  for (const b of document.querySelectorAll("#chips button")) b.setAttribute("aria-pressed", b.dataset.k === key ? "true" : "false");
+  for (const b of document.querySelectorAll("#mode button")) b.setAttribute("aria-pressed", b.dataset.v === S.mode ? "true" : "false");
+  return true;
+}
+function computeSpectrum() {
+  const c = S.c;
+  S.sp = DM.spectrum2nu(S.Q, S.shape, c.Z + 2, c.A);
+  S.spPR = S.shape === "pr" ? S.sp : DM.spectrum2nu(S.Q, "pr");
+  S.smp = DM.sampler2nu(S.sp);
+  S.fwhm = S.res / 100 * S.Q; S.sigma = S.fwhm / DM.FWHM;
+  const r = DM.roi(S.Q, S.fwhm);
+  S.f2 = DM.frac2nu(S.sp, S.sigma, r[0], r[1]); S.f0 = DM.frac0nu(S.Q, S.sigma, r[0], r[1]);
+  const rh = DM.roi(S.Q, S.fwhm / 2); S.f2half = DM.frac2nu(S.sp, S.sigma / 2, rh[0], rh[1]);
+}
+function parseHash(h) {
+  h = String(h || "").replace(/^#/, "");
+  try { h = decodeURIComponent(h); } catch (e) { return null; }
+  const m = h.match(/^([0-9]{2,3}[A-Za-z]{1,2})(?:\/(2nu|0nu))?(?:@([0-9]*\.?[0-9]+))?$/);
+  if (!m) return null;
+  const key = KEYS.find((k) => k.toLowerCase() === m[1].toLowerCase());
+  if (!key) return null;
+  const res = m[3] != null ? +m[3] : null;
+  if (res != null && !(isFinite(res) && res >= 0.05 && res <= 15)) return { key, mode: m[2] || null, res: null };
+  return { key, mode: m[2] || null, res };
+}
+
+// ---------- the info panel
+function nubaseText(c) {
+  const n = c.nubase;
+  if (n.b2 == null) return `T<sub>½</sub> ${n.T} ${n.unit} (±${n.dT}), branches "${n.br.replace(/^IS=[^;]*;/, "")}"`;
+  if (n.b2 === 100) return `${n.T} ${n.unit} ± ${n.dT}`;
+  return `${sci(n.Tpart, 2)} yr <span class="m">(= ${n.T} ${n.unit} / ${n.b2}% 2β<sup>−</sup>)</span>`;
+}
+function drawInfo() {
+  const c = S.c, Z = c.Z, A = c.A, rows = [], warn = [];
+  const p = nm(Z, A), i1 = nm(Z + 1, A), d = nm(Z + 2, A);
+  document.getElementById("title").innerHTML = `${p} → ${d} + 2e<sup>−</sup>${S.mode === "2nu" ? " + 2ν̄" : ""}`;
+  const q = DM.qbb(MAP, Z, A);
+  rows.push(`<dt>Q<sub>ββ</sub></dt><dd class="hi" id="qbb" data-v="${q}">${fx(q, 2)} ± ${fx(c.Q2b[1], 2)} keV <span class="m">AME2020</span></dd>`);
+  rows.push(`<dt></dt><dd class="m">Kotila-Iachello computed G with Q = ${c.ki.Q0} MeV${c.rmp ? `; Agostini et al. list ${c.rmp.Q} keV` : ""}</dd>`);
+  const qb = DM.qb(MAP, Z, A), qb2 = DM.qb(MAP, Z + 1, A), open = qb > 0;
+  const jp = ROW.get(Z + "," + (A - Z))?.[7], ji = ROW.get((Z + 1) + "," + (A - Z - 1))?.[7];
+  rows.push(`<dt>β<sup>−</sup> to ${i1}</dt><dd id="sbeta" data-open="${open}" class="${open ? "" : "no"}">Q = ${sgn(qb / 1000, 3)} MeV ${open ? `<span class="m">open by energy</span>` : "closed by energy"}</dd>`);
+  if (open) {
+    const lv = c.levels || [], dJ = lv.map((l) => Math.abs(parseInt(l[1].replace(/[()]/g, "")) - parseInt(jp))).filter((x) => isFinite(x));
+    warn.push(`Single β<sup>−</sup> decay of ${p} to ${i1} is open by energy (Q = ${fx(qb, 1)} ± ${fx(c.Qb[1], 1)} keV), but every level of ${i1} below Q has a high spin (ENSDF adopted levels: ${lv.map((l) => `${l[1]} at ${l[0] ? fx(l[0], 1) + " keV" : "g.s."}`).join(", ")}; parentheses: tentative), so from the J<sup>π</sup> = ${jp} parent the change of angular momentum is at least ${Math.min(...dJ)}, and the step is strongly hindered; NUBASE2020 lists "${c.nubase.br.replace(/^IS=[^;]*;/, "")}".`);
+  }
+  rows.push(`<dt>${i1} → ${d}</dt><dd>Q<sub>β</sub> = ${sgn(qb2 / 1000, 3)} MeV</dd>`);
+  rows.push(`<dt>pairing δ</dt><dd>${fx(S.fit.delta, 0)} keV <span class="m">fit of ${S.fit.n} measured A = ${A} masses, rms ${fx(S.fit.rms, 0)} keV</span></dd>`);
+  const b = c.bar.T, T2v = T2(c);
+  const pmT = b[1] === b[2] ? `(${b[0]} ± ${b[1]})` : `${b[0]}<sup>+${b[1]}</sup><sub>−${b[2]}</sub>`;
+  rows.push(`<dt class="hi">T<sub>½</sub>(2ν)</dt><dd class="hi">${pmT}×10${supNum(b[3])} yr <span class="m">Barabash 2020</span></dd>`);
+  rows.push(`<dt></dt><dd>${nubaseText(c)} <span class="m">NUBASE2020</span></dd>`);
+  if (c.rmp && c.rmp.flags.length) rows.push(`<dt></dt><dd class="m">Agostini et al. (2023) print this half-life with "${c.rmp.flags.map((f) => f.frag.replace(/\\right\)/, ")").replace("\\pm", "±") + '" (' + f.what).join('; "')}), a misprint; their value is not used here.</dd>`);
+  const mk = DM.meff2nu(c.bar.G2KOT, T2v), mm = DM.meff2nu(c.bar.G2MIR, T2v);
+  const fl = DB.meffFlag[c.key];
+  rows.push(`<dt>|M<sub>eff</sub><sup>2ν</sup>|</dt><dd>${fx(mk, 4)}, ${fx(mm, 4)} <span class="m">= (G<sub>2ν</sub>T)<sup>−1/2</sup>, his two G; printed ${c.bar.MeffKOT[0]}, ${c.bar.MeffMIR[0]}</span></dd>`);
+  if (fl) warn.push(`Barabash's printed |M<sub>eff</sub>| for ${p} differs from (G<sub>2ν</sub>T<sub>½</sub>)<sup>−1/2</sup> computed from his own printed G<sub>2ν</sub> and T<sub>½</sub> by more than half of his own printed error on |M<sub>eff</sub>|: ${fl.map((f) => `${fx(f[1], 5)} against ${f[2]} ± ${f[3]} (${sgn(100 * (f[1] / f[2] - 1), 2)} %)`).join(", ")}. Inverting, 1/(G |M<sub>eff</sub>|²) for his printed values gives T<sub>½</sub> = ${fl.map((f) => sci(f[4], 3)).join(" and ")} yr against his printed ${sci(T2v, 3)} yr, so a different T<sub>½</sub> input was likely used for this column. Shown as printed and as computed. Entries whose difference is within half of his error are not flagged.`);
+  rows.push(`<dt>G<sub>2ν</sub>, G<sub>0ν</sub></dt><dd>${c.bar.G2KOT}×10${supNum(-21)}, ${c.ki.G0}×10${supNum(-15)} yr<sup>−1</sup> <span class="m">Kotila-Iachello</span></dd>`);
+  const bl = bestLimit(c.key);
+  if (bl) {
+    rows.push(`<dt class="hi">T<sub>½</sub>(0ν)</dt><dd class="hi">&gt; ${sci(bl.T, 2)} yr <span class="m">${bl.cl}, ${bl.rmp ? "compilation" : bl.exp + " " + yearOf(bl.cite)}</span></dd>`);
+    if (bl.mbb) rows.push(`<dt>m<sub>ββ</sub></dt><dd>&lt; ${bl.mbb[0]} to ${bl.mbb[1]} meV <span class="m">as printed, range over matrix elements</span></dd>`);
+    if (bl.rmp) warn.push(`The 0νββ limit for ${p} is taken from the compilation of Agostini et al., Rev. Mod. Phys. 95, 025002 (2023); the original experiment paper was not opened for this page, and newer results may exist.`);
+  } else rows.push(`<dt>T<sub>½</sub>(0ν)</dt><dd class="m">no limit on this page</dd>`);
+  document.getElementById("info").innerHTML = rows.join("");
+  const W = document.getElementById("warn");
+  W.hidden = !warn.length; W.innerHTML = warn.join(" ");
+  document.getElementById("stamp").innerHTML = `<b>${p} → ${d}</b><small>Q<sub>ββ</sub> = ${fx(S.Q, 4)} MeV · the single step to ${i1} ${open ? "is open by energy but strongly hindered" : "would climb " + fx(-qb / 1000, 3) + " MeV"} · ${S.mode === "2nu" ? "2e<sup>−</sup> + 2ν̄: the electrons share a continuum" : "0νββ: the two electrons carry all of Q"}</small>`;
+  drawRate();
+}
+// the 0nu half-life from the sliders
+function drawRate() {
+  const c = S.c, nr = nmeRange(c.key), out = document.getElementById("t0nu");
+  const mbb = Math.pow(10, S.logm);
+  document.getElementById("mbbo").textContent = `${mbb < 10 ? mbb.toFixed(2) : mbb.toFixed(1)} meV`;
+  const ms = document.getElementById("mnme");
+  if (!nr) {
+    ms.disabled = true; document.getElementById("mnmeo").textContent = "no table";
+    out.dataset.v = ""; out.innerHTML = `No matrix-element table for ${nm(c.Z, c.A)} on this page (Agostini et al. 2023 tabulate ${["76Ge", "82Se", "100Mo", "130Te", "136Xe"].map((k) => nm(CAND.get(k).Z, CAND.get(k).A)).join(", ")}).`;
+    return;
+  }
+  ms.disabled = false; ms.min = nr[0]; ms.max = nr[1]; ms.step = 0.01;
+  if (!(S.M >= nr[0] && S.M <= nr[1])) S.M = (nr[0] + nr[1]) / 2;
+  ms.value = S.M;
+  document.getElementById("mnmeo").textContent = `${fx(S.M, 2)} (${nr[0]} to ${nr[1]})`;
+  const T = 1 / DM.invT0nu(c.ki.G0, S.M, mbb, GA);
+  out.dataset.v = T;
+  const bl = bestLimit(c.key);
+  out.innerHTML = `T<sub>½</sub><sup>0ν</sup> = <b>${sci(T, 3)} yr</b> <span class="src">(G<sub>0ν</sub> g<sub>A</sub><sup>4</sup> |M|<sup>2</sup> (m<sub>ββ</sub>/m<sub>e</sub>)<sup>2</sup>)<sup>−1</sup>, g<sub>A</sub> = ${GA}</span>` +
+    (bl ? `<br><span class="src">${T > bl.T ? "above" : "below"} the best limit ${sci(bl.T, 2)} yr: ${T > bl.T ? "not excluded" : "excluded"} for this M</span>` : "");
+}
+
+// ---------- plots
+function setupCanvas(c) {
+  const dpr = Math.min(devicePixelRatio, 2), w = c.clientWidth, h = c.clientHeight;
+  c.width = w * dpr; c.height = h * dpr;
+  const x = c.getContext("2d"); x.setTransform(dpr, 0, 0, dpr, 0, 0);
+  return { x, w, h };
+}
+function niceStep(span) { const p = Math.pow(10, Math.floor(Math.log10(span / 4))), m = span / 4 / p; return (m < 1.5 ? 1 : m < 3.5 ? 2 : 5) * p; }
+function axes(ctx, w, h, xr, yr, o) {
+  o = o || {};
+  const L = o.L || 40, R = 6, T = 6, B = 18;
+  const X = (v) => L + (v - xr[0]) / (xr[1] - xr[0]) * (w - L - R);
+  const Y = (v) => T + (yr[1] - v) / (yr[1] - yr[0]) * (h - T - B);
+  ctx.font = "10px ui-monospace,Menlo,monospace"; ctx.lineWidth = 1; ctx.strokeStyle = "#1e2432"; ctx.fillStyle = "#8a92a6";
+  const lab = (v, log) => (log ? (Math.abs(v - Math.round(v)) < 1e-9 ? "10" + supNum(Math.round(v)) : "") : +v.toPrecision(6));
+  const ys = o.ys || niceStep(yr[1] - yr[0]), xs = o.xs || niceStep(xr[1] - xr[0]);
+  for (let v = Math.ceil(yr[0] / ys - 1e-9) * ys; v <= yr[1] + 1e-9 * ys; v += ys) {
+    ctx.beginPath(); ctx.moveTo(L, Y(v)); ctx.lineTo(w - R, Y(v)); ctx.stroke();
+    ctx.textAlign = "right"; ctx.fillText(lab(v, o.ylog), L - 4, Y(v) + 3);
+  }
+  ctx.textAlign = "center";
+  if (!o.noX) for (let v = Math.ceil(xr[0] / xs - 1e-9) * xs; v <= xr[1] + 1e-9 * xs; v += xs) {
+    ctx.beginPath(); ctx.moveTo(X(v), T); ctx.lineTo(X(v), h - B); ctx.stroke();
+    ctx.fillText(lab(v, o.xlog), X(v), h - 5);
+  }
+  if (o.xl) { ctx.textAlign = "right"; ctx.fillText(o.xl, w - R - 2, h - B - 4); }
+  return { X, Y, L, R, T, B };
+}
+function curve(ctx, ax, pts, col, lw, dash) {
+  ctx.strokeStyle = col; ctx.lineWidth = lw; ctx.setLineDash(dash || []);
+  ctx.beginPath(); let on = false;
+  for (const [x, y] of pts) { if (!isFinite(y)) { on = false; continue; } if (on) ctx.lineTo(ax.X(x), ax.Y(y)); else { ctx.moveTo(ax.X(x), ax.Y(y)); on = true; } }
+  ctx.stroke(); ctx.setLineDash([]);
+}
+function dot(ctx, x, y, r, c, fill = true) { ctx.beginPath(); ctx.arc(x, y, r, 0, 2 * Math.PI); if (fill) { ctx.fillStyle = c; ctx.fill(); } else { ctx.strokeStyle = c; ctx.lineWidth = 1.2; ctx.stroke(); } }
+const C2 = "#7fd4ff", C0 = "#ff7ab6", CG = "#8a92a6";
+
+function drawSpectrum() {
+  const { x: ctx, w, h } = setupCanvas(document.getElementById("ps"));
+  const Q = S.Q, xr = [0, 1.1 * Q], n = 260;
+  const pts = [], sm = [], line = [];
+  let ym = 0;
+  for (let i = 0; i <= n; i++) { const E = xr[1] * i / n; const a = S.sp.pdf(E), b = DM.smeared(S.sp, E, S.sigma); pts.push([E, a]); sm.push([E, b]); ym = Math.max(ym, a, b); }
+  const ytop = ym * 1.25;
+  const ax = axes(ctx, w, h, xr, [0, ytop], { xl: "K (MeV)" });
+  // sampled events (measured energies), as a histogram normalized to unit area
+  if (S.nEv) {
+    const nb = S.hist.length, bw = xr[1] / nb;
+    ctx.fillStyle = "rgba(242,193,78,0.28)";
+    for (let i = 0; i < nb; i++) { const v = Math.min(ytop, S.hist[i] / (S.nEv * bw)); ctx.fillRect(ax.X(i * bw) + 0.5, ax.Y(v), ax.X((i + 1) * bw) - ax.X(i * bw) - 1, ax.Y(0) - ax.Y(v)); }
+  }
+  if (S.shape === "fermi") curve(ctx, ax, pts.map(([E]) => [E, S.spPR.pdf(E)]), CG, 1, [3, 3]);
+  curve(ctx, ax, pts, "rgba(127,212,255,0.55)", 1, []);
+  curve(ctx, ax, sm, C2, 2.2, []);
+  // the 0nu line, smeared, to unit area (clipped at the top when narrower than the plot can show)
+  const lo = Math.max(0, Q - 5 * S.sigma), hi = Q + 5 * S.sigma;
+  for (let i = 0; i <= 120; i++) { const E = lo + (hi - lo) * i / 120; line.push([E, Math.min(ytop * 0.98, DM.smearedLine(E, Q, S.sigma))]); }
+  curve(ctx, ax, line, C0, 2, []);
+  const peak = 1 / (S.sigma * Math.sqrt(2 * Math.PI));
+  ctx.fillStyle = C0; ctx.textAlign = "right"; ctx.font = "10px ui-monospace,Menlo,monospace";
+  if (peak > ytop) ctx.fillText(`0νββ peak ${peak > 1000 ? sci(peak, 2) : fx(peak, 0)}/MeV ↑`, ax.X(Q) - 4, ax.T + 10);
+  ctx.strokeStyle = "rgba(255,122,182,0.4)"; ctx.setLineDash([2, 3]); ctx.beginPath(); ctx.moveTo(ax.X(Q), ax.T); ctx.lineTo(ax.X(Q), ax.Y(0)); ctx.stroke(); ctx.setLineDash([]);
+  document.getElementById("legs").innerHTML = `<span><i class="ln" style="background:${C2}"></i>2νββ ${S.shape === "pr" ? "Primakoff-Rosen" : "F₀L₀ per electron"}, smeared</span>` +
+    (S.shape === "fermi" ? `<span><i class="ln" style="background:${CG}"></i>Primakoff-Rosen</span>` : "") +
+    `<span><i class="ln" style="background:${C0}"></i>0νββ line at Q, smeared</span><span><i style="background:rgba(242,193,78,.6)"></i>${S.nEv} sampled ${S.mode === "2nu" ? "2νββ" : "0νββ"} decays, measured energy</span>`;
+}
+function drawZoom() {
+  const { x: ctx, w, h } = setupCanvas(document.getElementById("pz"));
+  const Q = S.Q, span = Math.max(4 * S.fwhm, 0.01 * Q), xr = [Q - span, Q + 0.6 * span];
+  const r = Math.pow(10, S.logr);
+  // per decay and per keV: 2nu density (smeared) and r x the 0nu line
+  const pts2 = [], pts0 = [], n = 240;
+  let ymax = -Infinity, ymin = Infinity;
+  for (let i = 0; i <= n; i++) {
+    const E = xr[0] + (xr[1] - xr[0]) * i / n;
+    const a = DM.smeared(S.sp, E, S.sigma) / 1000, b = r * DM.smearedLine(E, Q, S.sigma) / 1000;
+    pts2.push([E * 1000, a > 0 ? Math.log10(a) : NaN]); pts0.push([E * 1000, b > 0 ? Math.log10(b) : NaN]);
+    if (a > 0) { ymax = Math.max(ymax, Math.log10(a)); ymin = Math.min(ymin, Math.log10(a)); }
+    if (b > 0) ymax = Math.max(ymax, Math.log10(b));
+  }
+  const top = Math.ceil(ymax + 0.3), bot = Math.max(top - 14, Math.floor(Math.min(ymin, Math.log10(r / (S.sigma * 1000 * Math.sqrt(2 * Math.PI))) - 2)));
+  const ax = axes(ctx, w, h, [xr[0] * 1000, xr[1] * 1000], [bot, top], { ylog: true, ys: top - bot > 8 ? 2 : 1, xs: 2 * niceStep((xr[1] - xr[0]) * 1000), xl: "K (keV)", L: 42 });
+  const roi = DM.roi(Q, S.fwhm);
+  ctx.fillStyle = "rgba(255,122,182,0.10)"; ctx.fillRect(ax.X(roi[0] * 1000), ax.T, ax.X(roi[1] * 1000) - ax.X(roi[0] * 1000), ax.Y(bot) - ax.T);
+  curve(ctx, ax, pts2.map(([x, y]) => [x, Math.max(bot, y)]), C2, 2, []);
+  curve(ctx, ax, pts0.map(([x, y]) => [x, isFinite(y) ? Math.max(bot - 1, y) : NaN]), C0, 2, []);
+  const ratio = S.f2 / (S.f0 * r);
+  const bl = bestLimit(S.key);
+  document.getElementById("legz").innerHTML = `<span><i class="ln" style="background:${C2}"></i>2νββ</span><span><i class="ln" style="background:${C0}"></i>0νββ × Γ<sub>0ν</sub>/Γ<sub>2ν</sub></span><span><i style="background:rgba(255,122,182,.5);border-radius:0"></i>Q ± FWHM/2</span>`;
+  document.getElementById("znote").innerHTML = `FWHM ${+S.res.toPrecision(3)} % = ${fx(S.fwhm * 1000, 2)} keV. Per decay, a 2νββ event lands in Q ± FWHM/2 with probability <span id="f2" data-v="${S.f2}">${sci(S.f2, 3)}</span>, a 0νββ event with ${fx(S.f0, 4)} (erf √ln2). At Γ<sub>0ν</sub>/Γ<sub>2ν</sub> = ${sci(r, 2)}${bl && Math.abs(S.logr - Math.log10(T2(S.c) / bl.T)) < 1e-6 ? " (T<sub>½</sub><sup>2ν</sup> over the best limit)" : ""} that is <b>${ratio >= 0.01 ? fx(ratio, ratio < 10 ? 3 : 1) : sci(ratio, 2)}</b> 2νββ events in the window per 0νββ event in it. Near Q the 2νββ spectrum falls as (Q − K)<sup>5</sup>, so the fraction in the window goes as FWHM<sup>6</sup>: at half this width it would be ${fx(S.f2 / S.f2half, 1)} times smaller.`;
+}
+// half-lives: 2nu (Barabash; NUBASE), 0nu lower limits
+const HIT = { pt: [] };
+function drawHalf() {
+  const { x: ctx, w, h } = setupCanvas(document.getElementById("pt"));
+  const yr = [18, 27.3], ax = axes(ctx, w, h, [-0.6, KEYS.length - 0.4], yr, { ylog: true, ys: 1, noX: true, L: 38 });
+  HIT.pt = [];
+  ctx.font = "9px ui-monospace,Menlo,monospace"; ctx.textAlign = "center";
+  KEYS.forEach((k, i) => {
+    const c = CAND.get(k), x = ax.X(i), b = c.bar.T, T = T2(c);
+    if (k === S.key) { ctx.fillStyle = "rgba(255,122,182,0.10)"; ctx.fillRect(x - 11, ax.T, 22, ax.Y(yr[0]) - ax.T); }
+    ctx.fillStyle = k === S.key ? "#ffd1e6" : "#8a92a6";
+    ctx.save(); ctx.translate(x, h - 3); ctx.fillText(k.replace(/^(\d+)/, ""), 0, 0); ctx.restore();
+    ctx.fillText(k.match(/^\d+/)[0], x, h - 12 + 0);
+    // 2nu with asymmetric bars
+    const y = Math.log10(T), yu = Math.log10((b[0] + b[1]) * Math.pow(10, b[3])), yd = Math.log10((b[0] - b[2]) * Math.pow(10, b[3]));
+    ctx.strokeStyle = C2; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(x - 3, ax.Y(yu)); ctx.lineTo(x - 3, ax.Y(yd)); ctx.stroke();
+    dot(ctx, x - 3, ax.Y(y), 3, C2);
+    const nT = c.nubase.Tpart || null;
+    if (nT) dot(ctx, x - 3, ax.Y(Math.log10(nT)), 5, "rgba(230,232,238,0.7)", false);
+    HIT.pt.push([x - 3, ax.Y(y), k]);
+    // 0nu limits: an arrow up from the limit; the latest solid, earlier ones faint
+    for (const l of limitsOf(k)) {
+      const yl = Math.log10(l.T), xx = x + 4;
+      ctx.strokeStyle = ctx.fillStyle = l.latest ? C0 : "rgba(255,122,182,0.35)"; ctx.lineWidth = l.latest ? 1.6 : 1;
+      ctx.beginPath(); ctx.moveTo(xx - 4, ax.Y(yl)); ctx.lineTo(xx + 4, ax.Y(yl)); ctx.moveTo(xx, ax.Y(yl)); ctx.lineTo(xx, ax.Y(Math.min(yr[1], yl + 0.55))); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(xx - 3, ax.Y(Math.min(yr[1], yl + 0.55)) + 4); ctx.lineTo(xx, ax.Y(Math.min(yr[1], yl + 0.55))); ctx.lineTo(xx + 3, ax.Y(Math.min(yr[1], yl + 0.55)) + 4); ctx.stroke();
+      HIT.pt.push([xx, ax.Y(yl), k]);
+    }
+  });
+  document.getElementById("legt").innerHTML = `<span><i style="background:${C2}"></i>2νββ, Barabash 2020</span><span><i style="border:1px solid #e6e8ee;box-sizing:border-box"></i>NUBASE2020</span><span><i class="ln" style="background:${C0}"></i>0νββ lower limit (faint: superseded)</span>`;
+  const c = S.c, ls = limitsOf(S.key);
+  document.getElementById("tnote").innerHTML = (ls.length ? ls.map((l) => `${l.latest ? "" : "<span style='opacity:.6'>"}${l.rmp ? "compilation (Agostini et al. 2023)" : l.exp + " " + yearOf(l.cite)}: T<sub>½</sub> &gt; ${sci(l.T, 2)} yr, ${l.cl}${l.mbb ? `, m<sub>ββ</sub> &lt; ${l.mbb[0]} to ${l.mbb[1]} meV` : ""}${l.mbbNoSM ? ` (${l.mbbNoSM[0]} to ${l.mbbNoSM[1]} meV without the shell-model matrix element)` : ""}${l.latest ? "" : "</span>"}`).join("<br>") : `No 0νββ limit for ${nm(c.Z, c.A)} on this page.`) +
+    `<br>2νββ: ${nm(c.Z, c.A)} ${sci(T2(c), 3)} yr; the 0νββ limits lie ${ls.length ? fx(Math.log10(Math.max(...ls.map((l) => l.T)) / T2(c)), 1) + " decades" : "n/a"} above it. Click a point.`;
+}
+// 0nu half-life against m_bb for the current isotope
+function drawRelation() {
+  const { x: ctx, w, h } = setupCanvas(document.getElementById("pr"));
+  const c = S.c, nr = nmeRange(c.key), bl = bestLimit(c.key), note = document.getElementById("rnote");
+  document.getElementById("prcap").innerHTML = nr ? `T<sub>½</sub> (yr) vs m<sub>ββ</sub> (meV)` : "";
+  if (!nr) { ctx.fillStyle = CG; ctx.font = "12px ui-monospace,Menlo,monospace"; ctx.fillText("no matrix-element table for this nucleus here", 20, h / 2); note.innerHTML = ""; return; }
+  const xr = [0, 3], yr = [23, 31];
+  const ax = axes(ctx, w, h, xr, yr, { xlog: true, ylog: true, xs: 1, ys: 1, xl: "m_ββ (meV)", L: 38 });
+  const lt = (m, M) => -Math.log10(DM.invT0nu(c.ki.G0, M, Math.pow(10, m), GA));
+  // band between the smallest and the largest matrix element
+  ctx.fillStyle = "rgba(127,212,255,0.16)"; ctx.beginPath();
+  for (let i = 0; i <= 60; i++) { const m = 3 * i / 60; ctx.lineTo(ax.X(m), ax.Y(Math.min(yr[1], Math.max(yr[0], lt(m, nr[0]))))); }
+  for (let i = 60; i >= 0; i--) { const m = 3 * i / 60; ctx.lineTo(ax.X(m), ax.Y(Math.min(yr[1], Math.max(yr[0], lt(m, nr[1]))))); }
+  ctx.closePath(); ctx.fill();
+  curve(ctx, ax, Array.from({ length: 61 }, (_, i) => [3 * i / 60, Math.min(yr[1], Math.max(yr[0], lt(3 * i / 60, S.M)))]), C2, 2);
+  if (bl) {
+    const y = Math.log10(bl.T);
+    ctx.strokeStyle = C0; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(ax.X(0), ax.Y(y)); ctx.lineTo(ax.X(3), ax.Y(y)); ctx.stroke();
+    ctx.fillStyle = "rgba(255,122,182,0.08)"; ctx.fillRect(ax.X(0), ax.Y(y), ax.X(3) - ax.X(0), ax.Y(yr[0]) - ax.Y(y));
+    ctx.fillStyle = C0; ctx.font = "10px ui-monospace,Menlo,monospace"; ctx.textAlign = "right"; ctx.fillText(`excluded below the limit`, ax.X(3) - 4, ax.Y(y) + 12);
+  }
+  const m = S.logm, y = lt(m, S.M);
+  dot(ctx, ax.X(m), ax.Y(Math.min(yr[1], Math.max(yr[0], y))), 4, "#ffffff");
+  let txt = `Band: M<sup>0ν</sup> from ${nr[0]} to ${nr[1]}, all the shell-model, QRPA, EDF and IBM values tabulated by Agostini et al. (2023) for ${nm(c.Z, c.A)}, with Kotila-Iachello's G<sub>0ν</sub> = ${c.ki.G0}×10${supNum(-15)} yr<sup>−1</sup> and g<sub>A</sub> = ${GA}; line and dot: the sliders.`;
+  if (bl && bl.mbb) {
+    const lo = DM.mbbFromT(bl.T, c.ki.G0, nr[1], GA), hi = DM.mbbFromT(bl.T, c.ki.G0, nr[0], GA);
+    txt += ` The limit ${sci(bl.T, 2)} yr gives m<sub>ββ</sub> &lt; ${fx(lo, 0)} to ${fx(hi, 0)} meV over this band; the paper prints ${bl.mbb[0]} to ${bl.mbb[1]} meV with its own choice of matrix elements${bl.G ? ` and G = ${bl.G}×10${supNum(-15)} yr<sup>−1</sup>` : ""}.`;
+    const own = bl.M || (bl === DB.limits.find((l) => l.exp === "KamLAND-Zen" && l.latest) ? DB.kzM : null), G = bl.G || c.ki.G0;
+    if (own) txt += ` With its printed range M = ${own[0]} to ${own[1]}${bl.G ? "" : " (G not printed, Kotila-Iachello's used)"}: ${fx(DM.mbbFromT(bl.T, G, own[1], GA), 1)} to ${fx(DM.mbbFromT(bl.T, G, own[0], GA), 1)} meV.`;
+    else txt += ` Its matrix elements are not printed as numbers; at Kotila-Iachello's G the printed range corresponds to M = ${fx(DM.MfromLimit(bl.T, G, bl.mbb[1], GA), 2)} to ${fx(DM.MfromLimit(bl.T, G, bl.mbb[0], GA), 2)}.`;
+  }
+  note.innerHTML = txt;
+}
+// m_bb against the lightest neutrino mass, NuFIT 6.0
+const MB = { cache: null };
+function mbbBands() {
+  if (MB.cache) return MB.cache;
+  const out = {};
+  for (const o of ["NO", "IO"]) {
+    const bf = DM.nuParams(DB.nufit, o, "bf"), box = DM.nuParams(DB.nufit, o, 5), pts = [];
+    for (let i = 0; i <= 160; i++) { const m0 = Math.pow(10, -4 + 4 * i / 160); pts.push({ m0, bf: DM.mbbBand(m0, o, bf), box: DM.mbbBand(m0, o, box) }); }
+    out[o] = pts;
+  }
+  return (MB.cache = out);
+}
+function drawMbb() {
+  const { x: ctx, w, h } = setupCanvas(document.getElementById("pm"));
+  const xr = [-4, 0], yr = [-4, 0];
+  const ax = axes(ctx, w, h, xr, yr, { xlog: true, ylog: true, xs: 1, ys: 1, xl: "m_lightest (eV)", L: 38 });
+  const B = mbbBands(), L10 = (v) => Math.log10(Math.max(v, 1e-4));
+  const band = (pts, key, col) => {
+    ctx.fillStyle = col; ctx.beginPath();
+    pts.forEach((p, i) => ctx.lineTo(ax.X(Math.log10(p.m0)), ax.Y(L10(p[key][1]))));
+    for (let i = pts.length - 1; i >= 0; i--) ctx.lineTo(ax.X(Math.log10(pts[i].m0)), ax.Y(L10(pts[i][key][0])));
+    ctx.closePath(); ctx.fill();
+  };
+  band(B.NO, "box", "rgba(127,212,255,0.20)"); band(B.IO, "box", "rgba(242,193,78,0.20)");
+  band(B.NO, "bf", "rgba(127,212,255,0.55)"); band(B.IO, "bf", "rgba(242,193,78,0.55)");
+  // experimental upper limits (ranges over matrix elements): the latest per isotope with a printed m_bb range
+  const lims = DB.limits.filter((l) => l.latest && l.mbb).sort((a, b) => a.mbb[0] - b.mbb[0]);
+  const shown = lims.slice(0, 3);
+  shown.forEach((l, i) => {
+    const y0 = Math.log10(l.mbb[0] / 1000), y1 = Math.log10(l.mbb[1] / 1000);
+    const best = i === 0, col = best ? "rgba(255,122,182,0.22)" : "rgba(255,122,182,0.07)";
+    ctx.fillStyle = col; ctx.fillRect(ax.X(xr[0]), ax.Y(y1), ax.X(xr[1]) - ax.X(xr[0]), ax.Y(y0) - ax.Y(y1));
+    ctx.strokeStyle = best ? C0 : "rgba(255,122,182,0.6)"; ctx.lineWidth = best ? 1.5 : 1; ctx.setLineDash(best ? [] : [4, 3]);
+    ctx.beginPath(); ctx.moveTo(ax.X(xr[0]), ax.Y(y1)); ctx.lineTo(ax.X(xr[1]), ax.Y(y1)); ctx.stroke(); ctx.setLineDash([]);
+    ctx.fillStyle = best ? "#ffd1e6" : "rgba(255,209,230,0.7)"; ctx.font = "10px ui-monospace,Menlo,monospace"; ctx.textAlign = "left";
+    ctx.fillText(`${l.iso}`, ax.X(xr[0]) + 4 + i * 44, ax.Y(y1) - 3);
+  });
+  // the slider's m_bb
+  const ym = Math.log10(Math.pow(10, S.logm) / 1000);
+  ctx.strokeStyle = "rgba(255,255,255,0.6)"; ctx.setLineDash([2, 3]); ctx.beginPath(); ctx.moveTo(ax.X(xr[0]), ax.Y(ym)); ctx.lineTo(ax.X(xr[1]), ax.Y(ym)); ctx.stroke(); ctx.setLineDash([]);
+  const nf = DB.nufit;
+  document.getElementById("legm").innerHTML = `<span><i style="background:rgba(127,212,255,.8)"></i>normal ordering</span><span><i style="background:rgba(242,193,78,.8)"></i>inverted</span><span><i style="background:rgba(255,122,182,.5);border-radius:0"></i>0νββ upper limits</span>`;
+  const io0 = B.IO[0].box[0] * 1000, io0b = B.IO[0].bf[0] * 1000, kz = shown[0];
+  const z0 = B.NO.filter((p) => p.bf[0] === 0).map((p) => p.m0), NOZ = z0.length ? [Math.min(...z0), Math.max(...z0)] : [NaN, NaN];
+  document.getElementById("mnote").innerHTML = `m<sub>ββ</sub> = |Σ U<sub>ei</sub><sup>2</sup> m<sub>i</sub>|, scanned over both Majorana phases (closed form: from max(0, 2 max a<sub>i</sub> − Σa<sub>i</sub>) to Σa<sub>i</sub>). Dark: NuFIT 6.0 best fit (${nf.block}); light: the box of their one-dimensional 3σ ranges of sin²θ<sub>12</sub>, sin²θ<sub>13</sub>, Δm²<sub>21</sub>, Δm²<sub>3ℓ</sub>, varied independently on a 5<sup>4</sup> grid, a conservative envelope rather than a joint 3σ region. Inverted ordering keeps m<sub>ββ</sub> ≥ ${fx(io0b, 1)} meV (best fit; ${fx(io0, 1)} meV within 3σ) as m<sub>lightest</sub> → 0; normal ordering can cancel to zero (best fit: for m<sub>lightest</sub> between ${fx(NOZ[0] * 1000, 1)} and ${fx(NOZ[1] * 1000, 1)} meV on this grid). Bands of the limits: from the most to the least favourable matrix element${kz ? `; the lowest, ${kz.exp} ${yearOf(kz.cite)} (${kz.iso}), ${kz.mbb[0]} to ${kz.mbb[1]} meV at ${kz.cl}` : ""}. Above a band's top every listed matrix element excludes; inside it, some do. NuFIT disfavours inverted ordering by Δχ² = ${nf.dchi2IO} in this data set.`;
+}
+function drawAll() { drawSpectrum(); drawZoom(); drawHalf(); drawRelation(); drawMbb(); }
+for (const id of ["pt"]) {
+  const cv = document.getElementById(id);
+  const pick = (ev) => {
+    const b = cv.getBoundingClientRect(), x = ev.clientX - b.left, y = ev.clientY - b.top;
+    let best = null, bd = 200;
+    for (const [px, py, k] of HIT[id]) { const d2 = (px - x) ** 2 + (py - y) ** 2; if (d2 < bd) { bd = d2; best = k; } }
+    return best;
+  };
+  cv.addEventListener("click", (ev) => { const k = pick(ev); if (k) setCandidate(k); });
+  cv.addEventListener("mousemove", (ev) => { const k = pick(ev); cv.title = k ? k : ""; });
+}
+
+// ---------- labels in the scene
+const labDiv = document.getElementById("labels"), LABS = [];
+function mkLab(cls) { const e = document.createElement("div"); e.className = "axlab " + cls; labDiv.appendChild(e); return e; }
+function placeLabels() {
+  for (const l of LABS) l.el.remove();
+  LABS.length = 0;
+  const c = S.c;
+  for (const e of CELL) {
+    const cls = e.Z === c.Z ? "par" : e.Z === c.Z + 2 ? "dau" : e.Z === c.Z + 1 ? "par1" : "";
+    const el = mkLab(cls);
+    el.innerHTML = nm(e.Z, c.A) + (e.Z === c.Z + 1 ? " <span style='opacity:.7'>(odd-odd)</span>" : "");
+    LABS.push({ el, p: new THREE.Vector3(xOf(e.Z), e.y + (e.Z === c.Z ? 2.2 : 0.62), 0.6) });
+  }
+  const q = mkLab("q"); q.innerHTML = `ββ: Q = ${fx(S.Q, 3)} MeV`;
+  LABS.push({ el: q, p: S.bbCurve.getPoint(0.5).add(new THREE.Vector3(0, 0.55, 0)) });
+  const qb = DM.qb(MAP, c.Z, c.A) / 1000, x = mkLab(qb > 0 ? "q" : "x");
+  x.innerHTML = qb > 0 ? `β: +${fx(qb, 3)} MeV, hindered` : `β: ${sgn(qb, 3)} MeV ✕`;
+  LABS.push({ el: x, p: S.s1mid.clone().add(new THREE.Vector3(0, -0.15, 1.2)) });
+  const lo = CELL[0], hi = CELL[CELL.length - 1];
+  const eZ = mkLab("ax"); eZ.textContent = "Z →"; LABS.push({ el: eZ, p: new THREE.Vector3(xOf(hi.Z) + 1.4, 0, 0) });
+  const pe = mkLab("par2"); pe.textContent = "even-even"; const po = mkLab("par1"); po.textContent = "odd-odd";
+  const ze = c.Z - 2, zo = c.Z + 3;
+  LABS.push({ el: pe, p: new THREE.Vector3(xOf(ze), BASE + yOf((DM.parabola(S.fit, ze, false) - S.dmin) / 1000) + 0.5, 0.7) });
+  LABS.push({ el: po, p: new THREE.Vector3(xOf(zo), BASE + yOf((DM.parabola(S.fit, zo, true) - S.dmin) / 1000) + 0.5, 0.7) });
+}
+const tmp = new THREE.Vector3();
+function drawLabels() {
+  for (const l of LABS) {
+    tmp.copy(l.p).project(camera);
+    const vis = tmp.z < 1 && Math.abs(tmp.x) < 1 && Math.abs(tmp.y) < 1;
+    l.el.hidden = !vis;
+    if (vis) { l.el.style.left = (tmp.x * 0.5 + 0.5) * innerWidth + "px"; l.el.style.top = (-tmp.y * 0.5 + 0.5) * innerHeight + "px"; }
+  }
+}
+
+// ---------- texts that only change with the data
+function staticTexts() {
+  const rr = DB.cands.map((c) => DM.fitIsobar(DM.isobarPoints(MAP, c.A, 5).pts).rms), RMS = [Math.min(...rr), Math.max(...rr)];
+  const kzr = DB.res.find((r) => r.key === "kz");
+  document.getElementById("drawn").innerHTML = `What is drawn: one column per member of the isobar with an AME2020 mass, from four charges below the parent to six above (Z to the right), its height the mass excess above the lightest member (the vertical scale is set so the parent, the intermediate and the daughter fill the view; heights above ${KNEE} units are compressed and paler). Gold: even-even, blue: odd-odd, pink: the parent; thin grey columns rest on estimated masses; a lit core marks a nucleus that NUBASE2020 lists as stable or longer-lived than 10<sup>25</sup> s. The two glowing curves are the isobar parabolas fitted to the measured masses (even-even below, odd-odd above, split by 2δ). The pink arc is the double step; the short arrow from the parent is the single step, red when it would climb. In a drawn decay the energies are sampled from the computed spectrum, the two electrons share K and the two antineutrinos share Q − K as stated under the model; momenta are drawn to one scale and sum to zero with the recoil; directions are isotropic and independent (the angular correlations are left out). The flight time and the glide are not to scale; the intermediate column lights as the daughter passes over it, because the odd-odd nucleus is never reached as a real state. Materials, lights and glow are decoration.`;
+  document.getElementById("model").innerHTML = [
+    `Q<sub>ββ</sub> = Δ(Z, A) − Δ(Z + 2, A) from AME2020 mass excesses (atomic masses, so the electron masses cancel). The single step: Q<sub>β</sub> = Δ(Z, A) − Δ(Z + 1, A).`,
+    `Parabolas: M(Z) = cZ² + bZ + m<sub>0</sub> + δs, s = +1 for odd Z, −1 for even Z, unweighted least squares on the measured masses within five charges of the isobar's lightest member. Shell effects make the rms of this fit ${fx(RMS[0], 0)} to ${fx(RMS[1], 0)} keV over the eleven isobars; it is drawn for the shape, not used for any Q.`,
+    `2νββ summed kinetic energy K of the two electrons, in units of m<sub>e</sub>c², T<sub>0</sub> = Q<sub>ββ</sub>/m<sub>e</sub>c²: dN/dK ∝ K(K⁴ + 10K³ + 40K² + 60K + 30)(T<sub>0</sub> − K)⁵. This is the closed form usually attributed to Primakoff and Rosen (Rep. Prog. Phys. 22, 121 (1959); not opened here): each electron's Fermi function is replaced by F p ε ∝ ε² (ε the total energy, a nonrelativistic Coulomb approximation), the neutrino phase space by ω<sub>1</sub>²ω<sub>2</sub>² with closure (no lepton-energy dependence in the nuclear part), and the angular correlation is integrated out; then 30∫<sub>0</sub><sup>K</sup>(k + 1)²(K − k + 1)² dk gives the polynomial (derived exactly in the test). The same polynomial is drawn in the figure source of Agostini et al., Rev. Mod. Phys. 95, 025002 (2023), there with energies in MeV instead of m<sub>e</sub>c². The second shape keeps the Fermi function F<sub>0</sub>L<sub>0</sub> of the beta-decay page for each electron (daughter charge Z + 2, R = 1.2 A<sup>1/3</sup> fm): dN/dK ∝ (T<sub>0</sub> − K)⁵ ∫<sub>0</sub><sup>K</sup> F p<sub>1</sub>ε<sub>1</sub> F p<sub>2</sub>ε<sub>2</sub> dk<sub>1</sub>, tabulated on 160 points. Neither includes screening, radiative corrections or the energy dependence of the nuclear matrix element beyond closure.`,
+    `In a drawn event the summed energy is split between the electrons with density (ε<sub>1</sub>ε<sub>2</sub>)² and the neutrino energy Q − K with density (ω<sub>1</sub>ω<sub>2</sub>)², the same approximation; for 0νββ the electrons share Q with (ε<sub>1</sub>ε<sub>2</sub>)².`,
+    `0νββ: a line at K = Q<sub>ββ</sub> (the nuclear recoil is neglected). Detector response: a Gaussian with the width it has at Q, FWHM = 2√(2 ln 2) σ, applied at all energies; the window Q ± FWHM/2 holds erf(√ln 2) of a line. Presets: ${DB.res.map((r) => `${r.label} ${r.fwhm_keV ? r.fwhm_keV + " keV FWHM" : (100 * r.sigma_rel_sqrtE) + " %/√E, which the paper does not say is σ or FWHM; taken as σ here"}`).join("; ")}.`,
+    `0νββ by light Majorana-neutrino exchange in the convention of Kotila and Iachello, Phys. Rev. C 85, 034316 (2012): 1/T<sub>½</sub> = G<sub>0ν</sub> g<sub>A</sub>⁴ |M<sup>0ν</sup>|² (m<sub>ββ</sub>/m<sub>e</sub>)², their G<sub>0ν</sub><sup>(0)</sup>, g<sub>A</sub> = ${GA}, the value stated by ${GA_EXP.join(", ")}; the other experiments here do not state it in the text read, and the page uses the same value for every isotope. Nothing about G or M is computed on this page: G from their table, M from the table of Agostini et al. (2023, bare g<sub>A</sub>, no short-range term). 2νββ: 1/T<sub>½</sub> = G<sub>2ν</sub>|M<sub>eff</sub>|², Barabash's Eq. (5), so |M<sub>eff</sub>| = (G<sub>2ν</sub>T<sub>½</sub>)<sup>−1/2</sup>.`,
+    `m<sub>ββ</sub> = |m<sub>1</sub>c<sub>12</sub>²c<sub>13</sub>² + m<sub>2</sub>s<sub>12</sub>²c<sub>13</sub>² e<sup>iα</sup> + m<sub>3</sub>s<sub>13</sub>² e<sup>iβ</sup>|, normal ordering m<sub>1</sub> = m<sub>0</sub>, m<sub>2</sub> = √(m<sub>0</sub>² + Δm²<sub>21</sub>), m<sub>3</sub> = √(m<sub>0</sub>² + Δm²<sub>3ℓ</sub>); inverted m<sub>3</sub> = m<sub>0</sub>, m<sub>2</sub> = √(m<sub>0</sub>² − Δm²<sub>3ℓ</sub>), m<sub>1</sub> = √(m<sub>2</sub>² − Δm²<sub>21</sub>), as NuFIT 6.0 writes them (their Majorana phases sit on m<sub>1</sub> and m<sub>2</sub>; moving them to m<sub>2</sub> and m<sub>3</sub> changes only an overall phase). Over the two phases a sum of three lengths a<sub>i</sub> reaches every value from max(0, 2 max a<sub>i</sub> − Σa<sub>i</sub>) to Σa<sub>i</sub>; the test checks this against a brute-force phase scan.`,
+  ].map((t) => `<span>${t}</span>`).join("");
+  const cites = [...new Set(DB.limits.filter((l) => !l.rmp).map((l) => l.cite))];
+  document.getElementById("sources").innerHTML = `Masses and Q: AME2020, Wang et al., Chin. Phys. C 45, 030003 (2021). Half-lives, J<sup>π</sup>: NUBASE2020, Kondev et al., Chin. Phys. C 45, 030001 (2021). 2νββ half-lives and G<sub>2ν</sub>: A. S. Barabash, Universe 6, 159 (2020), Tables 3 and 4. G<sub>0ν</sub>: J. Kotila and F. Iachello, Phys. Rev. C 85, 034316 (2012). M<sup>0ν</sup> and the 0νββ limits of <sup>48</sup>Ca, <sup>96</sup>Zr, <sup>116</sup>Cd, <sup>150</sup>Nd: M. Agostini et al., Rev. Mod. Phys. 95, 025002 (2023). Oscillation parameters: NuFIT 6.0, I. Esteban et al., JHEP 12 (2024) 216. 0νββ limits: ${cites.join("; ")}. All read from the arXiv sources saved in data/doublebeta/.`;
+  // chips
+  document.getElementById("chips").innerHTML = KEYS.map((k) => `<button data-k="${k}">${k}</button>`).join("");
+  document.getElementById("rchips").innerHTML = DB.res.map((r) => `<button data-r="${r.key}">${r.label}</button>`).join("");
+}
+function resOf(r, Q) { return r.fwhm_keV ? 100 * r.fwhm_keV / (Q * 1000) : 100 * DM.FWHM * r.sigma_rel_sqrtE / Math.sqrt(Q); }
+function syncControls() {
+  const res = document.getElementById("res"); res.value = Math.log10(S.res);
+  document.getElementById("reso").textContent = `${+S.res.toPrecision(3)} % = ${fx(S.res / 100 * S.Q * 1000, 2)} keV`;
+  document.getElementById("ratio").value = S.logr;
+  document.getElementById("ratioo").textContent = sci(Math.pow(10, S.logr), 2);
+  document.getElementById("mbbs").value = S.logm;
+  for (const b of document.querySelectorAll("#shape button")) b.setAttribute("aria-pressed", b.dataset.v === S.shape ? "true" : "false");
+  for (const b of document.querySelectorAll("#rchips button")) {
+    const r = DB.res.find((x) => x.key === b.dataset.r);
+    b.title = `FWHM ${+resOf(r, S.Q).toPrecision(3)} % at this Q`;
+  }
+}
+
+// ---------- UI wiring
+staticTexts();
+document.getElementById("chips").addEventListener("click", (e) => { const b = e.target.closest("button"); if (b) setCandidate(b.dataset.k); });
+document.getElementById("mode").addEventListener("click", (e) => { const b = e.target.closest("button"); if (!b) return; S.hist.fill(0); S.nEv = 0; setCandidate(S.key, b.dataset.v); });
+document.getElementById("shape").addEventListener("click", (e) => {
+  const b = e.target.closest("button"); if (!b) return;
+  S.shape = b.dataset.v; computeSpectrum(); syncControls(); S.hist.fill(0); S.nEv = 0; drawSpectrum(); drawZoom();
+});
+document.getElementById("rchips").addEventListener("click", (e) => {
+  const b = e.target.closest("button"); if (!b) return;
+  const r = DB.res.find((x) => x.key === b.dataset.r);
+  S.res = Math.min(15, Math.max(0.05, resOf(r, S.Q))); S.hist.fill(0); S.nEv = 0; setCandidate(S.key, S.mode);
+});
+document.getElementById("res").addEventListener("input", (e) => {
+  const v = Math.pow(10, +e.target.value); if (!isFinite(v)) return;
+  S.res = Math.min(15, Math.max(0.05, v)); S.hist.fill(0); S.nEv = 0; computeSpectrum(); syncControls(); drawSpectrum(); drawZoom();
+  const hash = "#" + S.key + (S.mode === "0nu" ? "/0nu" : "") + (Math.abs(S.res - 0.12) > 1e-9 ? "@" + +S.res.toPrecision(4) : "");
+  history.replaceState(null, "", hash);
+});
+document.getElementById("ratio").addEventListener("input", (e) => { const v = +e.target.value; if (!isFinite(v)) return; S.logr = v; syncControls(); drawZoom(); });
+document.getElementById("atlim").addEventListener("click", () => { const bl = bestLimit(S.key); if (bl) { S.logr = Math.log10(T2(S.c) / bl.T); syncControls(); drawZoom(); } });
+document.getElementById("mbbs").addEventListener("input", (e) => { const v = +e.target.value; if (!isFinite(v)) return; S.logm = v; drawRate(); drawRelation(); drawMbb(); });
+document.getElementById("mnme").addEventListener("input", (e) => { const v = +e.target.value; if (!isFinite(v)) return; S.M = v; drawRate(); drawRelation(); });
+document.getElementById("replay").addEventListener("click", () => newEvent());
+document.getElementById("more").addEventListener("click", () => {
+  for (let i = 0; i < 1000; i++) { const K = S.mode === "2nu" ? S.smp(rnd) : S.Q; addHist(K + gauss() * S.sigma); }
+  drawSpectrum();
+});
+document.getElementById("clear").addEventListener("click", () => { S.hist.fill(0); S.nEv = 0; drawSpectrum(); });
+addEventListener("hashchange", () => {
+  const p = parseHash(location.hash);
+  if (p && (p.key !== S.key || (p.mode && p.mode !== S.mode) || (!p.mode && S.mode !== "2nu") || (p.res != null && Math.abs(p.res - S.res) > 1e-12))) {
+    if (p.mode !== S.mode) { S.hist.fill(0); S.nEv = 0; }
+    setCandidate(p.key, p.mode || "2nu", p.res != null ? p.res : p.key !== S.key ? null : S.res);
+  }
+});
+addEventListener("resize", () => {
+  camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight); composer.setSize(innerWidth, innerHeight);
+  drawAll();
+});
+const ray = new THREE.Raycaster(), ndc = new THREE.Vector2();
+let down = null;
+renderer.domElement.addEventListener("pointerdown", (e) => { down = e.button === 0 && e.isPrimary ? [e.clientX, e.clientY, e.pointerId] : null; });
+renderer.domElement.addEventListener("pointercancel", () => { down = null; });
+renderer.domElement.addEventListener("pointerup", (e) => {
+  const st = down; down = null;
+  if (!st || e.pointerId !== st[2] || Math.hypot(e.clientX - st[0], e.clientY - st[1]) > 5) return;
+  ndc.set((e.clientX / innerWidth) * 2 - 1, -(e.clientY / innerHeight) * 2 + 1);
+  ray.setFromCamera(ndc, camera);
+  const hit = ray.intersectObject(cols, false)[0];
+  if (hit && hit.instanceId != null && CELL[hit.instanceId]) {
+    // a column that is itself a candidate (the same A) selects it
+    const Z = CELL[hit.instanceId].Z, k = KEYS.find((x) => CAND.get(x).Z === Z && CAND.get(x).A === S.c.A);
+    if (k) setCandidate(k);
+  }
+});
+let quality = innerWidth < 700 ? "low" : "high";
+function applyQuality() {
+  const g = quality === "high" ? GROUND_PRE_ACES : GROUND;
+  scene.background.copy(g); scene.fog.color.copy(g);
+  renderer.shadowMap.enabled = quality === "high"; RIG.key.castShadow = quality === "high";
+  colMat.needsUpdate = true;
+  for (const b of document.querySelectorAll("#qmode button")) b.setAttribute("aria-pressed", b.dataset.v === quality ? "true" : "false");
+}
+document.getElementById("qmode").addEventListener("click", (e) => { const b = e.target.closest("button"); if (!b) return; quality = b.dataset.v; applyQuality(); });
+applyQuality();
+
+// ---------- start
+{
+  const p = parseHash(location.hash);
+  setCandidate(p ? p.key : "76Ge", p && p.mode ? p.mode : "2nu", p ? p.res : null);
+}
+let last = performance.now();
+function animate(now) {
+  requestAnimationFrame(animate);
+  const dt = Math.min(0.1, Math.max(0, (now - last) / 1000)); last = now;
+  controls.update(); updateEvent(dt);
+  if (quality === "high") composer.render(); else renderer.render(scene, camera);
+  drawLabels();
+}
+requestAnimationFrame(animate);
+</script>
+<script src="assets/glass.js"></script>
+</body>
+</html>

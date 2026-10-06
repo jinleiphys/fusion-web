@@ -1,0 +1,794 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Shape coexistence · nuclearjs</title>
+<link rel="stylesheet" href="assets/glass.css">
+<style>
+body{margin:0}
+:root{
+  color-scheme:dark;
+  --ground:#0b0d12; --line:#262c3a;
+  --ink:#e6e8ee; --muted:#8a92a6; --accent:#f2c14e;
+  --sph:#dfe6f2; --obl:#8fc3f4; --pro:#ff9656;
+  --sans:"Avenir Next","Futura","Helvetica Neue","PingFang SC","Noto Sans SC",system-ui,sans-serif;
+  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+}
+html,body{height:100%}
+body{background:var(--ground);color:var(--ink);font-family:var(--sans);overflow:hidden}
+#stage{position:fixed;inset:0}
+#stage canvas{display:block;touch-action:none}
+.panel{position:fixed;border-radius:18px;padding:16px 18px;display:flex;flex-direction:column;gap:12px;overflow:auto;box-sizing:border-box;z-index:2}
+.panel>*{flex-shrink:0}
+#ctl{left:16px;top:calc(16px + env(safe-area-inset-top,0px));width:min(318px,calc(100% - 32px));max-height:calc(100% - 32px)}
+#side{right:16px;top:calc(16px + env(safe-area-inset-top,0px));width:400px;max-height:calc(100% - 32px);gap:9px}
+h1{margin:0;font-size:22px;font-weight:600;letter-spacing:.01em}
+.sub{margin:2px 0 0;color:var(--muted);font-size:13px;line-height:1.45}
+.sub sup,.src sup,.kv sup,.warn sup{font-size:.7em}
+.sub b{color:var(--ink);font-weight:600}
+.grp{display:flex;flex-direction:column;gap:6px}
+.lab{font-size:11px;text-transform:uppercase;letter-spacing:.12em;color:var(--muted)}
+.seg{display:flex;border:1px solid var(--line);border-radius:4px;overflow:hidden}
+.seg button{flex:1;background:none;border:0;color:var(--muted);font:500 12px var(--mono);padding:6px 4px;cursor:pointer}
+.seg button+button{border-left:1px solid var(--line)}
+.seg button[aria-pressed="true"]{background:#1f2533;color:var(--ink)}
+.seg.sm button{font-size:11px;padding:4px 3px}
+button:focus-visible,input:focus-visible,summary:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chips button{background:#161a24;border:1px solid var(--line);border-radius:4px;color:var(--ink);font:12px var(--mono);padding:5px 8px;cursor:pointer}
+.chips button:hover{border-color:var(--muted)}
+.chips button[aria-pressed="true"]{border-color:var(--accent);color:var(--accent)}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:3px 10px;font:12px var(--mono);font-variant-numeric:tabular-nums}
+.kv dt{color:var(--muted)}.kv dd{margin:0}
+.c-sph{color:var(--sph)}.c-obl{color:var(--obl)}.c-pro{color:var(--pro)}
+.row{display:flex;gap:8px;align-items:center;font:12px var(--mono);color:var(--muted)}
+.row input[type=range]{flex:1;accent-color:var(--accent);min-width:0}
+.row output{min-width:64px;text-align:right;color:var(--ink);font-variant-numeric:tabular-nums}
+.row span.k{min-width:26px}
+details summary{cursor:pointer;font-size:11px;text-transform:uppercase;letter-spacing:.12em;color:var(--muted);list-style:none}
+details summary::before{content:"▸ ";}
+details[open] summary::before{content:"▾ ";}
+details .grp{margin-top:8px}
+.home{font:12px var(--mono);color:var(--muted);text-decoration:none}.home:hover{color:var(--ink)}
+.src{font-size:11px;color:var(--muted);line-height:1.45}
+.src a{color:var(--muted)}
+.warn{font-size:12px;color:var(--accent);line-height:1.4;margin:0}
+.warn a{color:var(--accent)}
+.plot{width:100%;height:150px;display:block}
+.plot.tall{height:200px}
+.cap{display:flex;flex-wrap:wrap;gap:2px 8px;justify-content:space-between;align-items:baseline;font:11px var(--mono);color:var(--muted)}
+.cap b{font:600 13px var(--sans);color:var(--ink)}
+.leg{display:flex;flex-wrap:wrap;gap:3px 12px;font:11px var(--mono);color:var(--muted)}
+.leg i{display:inline-block;width:14px;height:0;border-top:2px solid;vertical-align:middle;margin-right:4px}
+.leg i.o{width:7px;height:7px;border:1.5px solid;border-radius:50%;vertical-align:middle}
+.math{font:12px var(--mono);color:var(--ink);line-height:1.6}
+table.t{width:100%;border-collapse:collapse;font:10.5px var(--mono);font-variant-numeric:tabular-nums}
+table.t th{color:var(--muted);font-weight:500;text-align:right;padding:2px 3px;border-bottom:1px solid var(--line)}
+table.t td{text-align:right;padding:3px 3px;border-bottom:1px solid #191e2a;white-space:nowrap}
+table.t th:first-child,table.t td:first-child{text-align:left}
+table.t tr[data-n]{cursor:pointer}
+table.t tr.on td{color:var(--accent)}
+.axlab{position:fixed;font:500 11px var(--mono);pointer-events:none;transform:translate(-50%,-50%);white-space:nowrap;color:var(--muted)}
+.shlab{position:fixed;font:500 11px var(--mono);pointer-events:none;transform:translate(-50%,-100%);white-space:nowrap;text-align:center;line-height:1.35;text-shadow:0 1px 3px #000}
+.shlab b{font:600 12px var(--sans)}
+.lvlab{position:fixed;font:500 10.5px var(--mono);pointer-events:none;transform:translate(6px,-50%);white-space:nowrap;text-shadow:0 1px 3px #000}
+#stamp{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);text-align:center;pointer-events:none}
+#stamp b{display:block;font:600 clamp(30px,4.6vw,54px)/1 var(--sans);letter-spacing:-.01em}
+#stamp b sup{font-size:.55em}
+#stamp small{display:block;font:500 12px var(--mono);color:var(--muted);margin-top:6px}
+.hint{position:fixed;left:calc(min(318px,100% - 32px) + 40px);top:calc(18px + env(safe-area-inset-top,0px));font:11px var(--mono);color:var(--muted)}
+#sceneOnly{position:fixed;z-index:4;bottom:16px;left:16px;padding:8px 12px;border:1px solid var(--line);border-radius:8px;color:var(--ink);cursor:pointer;font:12px var(--mono)}
+body.scene-only .panel,body.scene-only .hint{display:none}
+body.scene-only #stamp,body.scene-only .shlab,body.scene-only .lvlab{display:block}
+body.scene-only #stamp{left:50%}
+@media (max-width:1250px){#stamp{left:calc(50% - 40px)}}
+@media (max-width:900px){
+  #ctl{max-height:42vh}
+  #side{left:16px;right:16px;width:auto;top:auto;bottom:calc(12px + env(safe-area-inset-bottom,0px));max-height:40vh}
+  #stamp,.hint,.axlab,.lvlab{display:none}
+  #sceneOnly{bottom:auto;top:calc(42vh + 26px);left:16px}
+}
+@media (max-width:560px){.panel{padding:10px 12px;gap:9px}h1{font-size:18px}.shlab{font-size:10px}.shlab b{font-size:11px}}
+</style>
+<script data-goatcounter="https://jinleiphys.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
+</head>
+<body>
+
+<div id="stage"></div>
+<button id="sceneOnly" class="glass" aria-pressed="false" title="Hide or show panels (H)">hide panels · H</button>
+
+<aside id="ctl" class="panel glass glass-deep" data-glass data-glass-bevel="22" data-glass-scale="42">
+  <div>
+    <a class="home" href="index.html">← nuclearjs</a> &nbsp; <a class="home" id="toDef" href="deformed.html">Nilsson model</a> &nbsp; <a class="home" id="toFis" href="fission.html">liquid drop</a>
+    <h1>Shape coexistence</h1>
+    <p class="sub">One nucleus, several shapes at nearly the same energy. In <sup>186</sup>Pb the three lowest 0<sup>+</sup> states lie within 700 keV and are associated with spherical, prolate and oblate configurations. Each shape is drawn above its own valley of the energy surface, at the deformation of a published calculation; the glowing rings in each valley are the measured levels built on that shape.</p>
+  </div>
+  <p class="src" style="border-left:2px solid var(--accent);padding-left:10px;margin:0"><b>Potential minima ≠ observed levels.</b> The shapes are intrinsic configurations. A 0<sup>+</sup> state has no fixed laboratory orientation, and the observed states are mixtures of the configurations; the rings mark measured energies, the valleys only show where each configuration sits.</p>
+  <div class="grp">
+    <div class="lab">Nucleus</div>
+    <div class="chips" id="chips"></div>
+  </div>
+  <div class="grp" id="asgbox" style="display:none">
+    <div class="lab">Which excited 0<sup>+</sup> is prolate? (disputed)</div>
+    <div class="seg sm" id="asg"><button data-v="ojala" aria-pressed="true">530 keV prolate · Ojala 2022</button><button data-v="andreyev" aria-pressed="false">530 keV oblate · Andreyev 2000</button></div>
+  </div>
+  <div class="grp">
+    <div class="lab">Look at</div>
+    <div class="chips" id="focus" aria-label="Fly to a shape"></div>
+  </div>
+  <div class="grp">
+    <div class="lab">This nucleus</div>
+    <dl class="kv" id="info"></dl>
+    <p class="warn" id="warn" hidden></p>
+  </div>
+  <div class="grp">
+    <div class="lab">Rendering</div>
+    <div class="seg" id="qmode">
+      <button data-v="high" title="ray-marched volumes, glass surfaces, soft bloom">cinematic</button>
+      <button data-v="low" title="solid surfaces, for phones">fast</button>
+    </div>
+    <p class="sub" id="vnote"></p>
+  </div>
+  <details>
+    <summary>What is drawn</summary>
+    <div class="grp src" id="model"></div>
+  </details>
+  <details>
+    <summary>Open question: the 0<sup>+</sup> states of <sup>186</sup>Pb</summary>
+    <div class="grp src" id="open"></div>
+  </details>
+  <details>
+    <summary>Sources</summary>
+    <div class="grp src" id="sources"></div>
+  </details>
+</aside>
+
+<aside id="side" class="panel glass glass-deep" data-glass data-glass-bevel="22" data-glass-scale="42">
+  <div class="cap"><b>Level scheme</b><span>keV, ENSDF adopted levels</span></div>
+  <canvas id="scheme" class="plot tall"></canvas>
+  <div class="leg" id="legscheme"></div>
+  <div class="cap"><b id="chaint">Excited 0<sup>+</sup> states along the chain</b><span>keV</span></div>
+  <canvas id="chain" class="plot"></canvas>
+  <div class="leg" id="legchain"></div>
+  <div class="src" id="chainsrc"></div>
+  <div class="cap"><b>Two-state mixing</b><span id="mixq"></span></div>
+  <div id="mixctl" class="grp"></div>
+  <canvas id="mix" class="plot"></canvas>
+  <div class="src" id="mixtxt"></div>
+  <div class="cap"><b>Measured E0 strength</b><span>ρ²(E0; 0<sup>+</sup><sub>2</sub> → 0<sup>+</sup><sub>1</sub>)</span></div>
+  <table class="t" id="e0tab"></table>
+  <div class="src" id="e0src"></div>
+</aside>
+
+<div id="labels"></div>
+<div id="stamp"></div>
+<div class="hint">drag to orbit · scroll to zoom · click a shape to fly to it</div>
+
+<script src="assets/three-bundle.js"></script>
+<script src="assets/three-post.js"></script>
+<script src="assets/vol.js"></script>
+<script src="assets/nubase.js"></script>
+<script src="assets/coexistence.js"></script>
+<script src="assets/coexistence-data.js"></script>
+<script>
+"use strict";
+const C = window.COEX, D = window.COEX_DATA, LIT = D.lit;
+const ELEM = {}, SYM = {};
+for (const r of window.NUC) { ELEM[r[0]] = r[2]; SYM[r[2].toLowerCase()] = r[0]; }
+const sup = (A) => `<sup>${A}</sup>`;
+const nucHTML = (Z, N) => `${sup(Z + N)}${ELEM[Z]}`;
+const keyOf = (Z, N) => `${Z + N}${ELEM[Z]}`;
+const COL = { sph: new THREE.Color("#dfe6f2"), obl: new THREE.Color("#8fc3f4"), pro: new THREE.Color("#ff9656"), un: new THREE.Color("#e6e8ee") };
+const CSS = { sph: "#dfe6f2", obl: "#8fc3f4", pro: "#ff9656", un: "#e6e8ee" };
+const WORD = { sph: "spherical", obl: "oblate", pro: "prolate" };
+
+/* ---------- the cases: every number below is published (source named in `src`) ----------
+   conf: t (shape), b (|beta2|), g (gamma, deg), b4, E0 (keV, the measured 0+ assigned to it; null: none assigned),
+   band: ENSDF band key built on it. Ground states have E0 = 0. */
+const EG = LIT.egido2004.beta2, GF = LIT.gaffney2014, BX = LIT.bai2015.table1;
+const pb = (A) => ({ src: "egido", b: EG[A + "Pb"] });
+const CASES = [
+  { id: "186Pb", Z: 82, N: 104, defs: "egido", confs: (asg) => [
+      { t: "sph", b: 0, g: 0, E0: 0 },
+      { t: "pro", b: EG["186Pb"][0], g: 0, E0: asg === "ojala" ? 530 : 649, band: "A" },
+      { t: "obl", b: -EG["186Pb"][1], g: 60, E0: asg === "ojala" ? 649 : 530, band: "B" }] },
+  { id: "188Pb", Z: 82, N: 106, defs: "egido", confs: () => [
+      { t: "sph", b: 0, g: 0, E0: 0 },
+      { t: "pro", b: EG["188Pb"][0], g: 0, E0: 725, band: "A" },
+      { t: "obl", b: -EG["188Pb"][1], g: 60, E0: 591, band: "B" }] },
+  { id: "190Pb", Z: 82, N: 108, defs: "egido", un: [658], confs: () => [
+      { t: "sph", b: 0, g: 0, E0: 0 },
+      { t: "pro", b: EG["190Pb"][0], g: 0, E0: null },
+      { t: "obl", b: -EG["190Pb"][1], g: 60, E0: null }] },
+  ...["182Hg", "184Hg", "186Hg", "188Hg"].map((id) => ({ id, Z: 80, N: +id.slice(0, 3) - 80, defs: "gaffney", confs: () => {
+      const z = D.nuclei[id].zeros.filter((x) => x[0] > 0)[0], bands = { "182Hg": ["F", "A"], "186Hg": ["A", "B"], "188Hg": ["A", "H"] }[id] || [];
+      return [{ t: "obl", b: -GF.beta_oblate, g: 60, E0: 0, band: bands[0] }, { t: "pro", b: GF.beta_prolate, g: 0, E0: z[0], band: bands[1] }]; } })),
+  ...["72Kr", "74Kr", "76Kr"].map((id) => ({ id, Z: 36, N: +id.slice(0, 2) - 36, defs: "bai", confs: () => {
+      const T = BX[id], z = D.nuclei[id].zeros.filter((x) => x[0] > 0)[0], tp = (g) => (g > 30 ? "obl" : "pro");
+      const bands = { "74Kr": ["A", null], "76Kr": ["A", "G"] }[id] || [];
+      return [{ t: tp(T.gs[1]), b: T.gs[0], g: T.gs[1], b4: T.gs[2], E0: 0, band: bands[0] }, { t: tp(T.e2[1]), b: T.e2[0], g: T.e2[1], b4: T.e2[2], E0: z[0], band: bands[1] }]; } })),
+];
+const CASE = (id) => CASES.find((c) => c.id === id);
+
+/* ---------- state */
+const S = { id: "186Pb", asg: "ojala", confs: [], sel: -1, mix: null, V: null, dE0: null };
+
+/* ---------- scene */
+const stage = document.getElementById("stage");
+const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.setSize(innerWidth, innerHeight);
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.05;
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+stage.appendChild(renderer.domElement);
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(36, innerWidth / innerHeight, 0.5, 2000);
+const composer = new EffectComposer(renderer);
+composer.addPass(new RenderPass(scene, camera));
+const bloom = new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), 0.24, 0.6, 0.9);
+composer.addPass(bloom);
+composer.addPass(new OutputPass());
+const smaa = new SMAAPass(innerWidth * renderer.getPixelRatio(), innerHeight * renderer.getPixelRatio());
+composer.addPass(smaa);
+scene.environment = VOL.studioEnv(renderer);
+VOL.lightRig(scene);
+scene.fog = new THREE.Fog("#0b0d12", 150, 420);
+// The ground colour #0b0d12 is drawn untouched on the direct path, but OutputPass runs it through
+// ACES, whose toe crushes it to black. On the bloom path the background and fog therefore take the
+// linear colour that ACES (exposure 1.05) maps back to exactly #0b0d12 (as on the other pages).
+const GROUND = new THREE.Color("#0b0d12");
+const GROUND_PRE_ACES = new THREE.Color().setRGB(0.0115476, 0.0131218, 0.0174740, THREE.LinearSRGBColorSpace);
+scene.background = GROUND.clone();
+function applyOffset() {
+  const a = document.getElementById("ctl").getBoundingClientRect(), b = document.getElementById("side").getBoundingClientRect();
+  const free = innerWidth > 900 && !document.body.classList.contains("scene-only") ? 0.5 * (a.right + b.left) : innerWidth / 2, dx = innerWidth / 2 - free;
+  if (Math.abs(dx) > 1) camera.setViewOffset(innerWidth, innerHeight, dx, 0, innerWidth, innerHeight); else camera.clearViewOffset();
+}
+applyOffset();
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true; controls.dampingFactor = 0.08;
+controls.minDistance = 12; controls.maxDistance = 600;
+const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+controls.addEventListener("start", () => { fly = null; });
+
+/* Presentation scales (stated on the page): the (beta, gamma) sextant lies flat, beta along the radius at SB fm
+   per unit, gamma as the polar angle (0 deg prolate edge, 60 deg oblate edge); energy is height at SY fm per MeV,
+   compressed above ECAP by tanh. */
+const SB = 150, SY = 9, ECAP = 1.6, BMAX = 0.47, WALL = 0.25, CURV = 30, TSOFT = 0.12;
+const yOfE = (E) => (E < ECAP ? E : ECAP + 0.5 * Math.tanh((E - ECAP) / 0.5)) * SY;
+const world = new THREE.Group(); scene.add(world);
+const land = new THREE.Group(); world.add(land);
+let BASE = -40, R0 = 7;
+const posOf = (b, gDeg) => { const g = gDeg * Math.PI / 180; return [SB * b * Math.cos(g), -SB * b * Math.sin(g)]; };
+
+// the schematic surface: a soft minimum of one paraboloid per configuration, each with its bottom WALL MeV below
+// the measured 0+ energy assigned to it (drawn, not computed)
+function wellsOf(confs) {
+  const known = confs.map((c) => c.E0).filter((e) => e != null);
+  const unE = (CASE(S.id).un || [])[0];
+  return confs.map((c) => {
+    const [x, z] = posOf(c.b, c.g);
+    const E = c.E0 != null ? c.E0 / 1000 : (unE != null ? unE / 1000 : Math.max(...known) / 1000 + 0.3);
+    return { x: x / SB, z: z / SB, Ew: E - WALL };
+  });
+}
+function Vsurf(W, bx, bz) {
+  let s = 0, m = Infinity;
+  const e = W.map((w) => w.Ew + CURV * ((bx - w.x) ** 2 + (bz - w.z) ** 2));
+  for (const v of e) m = Math.min(m, v);
+  for (const v of e) s += Math.exp(-(v - m) / TSOFT);
+  return m - TSOFT * Math.log(s);
+}
+const CMAP = ["#123a46", "#1d6a73", "#4f9a8a", "#a9c08f", "#e7cf8a", "#efa36a", "#d9644f"].map((c) => new THREE.Color(c));
+function cmap(E) {
+  const x = Math.min(1, Math.max(0, (E + WALL) / (ECAP + WALL))) * (CMAP.length - 1), i = Math.min(CMAP.length - 2, Math.floor(x)), t = x - i;
+  return CMAP[i].clone().lerp(CMAP[i + 1], t);
+}
+const disposeAll = (grp) => { for (const o of [...grp.children]) { grp.remove(o); o.traverse((q) => { if (q.geometry) q.geometry.dispose(); if (q.material) q.material.dispose(); }); } };
+let rings = [];
+// a level ring around (x, z), kept inside the sextant (the surface is mirror symmetric across both edges)
+function ringArc(x, z, r, y) {
+  const inside = (ph) => { const px = x + r * Math.cos(ph), pz = z + r * Math.sin(ph), b = Math.hypot(px, pz) / SB, g = Math.atan2(-pz, px) * 180 / Math.PI; return g >= -0.01 && g <= 60.01 && b <= BMAX; };
+  const n = 120, ok = []; for (let i = 0; i < n; i++) ok.push(inside(2 * Math.PI * i / n));
+  if (ok.every(Boolean)) { const pts = []; for (let i = 0; i <= n; i++) { const ph = 2 * Math.PI * i / n; pts.push(new THREE.Vector3(x + r * Math.cos(ph), y, z + r * Math.sin(ph))); } return pts; }
+  let s0 = ok.findIndex((v, i) => v && !ok[(i + n - 1) % n]); if (s0 < 0) return [];
+  const pts = []; for (let i = 0; i < n && ok[(s0 + i) % n]; i++) { const ph = 2 * Math.PI * (s0 + i) / n; pts.push(new THREE.Vector3(x + r * Math.cos(ph), y, z + r * Math.sin(ph))); }
+  return pts;
+}
+function buildLand() {
+  disposeAll(land); rings = [];
+  const W = wellsOf(S.confs), NR = 120, NG = 72;
+  const pos = new Float32Array((NR + 1) * (NG + 1) * 3), col = new Float32Array((NR + 1) * (NG + 1) * 3), Eg = new Float32Array((NR + 1) * (NG + 1));
+  for (let i = 0; i <= NR; i++) for (let j = 0; j <= NG; j++) {
+    const b = BMAX * i / NR, g = 60 * j / NG, [x, z] = posOf(b, g), q = i * (NG + 1) + j;
+    const E = Vsurf(W, x / SB, z / SB);
+    pos[3 * q] = x; pos[3 * q + 1] = BASE + yOfE(E); pos[3 * q + 2] = z; Eg[q] = E;
+    const c = cmap(E); col[3 * q] = c.r; col[3 * q + 1] = c.g; col[3 * q + 2] = c.b;
+  }
+  const idx = [];
+  for (let i = 0; i < NR; i++) for (let j = 0; j < NG; j++) { const q = i * (NG + 1) + j; idx.push(q, q + NG + 1, q + 1, q + 1, q + NG + 1, q + NG + 2); }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute("position", new THREE.BufferAttribute(pos, 3)); g.setAttribute("color", new THREE.BufferAttribute(col, 3));
+  g.setIndex(idx); g.computeVertexNormals();
+  land.add(new THREE.Mesh(g, new THREE.MeshPhysicalMaterial({ vertexColors: true, roughness: 0.5, clearcoat: 0.4, clearcoatRoughness: 0.35, side: THREE.DoubleSide, envMapIntensity: 0.55, polygonOffset: true, polygonOffsetFactor: 2, polygonOffsetUnits: 2 })));
+  // contours every 0.2 MeV
+  const seg = [];
+  for (let lev = -0.2; lev < ECAP + 0.01; lev += 0.2) for (let i = 0; i < NR; i++) for (let j = 0; j < NG; j++) {
+    const q = [i * (NG + 1) + j, (i + 1) * (NG + 1) + j, (i + 1) * (NG + 1) + j + 1, i * (NG + 1) + j + 1], e = q.map((k) => Eg[k]), pts = [];
+    for (let s = 0; s < 4; s++) { const s1 = (s + 1) % 4; if ((e[s] - lev) * (e[s1] - lev) < 0) { const t = (lev - e[s]) / (e[s1] - e[s]); pts.push([0, 1, 2].map((c) => pos[3 * q[s] + c] + t * (pos[3 * q[s1] + c] - pos[3 * q[s] + c]))); } }
+    if (pts.length >= 2) { seg.push(...pts[0], ...pts[1]); if (pts.length === 4) seg.push(...pts[2], ...pts[3]); }
+  }
+  const lg = new THREE.BufferGeometry(); lg.setAttribute("position", new THREE.Float32BufferAttribute(seg, 3));
+  land.add(new THREE.LineSegments(lg, new THREE.LineBasicMaterial({ color: "#e9eef7", transparent: true, opacity: 0.16, depthWrite: false })));
+  // the two edges of the sextant and beta arcs on a floor below the surface
+  const floorY = BASE - 1.2, fl = [];
+  for (const gg of [0, 60]) { const [x, z] = posOf(BMAX, gg); fl.push(0, floorY, 0, x, floorY, z); }
+  for (const bb of [0.1, 0.2, 0.3, 0.4]) for (let k = 0; k < 30; k++) { const [x1, z1] = posOf(bb, 2 * k), [x2, z2] = posOf(bb, 2 * k + 2); fl.push(x1, floorY, z1, x2, floorY, z2); }
+  const fg = new THREE.BufferGeometry(); fg.setAttribute("position", new THREE.Float32BufferAttribute(fl, 3));
+  land.add(new THREE.LineSegments(fg, new THREE.LineBasicMaterial({ color: "#8a92a6", transparent: true, opacity: 0.35, depthWrite: false })));
+  // levels: rings in each valley (0+ bright, band members thin); unassigned 0+ as an arc across the sextant
+  const nb = S.confs.length;
+  S.confs.forEach((c, k) => {
+    const w = W[k], [x, z] = posOf(c.b, c.g);
+    let dmin = Infinity; W.forEach((o, j) => { if (j !== k) dmin = Math.min(dmin, Math.hypot(o.x - w.x, o.z - w.z)); });
+    const lv = [];
+    if (c.E0 != null) lv.push({ E: c.E0, J: "0+", main: true });
+    if (c.band) for (const [E, J] of D.nuclei[S.id].bands[c.band].levels) if (E / 1000 < ECAP && Math.abs(E - (c.E0 ?? -1)) > 1) lv.push({ E, J, main: false });
+    for (const L of lv) {
+      const rb = Math.min(Math.sqrt(Math.max(0.004, L.E / 1000 - w.Ew) / CURV), 0.45 * dmin, 0.11), r = SB * rb;
+      const pts = ringArc(x, z, r, BASE + yOfE(L.E / 1000) + 0.15);
+      if (pts.length < 2) continue;
+      const m = new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 4 * pts.length, L.main ? 0.42 : 0.17, 8, false),
+        new THREE.MeshStandardMaterial({ color: CSS[c.t], emissive: CSS[c.t], emissiveIntensity: L.main ? 1.15 : 0.55, roughness: 0.4, transparent: !L.main, opacity: L.main ? 1 : 0.8 }));
+      land.add(m); rings.push({ mesh: m, conf: k, E: L.E, J: L.J, main: L.main, r, pts });
+    }
+  });
+  for (const Eu of CASE(S.id).un || []) {
+    const pts = []; for (let k = 0; k <= 60; k++) { const [x, z] = posOf(0.36, k); pts.push(new THREE.Vector3(x, BASE + yOfE(Eu / 1000), z)); }
+    const m = new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 120, 0.32, 8, false), new THREE.MeshStandardMaterial({ color: "#e6e8ee", emissive: "#e6e8ee", emissiveIntensity: 0.7, roughness: 0.4 }));
+    land.add(m); rings.push({ mesh: m, conf: -1, E: Eu, J: "0+", main: true, un: true, r: 0, pts });
+  }
+  // stems from each valley to its shape
+  S.confs.forEach((c) => {
+    const [x, z] = posOf(c.b, c.g), y0 = BASE + yOfE(c.E0 != null ? c.E0 / 1000 : 0.5) + 0.5;
+    const st = new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(x, y0, z), new THREE.Vector3(x, -1.3 * R0, z)]),
+      new THREE.LineDashedMaterial({ color: CSS[c.t], transparent: true, opacity: 0.5, dashSize: 0.8, gapSize: 0.6 }));
+    st.computeLineDistances(); land.add(st);
+  });
+}
+
+// axial shape R(theta) = Rn (1 + beta Y20 + beta4 Y40), Rn fixed by the volume of the sphere R0 = 1.2 A^(1/3) fm
+const Y20 = (u) => Math.sqrt(5 / (16 * Math.PI)) * (3 * u * u - 1), Y40 = (u) => 3 / (16 * Math.sqrt(Math.PI)) * (35 * u ** 4 - 30 * u * u + 3);
+function shapeFn(c) {
+  const bax = c.t === "obl" ? -c.b : c.b, b4 = c.b4 || 0, f = (u) => 1 + bax * Y20(u) + b4 * Y40(u);
+  let v = 0; const n = 400; for (let i = 0; i < n; i++) { const u = -1 + 2 * (i + 0.5) / n; v += f(u) ** 3 * 2 / n; }
+  const Rn = R0 / Math.cbrt(v / 2);
+  return (u) => Rn * f(u);
+}
+const shapeGroup = new THREE.Group(); world.add(shapeGroup);
+const glassMat = VOL.glassMaterial({ clearcoat: 0.3, clearcoatRoughness: 0.12, envMapIntensity: 0.5 });
+const solidMats = {};
+for (const t of ["sph", "obl", "pro"]) solidMats[t] = new THREE.MeshPhysicalMaterial({ color: COL[t], roughness: 0.32, clearcoat: 0.6, clearcoatRoughness: 0.2, envMapIntensity: 0.8 });
+const vol = new VOL.Volume({ steps: 220, coarse: 1.2 });
+vol.setExposure(0.42);
+const gov = new VOL.Governor(vol);
+world.add(vol.mesh);
+let shapes = [];
+const DIFF = 0.55;   // drawn surface diffuseness (fm), presentation
+function buildShapes() {
+  for (const s of shapes) { shapeGroup.remove(s.mesh); shapeGroup.remove(s.glass); s.mesh.geometry.dispose(); }
+  shapes = [];
+  for (const c of S.confs) {
+    const R = shapeFn(c), pts = [];
+    for (let i = 0; i <= 140; i++) { const th = Math.PI * (1 - i / 140), r = R(Math.cos(th)); pts.push(new THREE.Vector2(Math.max(1e-6, r * Math.sin(th)), r * Math.cos(th))); }
+    const g = new THREE.LatheGeometry(pts, 96); g.computeVertexNormals();
+    const [x, z] = posOf(c.b, c.g), mesh = new THREE.Mesh(g, solidMats[c.t]), glass = new THREE.Mesh(g, glassMat);
+    mesh.position.set(x, 0, z); glass.position.copy(mesh.position); glass.renderOrder = 20; glass.scale.setScalar(1.015);
+    shapeGroup.add(mesh); shapeGroup.add(glass);
+    shapes.push({ mesh, glass, c, x, z, R, top: Math.max(R(1), R(0)) });
+  }
+  // volume: one box over all shapes, one channel per kind of shape
+  let x0 = Infinity, x1 = -Infinity, z0 = Infinity, z1 = -Infinity;
+  for (const s of shapes) { x0 = Math.min(x0, s.x); x1 = Math.max(x1, s.x); z0 = Math.min(z0, s.z); z1 = Math.max(z1, s.z); }
+  const pad = 1.7 * R0, cx = 0.5 * (x0 + x1), cz = 0.5 * (z0 + z1), hx = 0.5 * (x1 - x0) + pad, hz = 0.5 * (z1 - z0) + pad, hy = 1.75 * R0, h = 0.4 * (R0 / 6.8);
+  // the volume code fixes its opacity scale on the line along x through the box centre, which may miss every
+  // nucleus here: rescale tau so that one nucleus diameter has optical depth 2.6 whatever that line crosses
+  const dens = (x, y, z) => { let v = 0; for (const s of shapes) { const dx = x - s.x, dz = z - s.z, r = Math.sqrt(dx * dx + y * y + dz * dz); if (r < 1.6 * R0) v += 1 / (1 + Math.exp((r - s.R(r > 0 ? y / r : 0)) / DIFF)); } return v; };
+  let Ic = 0; for (let x = cx - hx; x < cx + hx; x += 0.1) Ic += dens(x, 0, cz) * 0.1;
+  let I1 = 0; for (let x = -1.6 * R0; x < 1.6 * R0; x += 0.1) I1 += 1 / (1 + Math.exp((Math.abs(x) - R0) / DIFF)) * 0.1;
+  const tau = 2.6 * Math.max(Ic, 1e-4) / I1;
+  const nx = Math.min(300, Math.ceil(2 * hx / h)), ny = Math.min(110, Math.ceil(2 * hy / h)), nz = Math.min(260, Math.ceil(2 * hz / h));
+  // one channel per kind of shape present (an empty channel would have no maximum to normalise to)
+  const kinds = [...new Set(shapes.map((q) => q.c.t))], chOf = {}; kinds.forEach((t, i) => { chOf[t] = i; });
+  const F = VOL.grid3D({ n: [nx, ny, nz], half: [hx, hy, hz], tau, iso: [{ w: [1, 1, 1], level: 0.5, alpha: 0.85 }],
+    f: (x, y, z, out) => {
+      x += cx; z += cz;
+      for (const s of shapes) {
+        const dx = x - s.x, dz = z - s.z, r = Math.sqrt(dx * dx + y * y + dz * dz);
+        if (r > 1.6 * R0) continue;
+        out[chOf[s.c.t]] += 1 / (1 + Math.exp((r - s.R(r > 0 ? y / r : 0)) / DIFF));
+      }
+    },
+    channels: kinds.map((t) => ({ color: COL[t].clone(), group: 0 })) });
+  vol.setField(F, false);
+  vol.mesh.position.set(cx, 0, cz);
+  vol.u.uFloorY.value = -1e9;
+  applyVis();
+}
+function build3D() {
+  R0 = 1.2 * Math.cbrt(CASE(S.id).Z + CASE(S.id).N);
+  BASE = -(1.5 * R0 + 4) - yOfE(0.6);
+  buildLand(); buildShapes(); buildLabels();
+  // centre the sextant
+  const [px] = posOf(BMAX, 0), [, oz] = posOf(BMAX, 60);
+  let sx = 0, sz = 0; for (const sh of shapes) { sx += sh.x / shapes.length; sz += sh.z / shapes.length; }
+  world.position.set(-(0.6 * sx + 0.4 * 0.45 * px), 0, -(0.6 * sz + 0.4 * 0.45 * oz));
+  overview(!camInit);
+}
+let camInit = false, fly = null;
+const fitDist = () => 205 * Math.max(1, Math.min(1.9, 1.5 / (camera.aspect || 1.6)));
+function overview(jump) {
+  const t = new THREE.Vector3(0, BASE * 0.55, 0), dir = new THREE.Vector3(-0.1, 1.05, 1).normalize(), p = t.clone().add(dir.multiplyScalar(fitDist()));
+  if (jump || reduce) { camera.position.copy(p); controls.target.copy(t); camInit = true; fly = null; }
+  else fly = { p, t };
+  S.sel = -1; markFocus();
+}
+function focusOn(k) {
+  const s = shapes[k]; if (!s) return;
+  const t = new THREE.Vector3(s.x, BASE * 0.25, s.z).add(world.position), dir = camera.position.clone().sub(controls.target).normalize();
+  dir.y = Math.max(dir.y, 0.35); dir.normalize();
+  const p = t.clone().add(dir.multiplyScalar(5.2 * R0 + 70));
+  if (reduce) { camera.position.copy(p); controls.target.copy(t); } else fly = { p, t };
+  S.sel = k; markFocus();
+}
+function markFocus() {
+  for (const b of document.querySelectorAll("#focus button")) b.setAttribute("aria-pressed", String(+b.dataset.k === S.sel));
+  for (const r of rings) { r.base = (r.main ? 1.15 : 0.55) * (S.sel < 0 || r.conf === S.sel || r.un ? 1 : 0.4); r.mesh.material.emissiveIntensity = r.base; }
+}
+
+// labels
+const labelsEl = document.getElementById("labels");
+let labs = [];
+function buildLabels() {
+  labelsEl.innerHTML = ""; labs = [];
+  shapes.forEach((s) => {
+    const c = s.c, el = document.createElement("div"); el.className = "shlab";
+    el.innerHTML = `<b style="color:${CSS[c.t]}">${WORD[c.t]}</b><br>${c.t === "sph" ? "β = 0" : `β = ${c.b.toFixed(2)}${CASE(S.id).defs === "bai" ? `, γ = ${c.g}°` : ""}`}`;
+    labelsEl.appendChild(el); labs.push({ el, kind: "shape", s });
+  });
+  for (const r of rings.filter((r) => r.main)) {
+    const el = document.createElement("div"); el.className = "lvlab";
+    el.style.color = r.un ? CSS.un : CSS[S.confs[r.conf].t];
+    el.innerHTML = `0<sup>+</sup> ${r.E === 0 ? "ground state" : Math.round(r.E) + " keV"}${r.un ? ", shape not assigned" : ""}`;
+    labelsEl.appendChild(el); labs.push({ el, kind: "ring", r });
+  }
+  for (const [g, t, tc] of [[0, "γ = 0°, prolate edge", "pro"], [60, "γ = 60°, oblate edge", "obl"]]) {
+    const el = document.createElement("div"); el.className = "axlab"; el.style.color = CSS[tc]; el.textContent = t; labelsEl.appendChild(el); labs.push({ el, kind: "edge", g });
+  }
+  for (const bb of [0.1, 0.2, 0.3, 0.4]) { const el = document.createElement("div"); el.className = "axlab"; el.textContent = "β " + bb.toFixed(1); el.style.fontSize = "10px"; labelsEl.appendChild(el); labs.push({ el, kind: "beta", bb }); }
+}
+const tmp = new THREE.Vector3();
+function placeLabels() {
+  for (const L of labs) {
+    if (L.kind === "shape") tmp.set(L.s.x, L.s.top + 2.4, L.s.z);
+    else if (L.kind === "ring") tmp.copy(L.r.pts[L.r.un ? 0 : Math.floor(L.r.pts.length * (L.r.pts.length > 100 ? 0.08 : 0.5))]);
+    else if (L.kind === "edge") { const [x, z] = posOf(BMAX + 0.05, L.g); tmp.set(x, BASE - 1.2, z); }
+    else { const [x, z] = posOf(L.bb, -4); tmp.set(x, BASE - 1.2, z); }
+    tmp.add(world.position).project(camera);
+    const vis = tmp.z < 1 && Math.abs(tmp.x) < 1.02 && Math.abs(tmp.y) < 1.02;
+    L.el.style.display = vis ? "" : "none";
+    if (vis) { L.el.style.left = (tmp.x * 0.5 + 0.5) * innerWidth + "px"; L.el.style.top = (-tmp.y * 0.5 + 0.5) * innerHeight + "px"; }
+  }
+}
+// click a shape: fly to it
+const ray = new THREE.Raycaster(), mouse = new THREE.Vector2();
+let downAt = null;
+renderer.domElement.addEventListener("pointerdown", (e) => { downAt = [e.clientX, e.clientY]; });
+renderer.domElement.addEventListener("pointerup", (e) => {
+  if (!downAt || Math.hypot(e.clientX - downAt[0], e.clientY - downAt[1]) > 5) return;
+  mouse.set(e.clientX / innerWidth * 2 - 1, -e.clientY / innerHeight * 2 + 1);
+  ray.setFromCamera(mouse, camera);
+  const hit = ray.intersectObjects(shapes.map((s) => (s.mesh.visible ? s.mesh : s.glass)))[0];
+  if (!hit) return;
+  const k = shapes.findIndex((x) => x.mesh === hit.object || x.glass === hit.object);
+  if (k >= 0) focusOn(k);
+});
+
+/* ---------- plots */
+function setupCanvas(c) {
+  const d = Math.min(devicePixelRatio, 2), w = c.clientWidth, h = c.clientHeight;
+  c.width = w * d; c.height = h * d;
+  const x = c.getContext("2d"); x.setTransform(d, 0, 0, d, 0, 0);
+  return { x, w, h };
+}
+const L0 = 40, R0p = 8, T0 = 8, B0 = 18;
+function axes(ctx, w, h, X, Y, xt, yt, xl) {
+  ctx.font = "10px ui-monospace,Menlo,monospace";
+  ctx.strokeStyle = "#1e2432"; ctx.fillStyle = "#8a92a6"; ctx.lineWidth = 1;
+  for (const [v, s] of yt) { ctx.beginPath(); ctx.moveTo(L0, Y(v)); ctx.lineTo(w - R0p, Y(v)); ctx.stroke(); ctx.textAlign = "right"; ctx.fillText(s, L0 - 4, Y(v) + 3); }
+  ctx.textAlign = "center";
+  for (const [v, s] of xt) { ctx.fillText(s, X(v), h - 5); }
+  if (xl) { ctx.textAlign = "right"; ctx.fillText(xl, w - R0p, h - B0 - 4); }
+}
+function niceTicks(lo, hi, n) {
+  const span = hi - lo, step0 = span / n, mag = Math.pow(10, Math.floor(Math.log10(step0))), r = step0 / mag;
+  const step = (r < 1.5 ? 1 : r < 3 ? 2 : r < 7 ? 5 : 10) * mag, out = [];
+  for (let v = Math.ceil(lo / step) * step; v <= hi + 1e-9; v += step) out.push(+v.toFixed(6));
+  return out;
+}
+const Jtxt = (J) => J.replace(/\+/g, "⁺").replace(/-/g, "⁻");
+function drawScheme() {
+  const { x: ctx, w, h } = setupCanvas(document.getElementById("scheme"));
+  const cs = S.confs, unl = CASE(S.id).un || [];
+  const cols = cs.map((c, k) => ({ c, k, lv: [] }));
+  cols.forEach((o) => { if (o.c.E0 != null) o.lv.push([o.c.E0, "0+"]); if (o.c.band) for (const [E, J] of D.nuclei[S.id].bands[o.c.band].levels) if (E < 2000 && Math.abs(E - (o.c.E0 ?? -1)) > 1) o.lv.push([E, J]); });
+  if (unl.length) cols.push({ c: { t: "un" }, k: -1, lv: unl.map((E) => [E, "0+"]) });
+  const top = 2000, n = cols.length, cw = (w - L0 - R0p) / n;
+  const Y = (v) => T0 + (top - v) / top * (h - T0 - B0);
+  axes(ctx, w, h, () => 0, Y, [], niceTicks(0, top, 4).map((v) => [v, String(v)]), null);
+  cols.forEach((o, i) => {
+    const x0 = L0 + i * cw + 6, x1 = L0 + (i + 1) * cw - 62, col = CSS[o.c.t];
+    ctx.font = "10px ui-monospace,Menlo,monospace";
+    ctx.fillStyle = col; ctx.textAlign = "center"; ctx.fillText(o.c.t === "un" ? "not assigned" : WORD[o.c.t], 0.5 * (x0 + x1) + 16, h - 5);
+    let lastY = 1e9;
+    for (const [E, J] of o.lv.sort((a, b) => a[0] - b[0])) {
+      const y = Y(E);
+      ctx.strokeStyle = col; ctx.lineWidth = J === "0+" ? 2.4 : 1.2; ctx.globalAlpha = S.sel < 0 || o.k === S.sel ? 1 : 0.4;
+      ctx.beginPath(); ctx.moveTo(x0, y); ctx.lineTo(x1, y); ctx.stroke();
+      if (lastY - y > 9) { ctx.fillStyle = col; ctx.textAlign = "left"; ctx.fillText(`${Jtxt(J)} ${Math.round(E)}`, x1 + 3, y + 3); lastY = y; }
+      ctx.globalAlpha = 1;
+    }
+  });
+  const bandNames = cs.filter((c) => c.band).map((c) => `<span class="c-${c.t}">${WORD[c.t]}: ENSDF "${ensdfText(D.nuclei[S.id].bands[c.band].name.replace(/\.$/, "").replace(/\s+\(1993Ma02\).*$/, ""))}"</span>`);
+  document.getElementById("legscheme").innerHTML = `<span>thick: 0<sup>+</sup>; thin: the band built on it</span>` + bandNames.join("");
+}
+function ensdfText(t) {
+  return t.replace(/\bk\|p/gi, "K|p").replace(/\{\+([^}]*)\}/g, (m, a) => `<sup>${a.replace(/-/g, "−")}</sup>`).replace(/\{-([^}]*)\}/g, "<sub>$1</sub>")
+    .replace(/\|p/g, "π").replace(/\|n/g, "ν").replace(/\|a/g, "α").replace(/\|g/g, "γ").replace(/\|b/g, "β").replace(/\|d/g, "δ");
+}
+// measured excited 0+ along the chain, coloured where a shape is assigned (published)
+function chainShape(Z, N, E, rank) {
+  if (Z === 80) return N >= 100 && N <= 110 && rank === 0 ? "pro" : null;
+  if (Z === 82) { if (N === 106) return E < 650 ? "obl" : "pro"; return null; }
+  if (Z === 36) { const T = BX[`${Z + N}Kr`]; return T && rank === 0 ? (T.e2[1] > 30 ? "obl" : "pro") : null; }
+  return null;
+}
+function drawChain() {
+  const { x: ctx, w, h } = setupCanvas(document.getElementById("chain"));
+  const Z = CASE(S.id).Z, Ns = []; for (const k in D.nuclei) if (D.nuclei[k].Z === Z) Ns.push(D.nuclei[k].N);
+  const n0 = Math.min(...Ns) - 1, n1 = Math.max(...Ns) + 1, top = 2000;
+  const X = (n) => L0 + (n - n0) / (n1 - n0) * (w - L0 - R0p), Y = (v) => T0 + (top - v) / top * (h - T0 - B0);
+  const xt = []; for (let n = Math.ceil(n0 / 4) * 4; n <= n1; n += 4) xt.push([n, String(n)]);
+  axes(ctx, w, h, X, Y, xt, niceTicks(0, top, 4).map((v) => [v, String(v)]), "N");
+  for (const k in D.nuclei) {
+    const d = D.nuclei[k]; if (d.Z !== Z) continue;
+    d.zeros.filter((x) => x[0] > 0).slice(0, 2).forEach((z, rank) => {
+      if (z[0] > top) return;
+      const t = chainShape(Z, d.N, z[0], rank), x = X(d.N), y = Y(z[0]), here = k === S.id;
+      ctx.lineWidth = here ? 2.2 : 1.4; ctx.strokeStyle = t ? CSS[t] : "#e6e8ee"; ctx.fillStyle = t ? CSS[t] : "#e6e8ee";
+      ctx.beginPath(); ctx.arc(x, y, here ? 4.6 : 3.4, 0, 2 * Math.PI); if (t) ctx.fill(); else ctx.stroke();
+    });
+  }
+  ctx.strokeStyle = "#f2c14e"; ctx.globalAlpha = 0.6; ctx.setLineDash([2, 3]); ctx.beginPath(); ctx.moveTo(X(CASE(S.id).N), T0); ctx.lineTo(X(CASE(S.id).N), h - B0); ctx.stroke(); ctx.setLineDash([]); ctx.globalAlpha = 1;
+  document.getElementById("chaint").innerHTML = `Excited 0<sup>+</sup> states, ${ELEM[Z]} chain`;
+  document.getElementById("legchain").innerHTML = `<span><i class="o" style="border-color:#e6e8ee;background:#e6e8ee"></i>filled: shape assigned (colour)</span><span><i class="o" style="border-color:#e6e8ee"></i>open: not assigned or disputed</span>`;
+  document.getElementById("chainsrc").innerHTML = Z === 82
+    ? `ENSDF adopted levels. Filled only for <sup>188</sup>Pb, where ENSDF calls the 591 keV state "an oblate 0<sup>+</sup>" and the 725 keV state "a candidate for a prolate 0<sup>+</sup> intruder". <sup>186</sup>Pb is open on purpose (see the open question).`
+    : Z === 80 ? `ENSDF adopted levels; for <sup>180–190</sup>Hg the second 0<sup>+</sup> is the prolate intruder band head of Gaffney et al. (2014).`
+    : `ENSDF adopted levels; 0<sup>+</sup><sub>2</sub> of <sup>72–76</sup>Kr coloured by the minimum it belongs to in Bai et al. (2015), Table 1.`;
+}
+
+/* ---------- two-state mixing: H = [[0, V], [V, dE0]] and rho^2(E0) (assets/coexistence.js) */
+function mixSetup() {
+  const cs = S.confs, gs = cs.find((c) => c.E0 === 0), ex = cs.filter((c) => c.E0 > 0).sort((a, b) => a.E0 - b.E0)[0];
+  const box = document.getElementById("mixctl");
+  document.getElementById("mix").style.display = gs && ex ? "" : "none";
+  if (!gs || !ex) { S.mix = null; box.innerHTML = `<p class="sub">No excited 0<sup>+</sup> state with an assigned shape: nothing to mix.</p>`; return; }
+  const g = GF.table2[S.id], dE = ex.E0;
+  const bgs = gs.t === "sph" ? 0 : gs.b, bex = ex.b;
+  S.mix = { Z: CASE(S.id).Z, gs, ex, dE, b: [bgs, bex], gaffney: g, meas: D.rho2.find((r) => r.nuc === S.id && Math.abs(r.Ei - dE) < 2) };
+  if (g) {
+    if (S.V == null) S.V = g[0];
+    box.innerHTML = `<div class="row"><span class="k">V</span><input id="mv" type="range" min="0" max="250" step="0.5" value="${S.V}"><output id="mvo"></output></div>`;
+    document.getElementById("mv").addEventListener("input", (e) => { S.V = +e.target.value; drawMix(); });
+  } else {
+    if (S.dE0 == null || S.dE0 > dE) {
+      const m = S.mix.meas, inv = m && m.note !== "lower limit" ? C.mixFromRho2(S.mix.Z, m.rho2, bgs, bex) : null;
+      S.dE0 = inv && inv.b2 != null ? dE * (1 - 2 * inv.b2) : 0.8 * dE;
+      S.mix.fromRho = !!(inv && inv.b2 != null);
+    } else S.mix.fromRho = S.mixFromRho;
+    S.mixFromRho = S.mix.fromRho;
+    box.innerHTML = `<div class="row"><span class="k">ΔE<sub>0</sub></span><input id="mde" type="range" min="0" max="${dE}" step="${dE / 400}" value="${S.dE0}"><output id="mdeo"></output></div>`;
+    document.getElementById("mde").addEventListener("input", (e) => { S.dE0 = +e.target.value; drawMix(); });
+  }
+}
+function drawMix() {
+  const { x: ctx, w, h } = setupCanvas(document.getElementById("mix"));
+  const mx = S.mix, txt = document.getElementById("mixtxt");
+  if (!mx) { txt.innerHTML = ""; document.getElementById("mixq").textContent = ""; return; }
+  let dE0, V, b2, dE, Elo;
+  if (mx.gaffney) { dE0 = mx.gaffney[2] - mx.gaffney[1]; V = S.V; const r = C.mixFromV(V, dE0); b2 = r.b2; dE = r.dE; Elo = 0.5 * (mx.gaffney[1] + mx.gaffney[2]) - 0.5 * dE; document.getElementById("mvo").textContent = V.toFixed(1) + " keV"; }
+  else { dE = mx.dE; dE0 = S.dE0; const r = C.mixFromSplit(dE, dE0); b2 = r.b2; V = r.V; Elo = 0; document.getElementById("mdeo").textContent = dE0.toFixed(0) + " keV"; }
+  const mid = Elo + 0.5 * dE, u1 = mid - 0.5 * dE0, u2 = mid + 0.5 * dE0;
+  const r2 = C.rho2(mx.Z, 1 - b2, mx.b[0], mx.b[1]);
+  // drawing: unperturbed (left), mixed (right), bars split by the squared amplitudes
+  const top = Math.max(dE, mx.dE, u2) * 1.12 + 40, bot = Math.min(0, u1) - 40;
+  const Y = (v) => T0 + (top - v) / (top - bot) * (h - T0 - B0);
+  ctx.font = "10px ui-monospace,Menlo,monospace";
+  const xa = [24, 0.36 * w], xb = [0.6 * w, w - 70], cg = CSS[mx.gs.t], ce = CSS[mx.ex.t];
+  const bar = (x, y, f, ca, cb) => { ctx.lineWidth = 3; ctx.strokeStyle = ca; ctx.beginPath(); ctx.moveTo(x[0], y); ctx.lineTo(x[0] + f * (x[1] - x[0]), y); ctx.stroke(); ctx.strokeStyle = cb; ctx.beginPath(); ctx.moveTo(x[0] + f * (x[1] - x[0]), y); ctx.lineTo(x[1], y); ctx.stroke(); };
+  bar(xa, Y(u1), 1, cg, cg); bar(xa, Y(u2), 1, ce, ce);
+  bar(xb, Y(Elo), 1 - b2, cg, ce); bar(xb, Y(Elo + dE), b2, cg, ce);
+  ctx.setLineDash([2, 3]); ctx.strokeStyle = "#5b6378"; ctx.lineWidth = 1;
+  for (const [a, b] of [[u1, Elo], [u2, Elo + dE]]) { ctx.beginPath(); ctx.moveTo(xa[1], Y(a)); ctx.lineTo(xb[0], Y(b)); ctx.stroke(); }
+  ctx.setLineDash([]);
+  if (mx.gaffney) { ctx.strokeStyle = "#f2c14e"; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(xb[0] - 6, Y(mx.dE)); ctx.lineTo(xb[1] + 6, Y(mx.dE)); ctx.stroke(); }
+  ctx.fillStyle = "#8a92a6"; ctx.textAlign = "center";
+  ctx.fillText("unperturbed", 0.5 * (xa[0] + xa[1]), h - 4); ctx.fillText("mixed", 0.5 * (xb[0] + xb[1]), h - 4);
+  ctx.textAlign = "left"; ctx.fillStyle = "#e6e8ee";
+  ctx.fillText(`${Math.round(Elo)}`, xb[1] + 4, Y(Elo) + 3); ctx.fillText(`${Math.round(Elo + dE)}`, xb[1] + 4, Y(Elo + dE) + 3);
+  if (mx.gaffney) { ctx.fillStyle = "#f2c14e"; ctx.fillText(`${Math.round(mx.dE)} meas.`, xb[1] + 4, Y(mx.dE) + (Math.abs(Y(mx.dE) - Y(Elo + dE)) < 10 ? 12 : 3)); }
+  ctx.fillStyle = "#8a92a6"; ctx.fillText(`${Math.round(u1)}`, 2, Y(u1) + 3); ctx.fillText(`${Math.round(u2)}`, 2, Y(u2) + 3);
+  document.getElementById("mixq").innerHTML = `${WORD[mx.gs.t]} ground state + ${WORD[mx.ex.t]} 0<sup>+</sup>, keV`;
+  const meas = mx.meas, mtxt = meas ? (meas.note === "lower limit" ? `&gt; ${meas.rho2}` : meas.ep === meas.em ? `${meas.rho2} ± ${meas.ep}` : `${meas.rho2} +${meas.ep} −${meas.em}`) : null;
+  const flat = Math.abs(mx.b[0] ** 2 - mx.b[1] ** 2) < 1e-12;
+  txt.innerHTML = `<span class="math">ΔE = √(ΔE<sub>0</sub>² + 4V²), b² = ½(1 − ΔE<sub>0</sub>/ΔE)<br>ρ² = (3Z/4π)² a²b² (β<sub>1</sub>² − β<sub>2</sub>²)²</span><br>` +
+    (mx.gaffney ? `V and the unperturbed band heads ${mx.gaffney[1]} and ${mx.gaffney[2]} keV from Gaffney et al. (2014), Table II (V = ${mx.gaffney[0]} keV there); the slider changes V. ` : `ΔE = ${Math.round(dE)} keV measured (ENSDF); the unperturbed splitting ΔE<sub>0</sub> is not measured, so it is a slider${mx.fromRho ? " (start: the value that reproduces the measured ρ²)" : " (start: 0.8 ΔE, an assumption)"}. V = ${V.toFixed(0)} keV. `) +
+    `Admixture of the ${WORD[mx.ex.t]} configuration in the ground state b² = ${b2.toFixed(4)}.<br>` +
+    (flat ? `These configurations have equal β₂². This approximation predicts no E0 contrast, so E0 cannot determine the mixing amplitude.` :
+      `With β = ${mx.b[0]} and ${mx.b[1]} (the deformations drawn): ρ²(E0) = ${r2.toPrecision(2)}${mtxt ? `; measured ${mtxt} (ENSDF)` : "; no measured value in ENSDF"}${S.mix.Z === 36 && meas && C.rho2(36, 0.5, mx.b[0], mx.b[1]) < meas.rho2 ? `. Even full mixing gives only ${C.rho2(36, 0.5, mx.b[0], mx.b[1]).toPrecision(2)} with these β: the lowest-order formula with these two deformations falls short of the measured value.` : "."}`);
+}
+function drawE0Table() {
+  const fmt = (r) => r.note === "lower limit" ? `&gt; ${r.rho2}` : r.ep === r.em ? `${r.rho2}±${r.ep}` : `${r.rho2}<sup>+${r.ep}</sup><sub>−${r.em}</sub>`;
+  const rows = D.rho2.map((r) => {
+    const d = D.nuclei[r.nuc], c = CASE(r.nuc);
+    let b = null;
+    if (c) { const cs = c.confs(S.asg), gs = cs.find((x) => x.E0 === 0), ex = cs.find((x) => x.E0 != null && Math.abs(x.E0 - r.Ei) < 2); if (gs && ex) b = [gs.t === "sph" ? 0 : gs.b, ex.b]; }
+    const inv = b ? C.mixFromRho2(d.Z, r.rho2, b[0], b[1]) : null;
+    const g = GF.table2[r.nuc], pred = g && b ? C.rho2(d.Z, 1 - C.mixFromV(g[0], g[2] - g[1]).b2, b[0], b[1]) : null;
+    return `<tr class="${r.nuc === S.id ? "on" : ""}" ${c ? `data-n="${r.nuc}"` : ""}><td>${nucHTML(d.Z, d.N)}</td><td>${Math.round(r.Ei)}</td><td>${fmt(r)}</td><td>${b ? `${b[0]}/${b[1]}` : "none"}</td><td>${inv && inv.b2 != null ? (r.note === "lower limit" ? "&gt; " : "") + inv.b2.toFixed(3) : inv ? "&gt; full" : ""}</td><td>${pred != null ? pred.toFixed(4) : ""}</td></tr>`;
+  });
+  document.getElementById("e0tab").innerHTML = `<tr><th></th><th>keV</th><th>ρ² meas.</th><th>β₁/β₂</th><th>b²(ρ²)</th><th>ρ²(V)<sup>*</sup></th></tr>` + rows.join("");
+  document.getElementById("e0src").innerHTML = `ρ² as printed in the ENSDF adopted levels, which quote the evaluations of Kibédi and Spear (2005) and Kibédi, Garnsworthy and Wood (2022); not opened here. β as drawn on this page (Hg: Gaffney et al.; Kr: Bai et al. Table 1; none read for <sup>194</sup>Pb and <sup>78</sup>Kr). b²(ρ²): the admixture the formula needs to give the measured ρ². <sup>*</sup> from V and the unperturbed band heads of Gaffney et al., Table II. "&gt; full": the measured ρ² exceeds what the formula gives at full mixing with these β.`;
+}
+document.getElementById("e0tab").addEventListener("click", (e) => { const tr = e.target.closest("tr[data-n]"); if (tr) load(tr.dataset.n); });
+
+/* ---------- info, text */
+function drawInfo() {
+  const c = CASE(S.id), d = D.nuclei[S.id];
+  const ref = { egido: "Gogny HFB minima, Egido et al. (2004)", gaffney: "Nilsson-Strutinsky values quoted by Gaffney et al. (2014)", bai: "total-Routhian-surface minima, Bai et al. (2015), Table 1" }[c.defs];
+  let html = `<dt>Z, N</dt><dd>${c.Z}, ${c.N}</dd>`;
+  html += S.confs.map((k) => `<dt class="c-${k.t}">${WORD[k.t]}</dt><dd>${k.t === "sph" ? "β = 0" : `β = ${k.b.toFixed(k.defs === "bai" ? 3 : 2)}${c.defs === "bai" ? `, γ = ${k.g}°` : ""}`}; ${k.E0 === 0 ? "ground state" : k.E0 != null ? `0<sup>+</sup> at ${k.E0} keV` : "no 0<sup>+</sup> assigned"}</dd>`).join("");
+  html += `<dt>deformations</dt><dd>${ref}</dd>`;
+  const z = d.zeros.filter((x) => x[0] > 0);
+  html += `<dt>measured 0<sup>+</sup></dt><dd>${z.map((x) => `${x[0]}${/\(/.test(x[2]) ? "?" : ""}`).join(", ")} keV (ENSDF)</dd>`;
+  document.getElementById("info").innerHTML = html;
+  document.getElementById("focus").innerHTML = `<button data-k="-1" aria-pressed="${S.sel < 0}">all shapes</button>` + S.confs.map((k, i) => `<button data-k="${i}" aria-pressed="${S.sel === i}" style="color:${CSS[k.t]}">${WORD[k.t]}${k.E0 != null ? " · " + k.E0 + " keV" : ""}</button>`).join("");
+  const wl = [];
+  if (S.id === "186Pb") wl.push("0<sup>+</sup> at 530(21) and 649(21) keV in ENSDF (535 and 659(4) keV in Ojala et al. 2022). Which one is oblate and which prolate is disputed: switch the reading above, and see the open question.");
+  if (S.id === "190Pb") wl.push('The 658 keV 0<sup>+</sup> is an intruder state (ENSDF, from its E0 decay) with no shape assigned in the evaluation, so it is drawn as an arc across the sextant. ENSDF band labels predate the 2025 reassignment: the yrast collective band is predominantly oblate, the more collective non-yrast band predominantly prolate, <a href="https://doi.org/10.1038/s42005-024-01928-8" target="_blank" rel="noopener">Montes Plaza et al. (2025)</a>; no bands are drawn here.');
+  if (c.Z === 80) wl.push("Hg: the ground state is weakly oblate, the excited 0<sup>+</sup> the head of a prolate intruder band; both β are the approximate values quoted by Gaffney et al. for the whole chain.");
+  if (c.Z === 36) wl.push(`These nuclei are soft in γ: the drawn shapes take γ = 0° or 60° (the calculated minima lie at 2° to 5° from the axis), and the states are strongly mixed. ${S.id === "72Kr" ? "In <sup>72</sup>Kr the ground state is oblate." : "Ground-state band prolate (Coulomb excitation, as summarised by Bai et al.)."}`);
+  const W = document.getElementById("warn"); W.hidden = !wl.length; W.innerHTML = wl.join(" ");
+  const span = Math.max(...S.confs.map((k) => k.E0 ?? 0));
+  document.getElementById("stamp").innerHTML = `<b>${nucHTML(c.Z, c.N)}</b><small>${S.confs.length} shapes${span > 0 ? ` · their 0<sup>+</sup> states within ${span} keV` : ""}</small>`;
+}
+function drawModel() {
+  document.getElementById("model").innerHTML = `
+  <span><b style="color:var(--ink)">The plane.</b> The floor is the (β, γ) sextant of quadrupole shapes: β is the distance from the corner (the sphere), γ the angle, 0° along the prolate edge and 60° along the oblate edge, triaxial shapes in between. Every shape on this page sits on one of the two edges or at the corner.</span>
+  <span><b style="color:var(--ink)">The shapes.</b> Placed at published deformations: Pb from Gogny-HFB minima (Egido, Robledo and Rodríguez-Guzmán 2004), Hg at the approximate values quoted by Gaffney et al. (2014), Kr at the total-Routhian-surface minima of Bai et al. (2015). Each is the surface R(θ) = R<sub>n</sub>(1 + β Y<sub>20</sub> + β<sub>4</sub> Y<sub>40</sub>) at the volume of a sphere of radius 1.2A<sup>1/3</sup> fm (β<sub>4</sub> = 0 where the source gives none).</span>
+  <span><b style="color:var(--ink)">The surface.</b> Schematic: one smooth valley per shape, its bottom ${(1000 * WALL).toFixed(0)} keV below the 0<sup>+</sup> energy assigned to it, curvature and barriers chosen for the picture. Nothing about the valleys is computed or published; only where they sit (the deformation) and the rings in them (the energies) are data.</span>
+  <span><b style="color:var(--ink)">The rings.</b> Measured levels (ENSDF adopted levels) at their energy as height: thick rings the 0<sup>+</sup> band heads, thin rings the members of the band the evaluation builds on that shape. A level whose shape is not assigned is drawn as an arc across the sextant.</span>
+  <span><b style="color:var(--ink)">Live math.</b> Only the two-state mixing of the side panel: a 2×2 matrix and the lowest-order monopole formula ρ² = (3Z/4π)² a²b² (β<sub>1</sub>² − β<sub>2</sub>²)² of Wood et al. (1999), as written in Ojala et al. (2022), Eq. (3). Checked by tests/check_coexistence.js: the 2×2 with Gaffney's V and band heads reproduces their ground-state amplitude |α<sub>0</sub>| to 1×10<sup>−4</sup> and puts the 0<sup>+</sup><sub>2</sub> of <sup>180–188</sup>Hg within 26 keV of the measured energies (their fit uses all spins), and ρ² for <sup>188</sup>Hg is 0.0085 against the measured 0.0077 +22 −32.</span>`;
+  document.getElementById("open").innerHTML = `
+  <span>Andreyev et al., Nature 405, 430 (2000), found two excited 0<sup>+</sup> states in <sup>186</sup>Pb from the α decay of <sup>190</sup>Po, at about 530 and 650 keV, and assigned the lower one oblate and the upper one prolate: three 0<sup>+</sup> states of three shapes within 700 keV. Their arguments, as summarised by Ojala et al.: the systematics of the oblate 0<sup>+</sup> energies along the chain, the extrapolation of the prolate yrast band to spin 0, and the reduced α-decay widths. (The Nature paper itself was not opened for this page.)</span>
+  <span>Ojala et al., Commun. Phys. 5, 213 (2022), measured the E0 conversion electrons directly (0<sup>+</sup><sub>2</sub> → 0<sup>+</sup><sub>1</sub> at 535 keV, 0<sup>+</sup><sub>3</sub> → 0<sup>+</sup><sub>1</sub> at 659(4) keV) and found a 2<sup>+</sup><sub>1</sub> → 0<sup>+</sup><sub>2</sub> transition with B(E2) = 190(80) W.u. and |Q<sub>t</sub>| = 7.7(33) eb, a transition inside the prolate band. With intensity balances they reassign 0<sup>+</sup><sub>2</sub> as predominantly prolate and 0<sup>+</sup><sub>3</sub> as oblate. They note that many calculations put the prolate minimum lowest, some the oblate one, and that the evidence on both sides is indirect: no spectroscopic quadrupole moment of these states has been measured.</span>
+  <span>This page does not decide: the switch in the left panel moves the two measured rings between the prolate and oblate valleys.</span>`;
+  document.getElementById("sources").innerHTML = `
+  <span>Levels, bands, ρ²(E0): ENSDF adopted levels (NNDC), fetched 2026-10-03 by scripts/fetch_coexistence_ensdf.py; the ρ² values are the ones printed in ENSDF comments, each tied to its line by scripts/build_coexistence_data.py.</span>
+  <span>J. L. Egido, L. M. Robledo, R. R. Rodríguez-Guzmán, Phys. Rev. Lett. 93, 082502 (2004), arXiv:nucl-th/0311105 (read): Gogny-HFB prolate and oblate β₂ of <sup>182–192</sup>Pb (<sup>186</sup>Pb: 0.29 and −0.20; <sup>188</sup>Pb: 0.28, −0.20; <sup>190</sup>Pb: 0.25, −0.20).</span>
+  <span>L. P. Gaffney et al., Phys. Rev. C 89, 024307 (2014), arXiv:1401.5030 (read): β ≈ −0.15 (oblate ground state) and 0.27 (prolate) in the Hg isotopes, quoted from Nilsson-Strutinsky calculations; mixing strengths V and unperturbed band heads, Table II.</span>
+  <span>Z. J. Bai, X. M. Fu, C. F. Jiao, F. R. Xu, Chin. Phys. C 39, 094101 (2015), arXiv:1503.09013 (read): Table 1, (β₂, γ, β₄) of the ground-state and 0<sup>+</sup><sub>2</sub> minima of <sup>72,74,76</sup>Kr.</span>
+  <span>J. Ojala et al., Commun. Phys. 5, 213 (2022), doi:10.1038/s42005-022-00990-4 (read): <sup>186</sup>Pb energies and reassignment, the two-state formula, Eq. (3).</span>
+  <span><a href="https://doi.org/10.1038/s42005-024-01928-8" target="_blank" rel="noopener">A. Montes Plaza et al., Commun. Phys. 8, 8 (2025)</a> (read): updated <sup>190</sup>Pb band assignments. The ENSDF snapshot is retained and its older band labels are flagged.</span>
+  <span>Cited, not opened: Andreyev et al., Nature 405, 430 (2000); Heyde and Wood, Rev. Mod. Phys. 83, 1467 (2011); Wood et al., Nucl. Phys. A 651, 323 (1999); Kibédi, Garnsworthy and Wood, Prog. Part. Nucl. Phys. 123, 103930 (2022). Their content enters only as quoted by the sources read.</span>`;
+}
+
+function drawAll() { drawScheme(); drawChain(); mixSetup(); drawMix(); drawE0Table(); drawInfo(); }
+
+/* ---------- loading, hash */
+function load(id, asg) {
+  const c = CASE(id); if (!c) return;
+  if (asg) S.asg = asg;
+  const changed = id !== S.id; S.id = id;
+  if (changed) { S.V = null; S.dE0 = null; }
+  S.confs = c.confs(S.asg).map((k) => Object.assign({ defs: c.defs }, k));
+  for (const b of document.querySelectorAll("#chips button")) b.setAttribute("aria-pressed", String(b.dataset.id === id));
+  document.getElementById("asgbox").style.display = id === "186Pb" ? "" : "none";
+  for (const b of document.querySelectorAll("#asg button")) b.setAttribute("aria-pressed", String(b.dataset.v === S.asg));
+  document.title = `${id} shape coexistence · nuclearjs`;
+  document.getElementById("toDef").href = `deformed.html#${id}`;
+  document.getElementById("toFis").href = `fission.html#${id}`;
+  build3D(); drawAll(); markFocus(); setHash();
+}
+function setHash() {
+  const h = "#" + S.id + (S.id === "186Pb" && S.asg === "andreyev" ? "/andreyev" : "");
+  if (location.hash !== h) history.replaceState(null, "", h);
+}
+function parseHash() {
+  const m = location.hash.slice(1).match(/^(\d{2,3}[A-Za-z]{1,2})(?:\/(ojala|andreyev))?$/);
+  if (!m) return null;
+  const c = CASES.find((x) => x.id.toLowerCase() === m[1].toLowerCase());
+  return c ? { id: c.id, asg: m[2] || null } : null;
+}
+
+/* ---------- UI */
+document.getElementById("chips").innerHTML = CASES.map((c) => `<button data-id="${c.id}">${sup(c.Z + c.N)}${ELEM[c.Z]}</button>`).join("");
+document.getElementById("chips").addEventListener("click", (e) => { const b = e.target.closest("button"); if (b) load(b.dataset.id); });
+document.getElementById("asg").addEventListener("click", (e) => { const b = e.target.closest("button"); if (!b) return; S.dE0 = null; const sel = S.sel; load("186Pb", b.dataset.v); if (sel >= 0) focusOn(sel); });
+document.getElementById("focus").addEventListener("click", (e) => { const b = e.target.closest("button[data-k]"); if (!b) return; const k = +b.dataset.k; if (k < 0) overview(false); else focusOn(k); drawScheme(); });
+document.getElementById("sceneOnly").addEventListener("click", () => {
+  const hidden = document.body.classList.toggle("scene-only");
+  const b = document.getElementById("sceneOnly"); b.setAttribute("aria-pressed", String(hidden)); b.textContent = hidden ? "show panels · H" : "hide panels · H";
+  dispatchEvent(new Event("resize"));
+});
+addEventListener("keydown", (e) => { if (e.code === "KeyH" && !e.repeat && !e.ctrlKey && !e.metaKey && !e.altKey && !e.target.closest("input,textarea,[contenteditable]")) { e.preventDefault(); document.getElementById("sceneOnly").click(); } });
+addEventListener("hashchange", () => { const h = parseHash(); if (h && (h.id !== S.id || (h.asg && h.asg !== S.asg))) load(h.id, h.asg || (h.id === "186Pb" ? "ojala" : null)); });
+addEventListener("resize", () => {
+  camera.aspect = innerWidth / innerHeight; applyOffset(); camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight); composer.setSize(innerWidth, innerHeight);
+  drawScheme(); drawChain(); drawMix();
+});
+
+/* ---------- rendering modes */
+let quality = innerWidth < 700 ? "low" : "high";
+function applyVis() {
+  const hi = quality === "high";
+  vol.mesh.visible = hi;
+  for (const s of shapes) { s.mesh.visible = !hi; s.glass.visible = hi; }
+  document.getElementById("vnote").innerHTML = hi
+    ? `Each shape is a ray-marched glowing volume of density 1/(1 + e<sup>(r − R(θ))/a</sup>), a = ${DIFF} fm, with a lit half-density shell and a thin glass wall; colour marks the kind of shape (pale spherical, blue oblate, orange prolate). Symmetry axes vertical. Below, the (β, γ) sextant at ${SB} fm per unit β with energy as height at ${SY} fm per MeV (compressed above ${ECAP} MeV), contours every 0.2 MeV. The valleys are schematic; positions and rings are data. Brightness, glass and colours are presentation.`
+    : `Solid surfaces at R(θ) of each shape above the schematic energy surface on the (β, γ) sextant (${SB} fm per unit β, ${SY} fm per MeV); rings are measured levels.`;
+}
+function applyQuality() {
+  const g = quality === "high" ? GROUND_PRE_ACES : GROUND;
+  scene.background.copy(g); scene.fog.color.copy(g); renderer.setClearColor(g);
+  applyVis();
+  for (const b of document.querySelectorAll("#qmode button")) b.setAttribute("aria-pressed", String(b.dataset.v === quality));
+}
+document.getElementById("qmode").addEventListener("click", (e) => { const b = e.target.closest("button"); if (!b) return; quality = b.dataset.v; applyQuality(); });
+applyQuality();
+
+/* ---------- start */
+{
+  const h = parseHash();
+  drawModel();
+  load(h ? h.id : "186Pb", h && h.asg ? h.asg : "ojala");
+}
+
+/* ---------- loop: rings breathe slowly, the camera glides to a chosen shape */
+let last = performance.now();
+function animate(now) {
+  requestAnimationFrame(animate);
+  const dt = Math.min(0.1, Math.max(0, (now - last) / 1000)); last = now;
+  if (quality === "high") gov.tick(dt);
+  if (fly) {
+    const k = 1 - Math.exp(-dt / 0.35);
+    camera.position.lerp(fly.p, k); controls.target.lerp(fly.t, k);
+    if (camera.position.distanceTo(fly.p) < 0.05) fly = null;
+  }
+  controls.update();
+  const dnow = camera.position.distanceTo(controls.target);
+  scene.fog.near = dnow * 1.4; scene.fog.far = dnow * 3.8;
+  if (!reduce) for (const r of rings) if (r.main) r.mesh.material.emissiveIntensity = r.base * (1 + 0.18 * Math.sin(now / 650 + r.E / 90));
+  camera.getWorldDirection(vol.u.uFwd.value);
+  if (quality === "high") composer.render(); else renderer.render(scene, camera);
+  placeLabels();
+}
+requestAnimationFrame(animate);
+</script>
+<script src="assets/glass.js"></script>
+</body>
+</html>

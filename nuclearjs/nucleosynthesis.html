@@ -1,0 +1,781 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Making the heavy elements · nuclearjs</title>
+<link rel="stylesheet" href="assets/glass.css">
+<style>
+body{margin:0}
+:root{
+  color-scheme:dark;
+  --ground:#0b0d12; --line:#262c3a;
+  --ink:#e6e8ee; --muted:#8a92a6; --accent:#f2c14e;
+  --r:#ff9a3c; --s:#5fd4e6;
+  --sans:"Avenir Next","Futura","Helvetica Neue","PingFang SC","Noto Sans SC",system-ui,sans-serif;
+  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+}
+html,body{height:100%}
+body{background:var(--ground);color:var(--ink);font-family:var(--sans);overflow:hidden}
+#stage{position:fixed;inset:0}
+#stage canvas{display:block;touch-action:none}
+.panel{position:fixed;border-radius:18px;padding:16px 18px;display:flex;flex-direction:column;gap:12px;overflow:auto;box-sizing:border-box;z-index:2}
+.panel>*{flex-shrink:0}
+#ctl{left:16px;top:calc(16px + env(safe-area-inset-top,0px));width:min(320px,calc(100% - 32px));max-height:calc(100% - 56px)}
+#side{right:16px;top:calc(16px + env(safe-area-inset-top,0px));width:384px;max-height:calc(100% - 32px);gap:8px}
+h1{margin:0;font-size:22px;font-weight:600;letter-spacing:.01em}
+.sub{margin:2px 0 0;color:var(--muted);font-size:13px;line-height:1.45}
+.sub sup,.src sup,.kv sup,.cap sup,.leg sup{font-size:.7em}
+.grp{display:flex;flex-direction:column;gap:6px}
+.lab{font-size:11px;text-transform:uppercase;letter-spacing:.12em;color:var(--muted)}
+.lab.r{color:var(--r)}.lab.s{color:var(--s)}
+.seg{display:flex;border:1px solid var(--line);border-radius:4px;overflow:hidden}
+.seg button{flex:1;background:none;border:0;color:var(--muted);font:500 12px var(--mono);padding:6px 4px;cursor:pointer}
+.seg button+button{border-left:1px solid var(--line)}
+.seg button[aria-pressed="true"]{background:#1f2533;color:var(--ink)}
+.seg.mini button{font-size:11px;padding:3px 4px}
+button:focus-visible,input:focus-visible,summary:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:3px 10px;font:12px var(--mono);font-variant-numeric:tabular-nums}
+.kv dt{color:var(--muted)}.kv dd{margin:0}
+.row{display:flex;gap:8px;align-items:center;font:12px var(--mono);color:var(--muted)}
+.row input[type=range]{flex:1;accent-color:var(--accent);min-width:0}
+.row output{min-width:92px;text-align:right;color:var(--ink);font-variant-numeric:tabular-nums}
+.row span.k{min-width:34px}
+details summary{cursor:pointer;font-size:11px;text-transform:uppercase;letter-spacing:.12em;color:var(--muted);list-style:none}
+details summary::before{content:"▸ ";}
+details[open] summary::before{content:"▾ ";}
+details .grp{margin-top:8px}
+.linkbtn{background:none;border:0;color:var(--muted);font:12px var(--mono);padding:0;cursor:pointer;text-decoration:underline;align-self:flex-start}
+.home{font:12px var(--mono);color:var(--muted);text-decoration:none}.home:hover{color:var(--ink)}
+.src{font-size:11px;color:var(--muted);line-height:1.45}
+.src a{color:var(--muted)}
+.warn{font-size:12px;color:var(--accent);line-height:1.4}
+.plot{width:100%;height:158px;display:block;cursor:crosshair}
+#sceneOnly{position:fixed;z-index:4;left:16px;bottom:calc(10px + env(safe-area-inset-bottom,0px));padding:8px 12px;border:1px solid var(--line);border-radius:8px;color:var(--ink);cursor:pointer;font:12px var(--mono)}
+body.scene-only .panel{display:none}
+@media (max-width:900px){#sceneOnly{bottom:auto;top:calc(42vh + 24px);padding:5px 9px;font-size:11px}}
+.cap{display:flex;flex-wrap:wrap;gap:2px 8px;justify-content:space-between;align-items:baseline;font:11px var(--mono);color:var(--muted)}
+.cap b{font:600 13px var(--sans);color:var(--ink)}
+.leg{display:flex;flex-wrap:wrap;gap:3px 12px;font:11px var(--mono);color:var(--muted)}
+.leg i{display:inline-block;width:14px;height:0;border-top:2px solid;vertical-align:middle;margin-right:4px}
+.leg i.d{border-top-style:dashed}
+.leg i.p{width:6px;height:6px;border:0;border-radius:50%;margin-right:5px}
+.math{font:12px var(--mono);color:var(--ink);line-height:1.6}
+table.wp{width:100%;border-collapse:collapse;font:11.5px var(--mono);font-variant-numeric:tabular-nums}
+table.wp th{color:var(--muted);font-weight:500;text-align:right;padding:2px 4px;border-bottom:1px solid var(--line)}
+table.wp td{text-align:right;padding:3px 4px;border-bottom:1px solid #191e2a}
+table.wp th:first-child,table.wp td:first-child{text-align:left}
+.axlab{position:fixed;font:500 11px var(--mono);pointer-events:none;transform:translate(-50%,-50%);white-space:nowrap;text-shadow:0 0 6px #000,0 0 2px #000}
+#stamp{position:fixed;left:50%;bottom:calc(22px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);text-align:center;pointer-events:none;width:min(700px,60vw)}
+#stamp b{display:block;font:600 clamp(20px,2.6vw,32px)/1.05 var(--sans);letter-spacing:-.01em}
+#stamp b sup{font-size:.55em}
+#stamp small{display:block;font:500 12px var(--mono);color:var(--muted);margin-top:6px;line-height:1.5}
+#stamp small sup{font-size:.75em}
+.hint{position:fixed;left:170px;bottom:calc(14px + env(safe-area-inset-bottom,0px));font:11px var(--mono);color:var(--muted)}
+#tip{position:fixed;pointer-events:none;z-index:5;font:11.5px var(--mono);line-height:1.45;background:rgba(9,12,18,.88);border:1px solid var(--line);border-radius:6px;padding:6px 8px;transform:translate(14px,14px);display:none;max-width:280px}
+#tip sup{font-size:.75em}
+@media (max-width:900px){
+  #ctl{max-height:42vh}
+  #side{left:16px;right:16px;width:auto;top:auto;bottom:calc(12px + env(safe-area-inset-bottom,0px));max-height:44vh}
+  #stamp,.hint,.axlab{display:none}
+}
+@media (max-width:560px){.panel{padding:10px 12px;gap:9px}h1{font-size:18px}}
+</style>
+<script data-goatcounter="https://jinleiphys.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
+</head>
+<body>
+
+<div id="stage"></div>
+<button id="sceneOnly" class="glass" aria-pressed="false" title="Hide or show the panels (H)">hide panels · H</button>
+
+<aside id="ctl" class="panel glass glass-deep" data-glass data-glass-bevel="22" data-glass-scale="42">
+  <div>
+    <a class="home" href="index.html">← nuclearjs</a> &nbsp; <a class="home" href="https://vibeinscience.com/nuclides.html">nuclide chart</a> &nbsp; <a class="home" href="shells.html">shell gaps</a>
+    <h1>Making the heavy elements</h1>
+    <p class="sub">Iron captures neutrons. Slowly, in giant stars, each capture waits for the β decay and the flow hugs the valley of stability (<b style="color:var(--s)">s process</b>). In a neutron flood the captures run far to the neutron-rich side until photodisintegration stops them (<b style="color:var(--r)">r process</b>). Both stall at the closed neutron shells N = 50, 82, 126, but the r process meets them at lower Z, so after the decay back to stability its abundance peaks sit about ten mass units below those of the s process.</p>
+  </div>
+  <div class="grp">
+    <div class="lab">Show</div>
+    <div class="seg mini" id="stagesel">
+      <button data-v="s" title="slow captures along the valley of stability">s process</button>
+      <button data-v="r" title="(n,γ)⇄(γ,n) equilibrium on the neutron-rich side">r process</button>
+      <button data-v="f" title="the neutron flood stops; β decay at constant A back to stability">freeze-out</button>
+      <button data-v="all">all</button>
+    </div>
+    <p class="sub" id="stagetxt"></p>
+  </div>
+  <div class="grp">
+    <div class="lab r">r-process conditions</div>
+    <div class="row"><span class="k">T<sub>9</sub></span><input id="t9" type="range" min="0.6" max="3" step="0.05" aria-label="temperature T9"><output id="t9o"></output></div>
+    <div class="row"><span class="k">n<sub>n</sub></span><input id="nn" type="range" min="16" max="32" step="0.1" aria-label="log10 neutron density"><output id="nno"></output></div>
+    <dl class="kv" id="rinfo"></dl>
+  </div>
+  <div class="grp">
+    <div class="lab">Waiting points (path nucleus at a closed shell)</div>
+    <table class="wp" id="wp"></table>
+    <p class="src" id="wpsrc"></p>
+  </div>
+  <div class="grp">
+    <div class="lab">Rendering</div>
+    <div class="seg" id="qmode">
+      <button data-v="high" title="glass tiles, soft bloom">cinematic</button>
+      <button data-v="low" title="opaque tiles, no bloom, for phones">fast</button>
+    </div>
+    <p class="sub" id="vnote"></p>
+  </div>
+  <details>
+    <summary>Why the r peaks sit lower</summary>
+    <div class="grp">
+      <p class="sub">A closed neutron shell is a step down in S<sub>n</sub>: in AME2020 the 83rd neutron is bound by 3.2 to 5.0 MeV less than the 82nd (pairing included); at N = 50 the step is 3.1 to 4.8 MeV and at N = 126 2.4 to 3.4 MeV (differences of measured S<sub>n</sub>, every element where both are measured). Near stability the s process meets N = 82 at Xe to Sm (<sup>136</sup>Xe to <sup>144</sup>Sm are stable), and its flow piles up there: the s peak at A ≈ 138.</p>
+      <p class="sub">The r process works where S<sub>n</sub> ≈ S<sub>a</sub><sup>0</sup>, 2.9 MeV at the default setting (0.2 to 11 MeV over the full range of the sliders); at a few MeV no nucleus near stability is that weakly bound. There N = 82 is met by Z ≈ 40 to 50, and a run of elements waits at the same N while successive β decays raise Z (the vertical stretch of the path). At freeze-out each waiting point decays at fixed A, so the peak lands at A = Z + 82 ≈ 122 to 132, about ten units below the s peak. The same happens at N = 50 (A ≈ 76 to 80 against 86 to 92) and N = 126 (A ≈ 190 to 200 against 208).</p>
+    </div>
+  </details>
+  <details>
+    <summary>What this page does not compute</summary>
+    <div class="grp">
+      <p class="sub">The heights of the r columns are isotope shares: the Saha distribution inside each element, normalized to one per element. They are not element abundances. How much of each element there is depends on how long each chain waits for its β decays, and so on β-decay rates of nuclei that have mostly never been measured; without them the page does not predict the r-process abundance pattern, only where the path runs and where its waiting points decay to (Arnould, Goriely and Takahashi 2007, Sect. 4.1, Eqs. (26) and (27)).</p>
+      <p class="sub">The s path is drawn by a rule, not computed: a radioactive nucleus on it either decays or captures, never both. Real s-process branchings, where decay and capture compete, the exposure distribution and the abundances along the path are not modelled. The solar s/r split in the abundance panel is the published one.</p>
+      <p class="sub">Also left out: β-delayed neutron emission (it shifts the decayed mass down by one or two units), fission recycling beyond the actinides, neutron captures after freeze-out, excited states and ground-state spins in the partition functions.</p>
+    </div>
+  </details>
+  <details>
+    <summary>Model and sources</summary>
+    <div class="grp src" id="model"></div>
+  </details>
+</aside>
+
+<aside id="side" class="panel glass glass-deep" data-glass data-glass-bevel="22" data-glass-scale="42">
+  <div class="cap"><b>Solar-system abundances</b><span>N per 10⁶ Si, by A &nbsp;<span class="seg mini" id="srsrc" style="display:inline-flex;vertical-align:middle"><button data-v="p20">P20</button><button data-v="s08">S08</button><button data-v="g99">G99</button></span></span></div>
+  <canvas id="pab" class="plot"></canvas>
+  <div class="leg" id="leg1"></div>
+  <div class="cap"><b>Paths on the chart</b><span>N horizontal, Z vertical</span></div>
+  <canvas id="ppath" class="plot" style="height:178px"></canvas>
+  <div class="leg" id="leg2"></div>
+  <div class="cap"><b>Inside one element</b><span><button class="linkbtn" id="zdn" type="button" aria-label="previous element">◂</button> <span id="zname"></span> <button class="linkbtn" id="zup" type="button" aria-label="next element">▸</button></span></div>
+  <canvas id="pchain" class="plot"></canvas>
+  <div class="leg" id="leg3"></div>
+  <div class="src" id="datasrc"></div>
+</aside>
+
+<div id="labs"></div>
+<div id="stamp"></div>
+<div id="tip"></div>
+<div class="hint">drag to orbit · right-drag to pan · scroll to zoom · click the chart or a plot to pick an element</div>
+
+<script src="assets/three-bundle.js"></script>
+<script src="assets/three-post.js"></script>
+<script src="assets/vol.js"></script>
+<script src="assets/nubase.js"></script>
+<script src="assets/shells-data.js"></script>
+<script src="assets/nucleo-masses.js"></script>
+<script src="assets/nucleosynthesis-data.js"></script>
+<script src="assets/nucleosynthesis.js"></script>
+<script>
+"use strict";
+// ---------- data
+const NUC = window.NUC, DATA = window.NUCLEO_DATA;
+NUCLEO.init({ AME: window.AME, NUC, FRDM: window.NUCLEO_FRDM });
+const ELEM = {}, ROW = new Map();
+for (const r of NUC) { ELEM[r[0]] = r[2]; ROW.set(r[0] * 1000 + r[1], r); }
+const sup = (A) => `<sup>${A}</sup>`;
+const nucH = (Z, N) => `${sup(Z + N)}${ELEM[Z] || "Z" + Z}`;
+const MAGIC_N = [50, 82, 126], MAGIC_Z = [28, 50, 82];
+const ZMIN = 26, ZMAX = 94;
+const isStable = (r) => r && r[3] != null && r[3] >= 15;
+
+const S = { T9: 1.2, lnn: 22, Z: 48, stage: "all", sr: "p20" };
+const SPATH = NUCLEO.sPath();                         // drawn s path (rule, fixed)
+const SONLY = DATA.sOnly.map((r) => ({ Z: r[0], N: r[1] - r[0], note: r[2] }));
+let R = null;
+
+function fmtT(logT) {
+  if (logT == null) return "n/a";
+  const t = Math.pow(10, logT);
+  if (t < 1e-3) return (t * 1e6).toPrecision(3) + " μs";
+  if (t < 1) return (t * 1e3).toPrecision(3) + " ms";
+  if (t < 120) return t.toPrecision(3) + " s";
+  if (t < 7200) return (t / 60).toPrecision(3) + " min";
+  if (t < 172800) return (t / 3600).toPrecision(3) + " h";
+  if (t < 3.15e7 * 2) return (t / 86400).toPrecision(3) + " d";
+  return (t / 3.156e7).toPrecision(3) + " y";
+}
+const pow10 = (x) => `10<sup>${(+x).toFixed(Math.abs(x - Math.round(x)) < 1e-9 ? 0 : 1)}</sup>`;
+const showS = () => S.stage === "s" || S.stage === "all";
+const showR = () => S.stage !== "s";
+const showF = () => S.stage === "f" || S.stage === "all";
+function computeR() { R = NUCLEO.path(S.T9, S.lnn, ZMIN, ZMAX); }
+function waiting(path) { const out = {}; for (const m of MAGIC_N) out[m] = path.filter((c) => c.Npeak === m); return out; }
+
+// ---------- scene
+const stage = document.getElementById("stage");
+const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.setSize(innerWidth, innerHeight);
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.05;
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+stage.appendChild(renderer.domElement);
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(36, innerWidth / innerHeight, 0.5, 3000);
+const composer = new EffectComposer(renderer);
+composer.addPass(new RenderPass(scene, camera));
+const bloom = new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), 0.4, 0.45, 0.7);
+composer.addPass(bloom);
+composer.addPass(new OutputPass());
+const smaa = new SMAAPass(innerWidth * renderer.getPixelRatio(), innerHeight * renderer.getPixelRatio());
+composer.addPass(smaa);
+scene.environment = VOL.studioEnv(renderer);
+VOL.lightRig(scene);
+// The ground colour #0b0d12 is drawn untouched on the direct path, but OutputPass runs it through ACES,
+// whose toe crushes it to black; on the bloom path background and fog take the linear colour that ACES
+// (exposure 1.05) maps back to #0b0d12 (as on the other pages).
+const GROUND = new THREE.Color("#0b0d12");
+const GROUND_PRE_ACES = new THREE.Color().setRGB(0.0115476, 0.0131218, 0.0174740, THREE.LinearSRGBColorSpace);
+scene.background = GROUND.clone();
+scene.fog = new THREE.Fog("#0b0d12", 300, 900);
+
+// chart coordinates: one cell per nuclide, N along +x, Z along -z (away from the camera), as on the nuclide chart
+const N0 = 95, Z0 = 58;
+const X = (N) => N - N0, Zc = (Z) => -(Z - Z0);
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true; controls.dampingFactor = 0.08;
+controls.screenSpacePanning = false; controls.maxPolarAngle = Math.PI * 0.48;
+controls.minDistance = 15; controls.maxDistance = 600;
+const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+const narrow = innerWidth < 700;
+function home() {
+  const t = new THREE.Vector3(X(96), 0, Zc(60));
+  const dir = new THREE.Vector3(-0.12, 0.84, 0.53).normalize();
+  controls.target.copy(t);
+  camera.position.copy(t).addScaledVector(dir, narrow ? 360 : 268);
+}
+home();
+// centre the chart in the space between the two panels (wide screens only)
+function applyOffset() {
+  const a = document.getElementById("ctl").getBoundingClientRect(), b = document.getElementById("side").getBoundingClientRect();
+  const free = innerWidth > 900 && !document.body.classList.contains("scene-only") ? 0.5 * (a.right + b.left) : innerWidth / 2, dx = innerWidth / 2 - free;
+  if (Math.abs(dx) > 1) camera.setViewOffset(innerWidth, innerHeight, dx, 0, innerWidth, innerHeight); else camera.clearViewOffset();
+}
+applyOffset();
+
+// floor and grid (one cell per nuclide)
+const floor = new THREE.Mesh(new THREE.PlaneGeometry(2000, 2000), new THREE.MeshStandardMaterial({ color: "#11151e", roughness: 0.92, envMapIntensity: 0.2 }));
+floor.rotation.x = -Math.PI / 2; floor.position.y = -0.02; scene.add(floor);
+const grid = new THREE.GridHelper(400, 400, "#1f2533", "#1a1f2b");
+grid.position.set(0.5, 0.003, 0.5); grid.material.transparent = true; grid.material.opacity = 0.5; scene.add(grid);
+
+// magic-number lanes
+{
+  const mat = new THREE.LineBasicMaterial({ color: "#f2c14e", transparent: true, opacity: 0.32 });
+  const pts = [];
+  for (const m of MAGIC_N) for (const s of [-0.5, 0.5]) pts.push(new THREE.Vector3(X(m) + s, 0.02, Zc(18)), new THREE.Vector3(X(m) + s, 0.02, Zc(100)));
+  for (const m of MAGIC_Z) for (const s of [-0.5, 0.5]) pts.push(new THREE.Vector3(X(18), 0.02, Zc(m) + s), new THREE.Vector3(X(190), 0.02, Zc(m) + s));
+  scene.add(new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints(pts), mat));
+}
+
+// known nuclides (NUBASE2020, Z >= 18): flat tiles; stable ones carry a lit core, so the valley reads as a line of light
+const KNOWN = NUC.filter((r) => r[0] >= 18 && r[0] <= 100);
+const tileGeo = new RoundedBoxGeometry(0.9, 1, 0.9, 2, 0.12); tileGeo.translate(0, 0.5, 0);
+const tileGlass = new THREE.MeshPhysicalMaterial({ transmission: 0.55, thickness: 0.6, ior: 1.46, roughness: 0.12, metalness: 0,
+  clearcoat: 1, clearcoatRoughness: 0.05, envMapIntensity: 0.6, attenuationColor: "#ffffff", attenuationDistance: 3 });
+const tileFast = new THREE.MeshStandardMaterial({ roughness: 0.6, metalness: 0, envMapIntensity: 0.5 });
+const tiles = new THREE.InstancedMesh(tileGeo, tileGlass, KNOWN.length);
+const dummy = new THREE.Object3D();
+const TILE_C = new THREE.Color("#3b4357"), TILE_S = new THREE.Color("#8f97ab");
+const STABLES = KNOWN.filter(isStable);
+const coreGeo = new RoundedBoxGeometry(0.46, 1, 0.46, 2, 0.08); coreGeo.translate(0, 0.5, 0);
+const cores = new THREE.InstancedMesh(coreGeo, new THREE.MeshBasicMaterial({ color: new THREE.Color(1.05, 1.03, 0.98), toneMapped: false }), STABLES.length);
+KNOWN.forEach((r, i) => {
+  const st = isStable(r);
+  dummy.position.set(X(r[1]), 0, Zc(r[0])); dummy.scale.set(1, st ? 0.34 : 0.14, 1); dummy.updateMatrix();
+  tiles.setMatrixAt(i, dummy.matrix); tiles.setColorAt(i, st ? TILE_S : TILE_C);
+});
+STABLES.forEach((r, i) => { dummy.position.set(X(r[1]), 0, Zc(r[0])); dummy.scale.set(1, 0.26, 1); dummy.updateMatrix(); cores.setMatrixAt(i, dummy.matrix); });
+scene.add(tiles, cores);
+
+// r-process columns: one per chain member, height and glow from the Saha share inside the element
+const RMAX = 9000, RH = 16;
+const colGeo = new RoundedBoxGeometry(0.82, 1, 0.82, 2, 0.1); colGeo.translate(0, 0.5, 0);
+// emissive look: the instance colour is the light the column gives off (unlit, tone-mapped, picked up by the bloom)
+const rcols = new THREE.InstancedMesh(colGeo, new THREE.MeshBasicMaterial({ color: 0xffffff }), RMAX);
+rcols.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+rcols.count = 0;
+scene.add(rcols);
+// two-neutron drip line of the mass table
+const dripLine = new THREE.Line(new THREE.BufferGeometry(), new THREE.LineDashedMaterial({ color: "#8a7fd6", transparent: true, opacity: 0.7, dashSize: 1.2, gapSize: 0.8 }));
+scene.add(dripLine);
+// freeze-out: beta-decay tracks at constant A (N-1, Z+1 per step) from the path to the stable isobar
+const tracks = new THREE.LineSegments(new THREE.BufferGeometry(), new THREE.LineBasicMaterial({ color: "#ffb36b", transparent: true, opacity: 0.6 }));
+scene.add(tracks);
+const ends = new THREE.InstancedMesh(new THREE.TorusGeometry(0.42, 0.07, 8, 28).rotateX(Math.PI / 2), new THREE.MeshBasicMaterial({ color: new THREE.Color(2.0, 1.25, 0.55), toneMapped: false }), 200);
+ends.count = 0; scene.add(ends);
+// sparks: one point cloud per process, additive glow (presentation)
+function sparks(n, rgb) {
+  const pos = new Float32Array(n * 3), a = new Float32Array(n), g = new THREE.BufferGeometry();
+  g.setAttribute("position", new THREE.BufferAttribute(pos, 3)); g.setAttribute("aA", new THREE.BufferAttribute(a, 1));
+  const m = new THREE.ShaderMaterial({
+    uniforms: { uPix: { value: 600 }, uSize: { value: 1.3 }, uCol: { value: new THREE.Vector3(...rgb) } },
+    vertexShader: `attribute float aA; uniform float uPix, uSize; varying float vA;
+      void main(){ vA = aA; vec4 mv = modelViewMatrix * vec4(position, 1.0); gl_Position = projectionMatrix * mv;
+        gl_PointSize = aA > 0.0 ? max(1.5, uSize * uPix / -mv.z) : 0.0; }`,
+    fragmentShader: `uniform vec3 uCol; varying float vA; void main(){ vec2 d = gl_PointCoord - 0.5; float r2 = dot(d, d); if (r2 > 0.25) discard;
+        float a = exp(-r2 * 16.0) * vA; gl_FragColor = vec4(uCol * a, a);
+        #include <tonemapping_fragment>
+        #include <colorspace_fragment>
+      }`,
+    transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
+  });
+  const p = new THREE.Points(g, m); p.frustumCulled = false; scene.add(p);
+  return { p, pos, a, g, m, n };
+}
+const rSpark = sparks(2400, [1.6, 1.0, 0.5]);
+const sSpark = sparks(400, [0.45, 1.3, 1.6]);
+let trackList = [];
+
+// s path: capture steps (N+1), decays (N-1,Z+1 or N+1,Z-1), the alpha that closes it at 210Po
+const sPts = [], sCol = [];
+const CY = new THREE.Color(0.25, 0.85, 1.0), CYd = new THREE.Color(0.18, 0.55, 0.75);
+const sPoly = [new THREE.Vector3(X(SPATH[0][1]), 0.62, Zc(SPATH[0][0]))];
+for (const [z1, n1, z2, n2, k] of SPATH) {
+  sPts.push(X(n1), 0.62, Zc(z1), X(n2), 0.62, Zc(z2));
+  const c = k === "n" ? CY : CYd; sCol.push(c.r, c.g, c.b, c.r, c.g, c.b);
+  sPoly.push(new THREE.Vector3(X(n2), 0.62, Zc(z2)));
+}
+const sGeo = new THREE.BufferGeometry();
+sGeo.setAttribute("position", new THREE.Float32BufferAttribute(sPts, 3)); sGeo.setAttribute("color", new THREE.Float32BufferAttribute(sCol, 3));
+const sLines = new THREE.LineSegments(sGeo, new THREE.LineBasicMaterial({ vertexColors: true }));
+// a thin glowing tube on the same steps, so the path reads at any zoom
+{
+  const cp = new THREE.CurvePath();
+  for (let i = 1; i < sPoly.length; i++) cp.add(new THREE.LineCurve3(sPoly[i - 1], sPoly[i]));
+  const tube = new THREE.Mesh(new THREE.TubeGeometry(cp, (sPoly.length - 1) * 2, 0.11, 6, false), new THREE.MeshBasicMaterial({ color: new THREE.Color(0.22, 0.75, 0.95) }));
+  sLines.add(tube);
+}
+scene.add(sLines);
+const sLen = [0]; for (let i = 1; i < sPoly.length; i++) sLen.push(sLen[i - 1] + sPoly[i].distanceTo(sPoly[i - 1]));
+// stable nuclei the s path passes through
+const sStab = SPATH.filter((s) => isStable(ROW.get(s[2] * 1000 + s[3])));
+const sNodes = new THREE.InstancedMesh(new THREE.SphereGeometry(0.24, 16, 12), new THREE.MeshBasicMaterial({ color: new THREE.Color(0.3, 0.9, 1.1) }), sStab.length);
+sStab.forEach((s, i) => { dummy.position.set(X(s[3]), 0.62, Zc(s[2])); dummy.scale.setScalar(1); dummy.updateMatrix(); sNodes.setMatrixAt(i, dummy.matrix); });
+scene.add(sNodes);
+// s-only nuclei (Prantzos et al. 2020): rings, shielded from the r decay by a stable isobar
+const sOnlyRings = new THREE.InstancedMesh(new THREE.TorusGeometry(0.72, 0.1, 8, 32).rotateX(Math.PI / 2), new THREE.MeshBasicMaterial({ color: new THREE.Color(0.6, 1.6, 2.0), toneMapped: false }), SONLY.length);
+SONLY.forEach((s, i) => { dummy.position.set(X(s.N), 0.62, Zc(s.Z)); dummy.scale.setScalar(1); dummy.updateMatrix(); sOnlyRings.setMatrixAt(i, dummy.matrix); });
+scene.add(sOnlyRings);
+// selected element: a faint bar along its row
+const selBar = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshBasicMaterial({ color: "#f2c14e", transparent: true, opacity: 0.05, depthWrite: false }));
+selBar.rotation.x = -Math.PI / 2; scene.add(selBar);
+
+// abundance colour ramp: deep ember to white heat, x in [0,1]
+const RAMP = ["#4a1406", "#8f2c07", "#d4520e", "#ff8a2a", "#ffb05a", "#ffd9a0"].map((c) => new THREE.Color(c));
+function ramp(x, out) {
+  x = Math.min(1, Math.max(0, x)) * (RAMP.length - 1);
+  const i = Math.min(RAMP.length - 2, Math.floor(x));
+  return out.copy(RAMP[i]).lerp(RAMP[i + 1], x - i);
+}
+const tmpC = new THREE.Color();
+let rIndex = [];
+function buildR() {
+  let k = 0;
+  rIndex = [];
+  const dim = S.stage === "f" ? 0.45 : 1;              // at freeze-out the columns fade, the decay carries the story
+  if (showR()) for (const c of R) {
+    for (let i = 0; i < c.N.length; i++) {
+      const P = c.P[i];
+      if (P < 2e-3 || k >= RMAX) continue;
+      const peak = i === c.ipeak;
+      dummy.position.set(X(c.N[i]), 0, Zc(c.Z));
+      dummy.scale.set(1, 0.08 + RH * P * (S.stage === "f" ? 0.35 : 1), 1); dummy.updateMatrix();
+      rcols.setMatrixAt(k, dummy.matrix);
+      ramp(0.25 + 0.75 * Math.sqrt(P), tmpC).multiplyScalar(0.95 * dim * (peak ? 1.0 : 0.55 + 0.45 * Math.sqrt(P)));
+      rcols.setColorAt(k, tmpC);
+      rIndex.push({ Z: c.Z, N: c.N[i], P, peak });
+      k++;
+    }
+  }
+  rcols.count = k;
+  rcols.instanceMatrix.needsUpdate = true;
+  if (rcols.instanceColor) rcols.instanceColor.needsUpdate = true;
+  const dp = [];
+  for (const c of R) dp.push(new THREE.Vector3(X(c.Ndrip) + 0.5, 0.03, Zc(c.Z)));
+  dripLine.geometry.dispose(); dripLine.geometry = new THREE.BufferGeometry().setFromPoints(dp); dripLine.computeLineDistances();
+  dripLine.visible = showR();
+  buildTracks();
+  sLines.visible = sNodes.visible = sOnlyRings.visible = sSpark.p.visible = showS();
+}
+function buildTracks() {
+  trackList = [];
+  const tp = [];
+  let ne = 0;
+  for (const c of R) {
+    const A = c.Z + c.Npeak, Zs = NUCLEO.stableIsobar(c.Z, A);
+    if (Zs == null) continue;
+    const a = new THREE.Vector3(X(c.Npeak), 0.5, Zc(c.Z)), b = new THREE.Vector3(X(A - Zs), 0.5, Zc(Zs));
+    tp.push(a, b);
+    trackList.push({ a, b, steps: Zs - c.Z, Z: c.Z, A, Zs });
+    dummy.position.set(b.x, 0.36, b.z); dummy.scale.setScalar(1); dummy.updateMatrix();
+    if (ne < 200) ends.setMatrixAt(ne++, dummy.matrix);
+  }
+  tracks.geometry.dispose(); tracks.geometry = new THREE.BufferGeometry().setFromPoints(tp);
+  ends.count = ne; ends.instanceMatrix.needsUpdate = true;
+  tracks.visible = ends.visible = rSpark.p.visible = showF();
+}
+function placeSel() {
+  const c = R.find((x) => x.Z === S.Z);
+  const n0 = c ? c.N[0] : 40, n1 = c ? c.Ndrip : 150;
+  selBar.scale.set(n1 - n0 + 3, 1, 1);
+  selBar.position.set((X(n0) + X(n1)) / 2, 0.01, Zc(S.Z));
+}
+
+// ---------- HTML labels in the scene
+const labDiv = document.getElementById("labs");
+const LABS = [];
+function addLab(text, color, fn) { const el = document.createElement("div"); el.className = "axlab"; el.style.color = color; el.innerHTML = text; labDiv.appendChild(el); LABS.push({ el, fn }); }
+for (const m of MAGIC_N) addLab(`N = ${m}`, "#f2c14e", () => new THREE.Vector3(X(m), 0, Zc(20)));
+for (const m of MAGIC_Z) addLab(`Z = ${m}`, "#f2c14e", () => new THREE.Vector3(X(186), 0, Zc(m)));
+addLab("valley of stability", "#c9ced9", () => new THREE.Vector3(X(88), 0, Zc(74)));
+addLab("r-process path", "#ff9a3c", () => { const c = R && R.find((x) => x.Z === 60); return c && showR() ? new THREE.Vector3(X(c.Npeak) + 7, 3, Zc(60)) : null; });
+addLab("drip line (FRDM)", "#a99cf0", () => { const c = R && R.find((x) => x.Z === 40); return c && showR() ? new THREE.Vector3(X(c.Ndrip) + 5, 0, Zc(40)) : null; });
+for (const m of MAGIC_N) addLab(`N = ${m} waiting points`, "#ffb05a", () => { if (!R || !showR()) return null; const l = R.filter((c) => c.Npeak === m); if (l.length < 2) return null; const c = l[l.length - 1]; return new THREE.Vector3(X(m) + 3, (S.stage === "f" ? 0.35 : 1) * RH * c.Ppeak + 2, Zc(c.Z) - 1); });
+addLab("s process", "#5fd4e6", () => (showS() ? new THREE.Vector3(X(70), 1, Zc(50) + 6) : null));
+addLab("<sup>209</sup>Bi: the s path ends", "#5fd4e6", () => (showS() ? new THREE.Vector3(X(126) + 4, 1, Zc(83) - 2) : null));
+const tmpV = new THREE.Vector3();
+function drawLabs() {
+  for (const L of LABS) {
+    const p = L.fn();
+    if (!p) { L.el.hidden = true; continue; }
+    tmpV.copy(p).project(camera);
+    const vis = tmpV.z < 1 && Math.abs(tmpV.x) < 0.97 && Math.abs(tmpV.y) < 0.97;
+    L.el.hidden = !vis;
+    if (vis) { L.el.style.left = (tmpV.x * 0.5 + 0.5) * innerWidth + "px"; L.el.style.top = (-tmpV.y * 0.5 + 0.5) * innerHeight + "px"; }
+  }
+}
+
+// ---------- plots
+function setupCanvas(c) {
+  const d = Math.min(devicePixelRatio, 2), w = c.clientWidth, h = c.clientHeight;
+  c.width = w * d; c.height = h * d;
+  const x = c.getContext("2d"); x.setTransform(d, 0, 0, d, 0, 0);
+  return { x, w, h };
+}
+const L0 = 38, R0 = 8, T0 = 8, B0 = 18;
+function axes(ctx, w, h, X, Y, xt, yt, xl) {
+  ctx.font = "10px ui-monospace,Menlo,monospace";
+  ctx.strokeStyle = "#1e2432"; ctx.fillStyle = "#8a92a6"; ctx.lineWidth = 1;
+  for (const [v, s] of yt) { ctx.beginPath(); ctx.moveTo(L0, Y(v)); ctx.lineTo(w - R0, Y(v)); ctx.stroke(); ctx.textAlign = "right"; ctx.fillText(s, L0 - 4, Y(v) + 3); }
+  ctx.textAlign = "center";
+  for (const [v, s] of xt) { ctx.beginPath(); ctx.moveTo(X(v), T0); ctx.lineTo(X(v), h - B0); ctx.stroke(); ctx.fillText(s, X(v), h - 5); }
+  if (xl) { ctx.textAlign = "right"; ctx.fillText(xl, w - R0, h - B0 - 4); }
+}
+function poly(ctx, xs, ys, X, Y, color, lw, dash, clip) {
+  ctx.save();
+  if (clip) { ctx.beginPath(); ctx.rect(clip[0], clip[1], clip[2], clip[3]); ctx.clip(); }
+  ctx.beginPath(); ctx.strokeStyle = color; ctx.lineWidth = lw; ctx.setLineDash(dash || []);
+  let on = false;
+  for (let i = 0; i < xs.length; i++) {
+    const y = ys[i];
+    if (y == null || !isFinite(y)) { on = false; continue; }
+    if (!on) { ctx.moveTo(X(xs[i]), Y(y)); on = true; } else ctx.lineTo(X(xs[i]), Y(y));
+  }
+  ctx.stroke(); ctx.restore();
+}
+function dot(ctx, x, y, r, color, fill) { ctx.beginPath(); ctx.arc(x, y, r, 0, 2 * Math.PI); if (fill === false) { ctx.strokeStyle = color; ctx.stroke(); } else { ctx.fillStyle = color; ctx.fill(); } }
+const L10 = Math.log10;
+const supE = (e) => "10" + String(e).replace("-", "⁻").replace(/\d/g, (d) => "⁰¹²³⁴⁵⁶⁷⁸⁹"[d]);
+
+// solar abundances with the s/r split of the chosen decomposition (columns of DATA.sr)
+const SRCOL = { p20: [9, 10], s08: [4, 5], g99: [6, 7] };
+const PLOTS = {};
+function drawAbund() {
+  const { x: ctx, w, h } = setupCanvas(document.getElementById("pab"));
+  const xlo = 60, xhi = 240, ylo = -3.2, yhi = 2.0;
+  const Xf = (A) => L0 + (A - xlo) / (xhi - xlo) * (w - L0 - R0), Yf = (v) => T0 + (yhi - v) / (yhi - ylo) * (h - T0 - B0);
+  const xt = [80, 100, 120, 140, 160, 180, 200, 220, 240].map((a) => [a, a]);
+  const yt = [-3, -2, -1, 0, 1, 2].map((e) => [e, supE(e)]);
+  // the A range of this path's waiting points at each closed shell, decayed at constant A
+  const wp = waiting(R);
+  ctx.fillStyle = "rgba(255,154,60,0.13)";
+  for (const m of MAGIC_N) { const l = wp[m]; if (!l.length) continue; const As = l.map((c) => c.Z + m); const a0 = Math.min(...As) - 0.5, a1 = Math.max(...As) + 0.5; ctx.fillRect(Xf(a0), T0, Math.max(2, Xf(a1) - Xf(a0)), h - T0 - B0); }
+  // the s-process closed shells at stability: stable nuclei with N = 50, 82, 126
+  ctx.fillStyle = "rgba(95,212,230,0.12)";
+  for (const m of MAGIC_N) { const As = NUC.filter((r) => r[1] === m && isStable(r)).map((r) => r[0] + m); if (!As.length) continue; const a0 = Math.min(...As) - 0.5, a1 = Math.max(...As) + 0.5; ctx.fillRect(Xf(a0), T0, Math.max(2, Xf(a1) - Xf(a0)), h - T0 - B0); }
+  axes(ctx, w, h, Xf, Yf, xt, yt, "A");
+  const clip = [L0, T0, w - L0 - R0, h - T0 - B0];
+  const tot = {};
+  for (const r of DATA.solar) tot[r[1]] = (tot[r[1]] || 0) + r[3];
+  const As = Object.keys(tot).map(Number).filter((a) => a >= xlo).sort((a, b) => a - b);
+  { const a2 = [], v2 = []; for (let i = 0; i < As.length; i++) { if (i && As[i] - As[i - 1] > 3) { a2.push(As[i] - 1); v2.push(null); } a2.push(As[i]); v2.push(L10(tot[As[i]])); } poly(ctx, a2, v2, Xf, Yf, "#5d6577", 1, [], clip); }
+  for (const a of As) dot(ctx, Xf(a), Yf(L10(tot[a])), 1.6, "#8a92a6");
+  const [is, ir] = SRCOL[S.sr];
+  const sA = {}, rA = {};
+  for (const r of DATA.sr) { if (r[is] == null) continue; sA[r[1]] = (sA[r[1]] || 0) + r[3] * r[is]; if (r[ir] != null) rA[r[1]] = (rA[r[1]] || 0) + r[3] * r[ir]; }
+  const AA = Object.keys(sA).map(Number).sort((a, b) => a - b);
+  poly(ctx, AA, AA.map((a) => (sA[a] > 0 ? L10(sA[a]) : null)), Xf, Yf, "#5fd4e6", 1.5, [], clip);
+  const AR = Object.keys(rA).map(Number).sort((a, b) => a - b), AR2 = [], VR2 = [];
+  for (let i = 0; i < AR.length; i++) { if (i && AR[i] - AR[i - 1] > 3) { AR2.push(AR[i] - 1); VR2.push(null); } AR2.push(AR[i]); VR2.push(rA[AR[i]] > 0 ? L10(rA[AR[i]]) : null); }
+  poly(ctx, AR2, VR2, Xf, Yf, "#ff9a3c", 1.5, [], clip);
+  ctx.font = "10px ui-monospace,Menlo,monospace"; ctx.textAlign = "center";
+  for (const m of MAGIC_N) { const l = wp[m]; if (!l.length) continue; const A = (Math.min(...l.map((c) => c.Z)) + Math.max(...l.map((c) => c.Z))) / 2 + m; ctx.fillStyle = "#ff9a3c"; ctx.fillText("N=" + m, Xf(A), T0 + 10); }
+  document.getElementById("leg1").innerHTML =
+    `<span><i class="p" style="background:#8a92a6"></i>solar, Lodders 2009</span><span><i style="border-color:#5fd4e6"></i>s part</span><span><i style="border-color:#ff9a3c"></i>r part (${S.sr === "p20" ? "Prantzos 2020" : S.sr === "s08" ? "Sneden 2008" : "Goriely 1999"})</span>` +
+    `<span><i style="border-color:rgba(255,154,60,.5);border-top-width:8px;width:10px"></i>where this path's waiting points decay</span><span><i style="border-color:rgba(95,212,230,.45);border-top-width:8px;width:10px"></i>stable N = 50, 82, 126</span>`;
+}
+function drawPath() {
+  const { x: ctx, w, h } = setupCanvas(document.getElementById("ppath"));
+  const xlo = 20, xhi = 190, ylo = 18, yhi = 98;
+  const Xf = (N) => L0 + (N - xlo) / (xhi - xlo) * (w - L0 - R0), Yf = (Z) => T0 + (yhi - Z) / (yhi - ylo) * (h - T0 - B0);
+  PLOTS.ppath = { Yinv: (py) => yhi - (py - T0) / (h - T0 - B0) * (yhi - ylo) };
+  axes(ctx, w, h, Xf, Yf, [40, 60, 80, 100, 120, 140, 160, 180].map((n) => [n, n]), [20, 40, 60, 80].map((z) => [z, z]), "N");
+  ctx.fillStyle = "#8a92a6"; ctx.textAlign = "left"; ctx.fillText("Z", L0 + 3, T0 + 9);
+  ctx.strokeStyle = "rgba(242,193,78,.35)"; ctx.setLineDash([2, 3]);
+  for (const m of MAGIC_N) { ctx.beginPath(); ctx.moveTo(Xf(m), T0); ctx.lineTo(Xf(m), h - B0); ctx.stroke(); }
+  for (const m of MAGIC_Z) { ctx.beginPath(); ctx.moveTo(L0, Yf(m)); ctx.lineTo(w - R0, Yf(m)); ctx.stroke(); }
+  ctx.setLineDash([]);
+  ctx.fillStyle = "#262c3a";
+  for (const r of NUC) if (r[0] >= ylo && r[0] <= yhi) ctx.fillRect(Xf(r[1] - 0.5), Yf(r[0] + 0.5), Math.max(1, Xf(1) - Xf(0)), Math.max(1, Yf(0) - Yf(1)));
+  ctx.fillStyle = "#c9ced9";
+  for (const r of NUC) if (isStable(r) && r[0] >= ylo) ctx.fillRect(Xf(r[1] - 0.5), Yf(r[0] + 0.5), Math.max(1, Xf(1) - Xf(0)), Math.max(1, Yf(0) - Yf(1)));
+  const clip = [L0, T0, w - L0 - R0, h - T0 - B0];
+  poly(ctx, R.map((c) => c.Ndrip + 0.5), R.map((c) => c.Z), Xf, Yf, "#8a7fd6", 1, [3, 3], clip);
+  poly(ctx, R.map((c) => c.Npeak), R.map((c) => c.Z), Xf, Yf, "#ff9a3c", 1.8, [], clip);
+  poly(ctx, [SPATH[0][1], ...SPATH.map((s) => s[3])], [SPATH[0][0], ...SPATH.map((s) => s[2])], Xf, Yf, "#5fd4e6", 1.4, [], clip);
+  ctx.strokeStyle = "rgba(242,193,78,.6)"; ctx.beginPath(); ctx.moveTo(L0, Yf(S.Z)); ctx.lineTo(w - R0, Yf(S.Z)); ctx.stroke();
+  document.getElementById("leg2").innerHTML = `<span><i class="p" style="background:#c9ced9"></i>stable</span><span><i style="border-color:#5fd4e6"></i>s path (drawn)</span><span><i style="border-color:#ff9a3c"></i>r path</span><span><i class="d" style="border-color:#8a7fd6"></i>S<sub>2n</sub> = 0</span>`;
+}
+// isotopic chain of the selected element: the Saha shares and S_n
+function drawChain() {
+  const { x: ctx, w, h } = setupCanvas(document.getElementById("pchain"));
+  const c = R.find((x) => x.Z === S.Z);
+  if (!c) return;
+  let n0 = Infinity, n1 = -Infinity;
+  for (let i = 0; i < c.N.length; i++) if (c.P[i] > 1e-4) { n0 = Math.min(n0, c.N[i]); n1 = Math.max(n1, c.N[i]); }
+  n0 -= 8; n1 = Math.min(Math.max(n1 + 6, c.Ndrip + 2), n0 + 70);
+  const R2 = 30;
+  const Xf = (N) => L0 + (N - n0) / (n1 - n0) * (w - L0 - R2), Yf = (P) => T0 + (1 - P) * (h - T0 - B0);
+  const Yhi = 10, Ys = (s) => T0 + (Yhi - s) / Yhi * (h - T0 - B0);
+  const xt = []; for (let n = Math.ceil(n0 / 5) * 5; n <= n1; n += 5) xt.push([n, n]);
+  ctx.font = "10px ui-monospace,Menlo,monospace";
+  ctx.strokeStyle = "#1e2432"; ctx.fillStyle = "#8a92a6"; ctx.lineWidth = 1;
+  for (const [v, s] of [[0, "0"], [0.5, "0.5"], [1, "1"]]) { ctx.beginPath(); ctx.moveTo(L0, Yf(v)); ctx.lineTo(w - R2, Yf(v)); ctx.stroke(); ctx.textAlign = "right"; ctx.fillText(s, L0 - 4, Yf(v) + 3); }
+  ctx.textAlign = "left"; ctx.fillStyle = "#5fd4e6";
+  for (const s of [0, 2, 4, 6, 8, 10]) ctx.fillText(s, w - R2 + 4, Ys(s) + 3);
+  ctx.fillStyle = "#8a92a6"; ctx.textAlign = "center";
+  for (const [v, s] of xt) { ctx.beginPath(); ctx.moveTo(Xf(v), T0); ctx.lineTo(Xf(v), h - B0); ctx.stroke(); ctx.fillText(s, Xf(v), h - 5); }
+  ctx.textAlign = "right"; ctx.fillText("N", w - R2 - 2, h - B0 - 4);
+  for (const m of MAGIC_N) if (m > n0 && m < n1) { ctx.strokeStyle = "rgba(242,193,78,.5)"; ctx.setLineDash([2, 3]); ctx.beginPath(); ctx.moveTo(Xf(m), T0); ctx.lineTo(Xf(m), h - B0); ctx.stroke(); ctx.setLineDash([]); }
+  const bw = Math.max(2, (Xf(1) - Xf(0)) * 0.7);
+  for (let i = 0; i < c.N.length; i++) {
+    if (c.N[i] < n0 || c.N[i] > n1) continue;
+    const P = c.P[i]; if (P < 1e-4) continue;
+    ctx.fillStyle = i === c.ipeak ? "#ffd28a" : "#ff9a3c";
+    ctx.fillRect(Xf(c.N[i]) - bw / 2, Yf(P), bw, Yf(0) - Yf(P));
+  }
+  for (let i = 1; i < c.N.length; i++) {
+    if (c.N[i] < n0 || c.N[i] > n1 || c.Sn[i] == null) continue;
+    const sn = c.Sn[i]; if (sn > Yhi) continue;
+    dot(ctx, Xf(c.N[i]), Ys(Math.max(0, sn)), 2.2, "#5fd4e6", c.src[i] === "ame");
+  }
+  const Sa = NUCLEO.Sa0(S.T9, S.lnn);
+  ctx.strokeStyle = "#5fd4e6"; ctx.setLineDash([4, 3]); ctx.beginPath(); ctx.moveTo(L0, Ys(Sa)); ctx.lineTo(w - R2, Ys(Sa)); ctx.stroke(); ctx.setLineDash([]);
+  ctx.strokeStyle = "#8a7fd6"; ctx.setLineDash([3, 3]); ctx.beginPath(); ctx.moveTo(Xf(c.Ndrip + 0.5), T0); ctx.lineTo(Xf(c.Ndrip + 0.5), h - B0); ctx.stroke(); ctx.setLineDash([]);
+  document.getElementById("zname").innerHTML = `Z = ${S.Z}, ${ELEM[S.Z]}`;
+  document.getElementById("leg3").innerHTML = `<span><i style="border-color:#ff9a3c;border-top-width:6px;width:8px"></i>isotope share Y(Z,N)/Y(Z), path ${nucH(S.Z, c.Npeak)}</span>` +
+    `<span><i class="p" style="background:#5fd4e6"></i>S<sub>n</sub>, MeV, right axis (filled AME2020, open FRDM(2012))</span><span><i class="d" style="border-color:#5fd4e6"></i>S<sub>a</sub><sup>0</sup> = ${Sa.toFixed(2)} MeV</span>`;
+}
+
+// ---------- panels
+const STAGETXT = {
+  s: "Slow captures, years apart (1/(n<sub>n</sub>σv<sub>T</sub>) ≈ 13 y for n<sub>n</sub> = 10<sup>8</sup> cm⁻³, σ = 100 mb, kT = 30 keV), so almost every radioactive nucleus decays first: the path zigzags along the valley of stability from <sup>56</sup>Fe to <sup>209</sup>Bi. Rings: the s-only nuclei, shielded from the r decay by a stable isobar.",
+  r: "A neutron flood: in each element the isotopes share out by (n,γ)⇄(γ,n) balance, and the most abundant one (brightest column) is the r path, where S<sub>n</sub> ≈ S<sub>a</sub><sup>0</sup>. At the closed shells the path climbs straight up in Z: the waiting points.",
+  f: "The neutrons run out. Every path nucleus β-decays at constant A, diagonally across the chart, to its first stable isobar (rings): the r abundance peaks form where the waiting points land.",
+  all: "Both processes on one chart: the s path along stability, the r path on the neutron-rich side, and the decay back from it.",
+};
+function drawInfo() {
+  const Sa = NUCLEO.Sa0(S.T9, S.lnn), kT = NUCLEO.kT(S.T9);
+  document.getElementById("stagetxt").innerHTML = STAGETXT[S.stage];
+  document.getElementById("t9o").textContent = `${S.T9.toFixed(2)} GK`;
+  document.getElementById("nno").innerHTML = `${pow10(S.lnn)} cm⁻³`;
+  document.getElementById("rinfo").innerHTML = `
+    <dt>kT</dt><dd>${(kT * 1000).toFixed(1)} keV</dd>
+    <dt>S<sub>a</sub><sup>0</sup></dt><dd style="color:var(--accent)">${Sa.toFixed(2)} MeV (path where S<sub>n</sub> ≈ S<sub>a</sub><sup>0</sup>)</dd>
+    <dt>path</dt><dd>${R.length ? nucH(R[0].Z, R[0].Npeak) + " … " + nucH(R[R.length - 1].Z, R[R.length - 1].Npeak) : "n/a"}</dd>
+    <dt>masses</dt><dd>AME2020, FRDM(2012) beyond</dd>`;
+  const wp = waiting(R);
+  let html = `<tr><th>N</th><th>elements</th><th>decay to A</th><th>s peak A</th></tr>`;
+  for (const m of MAGIC_N) {
+    const l = wp[m], sAs = NUC.filter((r) => r[1] === m && isStable(r)).map((r) => r[0] + m);
+    html += `<tr><td>${m}</td><td>${l.length ? `${ELEM[l[0].Z]}-${ELEM[l[l.length - 1].Z]} (${l.length})` : "none"}</td><td>${l.length ? `${l[0].Z + m}-${l[l.length - 1].Z + m}` : "-"}</td><td>${Math.min(...sAs)}-${Math.max(...sAs)}</td></tr>`;
+  }
+  document.getElementById("wp").innerHTML = html;
+  const meas = [];
+  for (const m of MAGIC_N) for (const c of wp[m]) { const r = ROW.get(c.Z * 1000 + m); if (r && r[3] != null && !r[6]) meas.push(`${nucH(c.Z, m)} ${fmtT(r[3])}`); }
+  document.getElementById("wpsrc").innerHTML = (meas.length ? `Measured half-lives (NUBASE2020): ${meas.join(", ")}. ` : "No waiting point of this path has a measured half-life in NUBASE2020. ") +
+    `s peak: the stable nuclei with that N. "decay to A" assumes no β-delayed neutron emission.`;
+  const w82 = wp[82];
+  document.getElementById("stamp").innerHTML = S.stage === "s"
+    ? `<b>s process: <sup>56</sup>Fe to <sup>209</sup>Bi along stability</b><small>${SPATH.filter((s) => s[4] === "n").length} captures, ${SPATH.filter((s) => s[4] !== "n").length} decays · stalls at N = 50, 82, 126 near A ≈ 88, 138, 208</small>`
+    : `<b>r path at T<sub>9</sub> = ${S.T9.toFixed(2)}, n<sub>n</sub> = ${pow10(S.lnn)} cm⁻³</b><small>S<sub>a</sub><sup>0</sup> = ${Sa.toFixed(2)} MeV · ` +
+      `${w82.length ? `N = 82 waiting points ${nucH(w82[0].Z, 82)} to ${nucH(w82[w82.length - 1].Z, 82)} decay to A = ${w82[0].Z + 82} to ${w82[w82.length - 1].Z + 82}` : "the path misses N = 82"} · s peak at A = 138</small>`;
+}
+function drawModel() {
+  const missed = SONLY.filter((s) => !SPATH.some((p) => p[2] === s.Z && p[3] === s.N)).map((s) => nucH(s.Z, s.N));
+  document.getElementById("model").innerHTML = `
+  <span><b style="color:var(--ink)">r process, the one live formula.</b> Along each element (n,γ) and (γ,n) balance, Arnould, Goriely and Takahashi, Phys. Rep. 450, 97 (2007), arXiv:0705.4512, Eq. (24): Y(Z,A+1)/Y(Z,A) = n<sub>n</sub> (2πħ²/m<sub>u</sub>kT)<sup>3/2</sup> G(A+1)/(2G(A)) exp(S<sub>n</sub>(Z,A+1)/kT), with G = 1 for every nucleus. The isotope with the largest share is the path; their Eq. (25), S<sub>a</sub><sup>0</sup> = (34.075 − log n<sub>n</sub> + 1.5 log T<sub>9</sub>) T<sub>9</sub>/5.04 MeV, is the S<sub>n</sub> where it sits. S<sub>n</sub> from AME2020 where both masses are measured, from FRDM(2012) otherwise (never one of each); a chain ends where FRDM's S<sub>2n</sub> turns negative.</span>
+  <span><b style="color:var(--ink)">s path, drawn by a rule.</b> From <sup>56</sup>Fe a stable nucleus captures; a radioactive one decays by its main NUBASE2020 mode when its half-life is below 10 y and is drawn as capturing above (<sup>63</sup>Ni, <sup>79</sup>Se, <sup>85</sup>Kr, <sup>93</sup>Zr, <sup>99</sup>Tc, <sup>107</sup>Pd, <sup>151</sup>Sm, <sup>193</sup>Pt, <sup>205</sup>Pb). This is the assumption of the classical s process that a nucleus on the path is either stable or decays before the next capture, which fails at the branchings (Prantzos et al. 2020, Sect. 2). The path closes at <sup>209</sup>Bi(n,γ)<sup>210</sup>Bi(β<sup>−</sup>)<sup>210</sup>Po(α)<sup>206</sup>Pb. It reaches ${SONLY.length - missed.length} of the ${SONLY.length} s-only nuclei of Prantzos et al.; ${missed.join(", ")} lie behind branchings, and Prantzos et al. note p-process contributions to <sup>80</sup>Kr and <sup>86</sup>Sr and radiogenic ones to <sup>87</sup>Sr (from <sup>87</sup>Rb) and <sup>176</sup>Hf (from <sup>176</sup>Lu). Terrestrial half-lives: the stellar ones differ for several branch points.</span>
+  <span><b style="color:var(--ink)">Freeze-out.</b> Each path nucleus decays at constant A to the lowest-Z stable or primordial isobar (half-life above 10<sup>15</sup> s, NUBASE2020) on its neutron-rich side; above A = 209 nothing is followed.</span>
+  <span><b style="color:var(--ink)">Checked</b> (tests/check_nucleosynthesis.js): the page's Saha ratio for one chain point against a hand calculation from the AME2020 masses and CODATA constants; the chain maximum against S<sub>a</sub><sup>0</sup>; no console errors.</span>`;
+  document.getElementById("datasrc").innerHTML =
+    `Masses: AME2020, Wang et al., Chin. Phys. C 45, 030003 (2021); FRDM(2012), Möller et al., At. Data Nucl. Data Tables 109-110, 1 (2016), arXiv:1508.06294. Half-lives: NUBASE2020, Kondev et al., Chin. Phys. C 45, 030001 (2021). ` +
+    `Abundances: Lodders, Palme, Gail, Landolt-Börnstein VI/4B (2009), arXiv:0901.1149, Table 10 (protosolar, 4.56 Ga ago). s/r split and s-only list: Prantzos et al., MNRAS 491, 1832 (2020), arXiv:1911.02545, their isotopic table, which also lists the splits of Sneden, Cowan and Gallino (2008) and Goriely (1999); r = residual of the solar value, so it carries every error of the s estimate.`;
+}
+
+// ---------- 3D hover / click
+const ray = new THREE.Raycaster(), mouse = new THREE.Vector2(), plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0), hit = new THREE.Vector3();
+const tip = document.getElementById("tip");
+function cellAt(e) {
+  mouse.set(e.clientX / innerWidth * 2 - 1, -e.clientY / innerHeight * 2 + 1);
+  ray.setFromCamera(mouse, camera);
+  const ih = ray.intersectObject(rcols, false);
+  if (ih.length && ih[0].instanceId != null && ih[0].instanceId < rcols.count) return rIndex[ih[0].instanceId];
+  if (!ray.ray.intersectPlane(plane, hit)) return null;
+  return { Z: Math.round(Z0 - hit.z), N: Math.round(hit.x + N0) };
+}
+function tipText(cell) {
+  const { Z, N } = cell;
+  if (!ELEM[Z]) return null;
+  const c = R.find((x) => x.Z === Z), k = c ? N - c.N[0] : -1, r = ROW.get(Z * 1000 + N);
+  let s = `<b>${nucH(Z, N)}</b> Z = ${Z}, N = ${N}<br>`;
+  s += r ? `T<sub>1/2</sub> ${isStable(r) ? "stable" : fmtT(r[3])}${r[7] ? ", J<sup>π</sup> " + r[7] : ""}<br>` : `not in NUBASE2020<br>`;
+  if (c && k >= 0 && k < c.N.length) {
+    if (c.Sn[k] != null) s += `S<sub>n</sub> ${c.Sn[k].toFixed(3)} MeV (${c.src[k] === "ame" ? "AME2020" : "FRDM(2012)"})<br>`;
+    s += `share of element ${Z}: ${c.P[k] < 1e-4 ? "below 0.01" : (100 * c.P[k]).toPrecision(3)}%${k === c.ipeak ? " (path)" : ""}`;
+    const A = Z + N, Zs = NUCLEO.stableIsobar(Z, A);
+    if (Zs != null && Zs !== Z) s += `<br>decays to ${nucH(Zs, A - Zs)}`;
+  }
+  if (SONLY.some((o) => o.Z === Z && o.N === N)) s += `<br><span style="color:var(--s)">s-only (Prantzos et al. 2020)</span>`;
+  return s;
+}
+function pickZ(Z) { if (Z >= ZMIN && Z <= ZMAX) { S.Z = Z; placeSel(); drawChain(); drawPath(); setHash(); } }
+let downAt = null;
+renderer.domElement.addEventListener("pointerdown", (e) => { downAt = [e.clientX, e.clientY]; });
+renderer.domElement.addEventListener("pointerup", (e) => {
+  if (!downAt || Math.hypot(e.clientX - downAt[0], e.clientY - downAt[1]) > 4) return;
+  const c = cellAt(e); if (c) pickZ(c.Z);
+});
+renderer.domElement.addEventListener("pointermove", (e) => {
+  if (e.buttons) { tip.style.display = "none"; return; }
+  const c = cellAt(e), t = c && tipText(c);
+  if (!t) { tip.style.display = "none"; return; }
+  tip.innerHTML = t; tip.style.display = "block"; tip.style.left = e.clientX + "px"; tip.style.top = e.clientY + "px";
+});
+renderer.domElement.addEventListener("pointerleave", () => { tip.style.display = "none"; });
+document.getElementById("ppath").addEventListener("click", (e) => { const r = e.target.getBoundingClientRect(); pickZ(Math.round(PLOTS.ppath.Yinv(e.clientY - r.top))); });
+document.getElementById("zdn").addEventListener("click", () => pickZ(Math.max(ZMIN, S.Z - 1)));
+document.getElementById("zup").addEventListener("click", () => pickZ(Math.min(ZMAX, S.Z + 1)));
+
+// ---------- state, hash
+function setHash() {
+  const h = `#T9=${S.T9.toFixed(2)}&nn=${S.lnn.toFixed(1)}&Z=${S.Z}&show=${S.stage}`;
+  if (location.hash !== h) history.replaceState(null, "", h);
+}
+function parseHash() {
+  const q = new URLSearchParams(location.hash.slice(1));
+  const num = (k, lo, hi) => { const v = parseFloat(q.get(k)); return isFinite(v) && v >= lo && v <= hi ? v : null; };
+  let v;
+  if ((v = num("T9", 0.6, 3)) != null) S.T9 = v;
+  if ((v = num("nn", 16, 32)) != null) S.lnn = v;
+  if ((v = num("Z", ZMIN, ZMAX)) != null) S.Z = Math.round(v);
+  if (["s", "r", "f", "all"].includes(q.get("show"))) S.stage = q.get("show");
+}
+function syncUI() {
+  document.getElementById("t9").value = S.T9; document.getElementById("nn").value = S.lnn;
+  const press = (id, v) => { for (const b of document.querySelectorAll(`#${id} button`)) b.setAttribute("aria-pressed", b.dataset.v === String(v) ? "true" : "false"); };
+  press("stagesel", S.stage); press("qmode", quality); press("srsrc", S.sr);
+}
+function updateR() { computeR(); buildR(); placeSel(); drawInfo(); drawAbund(); drawPath(); drawChain(); setHash(); }
+let pendR = false;
+function onR() { if (pendR) return; pendR = true; requestAnimationFrame(() => { pendR = false; updateR(); }); }
+document.getElementById("t9").addEventListener("input", (e) => { S.T9 = +e.target.value; onR(); });
+document.getElementById("nn").addEventListener("input", (e) => { S.lnn = +e.target.value; onR(); });
+function seg(id, fn) { document.getElementById(id).addEventListener("click", (e) => { const b = e.target.closest("button"); if (!b) return; fn(b.dataset.v); syncUI(); }); }
+seg("stagesel", (v) => { S.stage = v; tStage = 0; buildR(); drawInfo(); setHash(); });
+seg("srsrc", (v) => { S.sr = v; drawAbund(); });
+seg("qmode", (v) => { quality = v; applyQuality(); });
+document.getElementById("sceneOnly").addEventListener("click", () => {
+  const hidden = document.body.classList.toggle("scene-only"), b = document.getElementById("sceneOnly");
+  b.setAttribute("aria-pressed", String(hidden)); b.textContent = hidden ? "show panels · H" : "hide panels · H";
+  applyOffset(); camera.updateProjectionMatrix();
+});
+addEventListener("keydown", (e) => { if (e.code === "KeyH" && !e.repeat && !e.ctrlKey && !e.metaKey && !e.altKey && !e.target.closest("input,textarea")) document.getElementById("sceneOnly").click(); });
+addEventListener("hashchange", () => { parseHash(); syncUI(); updateR(); });
+addEventListener("resize", () => {
+  camera.aspect = innerWidth / innerHeight; applyOffset(); camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight); composer.setSize(innerWidth, innerHeight);
+  drawAbund(); drawPath(); drawChain();
+});
+let quality = narrow ? "low" : "high";
+function applyQuality() {
+  const hi = quality === "high";
+  const g = hi ? GROUND_PRE_ACES : GROUND;
+  scene.background.copy(g); scene.fog.color.copy(g); renderer.setClearColor(g);
+  tiles.material = hi ? tileGlass : tileFast;
+  document.getElementById("vnote").innerHTML = (hi ? "Glass tiles, soft bloom. " : "Opaque tiles, no bloom. ") +
+    "Floor: one cell per nuclide, N to the right, Z away from you; tiles are the nuclides of NUBASE2020, the lit ones stable or primordial (half-life above 10<sup>15</sup> s). Cyan line: the s path, captures bright, decays dim, spheres the stable nuclei on it, rings the s-only nuclei. Orange columns: the share of each isotope in its element, height linear (" + RH + " cells = 100%), glow rising as the square root of the share; the brightest column per element is the path. Dashed violet: where S<sub>2n</sub> of FRDM(2012) turns negative. Amber tracks and rings: the β decay at constant A from each path nucleus to its first stable isobar. Sparks move along the paths; their speed is presentation, not time. Colours and glow are presentation.";
+  syncUI();
+}
+
+// ---------- start
+parseHash();
+computeR(); buildR(); placeSel();
+applyQuality();
+drawInfo(); drawModel(); drawAbund(); drawPath(); drawChain();
+setHash();
+
+// ---------- loop
+let last = performance.now(), tsec = 0, tStage = 0;
+function animate(now) {
+  requestAnimationFrame(animate);
+  const dt = Math.min(0.1, Math.max(0, (now - last) / 1000)); last = now; tsec += dt; tStage += dt;
+  controls.update();
+  // decay sparks: one per beta-decay step per track
+  if (rSpark.p.visible) {
+    let k = 0;
+    for (let t = 0; t < trackList.length; t++) {
+      const tr = trackList[t], n = Math.max(1, tr.steps);
+      for (let j = 0; j < n && k < rSpark.n; j++, k++) {
+        const ph = reduce ? (j + 0.5) / n : ((tsec * 0.18 + j / n + t * 0.137) % 1);
+        rSpark.pos[3 * k] = tr.a.x + (tr.b.x - tr.a.x) * ph; rSpark.pos[3 * k + 1] = 0.7; rSpark.pos[3 * k + 2] = tr.a.z + (tr.b.z - tr.a.z) * ph;
+        rSpark.a[k] = 0.35 + 0.65 * Math.sin(Math.PI * ph);
+      }
+    }
+    for (; k < rSpark.n; k++) rSpark.a[k] = 0;
+    rSpark.g.attributes.position.needsUpdate = true; rSpark.g.attributes.aA.needsUpdate = true;
+  }
+  // s sparks: evenly spaced pulses running from 56Fe to 209Bi
+  if (sSpark.p.visible) {
+    const L = sLen[sLen.length - 1], ns = 120;
+    let seg = 0;
+    for (let k = 0; k < ns; k++) {
+      const d = ((k / ns + (reduce ? 0 : tsec * 0.012)) % 1) * L;
+      seg = 0; let lo = 0, hi = sLen.length - 1;
+      while (hi - lo > 1) { const m = (lo + hi) >> 1; if (sLen[m] <= d) lo = m; else hi = m; }
+      seg = lo;
+      const a = sPoly[seg], b = sPoly[seg + 1], f = (d - sLen[seg]) / Math.max(1e-9, sLen[seg + 1] - sLen[seg]);
+      sSpark.pos[3 * k] = a.x + (b.x - a.x) * f; sSpark.pos[3 * k + 1] = 0.75; sSpark.pos[3 * k + 2] = a.z + (b.z - a.z) * f;
+      sSpark.a[k] = 0.9;
+    }
+    for (let k = ns; k < sSpark.n; k++) sSpark.a[k] = 0;
+    sSpark.g.attributes.position.needsUpdate = true; sSpark.g.attributes.aA.needsUpdate = true;
+  }
+  const pix = renderer.domElement.height / (2 * Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2));
+  rSpark.m.uniforms.uPix.value = sSpark.m.uniforms.uPix.value = pix;
+  const d = camera.position.distanceTo(controls.target);
+  scene.fog.near = d * 1.4; scene.fog.far = d * 4;
+  if (quality === "high") composer.render(); else renderer.render(scene, camera);
+  drawLabs();
+}
+requestAnimationFrame(animate);
+</script>
+<script src="assets/glass.js"></script>
+</body>
+</html>

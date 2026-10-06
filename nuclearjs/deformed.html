@@ -1,0 +1,844 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Deformed nucleus · nuclearjs</title>
+<link rel="stylesheet" href="assets/glass.css">
+<style>
+body{margin:0}
+:root{
+  color-scheme:dark;
+  --ground:#0b0d12; --line:#262c3a;
+  --ink:#e6e8ee; --muted:#8a92a6; --accent:#f2c14e;
+  --neu:#a8cdf2; --pro:#ff9656;
+  --sans:"Avenir Next","Futura","Helvetica Neue","PingFang SC","Noto Sans SC",system-ui,sans-serif;
+  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+}
+html,body{height:100%}
+body{background:var(--ground);color:var(--ink);font-family:var(--sans);overflow:hidden}
+#stage{position:fixed;inset:0}
+#stage canvas{display:block;touch-action:none}
+.panel{position:fixed;border-radius:18px;padding:16px 18px;display:flex;flex-direction:column;gap:12px;overflow:auto;box-sizing:border-box}
+.panel{z-index:2}
+.panel>*{flex-shrink:0}
+#ctl{left:16px;top:calc(16px + env(safe-area-inset-top,0px));width:min(300px,calc(100% - 32px));max-height:calc(100% - 32px)}
+#side{right:16px;top:calc(16px + env(safe-area-inset-top,0px));width:430px;max-height:calc(100% - 32px);gap:10px}
+h1{margin:0;font-size:22px;font-weight:600;letter-spacing:.01em}
+h1 sup{font-size:.6em}
+.sub{margin:2px 0 0;color:var(--muted);font-size:13px;line-height:1.45}
+.sub sup,.src sup{font-size:.7em}
+.grp{display:flex;flex-direction:column;gap:6px}
+.lab{font-size:11px;text-transform:uppercase;letter-spacing:.12em;color:var(--muted)}
+.seg{display:flex;border:1px solid var(--line);border-radius:4px;overflow:hidden}
+.seg button{flex:1;background:none;border:0;color:var(--muted);font:500 12px var(--mono);padding:6px 4px;cursor:pointer}
+.seg button+button{border-left:1px solid var(--line)}
+.seg button[aria-pressed="true"]{background:#1f2533;color:var(--ink)}
+button:focus-visible,input:focus-visible,summary:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+input[type=text]{background:#0f121a;border:1px solid var(--line);border-radius:4px;color:var(--ink);font:13px var(--mono);padding:6px 8px;width:100%;box-sizing:border-box}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chips button{background:#161a24;border:1px solid var(--line);border-radius:4px;color:var(--ink);font:12px var(--mono);padding:5px 8px;cursor:pointer}
+.chips button:hover{border-color:var(--muted)}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:3px 10px;font:12px var(--mono);font-variant-numeric:tabular-nums}
+.kv dt{color:var(--muted)}.kv dd{margin:0}
+.kv .n{color:var(--neu)}.kv .p{color:var(--pro)}
+.kv .hit{color:#9fd8a8}.kv .miss{color:var(--accent)}
+.row{display:flex;gap:8px;align-items:center;font:12px var(--mono);color:var(--muted)}
+.row input[type=range]{flex:1;accent-color:var(--accent);min-width:0}
+.row output{min-width:52px;text-align:right;color:var(--ink);font-variant-numeric:tabular-nums}
+.row span{min-width:22px}
+.btns{display:flex;gap:14px;flex-wrap:wrap}
+details summary{cursor:pointer;font-size:11px;text-transform:uppercase;letter-spacing:.12em;color:var(--muted);list-style:none}
+details summary::before{content:"▸ ";}
+details[open] summary::before{content:"▾ ";}
+details .grp{margin-top:8px}
+.linkbtn{background:none;border:0;color:var(--muted);font:12px var(--mono);padding:0;cursor:pointer;text-decoration:underline;align-self:flex-start}
+.home{font:12px var(--mono);color:var(--muted);text-decoration:none}.home:hover{color:var(--ink)}
+.src{font-size:11px;color:var(--muted);line-height:1.45}
+.src a{color:var(--muted)}
+.warn{font-size:12px;color:var(--accent);line-height:1.4}
+#dia{width:100%;display:block;user-select:none}
+#dia .cv{cursor:pointer}
+#dia text{font:10px var(--mono);fill:var(--ink)}
+#dia .ax text{fill:var(--muted)}
+.cap{display:flex;justify-content:space-between;align-items:baseline;font:11px var(--mono);color:var(--muted)}
+.cap b{font:600 13px var(--sans);color:var(--ink)}
+.comp{display:grid;grid-template-columns:64px 1fr 44px;gap:3px 8px;align-items:center;font:11px var(--mono);font-variant-numeric:tabular-nums}
+.comp i{display:block;height:7px;border-radius:2px;background:var(--neu);opacity:.85}
+.comp span:last-child{text-align:right;color:var(--muted)}
+.axlab{position:fixed;font:500 11px var(--mono);color:var(--accent);pointer-events:none;transform:translate(-50%,-50%);opacity:.8;white-space:nowrap}
+#stamp{position:fixed;left:50%;bottom:calc(26px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);text-align:center;pointer-events:none}
+#stamp b{display:block;font:600 clamp(30px,4.6vw,54px)/1 var(--sans);letter-spacing:-.01em}
+#stamp b sup{font-size:.55em}
+#stamp small{display:block;font:500 12px var(--mono);color:var(--muted);margin-top:6px}
+.hint{position:fixed;left:16px;bottom:calc(14px + env(safe-area-inset-bottom,0px));font:11px var(--mono);color:var(--muted)}
+@media (max-width:1250px){#stamp{left:calc(50% - 60px)}}
+@media (max-width:900px){
+  #ctl{max-height:42vh}
+  #side{left:16px;right:16px;width:auto;top:auto;bottom:calc(12px + env(safe-area-inset-bottom,0px));max-height:44vh}
+  #stamp,.hint,.axlab{display:none}
+}
+@media (max-width:560px){.panel{padding:10px 12px;gap:9px}h1{font-size:18px}}
+</style>
+<script data-goatcounter="https://jinleiphys.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
+</head>
+<body>
+
+<div id="stage"></div>
+
+<aside id="ctl" class="panel glass glass-deep" data-glass data-glass-bevel="22" data-glass-scale="42">
+  <div>
+    <a class="home" href="https://vibeinscience.com/nuclides.html">← nuclide chart</a><br><a class="home" id="toSph" href="nucleus.html">← spherical shell model</a>
+    <h1 id="title">Deformed nucleus</h1>
+    <p class="sub">The Nilsson model: one nucleon in a deformed, modified oscillator well. Stretch the well and each spherical j level splits into its projections Ω on the symmetry axis.</p>
+  </div>
+  <div class="grp">
+    <label class="lab" for="find">Nucleus</label>
+    <input id="find" type="text" placeholder="166Er, 25Mg, 235U" autocomplete="off" spellcheck="false">
+    <div class="chips" id="chips">
+      <button data-n="24Mg">24Mg</button><button data-n="25Mg">25Mg</button><button data-n="152Sm">152Sm</button>
+      <button data-n="165Ho">165Ho</button><button data-n="166Er">166Er</button><button data-n="177Hf">177Hf</button>
+      <button data-n="235U">235U</button><button data-n="238U">238U</button><button data-n="208Pb">208Pb</button>
+    </div>
+  </div>
+  <div class="grp">
+    <div class="lab">Diagram for</div>
+    <div class="seg" id="species">
+      <button data-v="n" aria-pressed="true">neutrons</button>
+      <button data-v="p" aria-pressed="false">protons</button>
+    </div>
+  </div>
+  <div class="grp">
+    <div class="lab">Deformation</div>
+    <div class="row"><span>ε<sub>2</sub></span><input id="e2" type="range" min="-0.4" max="0.6" step="0.005"><output id="e2o"></output></div>
+    <div class="row"><span>ε<sub>4</sub></span><input id="e4" type="range" min="-0.1" max="0.12" step="0.005"><output id="e4o"></output></div>
+    <div class="btns"><button class="linkbtn" id="toFRDM" type="button">FRDM(2012) ground state</button><button class="linkbtn" id="zero4" type="button">ε<sub>4</sub> = 0</button></div>
+    <p class="sub" id="defnote"></p>
+  </div>
+  <div class="grp">
+    <div class="lab">Rendering</div>
+    <div class="seg" id="qmode">
+      <button data-v="high" title="ray-marched volume, glass surface, soft bloom">cinematic</button>
+      <button data-v="low" title="point cloud, for phones">fast</button>
+    </div>
+    <div class="seg" id="cutmode">
+      <button data-v="0" aria-pressed="false">whole</button>
+      <button data-v="1" aria-pressed="true" title="remove the wedge that faces you: the cut faces show the orbital in a plane through the symmetry axis">cut-away</button>
+    </div>
+    <p class="sub" id="rnote"></p>
+  </div>
+  <div class="grp">
+    <div class="lab">Ground state from the last nucleon</div>
+    <dl class="kv" id="info"></dl>
+    <p class="warn" id="warn" hidden></p>
+  </div>
+  <details>
+    <summary>Hamiltonian and sources</summary>
+    <div class="grp src">
+      <span>H = T + ½ħω<sub>0</sub>ρ<sub>t</sub><sup>2</sup>[1 − ⅔ε<sub>2</sub>P<sub>2</sub>(cos θ<sub>t</sub>) + 2ε<sub>4</sub>P<sub>4</sub>(cos θ<sub>t</sub>)] − κħω̊<sub>0</sub>[2ℓ<sub>t</sub>·s + μ(ℓ<sub>t</sub><sup>2</sup> − ⟨ℓ<sub>t</sub><sup>2</sup>⟩<sub>N</sub>)], ⟨ℓ<sub>t</sub><sup>2</sup>⟩<sub>N</sub> = N(N+3)/2, in stretched coordinates ξ = x(Mω<sub>⊥</sub>/ħ)<sup>1/2</sup>, ζ = z(Mω<sub>z</sub>/ħ)<sup>1/2</sup>, ω<sub>⊥</sub> = ω<sub>0</sub>(1 + ε<sub>2</sub>/3), ω<sub>z</sub> = ω<sub>0</sub>(1 − ⅔ε<sub>2</sub>). Ragnarsson &amp; Nilsson, <i>Shapes and Shells in Nuclear Structure</i> (Cambridge, 2005), Secs. 8.3 to 8.5; the same form is Eq. (vosc) of Möller et al. (2016) at γ = 0.</span>
+      <span>κ, μ by oscillator shell N: Bengtsson &amp; Ragnarsson, Nucl. Phys. A 436 (1985) 14, as tabulated in Table 6.2 of Shapes and Shells (protons N = 4: 0.065, 0.57; N = 5: 0.060, 0.65; N = 6: 0.054, 0.69; neutrons N = 4: 0.070, 0.39; N = 5: 0.062, 0.43; N = 6: 0.062, 0.34; the N ≥ 8 row for all higher shells). ω<sub>0</sub>(ε<sub>2</sub>, ε<sub>4</sub>) keeps the volume inside every equipotential fixed; ħω̊<sub>0</sub> = 41A<sup>−1/3</sup> MeV.</span>
+      <span>Basis: stretched spherical oscillator |N ℓ Λ Σ⟩, one block per Ω and parity. With ε<sub>4</sub> = 0 each (N, Ω) block is exact. ρ<sup>2</sup>P<sub>4</sub> couples all shells of one parity, so ε<sub>4</sub> ≠ 0 is diagonalized in N ≤ N<sub>max</sub>. At the chosen deformation N<sub>max</sub> grows two shells at a time until the 13 levels around the Fermi level move by less than 10<sup>−4</sup> ħω<sub>0</sub>; the change reached is printed under the diagram. The curves use a smaller basis, checked along the path the same way, with unconverged ranges shaded. An independent solver in a Cartesian basis agrees to 3×10<sup>−14</sup> ħω<sub>0</sub>.</span>
+      <span>Labels Ω<sup>π</sup>[N n<sub>z</sub> Λ]: in each (N, Ω) block of the pure ε<sub>2</sub> problem levels never cross, so the k-th one connects to the k-th asymptotic state (largest n<sub>z</sub> lowest for prolate, smallest for oblate); labels are assigned one-to-one, greedily: all overlaps² between the levels of an Ω<sup>π</sup> block and the asymptotic block states are sorted, largest first, and a pair is taken when neither member is taken yet. A level can therefore get a state that is not its own largest overlap; such a label, or one with overlap² below 0.5, is marked with ?.</span>
+      <span>Ground-state deformations: FRDM(2012), P. Möller et al., At. Data Nucl. Data Tables 109–110 (2016) 1, arXiv:1508.06294 (ε<sub>2</sub>, ε<sub>4</sub> of the axial ground state; ε<sub>3</sub>, ε<sub>6</sub> not used here). β<sub>2</sub> is computed from the surface drawn, by their Eq. (betaconv); to first order ε<sub>2</sub> ≈ 0.95β<sub>2</sub>. Measured J<sup>π</sup>: NUBASE2020, Kondev et al., Chin. Phys. C 45, 030001 (2021).</span>
+    </div>
+  </details>
+</aside>
+
+<aside id="side" class="panel glass glass-deep" data-glass data-glass-bevel="22" data-glass-scale="42">
+  <div class="cap"><b id="dtitle">Nilsson diagram</b><span>E / ħω<sub>0</sub>(ε<sub>2</sub>, ε<sub>4</sub>)</span></div>
+  <svg id="dia" role="img" aria-label="Nilsson diagram"></svg>
+  <div class="src" id="dnote"></div>
+  <div class="cap"><b id="stitle">Selected orbital</b><span id="sE"></span></div>
+  <div class="comp" id="comp"></div>
+  <div class="src">Components |N ℓ<sub>t</sub> j<sub>t</sub> Ω⟩ in the stretched spherical oscillator basis (angular momenta of the stretched coordinates, not projections onto laboratory spherical orbitals; the two agree only at ε<sub>2</sub> = 0). The density in 3D is |ψ|<sup>2</sup> summed over spin, drawn from this eigenvector; it is symmetric about the symmetry axis.</div>
+</aside>
+
+<div id="axlab" class="axlab" hidden>symmetry axis</div>
+<div id="stamp"></div>
+<div class="hint">drag to orbit · scroll to zoom · click a level</div>
+
+<script src="assets/three-bundle.js"></script>
+<script src="assets/three-post.js"></script>
+<script src="assets/vol.js"></script>
+<script src="assets/nubase.js"></script>
+<script src="assets/frdm2012.js"></script>
+<script src="assets/nilsson.js"></script>
+<script>
+"use strict";
+// ---------- data
+const NUC = window.NUC;                    // [Z, N, sym, log10 T1/2, mode, B/A, est, J^pi, year]
+const ROW = new Map(), SYM = {}, ELEM = {};
+for (const r of NUC) { ROW.set(r[0] + "," + r[1], r); SYM[r[2].toLowerCase()] = r[0]; ELEM[r[0]] = r[2]; }
+const FRDM = new Map();
+for (const r of window.FRDM2012) FRDM.set(r[0] + "," + r[1], { e2: r[2], e4: r[3], b2: r[4], b4: r[5] });
+const NL = window.NILSSON;
+const sup = (A) => `<sup>${A}</sup>`;
+const LN = NL.LNAME;
+
+function parseNucleus(s) {
+  s = s.trim();
+  let m = s.match(/^#?Z(\d+)N(\d+)$/i);
+  if (m) return { Z: +m[1], N: +m[2] };
+  s = s.toLowerCase().replace(/^#/, "").replace(/[-\s]/g, "");
+  m = s.match(/^(\d+)([a-z]+)$/) || s.match(/^([a-z]+)(\d+)$/);
+  if (!m) return null;
+  let A, el;
+  if (/^\d/.test(m[1])) { A = +m[1]; el = m[2]; } else { el = m[1]; A = +m[2]; }
+  const Z = SYM[el];
+  if (Z == null || A <= Z) return null;
+  return { Z, N: A - Z };
+}
+
+// ---------- state
+const S = { Z: 68, N: 98, q: "n", e2: 0.26, e4: 0.02, selId: null, dia: null, sol: null, sel: null };
+const count = (q) => (q === "n" ? S.N : S.Z);
+const r3 = (x) => (Math.abs(x) < 5e-4 ? "0.000" : x.toFixed(3));
+const signed = (x, d = 3) => (x >= 0 ? "+" : "−") + Math.abs(x).toFixed(d);
+
+// label "7/2+[633]" into HTML with superscript parity
+function labHTML(lab) {
+  return lab.replace(/^(\d+\/2)([+−])/, "$1<sup>$2</sup>");
+}
+
+// ---------- scene
+const stage = document.getElementById("stage");
+const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.setSize(innerWidth, innerHeight);
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.05;
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+stage.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(38, innerWidth / innerHeight, 0.1, 500);
+const composer = new EffectComposer(renderer);
+composer.addPass(new RenderPass(scene, camera));
+const bloom = new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), 0.2, 0.6, 0.95);
+composer.addPass(bloom);
+composer.addPass(new OutputPass());
+const smaa = new SMAAPass(innerWidth * renderer.getPixelRatio(), innerHeight * renderer.getPixelRatio());
+composer.addPass(smaa);
+// image-based light from a soft procedural studio (panels with feathered edges, no files)
+scene.environment = VOL.studioEnv(renderer);
+renderer.localClippingEnabled = true;
+scene.fog = new THREE.Fog("#0b0d12", 60, 180);
+// The ground colour #0b0d12 is drawn untouched on the direct path, but OutputPass runs it through
+// ACES, whose toe crushes it to black. On the bloom path the background and fog therefore take the
+// linear colour that ACES (exposure 1.05) maps back to exactly #0b0d12: found by Newton on the r160
+// shader formula, residual 1e-11, sRGB out (11, 13, 18).
+const GROUND = new THREE.Color("#0b0d12");
+const GROUND_PRE_ACES = new THREE.Color().setRGB(0.0115476, 0.0131218, 0.0174740, THREE.LinearSRGBColorSpace);
+scene.background = GROUND.clone();
+
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+controls.dampingFactor = 0.08;
+controls.minDistance = 4;
+controls.maxDistance = 140;
+const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+controls.autoRotate = !reduce;
+controls.autoRotateSpeed = 0.35;
+// any user drag or wheel stops the auto-rotation and any camera fit still in progress
+controls.addEventListener("start", () => { controls.autoRotate = false; fitTo = 0; });
+
+// key (overhead, warm) and rim (behind) lights, fill from the environment: they light the floor, the scale bar and the glass
+VOL.lightRig(scene);
+// stage: matte floor, contact shadow (blurred attenuation of an overhead light through the volume), scale bar in fm
+const stage3 = new VOL.Stage(scene);
+const grid = new THREE.GridHelper(200, 200, "#2a3245", "#1d2333");
+grid.material.opacity = 0.55;
+stage3.fadeGrid(grid);
+scene.add(grid);
+// cut-away wedge facing the camera, shared by the volume, the glass and the point cloud
+const cut = new VOL.Cut();
+cut.on = true;
+// the orbital density as a volume (cinematic): ray-marched emission and absorption
+const vol = new VOL.Volume({ steps: 150, coarse: 1.15 }).useCut(cut);
+// the glow is dimmed so the lit iso shells carry the form; the cut faces keep the full brightness
+// (emission scales, presentation)
+vol.setExposure(0.3);
+vol.u.uFaceB.value = 0.75;
+const gov = new VOL.Governor(vol);
+scene.add(vol.mesh);
+// cinematic: the nuclear surface as physically based glass, clipped by the cut-away
+const glassMat = VOL.glassMaterial({ clippingPlanes: cut.planes, clipIntersection: true });
+let glass = null;
+
+// nuclear surface: the equipotential through R0 = 1.2 A^(1/3) fm at the sphere, deformed with the
+// well. Only its Fresnel rim is drawn (cool above, warm below), so the cloud inside stays visible.
+const rimMat = new THREE.ShaderMaterial({
+  vertexShader: `
+    varying vec3 vN; varying vec3 vV; varying float vY;
+    void main(){
+      vec4 mv = modelViewMatrix * vec4(position, 1.0);
+      vN = normalize(normalMatrix * normal); vV = normalize(-mv.xyz); vY = normal.y;
+      gl_Position = projectionMatrix * mv;
+    }`,
+  fragmentShader: `
+    varying vec3 vN; varying vec3 vV; varying float vY;
+    void main(){
+      float f = pow(1.0 - abs(dot(normalize(vN), normalize(vV))), 3.2);
+      vec3 c = mix(vec3(1.0, 0.80, 0.58), vec3(0.72, 0.86, 1.0), smoothstep(-0.6, 0.6, vY));
+      gl_FragColor = vec4(c * f * 0.7, f * 0.7);
+      #include <tonemapping_fragment>
+      #include <colorspace_fragment>
+    }`,
+  transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
+});
+let rimShell = null;
+const equator = new THREE.LineLoop(
+  new THREE.BufferGeometry().setFromPoints(Array.from({ length: 128 }, (_, i) => new THREE.Vector3(Math.cos(2 * Math.PI * i / 128), 0, Math.sin(2 * Math.PI * i / 128)))),
+  new THREE.LineBasicMaterial({ color: "#f2c14e", transparent: true, opacity: 0.28 }));
+scene.add(equator);
+function buildSurface() {
+  const R0 = 1.2 * Math.cbrt(S.Z + S.N), pts = [];
+  for (let i = 0; i <= 160; i++) {
+    const th = Math.PI * (1 - i / 160), s = NL.surface(S.e2, S.e4, th);
+    pts.push(new THREE.Vector2(Math.max(1e-6, s.x * R0), s.z * R0));
+  }
+  const g = new THREE.LatheGeometry(pts, 128);
+  g.computeVertexNormals();
+  if (rimShell) { rimShell.geometry.dispose(); rimShell.geometry = g; glass.geometry = g; }
+  else {
+    rimShell = new THREE.Mesh(g, rimMat); rimShell.renderOrder = 3; scene.add(rimShell);
+    glass = new THREE.Mesh(g, glassMat); glass.renderOrder = 20; scene.add(glass);
+    applyVis();
+  }
+  let zmax = 0; for (const p of pts) zmax = Math.max(zmax, Math.abs(p.y));
+  // equator of the surface: a faint ring, so the tilt of the symmetry axis reads in 3D
+  const req = NL.surface(S.e2, S.e4, Math.PI / 2).x * R0;
+  equator.scale.setScalar(req);
+  // the main volume pass skips pixels the glass covers; an ellipsoid inside the surface is safe
+  let smin = Infinity;
+  for (let i = 0; i <= 64; i++) {
+    const th = Math.PI * i / 64, sf = NL.surface(S.e2, S.e4, th), x = sf.x * R0, z = sf.z * R0;
+    smin = Math.min(smin, 1 / Math.sqrt((x / req) ** 2 + (z / zmax) ** 2));
+  }
+  vol.u.uSkip.value.set(req, zmax, req).multiplyScalar(0.985 * Math.min(1, smin));
+  return { R0, zmax, req };
+}
+
+// symmetry axis
+const axisMat = new THREE.LineDashedMaterial({ color: "#f2c14e", transparent: true, opacity: 0.5, dashSize: 0.4, gapSize: 0.3 });
+const axis = new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, -1, 0), new THREE.Vector3(0, 1, 0)]), axisMat);
+scene.add(axis);
+
+// point cloud: each point one draw from |psi|^2 of the selected orbital
+const NPTS = innerWidth < 700 ? 45000 : 110000;
+const pos = new Float32Array(NPTS * 3), from = new Float32Array(NPTS * 3);
+const col = new Float32Array(NPTS * 3), colFrom = new Float32Array(NPTS * 3);
+const cloudGeo = new THREE.BufferGeometry();
+cloudGeo.setAttribute("position", new THREE.BufferAttribute(pos, 3));
+cloudGeo.setAttribute("aFrom", new THREE.BufferAttribute(from, 3));
+cloudGeo.setAttribute("color", new THREE.BufferAttribute(col, 3));
+cloudGeo.setAttribute("aColFrom", new THREE.BufferAttribute(colFrom, 3));
+const cloudMat = new THREE.ShaderMaterial({
+  uniforms: {
+    uMix: { value: 1 }, uSize: { value: 0.16 }, uPix: { value: 600 }, uAlpha: { value: 0.24 },
+    uFocus: { value: 40 }, uAperture: { value: 0 },
+    uCut: { value: 1 }, uCutA: { value: cut.A }, uCutB: { value: cut.B },
+  },
+  vertexShader: `
+    attribute vec3 aFrom; attribute vec3 color; attribute vec3 aColFrom;
+    uniform float uMix, uSize, uPix, uFocus, uAperture, uCut;
+    uniform vec3 uCutA, uCutB;
+    varying vec3 vC;
+    void main(){
+      vec3 p = mix(aFrom, position, uMix);
+      vC = mix(aColFrom, color, uMix);
+      // cut-away: points inside the removed wedge are dropped (moved behind the camera)
+      if (uCut > 0.5 && dot(p, uCutA) > 0.0 && dot(p, uCutB) > 0.0) { gl_Position = vec4(0.0, 0.0, 2.0, 1.0); gl_PointSize = 0.0; return; }
+      vec4 mv = modelViewMatrix * vec4(p, 1.0);
+      gl_Position = projectionMatrix * mv;
+      // depth of field: circle of confusion added to the sprite, brightness divided by the area ratio
+      float coc = uAperture * abs(-mv.z - uFocus) / max(uFocus, 1e-3);
+      float s = min(uSize + coc, 10.0 * uSize);
+      vC *= (uSize * uSize) / (s * s);
+      gl_PointSize = max(1.0, s * uPix / -mv.z);
+    }`,
+  fragmentShader: `
+    uniform float uAlpha;
+    varying vec3 vC;
+    void main(){
+      vec2 d = gl_PointCoord - 0.5;
+      float r2 = dot(d, d);
+      if (r2 > 0.25) discard;
+      float a = exp(-r2 * 14.0) * uAlpha;
+      gl_FragColor = vec4(vC * a, a);
+      #include <tonemapping_fragment>
+      #include <colorspace_fragment>
+    }`,
+  transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
+});
+const cloud = new THREE.Points(cloudGeo, cloudMat);
+cloud.frustumCulled = false;
+scene.add(cloud);
+const CN = new THREE.Color("#a8cdf2"), CP = new THREE.Color("#ff9656");
+
+// ---------- sampling |psi|^2 in stretched coordinates, mapped to the laboratory frame
+let mix = 1, quality = innerWidth < 700 ? "low" : "high";
+function resample() {
+  for (let i = 0; i < pos.length; i++) {
+    from[i] = from[i] + (pos[i] - from[i]) * mix;
+    colFrom[i] = colFrom[i] + (col[i] - colFrom[i]) * mix;
+  }
+  const lv = S.sel;
+  if (!lv) return;
+  const D = NL.makeDensity(lv);
+  const sc = NL.scales(S.Z + S.N, S.e2, S.e4);
+  let Nm = 0; for (const b of lv.B) Nm = Math.max(Nm, b.N);
+  const rmax = Math.sqrt(2 * Nm + 3) + 3.2, NR = 180, NU = 140, dr = rmax / NR, du = 2 / NU;
+  const w = new Float64Array(NR * NU);
+  let s = 0;
+  for (let i = 0; i < NR; i++) {
+    const r = (i + 0.5) * dr;
+    for (let j = 0; j < NU; j++) { const u = -1 + (j + 0.5) * du; const v = D(r, u) * r * r; s += v; w[i * NU + j] = s; }
+  }
+  const color = lv.q === "n" ? CN : CP;
+  for (let k = 0; k < NPTS; k++) {
+    const x = Math.random() * s;
+    let lo = -1, hi = w.length - 1;
+    while (hi - lo > 1) { const m = (lo + hi) >> 1; if (w[m] < x) lo = m; else hi = m; }
+    const i = (hi / NU) | 0, j = hi % NU;
+    const r = (i + Math.random()) * dr, u = -1 + (j + Math.random()) * du, st = Math.sqrt(Math.max(0, 1 - u * u)), ph = 2 * Math.PI * Math.random();
+    pos[3 * k] = r * st * Math.cos(ph) * sc.bperp;
+    pos[3 * k + 1] = r * u * sc.bz;
+    pos[3 * k + 2] = r * st * Math.sin(ph) * sc.bperp;
+    col[3 * k] = color.r; col[3 * k + 1] = color.g; col[3 * k + 2] = color.b;
+  }
+  for (const a of ["position", "aFrom", "color", "aColFrom"]) cloudGeo.attributes[a].needsUpdate = true;
+  mix = 0;
+  buildField(lv, D, sc, rmax);
+}
+
+// ---------- the same orbital as a volume (cinematic)
+// Transfer function, stated on the page: x = |psi|/|psi|max (the square root of the density summed
+// over spin); opacity proportional to x, emission to x (0.12 + 0.88 x). The texture is the density on a
+// (stretched radius, cos theta) grid, mapped to the laboratory frame by the oscillator lengths.
+// iso shells, stated on the page: lit surfaces at x = 0.5 (|psi|^2 at a quarter of its peak) and, fainter,
+// at x = 0.2 (4% of the peak density); the stored x is after the 0.05 floor, hence the remap
+const ISO = [{ w: [1, 0, 0], level: (0.5 - 0.05) / 0.95, alpha: 0.75 }, { w: [1, 0, 0], level: (0.2 - 0.05) / 0.95, alpha: 0.2 }];
+function buildField(lv, D, sc, rmax) {
+  const F = VOL.field({ rmax, ss: sc.bperp, sz: sc.bz, NR: 192, NU: 128, tau: 3.75, iso: ISO,
+    channels: [{ f: (r, u) => D(r, u), tf: { type: "pow", g: 0.5, floor: 0.05 }, color: lv.q === "n" ? CN : CP }] });
+  vol.setField(F, true);
+  vol.u.uFace.value = 10;
+  stage3.setShadow(F, 5);
+}
+
+// ---------- Nilsson diagram along a path in the (eps2, eps4) plane
+// The path is the straight line from the sphere through the chosen (eps2, eps4), so it passes through
+// the dots at the chosen deformation; |eps4| is capped at 0.15 along it. For |eps2| < 0.05 the slope
+// is undefined and eps4 is held fixed instead.
+const XMIN = -0.4, XMAX = 0.6, NX = 81, E4CAP = 0.15, CURVE_TOL = 1e-3;
+function pathInfo() {
+  const coupled = S.e4 !== 0;
+  const slope = coupled && Math.abs(S.e2) >= 0.05 ? S.e4 / S.e2 : null;
+  const e4At = (e) => (slope == null ? S.e4 : Math.max(-E4CAP, Math.min(E4CAP, slope * e)));
+  return { coupled, slope, e4At };
+}
+function computeDiagram() {
+  const q = S.q, n = count(q), P = pathInfo();
+  const base = NL.nmaxFor(q, n, 0), Nmax = P.coupled ? Math.min(16, base + 2) : base;
+  const xs = [], curves = new Map(), fermi = [], sols = [];
+  for (let i = 0; i < NX; i++) {
+    const e = XMIN + (XMAX - XMIN) * i / (NX - 1);
+    xs.push(e);
+    const sol = NL.solve(q, e, P.e4At(e), Nmax, P.coupled);
+    sols.push(sol);
+    sol.levels.forEach((lv) => {
+      let c = curves.get(lv.id);
+      if (!c) { c = { id: lv.id, par: lv.par, om2: lv.om2, E: new Float64Array(NX) }; curves.set(lv.id, c); }
+      c.E[i] = lv.E;
+    });
+    fermi.push(n > 0 ? sol.levels[NL.lastIndex(sol, n)].E : NaN);
+  }
+  // window: the Fermi path over the whole axis, with room above and below
+  let lo = Infinity, hi = -Infinity;
+  for (const f of fermi) { lo = Math.min(lo, f); hi = Math.max(hi, f); }
+  const hw = S.Z + S.N > 120 ? 0.27 : S.Z + S.N > 60 ? 0.31 : 0.36;
+  lo -= hw; hi += hw * 1.12;
+  // end labels (prolate side) and spherical labels at eps2 = 0
+  const end = NL.solve(q, XMAX, P.e4At(XMAX), Nmax, P.coupled); NL.label(end, (lv) => lv.E > lo - 0.3 && lv.E < hi + 0.3);
+  const endLab = new Map(end.levels.map((lv) => [lv.id, lv.label]));
+  const sph = NL.solve(q, 0, P.e4At(0), Nmax, P.coupled); NL.label(sph, (lv) => lv.E > lo - 0.3 && lv.E < hi + 0.3);
+  // numbers (dots, energies, predictions) come from a separate solve at the chosen point in a basis
+  // converged there (NL.converge, pointUpdate). The curves use a smaller basis for speed, so it is
+  // checked here: at every 8th point of the path, Nmax against Nmax + 2 for the levels inside the
+  // drawn window. Where the change exceeds CURVE_TOL (about half a pixel) the range is shaded and
+  // said to be unconverged. With eps4 = 0 the blocks are exact and nothing needs checking.
+  const chk = [];
+  if (P.coupled) for (let i = 0; i < NX; i += 8) {
+    const a = sols[i], b = NL.solve(q, xs[i], P.e4At(xs[i]), Nmax + 2, true);
+    let err = 0;
+    for (let j = 0; j < a.levels.length; j++) { const E = b.levels[j].E; if (E >= lo && E <= hi) err = Math.max(err, Math.abs(a.levels[j].E - E)); }
+    chk.push({ e: xs[i], err });
+  }
+  const bad = [];
+  for (let i = 0; i + 1 < chk.length; i++) if (chk[i].err > CURVE_TOL || chk[i + 1].err > CURVE_TOL) {
+    if (bad.length && Math.abs(bad[bad.length - 1][1] - chk[i].e) < 1e-9) bad[bad.length - 1][1] = chk[i + 1].e; else bad.push([chk[i].e, chk[i + 1].e]);
+  }
+  const curveErr = chk.reduce((m, c) => Math.max(m, c.err), 0);
+  S.dia = { q, n, Nmax, coupled: P.coupled, slope: P.slope, xs, curves, fermi, lo, hi, endLab, sph, bad, curveErr };
+}
+
+const svg = document.getElementById("dia"), NSV = "http://www.w3.org/2000/svg";
+function el(tag, attrs, parent) {
+  const e = document.createElementNS(NSV, tag);
+  for (const k in attrs) e.setAttribute(k, attrs[k]);
+  if (parent) parent.appendChild(e);
+  return e;
+}
+function drawDiagram() {
+  const d = S.dia, W = 394, H = innerWidth < 900 ? 320 : Math.max(360, Math.min(640, innerHeight * 0.62));
+  svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+  svg.style.height = H + "px";
+  svg.innerHTML = "";
+  const L = 30, R = W - 88, T = 8, B = H - 22;
+  const X = (e) => L + (e - XMIN) / (XMAX - XMIN) * (R - L);
+  const Y = (E) => T + (d.hi - E) / (d.hi - d.lo) * (B - T);
+  const C = d.q === "n" ? "#a8cdf2" : "#ff9656";
+  el("clipPath", { id: "clipd" }, svg).appendChild(el("rect", { x: L, y: T, width: R - L, height: B - T }));
+  // axes
+  const ax = el("g", { class: "ax" }, svg);
+  for (let e = -0.4; e <= 0.6001; e += 0.2) {
+    el("line", { x1: X(e), x2: X(e), y1: T, y2: B, stroke: Math.abs(e) < 1e-9 ? "#39415a" : "#1b2130", "stroke-width": 1 }, ax);
+    el("text", { x: X(e), y: H - 8, "text-anchor": "middle" }, ax).textContent = (Math.abs(e) < 1e-9 ? "0" : e.toFixed(1));
+  }
+  const step = d.hi - d.lo > 1.6 ? 0.5 : 0.25;
+  for (let E = Math.ceil(d.lo / step) * step; E <= d.hi; E += step) {
+    el("line", { x1: L, x2: R, y1: Y(E), y2: Y(E), stroke: "#1b2130", "stroke-width": 1 }, ax);
+    el("text", { x: L - 4, y: Y(E) + 3, "text-anchor": "end" }, ax).textContent = E.toFixed(2);
+  }
+  el("text", { x: X(-0.2), y: T + 11, "text-anchor": "middle" }, ax).textContent = "oblate";
+  el("text", { x: X(0.4), y: T + 11, "text-anchor": "middle" }, ax).textContent = "prolate";
+  el("text", { x: R + 8, y: H - 8, "text-anchor": "start" }, ax).textContent = "ε₂";
+  const g = el("g", { "clip-path": "url(#clipd)" }, svg);
+  // ranges where the curve basis is not converged to CURVE_TOL inside this window
+  for (const [a, b] of d.bad) el("rect", { x: X(a), y: T, width: X(b) - X(a), height: B - T, fill: "#f2c14e", opacity: 0.12 }, g);
+  // Fermi path: energy of the last filled level along the axis
+  let pf = "";
+  d.fermi.forEach((f, i) => { pf += (i ? "L" : "M") + X(d.xs[i]).toFixed(1) + " " + Y(f).toFixed(1); });
+  el("path", { d: pf, fill: "none", stroke: "#f2c14e", "stroke-width": 7, opacity: 0.3, "stroke-linejoin": "round", "stroke-linecap": "round" }, g);
+  // curves; solid = even parity, dashed = odd parity (Shapes and Shells convention)
+  const sel = S.selId;
+  for (const c of d.curves.values()) {
+    let lo = Infinity, hi = -Infinity;
+    for (const E of c.E) { lo = Math.min(lo, E); hi = Math.max(hi, E); }
+    if (hi < d.lo || lo > d.hi) continue;
+    let p = "";
+    c.E.forEach((E, i) => { p += (i ? "L" : "M") + X(d.xs[i]).toFixed(1) + " " + Y(E).toFixed(1); });
+    const gg = el("g", { class: "cv", "data-id": c.id }, g);
+    el("path", { d: p, fill: "none", stroke: "transparent", "stroke-width": 7 }, gg);
+    const isSel = c.id === sel;
+    el("path", {
+      d: p, fill: "none", stroke: isSel ? "#ffffff" : C, "stroke-width": isSel ? 2.4 : 1.1,
+      opacity: isSel ? 1 : 0.78, "stroke-dasharray": c.par ? "4 2.5" : "none",
+    }, gg);
+    el("title", {}, gg).textContent = `${(d.endLab.get(c.id) || "").replace(/−/, "−")} (label at ε₂ = 0.6)`;
+  }
+  // spherical labels at eps2 = 0 (only exact for eps4 = 0; there the j levels are degenerate in Omega)
+  if (S.dia.slope != null || S.e4 === 0) {
+    const seen = [];
+    for (const lv of d.sph.levels) {
+      if (!lv.lab || lv.E < d.lo + 0.02 || lv.E > d.hi - 0.02) continue;
+      const nm = lv.label.replace(/^.*\(/, "").replace(")", "");
+      if (seen.some((s) => s.nm === nm && Math.abs(s.E - lv.E) < 1e-6)) continue;
+      seen.push({ nm, E: lv.E });
+      const yy = Y(lv.E);
+      el("rect", { x: X(0) - 38, y: yy - 6, width: 34, height: 11, fill: "#0b0d12", opacity: 0.72, rx: 2 }, g);
+      el("text", { x: X(0) - 5, y: yy + 3, "text-anchor": "end", style: "fill:#cfd6e4" }, g).textContent = nm;
+    }
+  }
+  // current deformation
+  el("line", { x1: X(S.e2), x2: X(S.e2), y1: T, y2: B, stroke: "#ffffff", "stroke-width": 1, opacity: 0.5, "stroke-dasharray": "2 3" }, svg);
+  if (S.sol) {
+    const k = NL.lastIndex(S.sol, count(S.q));
+    S.sol.levels.forEach((lv, i) => {
+      if (lv.E < d.lo || lv.E > d.hi) return;
+      el("circle", { cx: X(S.e2), cy: Y(lv.E), r: i === k ? 3.6 : 1.8, fill: i === k ? "#f2c14e" : i < k ? C : "#5a6378", "pointer-events": "none" }, svg);
+    });
+  }
+  // right-edge labels, pushed apart
+  const ends = [];
+  for (const c of d.curves.values()) {
+    const E = c.E[NX - 1];
+    if (E < d.lo || E > d.hi || !d.endLab.has(c.id)) continue;
+    ends.push({ id: c.id, y: Y(E), lab: d.endLab.get(c.id), par: c.par });
+  }
+  ends.sort((a, b) => b.y - a.y);
+  const ly = ends.map((e) => e.y), gap = 10;
+  for (let i = 1; i < ly.length; i++) if (ly[i] > ly[i - 1] - gap) ly[i] = ly[i - 1] - gap;
+  if (ly.length && ly[ly.length - 1] < T + 4) {
+    ly[ly.length - 1] = T + 4;
+    for (let i = ly.length - 2; i >= 0; i--) if (ly[i] < ly[i + 1] + gap) ly[i] = ly[i + 1] + gap;
+  }
+  ends.forEach((e, i) => {
+    const gg = el("g", { class: "cv", "data-id": e.id }, svg);
+    el("polyline", { points: `${R},${e.y} ${R + 5},${ly[i]} ${R + 8},${ly[i]}`, fill: "none", stroke: "#3a4256", "stroke-width": 0.8 }, gg);
+    const t = el("text", { x: R + 10, y: ly[i] + 3.2, opacity: e.id === S.selId ? 1 : 0.8 }, gg);
+    t.textContent = e.lab.replace(/−/, "−");
+    if (e.id === S.selId) t.setAttribute("style", "font-weight:700");
+  });
+  document.getElementById("dtitle").textContent = `Nilsson diagram, ${d.q === "n" ? "neutrons" : "protons"}`;
+  const path = d.slope != null ? `Path: ε<sub>4</sub> = ${d.slope.toFixed(3)} ε<sub>2</sub> (the line from the sphere through the chosen shape, |ε<sub>4</sub>| ≤ ${E4CAP}).`
+    : S.e4 === 0 ? "Path: ε<sub>4</sub> = 0." : `Path: ε<sub>4</sub> = ${signed(S.e4, 3)} held fixed.`;
+  document.getElementById("dnote").innerHTML = `${path} Solid: even parity, dashed: odd. Amber band: last filled level for ${d.q === "n" ? "N" : "Z"} = ${d.n}; dots: levels at the chosen deformation, basis N ≤ ${S.conv.Nmax}${S.conv.exact ? " (exact: ε<sub>4</sub> = 0)" : `, converged there: adding two shells moves the 13 levels around the Fermi level by ${S.conv.err.toExponential(0).replace("e-", "×10<sup>−")}</sup> ħω<sub>0</sub>${S.conv.converged ? "" : " (cap reached)"}`}. Curves: N ≤ ${d.Nmax}${d.coupled ? (d.bad.length ? `; checked against two more shells along the path, they move by up to ${d.curveErr.toFixed(3)} ħω<sub>0</sub> inside this window, more than ${CURVE_TOL} in the shaded ε<sub>2</sub> range${d.bad.length > 1 ? "s" : ""}, where only the dots are converged` : `, checked against two more shells along the path: within ${CURVE_TOL} ħω<sub>0</sub> inside this window`) : " (exact)"}.${d.coupled ? " Levels of equal Ω<sup>π</sup> repel instead of crossing: ε<sub>4</sub> mixes shells." : ""}`;
+}
+svg.addEventListener("click", (e) => {
+  const g = e.target.closest(".cv");
+  if (!g) return;
+  S.selId = g.dataset.id;
+  pointUpdate(true);
+});
+
+// ---------- current deformation: solve, label, info
+function pickSel() {
+  let lv = S.sol.levels.find((l) => l.id === S.selId);
+  if (!lv) {
+    lv = S.sol.levels[Math.max(0, NL.lastIndex(S.sol, count(S.q)))];
+    S.selId = lv.id;
+  }
+  NL.label(S.sol, (l) => l === lv);
+  S.sel = lv;
+}
+function pointUpdate(resampleToo) {
+  S.conv = NL.converge(S.q, count(S.q), S.e2, S.e4);
+  S.sol = S.conv.sol;
+  pickSel();
+  drawDiagram();
+  drawSel();
+  drawInfo();
+  drawStamp();
+  if (resampleToo) resample();
+}
+function drawSel() {
+  const lv = S.sel;
+  document.getElementById("stitle").innerHTML = `${lv.q === "n" ? "ν" : "π"} ${labHTML(lv.label)}`;
+  document.getElementById("sE").textContent = `ε = ${lv.E.toFixed(4)} ħω₀`;
+  const comps = NL.sphericalComponents(lv).slice(0, 5), c = lv.q === "n" ? "var(--neu)" : "var(--pro)";
+  document.getElementById("comp").innerHTML = comps.filter((x) => x.w > 0.003).map((x) =>
+    `<span>${x.name}</span><i style="width:${(100 * x.w).toFixed(1)}%;background:${c}"></i><span>${(100 * x.w).toFixed(1)}%</span>`).join("");
+}
+function measuredJ() { const r = ROW.get(S.Z + "," + S.N); return r && r[7] ? r[7] : null; }
+function drawInfo() {
+  const A = S.Z + S.N, sc = NL.scales(A, S.e2, S.e4), b = NL.betas(S.e2, S.e4), F = FRDM.get(S.Z + "," + S.N);
+  const Jm = measuredJ(), odd = (S.Z % 2) + (S.N % 2);
+  const rows = [];
+  rows.push(`<dt>Z, N</dt><dd>${S.Z}, ${S.N}</dd>`);
+  rows.push(`<dt>shape</dt><dd>β<sub>2</sub> ${r3(b.beta2)} · β<sub>4</sub> ${r3(b.beta4)}</dd>`);
+  rows.push(`<dt>ħω̊<sub>0</sub></dt><dd>${sc.hw00.toFixed(2)} MeV · ω<sub>0</sub>/ω̊<sub>0</sub> ${sc.wr.toFixed(4)}</dd>`);
+  // last nucleon of each species at this deformation
+  for (const q of ["n", "p"]) {
+    const sol = q === S.q ? S.sol : NL.converge(q, count(q), S.e2, S.e4).sol;
+    const k = NL.lastIndex(sol, count(q));
+    if (k < 0) continue;
+    const lv = sol.levels[k];
+    NL.label(sol, (l) => l === lv || l === sol.levels[k + 1]);
+    const nx = sol.levels[k + 1];
+    const gap = count(q) % 2 === 0 && nx ? ` · gap ${((nx.E - lv.E) * sc.hw0).toFixed(2)} MeV` : "";
+    rows.push(`<dt class="${q}">last ${q}</dt><dd>${labHTML(lv.label)}${gap}</dd>`);
+    if (odd === 1 && count(q) % 2 === 1) {
+      const meas = Jm ? Jm.replace(/-/g, "−") : "n/a";
+      const norm = (x) => x.replace(/[()#]/g, "").replace(/-/g, "−");
+      if (S.e2 === 0 && S.e4 === 0 && lv.lab && lv.lab.sph) {
+        // at the sphere the 2j+1 states of a j level are degenerate: the Omega of the level picked is
+        // arbitrary, so K means nothing; compare the parent j^pi with the measured J^pi instead
+        const pred = `${lv.lab.j2}/2${lv.par ? "−" : "+"}`, ok = Jm && norm(Jm) === pred;
+        rows.push(`<dt>J<sup>π</sup></dt><dd>spherical: j<sup>π</sup> of ${lv.lab.nr + 1}${NL.LNAME[lv.lab.l]}<sub>${lv.lab.j2}/2</sub> = ${pred} · measured <span class="${ok ? "hit" : "miss"}">${meas}</span></dd>`);
+      } else {
+        const pred = `${lv.om2}/2${lv.par ? "−" : "+"}`, ok = Jm && norm(Jm) === pred;
+        rows.push(`<dt>K<sup>π</sup></dt><dd>predicted ${pred} · measured J<sup>π</sup> <span class="${ok ? "hit" : "miss"}">${meas}</span></dd>`);
+      }
+    }
+  }
+  if (odd === 0) rows.push(`<dt>J<sup>π</sup></dt><dd>even-even: K<sup>π</sup> = 0<sup>+</sup> · measured ${Jm ? Jm.replace(/-/g, "−") : "n/a"}</dd>`);
+  if (odd === 2) rows.push(`<dt>J<sup>π</sup></dt><dd>odd-odd: K = |Ω<sub>p</sub> ± Ω<sub>n</sub>| · measured ${Jm ? Jm.replace(/-/g, "−") : "n/a"}</dd>`);
+  document.getElementById("info").innerHTML = rows.join("");
+  const w = [];
+  if (!F) w.push("No FRDM(2012) entry (the table starts at Z = 8): set the deformation by hand.");
+  if (odd === 1 && !(S.e2 === 0 && S.e4 === 0)) w.push("For K = 1/2 the band head J need not equal K (decoupling); for K ≥ 3/2 the ground state has J = K.");
+  if (S.sel && S.sel.labAmbiguous) w.push(`The label of the selected orbital is ambiguous (marked ?): its overlap² with the assigned block state is ${S.sel.labWeight.toFixed(2)}, its largest with any is ${S.sel.labBest.toFixed(2)}.`);
+  if (Math.abs(S.e2) < 0.05) w.push("Near ε₂ = 0 the asymptotic labels lose their meaning; read the spherical parent instead.");
+  if (!ROW.get(S.Z + "," + S.N)) w.push("Not in NUBASE2020.");
+  const W = document.getElementById("warn");
+  W.hidden = !w.length; W.textContent = w.join(" ");
+  const fr = F ? `FRDM(2012): ε<sub>2</sub> = ${F.e2.toFixed(2)}, ε<sub>4</sub> = ${F.e4.toFixed(2)} (β<sub>2</sub> = ${F.b2.toFixed(3)})` : "no FRDM(2012) entry";
+  document.getElementById("defnote").innerHTML = fr + (F && Math.abs(F.e2 - S.e2) < 1e-9 && Math.abs(F.e4 - S.e4) < 1e-9 ? ", shown." : ". Showing your choice.");
+}
+// "spherical" only when every deformation vanishes
+function shapeWord() {
+  if (S.e2 > 0.01) return "prolate";
+  if (S.e2 < -0.01) return "oblate";
+  if (S.e2 === 0 && S.e4 === 0) return "spherical";
+  if (S.e4 !== 0) return `hexadecapole, β<sub>4</sub> = ${signed(NL.betas(S.e2, S.e4).beta4, 3)}`;
+  return "nearly spherical";
+}
+function drawStamp() {
+  const lv = S.sel;
+  const st = document.getElementById("stamp");
+  const sym = lv.q === "n" ? "ν" : "π";
+  st.innerHTML = `<b>${sym} ${labHTML(lv.label)}</b><small>Ω = ${lv.om2}/2 on the symmetry axis · ε<sub>2</sub> = ${signed(S.e2, 3)}, ε<sub>4</sub> = ${signed(S.e4, 3)} · ${shapeWord()}</small>`;
+}
+
+// ---------- loading
+let fitTo = 0, shape = null;
+function sync3D() {
+  shape = buildSurface();
+  const ext = Math.max(shape.zmax, shape.R0 * 1.3);
+  axis.geometry.setFromPoints([new THREE.Vector3(0, -1.55 * ext, 0), new THREE.Vector3(0, 1.55 * ext, 0)]);
+  axis.computeLineDistances();
+  grid.position.y = -ext - 5 + 0.01;
+  stage3.layout(-ext - 5, Math.max(shape.req, shape.zmax * 0.6) + 2);
+  vol.u.uFloorY.value = -ext - 5;
+}
+function syncSliders() {
+  const a = document.getElementById("e2"), b = document.getElementById("e4");
+  a.value = S.e2; b.value = S.e4;
+  document.getElementById("e2o").textContent = signed(S.e2, 3);
+  document.getElementById("e4o").textContent = signed(S.e4, 3);
+}
+function load(Z, N, keepDef) {
+  S.Z = Z; S.N = N;
+  if (!keepDef) { const F = FRDM.get(Z + "," + N); S.e2 = F ? F.e2 : 0; S.e4 = F ? F.e4 : 0; }
+  // default species: the odd one; for even-even, neutrons
+  S.q = Z % 2 && !(N % 2) ? "p" : "n";
+  S.selId = null;
+  for (const b of document.querySelectorAll("#species button")) b.setAttribute("aria-pressed", b.dataset.v === S.q ? "true" : "false");
+  syncSliders();
+  computeDiagram();
+  pointUpdate(true);
+  sync3D();
+  fitTo = 3.6 * Math.max(shape.zmax, shape.R0) + 16;
+  const A = Z + N, el = ELEM[Z] || "?";
+  document.getElementById("title").innerHTML = `${sup(A)}${el}`;
+  document.title = `${A}${el} deformed · nuclearjs`;
+  document.getElementById("toSph").href = `nucleus.html#${A}${el}`;
+  const hash = `#${A}${el}`;
+  if (location.hash !== hash) history.replaceState(null, "", hash);
+}
+
+// ---------- UI wiring
+const find = document.getElementById("find");
+find.addEventListener("keydown", (e) => {
+  if (e.key !== "Enter") return;
+  const p = parseNucleus(find.value);
+  if (!p || !ROW.get(p.Z + "," + p.N)) { find.setCustomValidity("no such nucleus in NUBASE2020"); find.reportValidity(); return; }
+  find.setCustomValidity(""); load(p.Z, p.N);
+});
+find.addEventListener("input", () => find.setCustomValidity(""));
+document.getElementById("chips").addEventListener("click", (e) => {
+  const b = e.target.closest("button"); if (!b) return;
+  const p = parseNucleus(b.dataset.n); load(p.Z, p.N);
+});
+document.getElementById("species").addEventListener("click", (e) => {
+  const b = e.target.closest("button"); if (!b) return;
+  S.q = b.dataset.v; S.selId = null;
+  for (const x of document.querySelectorAll("#species button")) x.setAttribute("aria-pressed", x === b ? "true" : "false");
+  computeDiagram(); pointUpdate(true);
+});
+// eps2 moves the point along the diagram (cheap); eps4 changes the diagram itself
+let pend2 = false, pend4 = false;
+document.getElementById("e2").addEventListener("input", (e) => {
+  S.e2 = Math.round(+e.target.value * 1000) / 1000;
+  document.getElementById("e2o").textContent = signed(S.e2, 3);
+  // the path depends on eps2 when eps4 != 0: redraw the diagram too
+  if (!pend2) { pend2 = true; requestAnimationFrame(() => { pend2 = false; if (S.e4 !== 0) computeDiagram(); pointUpdate(true); sync3D(); }); }
+});
+document.getElementById("e4").addEventListener("input", (e) => {
+  S.e4 = Math.round(+e.target.value * 1000) / 1000;
+  document.getElementById("e4o").textContent = signed(S.e4, 3);
+  if (!pend4) { pend4 = true; requestAnimationFrame(() => { pend4 = false; computeDiagram(); pointUpdate(true); sync3D(); }); }
+});
+document.getElementById("toFRDM").addEventListener("click", () => {
+  const F = FRDM.get(S.Z + "," + S.N); S.e2 = F ? F.e2 : 0; S.e4 = F ? F.e4 : 0;
+  syncSliders(); computeDiagram(); pointUpdate(true); sync3D();
+});
+document.getElementById("zero4").addEventListener("click", () => {
+  S.e4 = 0; syncSliders(); computeDiagram(); pointUpdate(true); sync3D();
+});
+
+addEventListener("hashchange", () => { const p = parseNucleus(location.hash); if (p && ROW.get(p.Z + "," + p.N) && (p.Z !== S.Z || p.N !== S.N)) load(p.Z, p.N); });
+addEventListener("resize", () => {
+  camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight);
+  composer.setSize(innerWidth, innerHeight);
+  drawDiagram();
+});
+
+function applyVis() {
+  const hi = quality === "high";
+  cloud.visible = !hi; if (rimShell) rimShell.visible = !hi;
+  vol.mesh.visible = hi; if (glass) glass.visible = hi;
+  vol.u.uSkipOn.value = hi ? 1 : 0;
+  vol.u.uCut.value = cloudMat.uniforms.uCut.value = cut.on ? 1 : 0;
+  glassMat.clippingPlanes = cut.on ? cut.planes : [];
+  for (const b of document.querySelectorAll("#cutmode button")) b.setAttribute("aria-pressed", (b.dataset.v === "1") === cut.on ? "true" : "false");
+  document.getElementById("rnote").textContent = hi
+    ? "The orbital is ray-marched as a glowing, absorbing volume: opacity is proportional to x and emission to x(0.12 + 0.88x), x = |ψ|/|ψ|max (the square root of the density, so weak lobes read and nodal surfaces stay empty), with x below 0.05 left empty so the far tail does not fog the view. Inside the volume, lit contour surfaces of the same x are drawn as thin shells, at x = 0.5 (|ψ|² at a quarter of its peak) and, fainter, at x = 0.2 (4% of the peak density), with the glow between them dimmed so the shells carry the form. A shell is shaded as a surface: its normal is the density gradient, it takes a key light from above with the self-shadowing below, a fill light, a soft highlight and an occlusion term from the density just outside it. The volume is lit from above, with self-shadowing computed from the same density; the floor shadow is the attenuation 1 − exp(−∫σ dy) of that light through the volume, blurred into a penumbra. The glass is the nuclear surface drawn as a thin glass wall; colours, brightness, the shell shading and the glass are presentation, not physics."
+    : "Point cloud: each dot one draw from |ψ|².";
+}
+document.getElementById("cutmode").addEventListener("click", (e) => {
+  const b = e.target.closest("button"); if (!b) return;
+  cut.on = b.dataset.v === "1"; applyVis();
+});
+function applyQuality() {
+  cloudMat.uniforms.uAperture.value = quality === "high" ? 0.35 : 0;
+  const g = quality === "high" ? GROUND_PRE_ACES : GROUND;
+  scene.background.copy(g); scene.fog.color.copy(g);
+  renderer.setClearColor(g);
+  applyVis();
+  for (const b of document.querySelectorAll("#qmode button")) b.setAttribute("aria-pressed", b.dataset.v === quality ? "true" : "false");
+}
+document.getElementById("qmode").addEventListener("click", (e) => {
+  const b = e.target.closest("button"); if (!b) return;
+  quality = b.dataset.v; applyQuality();
+});
+applyQuality();
+
+// ---------- start
+{
+  const p = parseNucleus(location.hash || "166Er");
+  const ok = p && ROW.get(p.Z + "," + p.N);
+  load(ok ? p.Z : 68, ok ? p.N : 98);
+  mix = 1;
+  from.set(pos); colFrom.set(col);
+  cloudGeo.attributes.aFrom.needsUpdate = true; cloudGeo.attributes.aColFrom.needsUpdate = true;
+  camera.position.set(0.74, 0.6, 0.48).setLength(fitTo);
+  controls.target.set(0, 0, 0);
+}
+
+// ---------- loop
+const axl = document.getElementById("axlab"), tmp = new THREE.Vector3();
+let last = performance.now();
+function animate(now) {
+  requestAnimationFrame(animate);
+  const dt = Math.min(0.1, Math.max(0, (now - last) / 1000)); last = now;
+  if (mix < 1) mix = reduce ? 1 : Math.min(1, mix + dt / 0.7);
+  cloudMat.uniforms.uMix.value = 1 - Math.pow(1 - mix, 3);
+  vol.setMix(1 - Math.pow(1 - mix, 3));
+  if (quality === "high") gov.tick(dt);
+  const dist = camera.position.distanceTo(controls.target);
+  if (fitTo && Math.abs(dist - fitTo) > 0.05) {
+    const k = reduce ? 1 : 1 - Math.exp(-dt / 0.35);
+    camera.position.sub(controls.target).multiplyScalar((dist + (fitTo - dist) * k) / dist).add(controls.target);
+  } else fitTo = 0;
+  controls.update();
+  cut.update(camera, controls.target);
+  stage3.update(camera);
+  camera.getWorldDirection(vol.u.uFwd.value);
+  cloudMat.uniforms.uPix.value = renderer.domElement.height / (2 * Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2));
+  cloudMat.uniforms.uFocus.value = camera.position.distanceTo(controls.target);
+  if (quality === "high") composer.render(); else renderer.render(scene, camera);
+  const ext = Math.max(shape.zmax, shape.R0 * 1.3);
+  tmp.set(0, 1.62 * ext, 0).project(camera);
+  const vis = tmp.z < 1 && Math.abs(tmp.x) < 1 && Math.abs(tmp.y) < 1;
+  axl.hidden = !vis;
+  if (vis) { axl.style.left = (tmp.x * 0.5 + 0.5) * innerWidth + "px"; axl.style.top = (-tmp.y * 0.5 + 0.5) * innerHeight + "px"; }
+}
+requestAnimationFrame(animate);
+</script>
+<script src="assets/glass.js"></script>
+</body>
+</html>

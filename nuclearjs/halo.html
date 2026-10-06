@@ -1,0 +1,846 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Halo nuclei · nuclearjs</title>
+<link rel="stylesheet" href="assets/glass.css">
+<style>
+body{margin:0}
+:root{
+  color-scheme:dark;
+  --ground:#0b0d12; --line:#262c3a;
+  --ink:#e6e8ee; --muted:#8a92a6; --accent:#f2c14e;
+  --neu:#a8cdf2; --pro:#ff9656;
+  --sans:"Avenir Next","Futura","Helvetica Neue","PingFang SC","Noto Sans SC",system-ui,sans-serif;
+  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+}
+html,body{height:100%}
+body{background:var(--ground);color:var(--ink);font-family:var(--sans);overflow:hidden}
+#stage{position:fixed;inset:0}
+#stage canvas{display:block;touch-action:none}
+.panel{position:fixed;border-radius:18px;padding:16px 18px;display:flex;flex-direction:column;gap:12px;overflow:auto;box-sizing:border-box}
+.panel{z-index:2}
+.panel>*{flex-shrink:0}
+#ctl{left:16px;top:calc(16px + env(safe-area-inset-top,0px));width:min(310px,calc(100% - 32px));max-height:calc(100% - 56px)}
+#side{right:16px;top:calc(16px + env(safe-area-inset-top,0px));width:372px;max-height:calc(100% - 32px);gap:10px}
+h1{margin:0;font-size:22px;font-weight:600;letter-spacing:.01em}
+h1 sup{font-size:.6em}
+.sub{margin:2px 0 0;color:var(--muted);font-size:13px;line-height:1.45}
+.sub sup,.src sup{font-size:.7em}
+.grp{display:flex;flex-direction:column;gap:6px}
+.lab{font-size:11px;text-transform:uppercase;letter-spacing:.12em;color:var(--muted)}
+.seg{display:flex;border:1px solid var(--line);border-radius:4px;overflow:hidden}
+.seg button{flex:1;background:none;border:0;color:var(--muted);font:500 12px var(--mono);padding:6px 4px;cursor:pointer}
+.seg button+button{border-left:1px solid var(--line)}
+.seg button[aria-pressed="true"]{background:#1f2533;color:var(--ink)}
+button:focus-visible,input:focus-visible,summary:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chips button{background:#161a24;border:1px solid var(--line);border-radius:4px;color:var(--ink);font:12px var(--mono);padding:5px 8px;cursor:pointer}
+.chips button:hover{border-color:var(--muted)}
+.chips button[aria-pressed="true"]{border-color:var(--accent);color:var(--accent)}
+.chips .ref{color:var(--muted)}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:3px 10px;font:12px var(--mono);font-variant-numeric:tabular-nums}
+.kv dt{color:var(--muted)}.kv dd{margin:0}
+.row{display:flex;gap:8px;align-items:center;font:12px var(--mono);color:var(--muted)}
+.row input[type=range]{flex:1;accent-color:var(--accent);min-width:0}
+.row output{min-width:78px;text-align:right;color:var(--ink);font-variant-numeric:tabular-nums}
+details summary{cursor:pointer;font-size:11px;text-transform:uppercase;letter-spacing:.12em;color:var(--muted);list-style:none}
+details summary::before{content:"▸ ";}
+details[open] summary::before{content:"▾ ";}
+details .grp{margin-top:8px}
+.linkbtn{background:none;border:0;color:var(--muted);font:12px var(--mono);padding:0;cursor:pointer;text-decoration:underline;align-self:flex-start}
+.home{font:12px var(--mono);color:var(--muted);text-decoration:none}.home:hover{color:var(--ink)}
+.src{font-size:11px;color:var(--muted);line-height:1.45}
+.src a{color:var(--muted)}
+.warn{font-size:12px;color:var(--accent);line-height:1.4}
+.plot{width:100%;height:170px;display:block}
+.cap{display:flex;flex-wrap:wrap;gap:2px 8px;justify-content:space-between;align-items:baseline;font:11px var(--mono);color:var(--muted)}
+.cap b{font:600 13px var(--sans);color:var(--ink)}
+.leg{display:flex;flex-wrap:wrap;gap:4px 12px;font:11px var(--mono);color:var(--muted)}
+.leg i{display:inline-block;width:14px;height:0;border-top:2px solid;vertical-align:middle;margin-right:4px}
+.leg i.d{border-top-style:dashed}
+.math{font:12px var(--mono);color:var(--ink);line-height:1.6}
+table.rad{width:100%;border-collapse:collapse;font:11.5px var(--mono);font-variant-numeric:tabular-nums}
+table.rad th{color:var(--muted);font-weight:500;text-align:right;padding:2px 4px;border-bottom:1px solid var(--line)}
+table.rad td{text-align:right;padding:3px 4px;border-bottom:1px solid #191e2a}
+table.rad th:first-child,table.rad td:first-child{text-align:left}
+table.rad tr.ref td{color:var(--muted)}
+table.rad tr.on td{color:var(--accent)}
+table.rad tr{cursor:pointer}
+.axlab{position:fixed;font:500 11px var(--mono);pointer-events:none;transform:translate(-50%,-50%);white-space:nowrap}
+#stamp{position:fixed;left:50%;bottom:calc(26px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);text-align:center;pointer-events:none}
+#stamp b{display:block;font:600 clamp(30px,4.6vw,54px)/1 var(--sans);letter-spacing:-.01em}
+#stamp b sup{font-size:.55em}
+#stamp small{display:block;font:500 12px var(--mono);color:var(--muted);margin-top:6px}
+.hint{position:fixed;left:16px;bottom:calc(14px + env(safe-area-inset-bottom,0px));font:11px var(--mono);color:var(--muted)}
+@media (max-width:900px){
+  #ctl{max-height:42vh}
+  #side{left:16px;right:16px;width:auto;top:auto;bottom:calc(12px + env(safe-area-inset-bottom,0px));max-height:44vh}
+  #stamp,.hint,.axlab{display:none}
+}
+@media (max-width:560px){.panel{padding:10px 12px;gap:9px}h1{font-size:18px}}
+</style>
+<script data-goatcounter="https://jinleiphys.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
+</head>
+<body>
+
+<div id="stage"></div>
+
+<aside id="ctl" class="panel glass glass-deep" data-glass data-glass-bevel="22" data-glass-scale="42">
+  <div>
+    <a class="home" href="index.html">← nuclearjs</a> &nbsp; <a class="home" id="toNucleus" href="nucleus.html">shell model</a> &nbsp; <a class="home" id="toScatter" href="scatter.html">scattering</a>
+    <h1>Halo nuclei</h1>
+    <p class="sub">A nucleon bound by a few hundred keV spends most of its time outside the nucleus. Drag the binding toward zero: an s-wave cloud swells without limit, a p wave more slowly, a d wave hardly at all, and a proton, held in by the Coulomb barrier, approaches a finite size.</p>
+  </div>
+  <div class="grp">
+    <div class="lab">One-nucleon halos</div>
+    <div class="chips" id="chips"></div>
+  </div>
+  <div class="grp">
+    <label class="lab" for="sl">Separation energy S</label>
+    <div class="row"><input id="sl" type="range" min="-3" max="1" step="0.005"><output id="sout"></output></div>
+    <button class="linkbtn" id="meas" type="button">back to the measured value</button>
+  </div>
+  <div class="grp">
+    <div class="lab">Core + nucleon</div>
+    <dl class="kv" id="info"></dl>
+    <p class="warn" id="warn" hidden></p>
+  </div>
+  <div class="grp">
+    <div class="lab">Rendering</div>
+    <div class="seg" id="qmode">
+      <button data-v="high" title="ray-marched volume, glass reference sphere, soft bloom">cinematic</button>
+      <button data-v="low" title="point cloud, for phones">fast</button>
+    </div>
+    <div class="seg" id="cutmode">
+      <button data-v="0" aria-pressed="true">whole</button>
+      <button data-v="1" aria-pressed="false" title="remove the wedge that faces you">cut-away</button>
+    </div>
+    <p class="sub" id="vnote"></p>
+  </div>
+  <details>
+    <summary>Why only s and p waves</summary>
+    <div class="grp">
+      <p class="sub">Outside the well a neutron's radial function is u(r) = b·W(2κr), κ = √(2μS)/ħ, with W = e<sup>−κr</sup>(1 + 1/κr) for l = 1 and e<sup>−κr</sup>(1 + 3/κr + 3/κ²r²) for l = 2. As S → 0 it tends to the zero-energy solution, which outside the well falls like r<sup>−l</sup>.</p>
+      <p class="sub"><b style="color:var(--ink)">l = 0:</b> u is flat outside, its norm diverges, so the tail carries all the probability: ⟨r²⟩ → 1/(2κ²) = ħ²/(4μS). The rms radius grows like S<sup>−1/2</sup>.</p>
+      <p class="sub"><b style="color:var(--ink)">l = 1:</b> u ~ A/r is normalizable but ∫r²u² is not: b → Aκ and ⟨r²⟩ → (5/4)A²/κ, so the rms radius grows like S<sup>−1/4</sup>.</p>
+      <p class="sub"><b style="color:var(--ink)">l ≥ 2:</b> u ~ A/r<sup>l</sup>, ∫r²u² converges: the radius stays finite at threshold.</p>
+      <p class="sub"><b style="color:var(--ink)">protons:</b> the Coulomb barrier makes the zero-energy tail fall faster than any power, and every l stays finite. This is why proton halos are rare.</p>
+      <p class="sub">All four laws are checked on the live solver down to S = 10<sup>−4</sup> MeV (slopes of ln⟨r²⟩ against ln S: −0.991, −0.498, −0.004, −0.000; the rms radius has half these, −0.50 and −0.25).</p>
+    </div>
+  </details>
+  <details>
+    <summary>Matter radius from core + orbital</summary>
+    <div class="grp">
+      <p class="sub">Point nucleons, core of A<sub>c</sub> nucleons, relative coordinate r. About the centre of mass the core sits at −r/A and the last nucleon at (A<sub>c</sub>/A)r, so</p>
+      <p class="math">A⟨r²⟩<sub>A</sub> = A<sub>c</sub>(⟨r²⟩<sub>c</sub> + ⟨r²⟩/A²) + (A<sub>c</sub>/A)²⟨r²⟩<br>⟨r²⟩<sub>A</sub> = (A<sub>c</sub>/A)⟨r²⟩<sub>c</sub> + (A<sub>c</sub>/A²)⟨r²⟩</p>
+      <p class="sub">⟨r²⟩<sub>c</sub> is the measured matter radius of the core; ⟨r²⟩ is the orbital computed here. The halo enters damped by A<sub>c</sub>/A², yet one nucleon at 7 fm still lifts the matter radius of <sup>11</sup>Be about 0.7 fm above that of its <sup>10</sup>Be core.</p>
+    </div>
+  </details>
+  <details>
+    <summary>Two-neutron halos</summary>
+    <div class="grp">
+      <p class="sub"><sup>11</sup>Li (S<sub>2n</sub> = <span id="s2n"></span> MeV) is the classic halo of Tanihata et al. (1985), but it is Borromean: <sup>9</sup>Li + n and n + n are both unbound, only the three together bind. A core + one nucleon well cannot describe it; it needs a three-body calculation and is left out here on purpose.</p>
+    </div>
+  </details>
+  <div class="src" id="model"></div>
+</aside>
+
+<aside id="side" class="panel glass glass-deep" data-glass data-glass-bevel="22" data-glass-scale="42">
+  <div class="cap"><b>Density of the last nucleon</b><span>fm⁻³, log</span></div>
+  <canvas id="tail" class="plot"></canvas>
+  <div class="leg" id="leg1"></div>
+  <div class="cap"><b>Size against binding</b><span id="lawq">rms of the orbital, fm</span></div>
+  <canvas id="law" class="plot"></canvas>
+  <div class="leg" id="leg2"></div>
+  <div class="cap"><b>Matter radii</b><span>fm, at the measured S</span></div>
+  <table class="rad" id="rad"></table>
+  <div class="src" id="radsrc"></div>
+</aside>
+
+<div id="lab1" class="axlab" style="color:var(--accent)" hidden></div>
+<div id="lab2" class="axlab" style="color:var(--muted)" hidden></div>
+<div id="stamp"></div>
+<div class="hint">drag to orbit · scroll to zoom · drag the S slider</div>
+
+<script src="assets/three-bundle.js"></script>
+<script src="assets/three-post.js"></script>
+<script src="assets/vol.js"></script>
+<script src="assets/nubase.js"></script>
+<script src="assets/ws.js"></script>
+<script src="assets/halo.js"></script>
+<script>
+"use strict";
+// ---------- data
+const NUC = window.NUC;                    // [Z, N, sym, log10 T1/2, mode, B/A, est, J^pi, year]
+const ROW = new Map(), ELEM = {};
+for (const r of NUC) { ROW.set(r[0] + "," + r[1], r); ELEM[r[0]] = r[2]; }
+const LN = "spdfgh";
+const sup = (A) => `<sup>${A}</sup>`;
+const nuc = (Z, N) => `${sup(Z + N)}${ELEM[Z]}`;
+
+// AME2020 separation energies with their uncertainties (keV), file rct2_1.mas20, columns S(n), S(p);
+// shown next to the NUBASE-derived S that the solver uses
+const AME = { "11Be": [501.6, 0.3], "19C": [577, 94], "15C": [1218.1, 0.8], "31Ne": [170, 127], "37Mg": [240, 110], "8B": [136.4, 1.0], "13C": [4946.3087, 0.0005], "17O": [4143.0801, 0.0008] };
+
+/* Measured rms matter radii (fm) from interaction cross sections. Filled only with values read
+   from the cited documents; a nucleus missing here is shown as "n/a". */
+const MEAS = {
+  "11Be": [2.73, 0.05, "a"], "10Be": [2.30, 0.02, "a"], "8B": [2.38, 0.04, "a"], "7Be": [2.31, 0.02, "a"],
+  "19C": [3.13, 0.07, "b"], "18C": [2.82, 0.04, "b"], "13C": [2.28, 0.04, "b"], "12C": [2.31, 0.02, "b"],
+  "15C": [2.54, 0.04, "c"], "14C": [2.33, 0.07, "c"],
+  "17O": [2.59, 0.05, "d"], "16O": [2.54, 0.02, "d"],
+  "31Ne": [3.27, 0.14, "e"], "30Ne": [3.14, 0.11, "e"],
+  "37Mg": [3.62, 0.03, "f"], "36Mg": [3.49, 0.01, "f"],
+};
+const MEAS_SRC = `Model r<sub>m</sub>: the formula under "Matter radius" with the measured core radius; its error is the core's only. Pairs (nucleus, core) always come from one analysis.
+  <sup>a</sup> Tanihata, Phys. Lett. B 206, 592 (1988), and <sup>b</sup> Ozawa et al., RIKEN-AF-NP-294 (1998), published as Nucl. Phys. A 691, 599 (2001): optical-limit Glauber fits to interaction cross sections near 800 MeV/u, as tabulated by Alkhazov, Shabelski and Novikov, arXiv:1101.4717, Table V.
+  <sup>c</sup> Kanungo et al., Phys. Rev. Lett. 117, 102501 (2016): finite-range Glauber with proton radii fixed, as tabulated by Dobrovolsky et al., arXiv:2101.10687, Table 2.
+  <sup>d</sup> Ozawa et al., Nucl. Phys. A 691, 599 (2001), as quoted by Ren, Elhatisari and Mei&szlig;ner, arXiv:2506.02597, Table I.
+  <sup>e</sup> Gaudefroy et al., arXiv:1211.3235: an estimated matter radius, not a Glauber fit. The interaction radius there, from the cross section of Takechi et al. (Phys. Lett. B 707, 357 (2012)), is 4.15(11) fm; the matter radius is estimated from it by extrapolation along the Na isotopes.
+  <sup>f</sup> Watanabe et al., Phys. Rev. C 89, 044610 (2014): from reaction cross sections on <sup>12</sup>C at 240 MeV/u with a deformed folding-model density.
+  The analysis moves a halo radius by more than its error bar: a few-body Glauber analysis gives 2.90(5) fm for <sup>11</sup>Be and 2.50(4) fm for <sup>8</sup>B (Al-Khalili and Tostevin, Phys. Rev. Lett. 76, 3903 (1996)). The model also puts the whole ground state in one orbital around an inert core; core-excited components, which it leaves out, shrink the halo.`;
+
+// ---------- model state
+const S = { cs: null, base: null, Smeas: 0, S: 0, sol: null, core: null, coreScale: 1 };
+function caseName(cs) { return `${sup(cs.Z + cs.N)}${ELEM[cs.Z]}`; }
+function orbName(cs) { return `${cs.nr + 1}${LN[cs.l]}<sub>${cs.j2}/2</sub>`; }
+
+// shell-model core (only for drawing the core's dots)
+const coreCache = new Map();
+function coreModel(Zc, Nc) {
+  const k = Zc + "," + Nc;
+  if (!coreCache.has(k)) {
+    const res = WS.solve(Zc, Nc), G = res.G, sn = res.species.n, sp = res.species.p;
+    const w = new Float64Array(G.n + 1), rho = new Float64Array(G.n + 1);
+    for (let i = 0; i <= G.n; i++) { rho[i] = sn.rho[i] + sp.rho[i]; w[i] = G.r[i] * G.r[i] * rho[i]; }
+    const fn = sn.count / (sn.count + sp.count);
+    coreCache.set(k, { G, rho, w, fn, cn: cdfU(rhoW(G, sn.rho)), cp: cdfU(rhoW(G, sp.rho)), A: Zc + Nc, rn: sn.rho, rp: sp.rho,
+      rms: Math.sqrt((sn.count * sn.rms ** 2 + sp.count * sp.rms ** 2) / (sn.count + sp.count)) });
+  }
+  return coreCache.get(k);
+}
+function rhoW(G, rho) { const w = new Float64Array(G.n + 1); for (let i = 0; i <= G.n; i++) w[i] = G.r[i] * G.r[i] * rho[i]; return { r: G.r, w }; }
+// cumulative distribution on a (possibly non-uniform) grid, trapezoid
+function cdfU(o) {
+  const n = o.w.length, c = new Float64Array(n);
+  let s = 0;
+  for (let i = 1; i < n; i++) { s += 0.5 * (o.w[i] + o.w[i - 1]) * (o.r[i] - o.r[i - 1]); c[i] = s; }
+  for (let i = 0; i < n; i++) c[i] /= s;
+  return { r: o.r, c };
+}
+function quantile(C, x) {
+  const c = C.c;
+  let lo = 0, hi = c.length - 1;
+  while (hi - lo > 1) { const m = (lo + hi) >> 1; if (c[m] < x) lo = m; else hi = m; }
+  const t = c[hi] > c[lo] ? (x - c[lo]) / (c[hi] - c[lo]) : 0;
+  return C.r[lo] + t * (C.r[hi] - C.r[lo]);
+}
+
+function solveAt(Sval) {
+  return HALO.solve({ ...S.base, S: Sval });
+}
+
+// ---------- scene
+const stage = document.getElementById("stage");
+const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.setSize(innerWidth, innerHeight);
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.05;
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+stage.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(38, innerWidth / innerHeight, 0.1, 4000);
+const composer = new EffectComposer(renderer);
+composer.addPass(new RenderPass(scene, camera));
+const bloom = new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), 0.2, 0.6, 0.95);
+composer.addPass(bloom);
+composer.addPass(new OutputPass());
+const smaa = new SMAAPass(innerWidth * renderer.getPixelRatio(), innerHeight * renderer.getPixelRatio());
+composer.addPass(smaa);
+// image-based light from a soft procedural studio (panels with feathered edges, no files)
+scene.environment = VOL.studioEnv(renderer);
+renderer.localClippingEnabled = true;
+VOL.lightRig(scene);
+scene.fog = new THREE.Fog("#0b0d12", 60, 180);
+// The ground colour #0b0d12 is drawn untouched on the direct path, but OutputPass runs it through
+// ACES, whose toe crushes it to black. On the bloom path the background and fog therefore take the
+// linear colour that ACES (exposure 1.05) maps back to exactly #0b0d12: found by Newton on the r160
+// shader formula, residual 1e-11, sRGB out (11, 13, 18).
+const GROUND = new THREE.Color("#0b0d12");
+const GROUND_PRE_ACES = new THREE.Color().setRGB(0.0115476, 0.0131218, 0.0174740, THREE.LinearSRGBColorSpace);
+scene.background = GROUND.clone();
+
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+controls.dampingFactor = 0.08;
+controls.minDistance = 4;
+controls.maxDistance = 1200;
+const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+controls.autoRotate = !reduce;
+controls.autoRotateSpeed = 0.35;
+// any user drag or wheel stops the auto-rotation and any camera fit still in progress
+controls.addEventListener("start", () => { controls.autoRotate = false; fitTo = 0; });
+
+// stage: matte floor, contact shadow (blurred attenuation of an overhead light through the volume), scale bar in fm
+const stage3 = new VOL.Stage(scene);
+stage3.side = 0.75;
+// floor grid, 1 fm cells
+const grid = new THREE.GridHelper(400, 400, "#2a3245", "#1d2333");
+grid.material.opacity = 0.55;
+stage3.fadeGrid(grid);
+scene.add(grid);
+// cut-away wedge facing the camera, shared by the volume, the glass and the point cloud
+const cut = new VOL.Cut();
+// core + halo densities as a volume (cinematic)
+const vol = new VOL.Volume({ coarse: 1.35 }).useCut(cut);
+const gov = new VOL.Governor(vol);
+scene.add(vol.mesh);
+
+// rings that always face the camera: rms of the halo nucleon (amber) and of 208Pb (grey)
+function ringLine(color, opacity, dashed) {
+  const pts = [];
+  for (let i = 0; i <= 160; i++) { const t = i / 160 * 2 * Math.PI; pts.push(new THREE.Vector3(Math.cos(t), Math.sin(t), 0)); }
+  const g = new THREE.BufferGeometry().setFromPoints(pts);
+  const m = dashed ? new THREE.LineDashedMaterial({ color, transparent: true, opacity, dashSize: 0.05, gapSize: 0.04 })
+                   : new THREE.LineBasicMaterial({ color, transparent: true, opacity });
+  const l = new THREE.Line(g, m);
+  if (dashed) l.computeLineDistances();
+  l.renderOrder = 4;
+  scene.add(l);
+  return l;
+}
+const ringHalo = ringLine("#f2c14e", 0.75, false);
+const ringPb = ringLine("#8a92a6", 0.7, true);
+const pb = WS.solve(82, 126);
+const R_PB = Math.sqrt((126 * pb.species.n.rms ** 2 + 82 * pb.species.p.rms ** 2) / 208);
+ringPb.scale.setScalar(R_PB);
+// cinematic: a glass sphere of the 208Pb rms radius, for scale; clipped by the cut-away
+const glassPb = new THREE.Mesh(new THREE.SphereGeometry(R_PB, 128, 96),
+  // only a scale reference: weak reflections, kept sharp (small glints, not soft blobs that read as
+  // objects inside the cloud), so the halo cloud leads
+  VOL.glassMaterial({ clippingPlanes: cut.planes, clipIntersection: true, clearcoat: 0.25, clearcoatRoughness: 0.1, envMapIntensity: 0.4 }));
+glassPb.renderOrder = 20;
+scene.add(glassPb);
+vol.u.uSkip.value.setScalar(R_PB * 0.995);
+
+// point cloud, per-point shader as on the shell-model page
+const NPTS = innerWidth < 700 ? 45000 : 110000;
+const pos = new Float32Array(NPTS * 3), from = new Float32Array(NPTS * 3);
+const col = new Float32Array(NPTS * 3), colFrom = new Float32Array(NPTS * 3);
+const cloudGeo = new THREE.BufferGeometry();
+cloudGeo.setAttribute("position", new THREE.BufferAttribute(pos, 3));
+cloudGeo.setAttribute("aFrom", new THREE.BufferAttribute(from, 3));
+cloudGeo.setAttribute("color", new THREE.BufferAttribute(col, 3));
+cloudGeo.setAttribute("aColFrom", new THREE.BufferAttribute(colFrom, 3));
+const isHalo = new Float32Array(NPTS);
+cloudGeo.setAttribute("aHalo", new THREE.BufferAttribute(isHalo, 1));
+const cloudMat = new THREE.ShaderMaterial({
+  uniforms: {
+    uMix: { value: 1 }, uSize: { value: 0.16 }, uPix: { value: 600 }, uAlpha: { value: 0.5 },
+    uFocus: { value: 40 }, uAperture: { value: 0 }, uHalo: { value: 1 },
+    uCut: { value: 0 }, uCutA: { value: cut.A }, uCutB: { value: cut.B },
+  },
+  vertexShader: `
+    attribute vec3 aFrom; attribute vec3 color; attribute vec3 aColFrom; attribute float aHalo;
+    uniform float uMix, uSize, uPix, uFocus, uAperture, uHalo, uCut;
+    uniform vec3 uCutA, uCutB;
+    varying vec3 vC;
+    void main(){
+      vec3 p = mix(aFrom, position, uMix);
+      vC = mix(aColFrom, color, uMix);
+      // cut-away: points inside the removed wedge are dropped
+      if (uCut > 0.5 && dot(p, uCutA) > 0.0 && dot(p, uCutB) > 0.0) { gl_Position = vec4(0.0, 0.0, 2.0, 1.0); gl_PointSize = 0.0; return; }
+      vec4 mv = modelViewMatrix * vec4(p, 1.0);
+      gl_Position = projectionMatrix * mv;
+      // depth of field: a point off the focal plane spreads into its circle of confusion
+      // (thin lens, size in fm at the point) and dims by the area ratio, so its total light is kept
+      float coc = uAperture * abs(-mv.z - uFocus) / max(uFocus, 1e-3);
+      // halo dots grow with the halo, so they keep their size on screen as the camera backs off
+      float s0 = uSize * mix(1.0, uHalo, aHalo);
+      float s = min(s0 + coc, 10.0 * s0);
+      vC *= (s0 * s0) / (s * s);
+      gl_PointSize = max(1.0, s * uPix / -mv.z);
+    }`,
+  fragmentShader: `
+    uniform float uAlpha;
+    varying vec3 vC;
+    void main(){
+      vec2 d = gl_PointCoord - 0.5;
+      float r2 = dot(d, d);
+      if (r2 > 0.25) discard;
+      float a = exp(-r2 * 14.0) * uAlpha;
+      gl_FragColor = vec4(vC * a, a);
+      // same output transform as the built-in materials: on screen ACES + sRGB here,
+      // into the composer's linear target nothing (OutputPass applies them once at the end)
+      #include <tonemapping_fragment>
+      #include <colorspace_fragment>
+    }`,
+  transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
+});
+const cloud = new THREE.Points(cloudGeo, cloudMat);
+cloud.frustumCulled = false;
+scene.add(cloud);
+const CN = new THREE.Color("#a8cdf2"), CP = new THREE.Color("#ff9656");
+const HALO_GAIN = 2.6;
+
+/* Per-point random numbers kept between S changes, so the cloud deforms continuously:
+   core point k: intrinsic position (fixed) + recoil -r/A, with r drawn from the halo orbital;
+   halo point k: (A_c/A) r, with r drawn from the halo orbital.
+   r = quantile(q_k) of the current orbital, along a fixed random direction. */
+const qv = new Float32Array(NPTS), dir = new Float32Array(NPTS * 3), intr = new Float32Array(NPTS * 3);
+let nCore = 0, mix = 1, haloCDF = null;
+function randDir(k) {
+  const ct = 2 * Math.random() - 1, st = Math.sqrt(1 - ct * ct), ph = 2 * Math.PI * Math.random();
+  dir[3 * k] = st * Math.cos(ph); dir[3 * k + 1] = ct; dir[3 * k + 2] = st * Math.sin(ph);
+}
+function sampleCase() {
+  for (let i = 0; i < pos.length; i++) {
+    from[i] = from[i] + (pos[i] - from[i]) * mix;
+    colFrom[i] = colFrom[i] + (col[i] - colFrom[i]) * mix;
+  }
+  const cs = S.cs, Ac = S.core.A, A = Ac + 1, core = S.core;
+  nCore = Math.round(NPTS * Ac / A);
+  const hc = cs.q === "n" ? CN : CP;
+  for (let k = 0; k < NPTS; k++) {
+    qv[k] = Math.random(); randDir(k);
+    if (k < nCore) {
+      const isN = Math.random() < core.fn;
+      const r = S.coreScale * quantile(isN ? core.cn : core.cp, Math.random());
+      const ct = 2 * Math.random() - 1, st = Math.sqrt(1 - ct * ct), ph = 2 * Math.PI * Math.random();
+      intr[3 * k] = r * st * Math.cos(ph); intr[3 * k + 1] = r * ct; intr[3 * k + 2] = r * st * Math.sin(ph);
+      const c = isN ? CN : CP;
+      col[3 * k] = c.r; col[3 * k + 1] = c.g; col[3 * k + 2] = c.b;
+      isHalo[k] = 0;
+    } else {
+      isHalo[k] = 1;
+      col[3 * k] = hc.r * HALO_GAIN; col[3 * k + 1] = hc.g * HALO_GAIN; col[3 * k + 2] = hc.b * HALO_GAIN;
+    }
+  }
+  placePoints();
+  cloudGeo.attributes.aFrom.needsUpdate = true;
+  cloudGeo.attributes.aColFrom.needsUpdate = true;
+  cloudGeo.attributes.color.needsUpdate = true;
+  cloudGeo.attributes.aHalo.needsUpdate = true;
+  mix = 0;
+}
+function placePoints() {
+  const A = S.core.A + 1, fc = S.core.A / A;
+  for (let k = 0; k < NPTS; k++) {
+    const r = quantile(haloCDF, qv[k]);
+    if (k < nCore) {
+      for (let a = 0; a < 3; a++) pos[3 * k + a] = intr[3 * k + a] - dir[3 * k + a] * r / A;
+    } else {
+      for (let a = 0; a < 3; a++) pos[3 * k + a] = dir[3 * k + a] * r * fc;
+    }
+  }
+  cloudGeo.attributes.position.needsUpdate = true;
+}
+let quality = innerWidth < 700 ? "low" : "high";
+
+// ---------- core + last nucleon as a volume (cinematic)
+// About the centre of mass, as for the dots: the last nucleon sits at (Ac/A) r, so its density is
+// rho_orb(s A/Ac); the core's shell-model densities are folded with the core's recoil -r/A, a
+// spherical convolution that is exact for spherical densities. Transfer functions, stated on the
+// page: core, x = rho/rho_max with neutrons and protons on one scale; last nucleon, logarithmic,
+// x = 1 + log10(rho/rho_peak)/3 (three decades): the tail reads, and the faint fourth decade, which
+// for an s-wave halo reaches the camera, no longer fogs the whole view
+const HALO_DEC = 3;
+function buildField(fade) {
+  const sol = S.sol, core = S.core, Ac = core.A, A = Ac + 1, fc = Ac / A;
+  const pr = HALO.profile(sol, 4), ro = pr.r, n = ro.length, dorb = new Float64Array(n);
+  for (let i = 1; i < n; i++) dorb[i] = pr.u[i] * pr.u[i] / (4 * Math.PI * ro[i] * ro[i]);
+  dorb[0] = dorb[1];
+  let k = 0;
+  const orbAt = (r) => {                          // monotone queries are not guaranteed: bisect
+    if (r >= ro[n - 1]) return 0;
+    let lo = 0, hi = n - 1;
+    while (hi - lo > 1) { const m = (lo + hi) >> 1; if (ro[m] <= r) lo = m; else hi = m; }
+    const t = (r - ro[lo]) / (ro[hi] - ro[lo]);
+    return dorb[lo] * (1 - t) + dorb[hi] * t;
+  };
+  let pk = 0, rlast = 0;
+  for (let i = 0; i < n; i++) pk = Math.max(pk, dorb[i]);
+  for (let i = 0; i < n; i++) if (dorb[i] > Math.pow(10, -HALO_DEC - 0.2) * pk) rlast = ro[i];
+  // core densities folded with the complete recoil distribution (the orbital's probability at d = r/A,
+  // tail included, renormalized), HALO.foldCore; the display threshold below is applied afterwards.
+  // The core is drawn at the measured matter radius used in the table (S.coreScale, see loadCase).
+  const G = core.G, sc = S.coreScale;
+  let cmax = 0, redge = 0;
+  for (let i = 0; i <= G.n; i++) cmax = Math.max(cmax, core.rho[i]);
+  for (let i = 0; i <= G.n; i++) if (core.rho[i] > 1e-6 * cmax) redge = G.r[i];
+  const RC = redge * sc + 6 * Math.sqrt(sol.r2) / A + 1, NC = 240, dR = RC / NC, Rg = new Float64Array(NC + 1);
+  for (let i = 0; i <= NC; i++) Rg[i] = Math.max(i * dR, 0.25 * dR);
+  const fold = HALO.foldCore(sol, A, { r: G.r, rho: [core.rn, core.rp] }, Rg, sc);
+  const cn = fold.rho[0], cp = fold.rho[1];
+  const cAt = (c, r) => { const f = r / dR; if (f >= NC) return 0; const i = Math.floor(f), t = f - i; return c[i] * (1 - t) + c[i + 1] * t; };
+  let cm = 0, rc = 0;
+  for (let i = 0; i <= NC; i++) cm = Math.max(cm, cn[i], cp[i]);
+  for (let i = 0; i <= NC; i++) if (Math.max(cn[i], cp[i]) > 2e-3 * cm) rc = i * dR;
+  const rmax = Math.max(rlast * fc, rc) * 1.04 + 1;
+  const hc = S.cs.q === "n" ? CN : CP;
+  // iso shells, stated on the page: the core's half-density surface (rho_n + rho_p at half its maximum)
+  // and, faint, the surface where the last nucleon's density falls to 1% of its peak (x = 1/3 on the
+  // three-decade log scale)
+  const F = VOL.field({ rmax, r0: rmax > 40 ? 2 : 0, NR: 256, NU: 1, tau: 4,
+    iso: [{ w: [1, 1, 0], level: 0.5, alpha: 0.7 }, { w: [0, 0, 1], level: 1 / 3, alpha: 0.22, rim: 1 }],
+    channels: [
+      { f: (r) => cAt(cn, r), group: 0, color: CN },
+      { f: (r) => cAt(cp, r), group: 0, color: CP },
+      { f: (r) => orbAt(r / fc), group: 1, tf: { type: "log", D: HALO_DEC }, color: hc.clone().multiplyScalar(1.5), weight: 0.014, emission: 0.022 },
+    ] });
+  vol.setField(F, fade, { min: 0.1, k: 0.03, max: rmax / 40 });
+  vol.u.uFace.value = Math.max(3, 0.12 * rmax);
+  vol.u.uGradH.value = Math.max(0.25, rmax / 200);
+  const ext = Math.max(R_PB, sol.rms * fc) * 1.1 + 2, fy = -Math.max(R_PB, sol.rms * fc) - 4;
+  stage3.layout(fy, ext);
+  stage3.setShadow(F, 4);
+  vol.u.uFloorY.value = fy;
+}
+function setAlpha() { cloudMat.uniforms.uAlpha.value = 0.16; cloudMat.uniforms.uSize.value = 0.16; }
+
+// ---------- plots
+function setupCanvas(c) {
+  const d = Math.min(devicePixelRatio, 2), w = c.clientWidth, h = c.clientHeight;
+  c.width = w * d; c.height = h * d;
+  const x = c.getContext("2d");
+  x.setTransform(d, 0, 0, d, 0, 0);
+  return { x, w, h };
+}
+const L0 = 40, R0 = 8, T0 = 8, B0 = 18;
+function axes(ctx, w, h, X, Y, xt, yt, xl, yl) {
+  ctx.font = "10px ui-monospace,Menlo,monospace";
+  ctx.strokeStyle = "#1e2432"; ctx.fillStyle = "#8a92a6"; ctx.lineWidth = 1;
+  for (const [v, s] of yt) { ctx.beginPath(); ctx.moveTo(L0, Y(v)); ctx.lineTo(w - R0, Y(v)); ctx.stroke(); ctx.textAlign = "right"; ctx.fillText(s, L0 - 4, Y(v) + 3); }
+  ctx.textAlign = "center";
+  for (const [v, s] of xt) { ctx.beginPath(); ctx.moveTo(X(v), T0); ctx.lineTo(X(v), h - B0); ctx.stroke(); ctx.fillText(s, X(v), h - 5); }
+  if (xl) { ctx.textAlign = "right"; ctx.fillText(xl, w - R0, h - B0 - 4); }
+}
+function poly(ctx, xs, ys, X, Y, color, w, dash, clip) {
+  ctx.save();
+  if (clip) { ctx.beginPath(); ctx.rect(clip[0], clip[1], clip[2], clip[3]); ctx.clip(); }
+  ctx.beginPath(); ctx.strokeStyle = color; ctx.lineWidth = w; ctx.setLineDash(dash || []);
+  let on = false;
+  for (let i = 0; i < xs.length; i++) {
+    const y = ys[i];
+    if (!isFinite(y)) { on = false; continue; }
+    if (!on) { ctx.moveTo(X(xs[i]), Y(y)); on = true; } else ctx.lineTo(X(xs[i]), Y(y));
+  }
+  ctx.stroke(); ctx.restore();
+}
+const L10 = Math.log10;
+const supNum = (e) => "10" + String(e).replace("-", "⁻").replace(/\d/g, (d) => "⁰¹²³⁴⁵⁶⁷⁸⁹"[d]);
+
+// orbital density rho(r) = u^2/(4 pi r^2)
+function densityOf(sol) {
+  const p = HALO.profile(sol, 5), rr = [], rho = [];
+  for (let i = 1; i < p.r.length; i++) { rr.push(p.r[i]); rho.push(p.u[i] * p.u[i] / (4 * Math.PI * p.r[i] * p.r[i])); }
+  return { r: rr, rho };
+}
+let refSol = null, lawCurves = null;
+function drawTail() {
+  const { x: ctx, w, h } = setupCanvas(document.getElementById("tail"));
+  const xmax = Math.max(20, Math.min(60, Math.ceil(3.2 * S.sol.rms / 10) * 10)), ylo = -7, yhi = 0;
+  const X = (r) => L0 + r / xmax * (w - L0 - R0), Y = (v) => T0 + (yhi - v) / (yhi - ylo) * (h - T0 - B0);
+  const xt = []; for (let r = 0; r <= xmax; r += xmax > 30 ? 10 : 5) xt.push([r, r]);
+  const yt = []; for (let e = ylo; e <= yhi; e += 1) if (e % 2 === 0 || e === yhi) yt.push([e, supNum(e)]);
+  axes(ctx, w, h, X, Y, xt, yt, "r (fm)");
+  const clip = [L0, T0, w - L0 - R0, h - T0 - B0];
+  const lg = (arr) => arr.map((v) => (v > 0 ? L10(v) : -Infinity));
+  // core density per nucleon (shell model)
+  const core = S.core, G = core.G, cr = [], cv = [];
+  const sc = S.coreScale;
+  for (let i = 1; i <= G.n; i += 4) { cr.push(sc * G.r[i]); cv.push(core.rho[i] / core.A / (sc * sc * sc)); }
+  poly(ctx, cr, lg(cv), X, Y, "#5d6577", 1.4, [], clip);
+  // same orbital bound like an ordinary nucleon
+  if (refSol && refSol.ok) { const d = densityOf(refSol); poly(ctx, d.r, lg(d.rho), X, Y, S.cs.q === "n" ? "#a8cdf2" : "#ff9656", 1.2, [4, 3], clip); }
+  // the halo orbital and its asymptote (b^2/4pi) e^{-2 kappa r}/r^2 (times the Coulomb factor for a proton)
+  const d = densityOf(S.sol);
+  const c = S.cs.q === "n" ? "#a8cdf2" : "#ff9656";
+  poly(ctx, d.r, lg(d.rho), X, Y, "#ffffff", 1.8, [], clip);
+  // the pure tail b^2 W^2(2 kappa r)/(4 pi r^2), continued inward to show where the orbital becomes it
+  const ar = [], av = [], b = S.sol.anc, k = S.sol.kappa, eta = S.sol.eta;
+  for (let r = 1; r <= xmax; r += 0.25) {
+    const W = HALO.whittaker(eta, S.cs.l, 2 * k * r);
+    ar.push(r); av.push(b * b * W.m * W.m * Math.exp(2 * W.e) / (4 * Math.PI * r * r));
+  }
+  poly(ctx, ar, lg(av), X, Y, "#f2c14e", 1, [2, 3], clip);
+  // surface radius
+  ctx.strokeStyle = "#3a4256"; ctx.setLineDash([2, 3]);
+  ctx.beginPath(); ctx.moveTo(X(S.sol.R), T0); ctx.lineTo(X(S.sol.R), h - B0); ctx.stroke(); ctx.setLineDash([]);
+  ctx.fillStyle = "#8a92a6"; ctx.textAlign = "left"; ctx.fillText("R", X(S.sol.R) + 3, T0 + 10);
+  const Sref = refSol ? HALO_REF_S : 0;
+  document.getElementById("leg1").innerHTML =
+    `<span><i style="border-color:#fff"></i>${orbName(S.cs)} at S = ${fmtS(S.S)}</span>` +
+    `<span><i class="d" style="border-color:${c}"></i>same orbital, S = ${Sref} MeV</span>` +
+    `<span><i class="d" style="border-color:#f2c14e"></i>pure tail b²W²/4πr², ${eta > 0 ? "W ≈ (2κr)<sup>−η</sup>e<sup>−κr</sup>" : S.cs.l === 0 ? "W = e<sup>−κr</sup>" : "W → e<sup>−κr</sup>"}</span>` +
+    `<span><i style="border-color:#5d6577"></i>core, per nucleon, rms ${(S.coreScale * S.core.rms).toFixed(2)} fm</span>`;
+}
+const HALO_REF_S = 8;
+const LAW_S = (() => { const a = []; for (let e = -3; e <= 1.0001; e += 0.125) a.push(Math.pow(10, e)); return a; })();
+function computeLaw() {
+  const cs = S.cs, out = [];
+  for (const l of [0, 1, 2]) {
+    const nr = l === cs.l ? cs.nr : (l === 0 ? 1 : 0), j2 = l === cs.l ? cs.j2 : 2 * l + 1;
+    const ys = LAW_S.map((Sv) => { const s = HALO.solve({ ...S.base, l, j2, nr, S: Sv }); return s.ok ? s.rms : NaN; });
+    out.push({ l, nr, j2, ys });
+  }
+  lawCurves = out;
+}
+const LCOL = ["#f2c14e", "#7fd1b9", "#c39bd3"];
+function drawLaw() {
+  const { x: ctx, w, h } = setupCanvas(document.getElementById("law"));
+  const xlo = -3, xhi = 1, ylo = L10(2), yhi = L10(200);
+  const X = (lS) => L0 + (lS - xlo) / (xhi - xlo) * (w - L0 - R0), Y = (v) => T0 + (yhi - v) / (yhi - ylo) * (h - T0 - B0);
+  const xt = [[-3, "0.001"], [-2, "0.01"], [-1, "0.1"], [0, "1"], [1, "10"]];
+  const yt = [[L10(2), "2"], [L10(5), "5"], [L10(10), "10"], [L10(20), "20"], [L10(50), "50"], [L10(100), "100"], [L10(200), "200"]];
+  axes(ctx, w, h, X, Y, xt, yt, "S (MeV)");
+  const clip = [L0, T0, w - L0 - R0, h - T0 - B0];
+  const lx = LAW_S.map(L10);
+  // l = 0 neutron threshold law: rms -> 1/(sqrt2 kappa) = hbar/(2 sqrt(mu S))
+  if (S.cs.q === "n") {
+    const mu = S.sol.mu, ys = LAW_S.map((Sv) => L10(HALO.HBARC / (2 * Math.sqrt(mu * Sv))));
+    poly(ctx, lx, ys, X, Y, "#f2c14e", 1, [2, 3], clip);
+  }
+  for (const c of lawCurves) poly(ctx, lx, c.ys.map(L10), X, Y, LCOL[c.l], c.l === S.cs.l ? 2 : 1.3, [], clip);
+  // measured S of the case and the current point
+  ctx.strokeStyle = "#3a4256"; ctx.setLineDash([2, 3]);
+  ctx.beginPath(); ctx.moveTo(X(L10(S.Smeas)), T0); ctx.lineTo(X(L10(S.Smeas)), h - B0); ctx.stroke(); ctx.setLineDash([]);
+  ctx.fillStyle = "#ffffff"; ctx.beginPath(); ctx.arc(X(L10(S.S)), Y(L10(S.sol.rms)), 4, 0, 2 * Math.PI); ctx.fill();
+  const q = S.cs.q === "n" ? "neutron" : "proton";
+  document.getElementById("lawq").textContent = `${q} on ${S.core.A}${ELEM[S.base.Zc]}, rms in fm`;
+  document.getElementById("leg2").innerHTML = lawCurves.map((c) => `<span><i style="border-color:${LCOL[c.l]}"></i>${c.nr + 1}${LN[c.l]}<sub>${c.j2}/2</sub></span>`).join("") +
+    (S.cs.q === "n" ? `<span><i class="d" style="border-color:#f2c14e"></i>ħ/(2√(μS)), s-wave limit</span>` : `<span>Coulomb: all finite at S → 0</span>`);
+}
+
+// ---------- radii table (all cases at their measured S, computed once)
+let radRows = null;
+function computeRadii() {
+  radRows = HALO.CASES.map((cs) => {
+    const base = HALO.fromTable(NUC, cs), sol = HALO.solve(base);
+    const Ac = base.Zc + base.Nc, m = MEAS[cs.id], mc = MEAS[`${Ac}${ELEM[base.Zc]}`];
+    const rm = mc ? Math.sqrt(HALO.matterR2(Ac, mc[0] ** 2, sol.r2)) : null;
+    // uncertainty of the model radius propagated from the core radius only
+    const drm = mc ? (Ac / (Ac + 1)) * mc[0] * mc[1] / rm : null;
+    return { cs, base, sol, m, mc, rm, drm, Ac };
+  });
+}
+function drawRadii() {
+  const t = document.getElementById("rad"), f = (x, d = 2) => (x == null ? "n/a" : x.toFixed(d));
+  t.innerHTML = `<tr><th>nucleus</th><th>S MeV</th><th>r<sub>orb</sub></th><th>core</th><th>r<sub>m</sub> model</th><th>r<sub>m</sub> meas.</th></tr>` +
+    radRows.map((R) => `<tr data-id="${R.cs.id}" class="${R.cs.id === S.cs.id ? "on" : R.cs.kind === "reference" ? "ref" : ""}" title="${R.cs.kind === "reference" ? "ordinary binding, for comparison" : ""}"><td>${caseName(R.cs)}</td><td>${R.base.S.toFixed(2)}</td><td>${f(R.sol.rms)}</td>` +
+      `<td>${R.mc ? `${f(R.mc[0])}(${Math.round(R.mc[1] * 100)})` : "n/a"}</td><td>${R.rm ? `${f(R.rm)}(${Math.round(R.drm * 100)})` : "n/a"}</td><td>${R.m ? `${f(R.m[0])}(${Math.round(R.m[1] * 100)})<sup>${R.m[2]}</sup>` : "n/a"}</td></tr>`).join("");
+  document.getElementById("radsrc").innerHTML = MEAS_SRC;
+}
+document.getElementById("rad").addEventListener("click", (e) => { const tr = e.target.closest("tr[data-id]"); if (tr) loadCase(tr.dataset.id); });
+
+// ---------- info panel
+function fmtS(x) { return x >= 1 ? x.toFixed(2) + " MeV" : x >= 0.01 ? (1000 * x).toFixed(0) + " keV" : (1000 * x).toFixed(1) + " keV"; }
+function drawInfo() {
+  const cs = S.cs, sol = S.sol, base = S.base, Ac = S.core.A, A = Ac + 1;
+  const ame = AME[cs.id];
+  const qn = cs.q === "n" ? "neutron" : "proton";
+  const f = (x, d = 2) => x.toFixed(d);
+  const R = radRows.find((r) => r.cs.id === cs.id);
+  const rmNow = R.mc ? Math.sqrt(HALO.matterR2(Ac, R.mc[0] ** 2, sol.r2)) : null;
+  document.getElementById("info").innerHTML = `
+    <dt>picture</dt><dd>${nuc(base.Zc, base.Nc)} + ${qn}, ${orbName(cs)}</dd>
+    <dt>J<sup>π</sup></dt><dd>measured ${(ROW.get(cs.Z + "," + cs.N)[7] || "n/a").replace(/-/g, "−")}</dd>
+    <dt>S measured</dt><dd>${f(S.Smeas, 3)} MeV</dd>
+    ${ame ? `<dt>AME2020</dt><dd>${ame[0]} ± ${ame[1]} keV</dd>` : ""}
+    <dt>S now</dt><dd style="color:var(--accent)">${fmtS(S.S)}</dd>
+    <dt>fitted V<sub>0</sub></dt><dd>${f(sol.V0)} MeV</dd>
+    <dt>κ</dt><dd>${f(sol.kappa, 4)} fm⁻¹</dd>
+    <dt>tail length</dt><dd>1/2κ = ${f(1 / (2 * sol.kappa), 1)} fm (density)</dd>
+    ${sol.eta > 0 ? `<dt>η</dt><dd>${f(sol.eta, 3)} (Sommerfeld)</dd>` : ""}
+    <dt>ANC b</dt><dd>${f(Math.abs(sol.anc), 3)} fm<sup>−1/2</sup></dd>
+    <dt>orbital rms</dt><dd>${f(sol.rms)} fm</dd>
+    <dt>beyond R</dt><dd>${f(100 * sol.pOut, 0)}% of the time</dd>
+    <dt>r<sub>m</sub> model</dt><dd>${rmNow ? `${f(rmNow)} fm` : "n/a"}</dd>
+    <dt>r<sub>m</sub> measured</dt><dd>${R.m ? `${f(R.m[0])}(${Math.round(R.m[1] * 100)}) fm<sup>${R.m[2]}</sup>` : "n/a"}</dd>`;
+  const w = [];
+  if (cs.id === "31Ne" || cs.id === "37Mg") w.push(`J<sup>π</sup> of ${caseName(cs)} is tentative in NUBASE2020 and its core is deformed; a spherical core + p-wave neutron is the simplest reading, not a settled one. S is known only to ±${AME[cs.id][1]} keV.`);
+  if (cs.id === "19C") w.push(`S<sub>n</sub> of ${caseName(cs)} is uncertain by ±${AME[cs.id][1]} keV.`);
+  if (cs.id === "8B") w.push(`${caseName(cs)} is odd-odd: the p<sub>3/2</sub> proton couples to the 3/2<sup>−</sup> core to 2<sup>+</sup>. The tail depends only on l and S.`);
+  if (Math.abs(S.S - S.Smeas) > 1e-4) w.push("S moved away from the measured value: the depth is refitted at each S, a model nucleus, not " + caseName(cs) + ".");
+  const W = document.getElementById("warn");
+  W.hidden = !w.length; W.innerHTML = w.join(" ");
+  document.getElementById("stamp").innerHTML = `<b>${caseName(cs)}</b><small>${nuc(base.Zc, base.Nc)} + ${cs.q === "n" ? "ν" : "π"} ${orbName(cs)} · S = ${fmtS(S.S)} · ⟨r²⟩<sup>1/2</sup> = ${f(sol.rms)} fm</small>`;
+  document.getElementById("sout").textContent = fmtS(S.S);
+}
+function drawModel() {
+  const sol = S.sol, G = sol.G;
+  document.getElementById("model").innerHTML =
+    `Core + nucleon, reduced mass μ: U(r) = V<sub>0</sub>f(r) + V<sub>ls</sub>r<sub>0</sub>²r<sup>−1</sup>f′(r)⟨l·s⟩ + V<sub>C</sub>(r), f = [1 + e<sup>(r−R)/a</sup>]<sup>−1</sup>, R = r<sub>0</sub>A<sub>c</sub><sup>1/3</sup>, r<sub>0</sub> = ${G.r0} fm, a = ${G.a} fm, V<sub>ls</sub> = ${G.Vls} MeV fixed (Bohr and Mottelson geometry, as on the shell-model page); V<sub>0</sub> alone is adjusted so that the orbital sits at −S. Beyond ${G.rout.toFixed(1)} fm the bound state is the exact Whittaker tail, integrated to infinity. Solver checked against an independent finite-difference calculation: eigenvalue to 4×10<sup>−8</sup> MeV, orbital rms radius to 6×10<sup>−7</sup> fm, ANC to 4×10<sup>−8</sup>, for all eight nuclei.<br>` +
+    `S from NUBASE2020 (Kondev et al., Chin. Phys. C 45, 030001 (2021)); B/A there is rounded to 10<sup>−4</sup> MeV, so S is good to about 0.01 MeV. Uncertainties from AME2020 (Wang et al., Chin. Phys. C 45, 030003 (2021)).`;
+}
+
+// ---------- updates
+function setS(Sval, morph) {
+  S.S = Sval;
+  S.sol = solveAt(Sval);
+  if (!S.sol.ok) return;
+  const p = HALO.profile(S.sol, 1), w = new Float64Array(p.r.length);
+  for (let i = 0; i < w.length; i++) w[i] = p.u[i] * p.u[i];
+  haloCDF = cdfU({ r: p.r, w });
+  if (!morph) placePoints();
+  const fcm = S.core.A / (S.core.A + 1);
+  ringHalo.scale.setScalar(S.sol.rms * fcm);
+  buildField(!!morph);
+  cloudMat.uniforms.uHalo.value = Math.max(1, S.sol.rms * fcm / 6);
+  fitTo = Math.max(28, Math.min(900, 3.4 * Math.max(S.sol.rms * fcm, R_PB) + 8));
+  drawInfo(); drawTail(); drawLaw();
+}
+let fitTo = 0;
+function loadCase(id) {
+  const cs = HALO.CASES.find((c) => c.id === id) || HALO.CASES[0];
+  S.cs = cs;
+  S.base = HALO.fromTable(NUC, cs);
+  S.Smeas = S.base.S;
+  S.core = coreModel(S.base.Zc, S.base.Nc);
+  // draw the core at the measured matter radius that the radii table uses: the shell-model density
+  // stretched radially, rho_s(r) = s^-3 rho(r/s) (same number of nucleons, rms times s)
+  const mcore = MEAS[`${S.core.A}${ELEM[S.base.Zc]}`];
+  S.coreScale = mcore ? mcore[0] / S.core.rms : 1;
+  refSol = HALO.solve({ ...S.base, S: HALO_REF_S });
+  computeLaw();
+  document.getElementById("sl").value = L10(S.Smeas);
+  setS(S.Smeas, true);
+  sampleCase();
+  drawModel(); drawRadii();
+  for (const b of document.querySelectorAll("#chips button")) b.setAttribute("aria-pressed", b.dataset.id === cs.id ? "true" : "false");
+  const A = cs.Z + cs.N;
+  document.getElementById("toNucleus").href = `nucleus.html#${A}${ELEM[cs.Z]}`;
+  document.getElementById("toScatter").href = `scatter.html`;
+  document.title = `${A}${ELEM[cs.Z]} halo · nuclearjs`;
+  setHash();
+}
+// #11Be or #11Be@0.02 (S in MeV)
+function setHash() {
+  const moved = Math.abs(S.S - S.Smeas) > 1e-6;
+  const hash = `#${S.cs.id}` + (moved ? `@${+S.S.toPrecision(3)}` : "");
+  if (location.hash !== hash) history.replaceState(null, "", hash);
+}
+function parseHash() {
+  const m = location.hash.slice(1).match(/^([0-9]+[A-Za-z]+)(?:@([0-9.eE+-]+))?$/);
+  if (!m || !HALO.CASES.some((c) => c.id === m[1])) return null;
+  const Sv = m[2] != null ? +m[2] : null;
+  return { id: m[1], S: Sv != null && Sv >= 1e-3 && Sv <= 10 ? Sv : null };
+}
+
+// ---------- UI wiring
+{
+  const ch = document.getElementById("chips");
+  ch.innerHTML = HALO.CASES.map((c) => `<button data-id="${c.id}" class="${c.kind === "reference" ? "ref" : ""}" title="${c.kind === "reference" ? "ordinary binding, for comparison" : "halo candidate"}">${caseName(c)}</button>`).join("");
+  ch.addEventListener("click", (e) => { const b = e.target.closest("button"); if (b) loadCase(b.dataset.id); });
+}
+let pend = false;
+document.getElementById("sl").addEventListener("input", (e) => {
+  if (pend) return;
+  pend = true;
+  requestAnimationFrame(() => { pend = false; setS(Math.pow(10, +document.getElementById("sl").value), false); setHash(); });
+});
+document.getElementById("meas").addEventListener("click", () => { document.getElementById("sl").value = L10(S.Smeas); setS(S.Smeas, false); setHash(); });
+{
+  const s2 = ROW.get("3,8"), s9 = ROW.get("3,6");
+  document.getElementById("s2n").textContent = (s2[5] * 11 - s9[5] * 9).toFixed(3);
+}
+addEventListener("hashchange", () => {
+  const h = parseHash(); if (!h) return;
+  if (h.id !== S.cs.id) loadCase(h.id);
+  if (h.S != null && Math.abs(h.S - S.S) > 1e-9) { document.getElementById("sl").value = L10(h.S); setS(h.S, false); }
+});
+addEventListener("resize", () => {
+  camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight);
+  composer.setSize(innerWidth, innerHeight);
+  drawTail(); drawLaw();
+});
+function applyVis() {
+  const hi = quality === "high";
+  cloud.visible = !hi; vol.mesh.visible = hi; glassPb.visible = hi;
+  vol.u.uSkipOn.value = hi ? 1 : 0;
+  vol.u.uCut.value = cloudMat.uniforms.uCut.value = cut.on ? 1 : 0;
+  glassPb.material.clippingPlanes = cut.on ? cut.planes : [];
+  for (const b of document.querySelectorAll("#cutmode button")) b.setAttribute("aria-pressed", (b.dataset.v === "1") === cut.on ? "true" : "false");
+  document.getElementById("vnote").innerHTML = hi
+    ? "Everything about the centre of mass (the core recoils against the halo): the core from its shell-model densities, stretched radially to the measured core matter radius used in the radii table and folded with the complete recoil distribution; the last nucleon from |ψ|². Ray-marched as a glowing, absorbing volume: opacity proportional to x, emission to x(0.12 + 0.88x). Two transfer functions, both stated: the core is linear, x = ρ/ρ<sub>max</sub>; the last nucleon is logarithmic over three decades, x = 1 + log<sub>10</sub>(ρ/ρ<sub>peak</sub>)/3, with 1.4% of the core's opacity per unit x and more light per unit opacity, so its tail reads without fogging the view. Two contour surfaces are drawn as thin lit shells: the core's half-density surface, where its ρ<sub>n</sub> + ρ<sub>p</sub> falls to half its maximum, shaded as a surface (normal from the density gradient, key light from above with the self-shadowing, a fill light, a soft highlight, occlusion from the density just outside); and, faint and visible mostly where it is seen edge-on, the surface where the last nucleon's density falls to 1% of its peak (x = 1/3). Lit from above with self-shadowing; the floor shadow is the attenuation 1 − exp(−∫σ dy) of that light through the volume, blurred into a penumbra. Glass sphere and dashed ring: the rms radius of <sup>208</sup>Pb. Amber ring: rms distance of the last nucleon. Colours, brightness, the shell shading and the glass are presentation."
+    : "Every nucleon gets the same number of dots: the core's from its shell-model density stretched to the measured core matter radius of the radii table, the last nucleon's from |ψ|², all about the centre of mass (the core recoils against the halo). Halo dots are drawn brighter. Rings: rms distance of the last nucleon, and the rms radius of <sup>208</sup>Pb.";
+}
+document.getElementById("cutmode").addEventListener("click", (e) => {
+  const b = e.target.closest("button"); if (!b) return;
+  cut.on = b.dataset.v === "1"; applyVis();
+});
+function applyQuality() {
+  cloudMat.uniforms.uAperture.value = quality === "high" ? 0.35 : 0;
+  const g = quality === "high" ? GROUND_PRE_ACES : GROUND;
+  scene.background.copy(g); scene.fog.color.copy(g);
+  renderer.setClearColor(g);
+  applyVis();
+  setAlpha();
+  for (const b of document.querySelectorAll("#qmode button")) b.setAttribute("aria-pressed", b.dataset.v === quality ? "true" : "false");
+}
+document.getElementById("qmode").addEventListener("click", (e) => {
+  const b = e.target.closest("button"); if (!b) return;
+  quality = b.dataset.v; applyQuality();
+});
+applyQuality();
+
+// ---------- start
+computeRadii();
+{
+  const h = parseHash();
+  loadCase(h ? h.id : "11Be");
+  if (h && h.S != null) { document.getElementById("sl").value = L10(h.S); setS(h.S, false); setHash(); }
+  mix = 1;
+  from.set(pos); colFrom.set(col);
+  cloudGeo.attributes.aFrom.needsUpdate = true; cloudGeo.attributes.aColFrom.needsUpdate = true;
+  camera.position.set(0.62, 0.38, 0.68).setLength(fitTo);
+  controls.target.set(0, 0, 0);
+}
+
+// ---------- loop
+const lab1 = document.getElementById("lab1"), lab2 = document.getElementById("lab2"), tmp = new THREE.Vector3();
+function tag(el, r, text) {
+  // label at the top of a camera-facing ring of radius r
+  tmp.set(0, r, 0).applyQuaternion(camera.quaternion).project(camera);
+  const vis = tmp.z < 1 && Math.abs(tmp.x) < 0.95 && Math.abs(tmp.y) < 0.95;
+  el.hidden = !vis;
+  if (vis) { el.textContent = text; el.style.left = (tmp.x * 0.5 + 0.5) * innerWidth + "px"; el.style.top = (-tmp.y * 0.5 + 0.5) * innerHeight - 10 + "px"; }
+}
+let last = performance.now();
+function animate(now) {
+  requestAnimationFrame(animate);
+  // the first rAF timestamp can predate the performance.now() taken at start: never let dt go negative
+  const dt = Math.min(0.1, Math.max(0, (now - last) / 1000)); last = now;
+  if (mix < 1) mix = reduce ? 1 : Math.min(1, mix + dt / 0.7);
+  cloudMat.uniforms.uMix.value = 1 - Math.pow(1 - mix, 3);
+  vol.setMix(1 - Math.pow(1 - mix, 3));
+  if (quality === "high") gov.tick(dt);
+  const dist = camera.position.distanceTo(controls.target);
+  if (fitTo && Math.abs(dist - fitTo) > 0.05) {
+    const k = reduce ? 1 : 1 - Math.exp(-dt / 0.35);
+    camera.position.sub(controls.target).multiplyScalar((dist + (fitTo - dist) * k) / dist).add(controls.target);
+  } else fitTo = 0;   // arrived: from here on the distance is the user's
+  controls.update();
+  const dnow = camera.position.distanceTo(controls.target);
+  scene.fog.near = dnow * 1.2; scene.fog.far = dnow * 3.5;
+  grid.position.y = -Math.max(R_PB, ringHalo.scale.x) - 4 + 0.01;
+  cut.update(camera, controls.target);
+  stage3.update(camera);
+  camera.getWorldDirection(vol.u.uFwd.value);
+  ringHalo.quaternion.copy(camera.quaternion); ringPb.quaternion.copy(camera.quaternion);
+  cloudMat.uniforms.uPix.value = renderer.domElement.height / (2 * Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2));
+  cloudMat.uniforms.uFocus.value = dnow;
+  if (quality === "high") composer.render(); else renderer.render(scene, camera);
+  tag(lab1, ringHalo.scale.x, `last nucleon, rms ${ringHalo.scale.x.toFixed(1)} fm from the c.m.`);
+  tag(lab2, -R_PB, `208Pb, rms ${R_PB.toFixed(1)} fm`);
+}
+requestAnimationFrame(animate);
+</script>
+<script src="assets/glass.js"></script>
+</body>
+</html>

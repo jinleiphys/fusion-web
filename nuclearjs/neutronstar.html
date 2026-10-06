@@ -1,0 +1,591 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Neutron stars · nuclearjs</title>
+<link rel="stylesheet" href="assets/glass.css">
+<style>
+body{margin:0}
+:root{
+  color-scheme:dark;
+  --ground:#0b0d12; --line:#262c3a;
+  --ink:#e6e8ee; --muted:#8a92a6; --accent:#f2c14e;
+  --sly:#f2c14e; --apr:#5fd4e6; --fps:#c39bd3; --obs:#7fd1b9; --gw:#ff9656;
+  --sans:"Avenir Next","Futura","Helvetica Neue","PingFang SC","Noto Sans SC",system-ui,sans-serif;
+  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+}
+html,body{height:100%}
+body{background:var(--ground);color:var(--ink);font-family:var(--sans);overflow:hidden}
+#stage{position:fixed;inset:0}
+#stage canvas{display:block;touch-action:none}
+.panel{position:fixed;border-radius:18px;padding:16px 18px;display:flex;flex-direction:column;gap:12px;overflow:auto;box-sizing:border-box;z-index:2}
+.panel>*{flex-shrink:0}
+#ctl{left:16px;top:calc(16px + env(safe-area-inset-top,0px));width:min(316px,calc(100% - 32px));max-height:calc(100% - 56px)}
+#side{right:16px;top:calc(16px + env(safe-area-inset-top,0px));width:372px;max-height:calc(100% - 32px);gap:9px}
+h1{margin:0;font-size:22px;font-weight:600;letter-spacing:.01em}
+.sub{margin:2px 0 0;color:var(--muted);font-size:13px;line-height:1.45}
+.sub sup,.src sup,.kv sup,.cap sup,.leg sup,table sup{font-size:.7em}
+.grp{display:flex;flex-direction:column;gap:6px}
+.lab{font-size:11px;text-transform:uppercase;letter-spacing:.12em;color:var(--muted)}
+.seg{display:flex;border:1px solid var(--line);border-radius:4px;overflow:hidden}
+.seg button{flex:1;background:none;border:0;color:var(--muted);font:500 12px var(--mono);padding:6px 4px;cursor:pointer}
+.seg button+button{border-left:1px solid var(--line)}
+.seg button[aria-pressed="true"]{background:#1f2533;color:var(--ink)}
+button:focus-visible,input:focus-visible,summary:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:3px 10px;font:12px var(--mono);font-variant-numeric:tabular-nums}
+.kv dt{color:var(--muted)}.kv dd{margin:0}
+.kv .hi{color:var(--accent)}
+.row{display:flex;gap:8px;align-items:center;font:12px var(--mono);color:var(--muted)}
+.row input[type=range]{flex:1;accent-color:var(--accent);min-width:0}
+.row output{min-width:70px;text-align:right;color:var(--ink);font-variant-numeric:tabular-nums}
+details summary{cursor:pointer;font-size:11px;text-transform:uppercase;letter-spacing:.12em;color:var(--muted);list-style:none}
+details summary::before{content:"▸ ";}
+details[open] summary::before{content:"▾ ";}
+details .grp{margin-top:8px}
+.home{font:12px var(--mono);color:var(--muted);text-decoration:none}.home:hover{color:var(--ink)}
+.src{font-size:11px;color:var(--muted);line-height:1.5}
+.src b{color:var(--ink);font-weight:600}
+.plot{width:100%;height:250px;display:block}
+.cap{display:flex;flex-wrap:wrap;gap:2px 8px;justify-content:space-between;align-items:baseline;font:11px var(--mono);color:var(--muted)}
+.cap b{font:600 13px var(--sans);color:var(--ink)}
+.leg{display:flex;flex-wrap:wrap;gap:3px 11px;font:10.5px var(--mono);color:var(--muted);line-height:1.4}
+.leg i{display:inline-block;width:14px;height:0;border-top:2px solid;vertical-align:middle;margin-right:4px}
+.leg i.d{border-top-style:dashed}
+.leg i.b{width:10px;height:8px;border:1px solid;vertical-align:-1px}
+table.ly{width:100%;border-collapse:collapse;font:11px var(--mono);font-variant-numeric:tabular-nums}
+table.ly th{color:var(--muted);font-weight:500;text-align:left;padding:2px 3px;border-bottom:1px solid var(--line)}
+table.ly td{padding:3px 3px;border-bottom:1px solid #191e2a;vertical-align:top;color:var(--ink)}
+table.ly td.n{text-align:right;white-space:nowrap}
+table.ly i{display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:5px;vertical-align:0}
+.axlab{position:fixed;font:500 11px var(--mono);color:#d6deea;pointer-events:none;transform:translate(-50%,-50%);white-space:nowrap;text-shadow:0 0 6px #000,0 0 2px #000;background:rgba(8,10,15,.55);padding:1px 5px;border-radius:4px}
+.axlab.l{transform:translate(0,-50%)}
+.axlab.hot{color:var(--accent)}
+.axlab small{color:var(--muted);font-size:10px}
+#stamp{position:fixed;left:50%;bottom:calc(22px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);text-align:center;pointer-events:none;width:min(640px,50vw)}
+#stamp b{display:block;font:600 clamp(24px,3.2vw,40px)/1.05 var(--sans);letter-spacing:-.01em}
+#stamp small{display:block;font:500 12px var(--mono);color:var(--muted);margin-top:6px;line-height:1.5}
+.hint{position:fixed;left:16px;bottom:calc(14px + env(safe-area-inset-bottom,0px));font:11px var(--mono);color:var(--muted)}
+@media (max-width:900px){
+  #ctl{max-height:34vh}
+  #side{left:16px;right:16px;width:auto;top:auto;bottom:calc(12px + env(safe-area-inset-bottom,0px));max-height:36vh}
+  #stamp,.hint,.axlab{display:none}
+  .plot{height:210px}
+}
+@media (max-width:560px){.panel{padding:10px 12px;gap:9px}h1{font-size:18px}}
+</style>
+<script data-goatcounter="https://jinleiphys.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
+</head>
+<body>
+
+<div id="stage"></div>
+
+<aside id="ctl" class="panel glass glass-deep" data-glass data-glass-bevel="22" data-glass-scale="42">
+  <div>
+    <a class="home" href="index.html">← nuclearjs</a> &nbsp; <a class="home" href="stellar.html">fusion in stars</a> &nbsp; <a class="home" href="nucleosynthesis.html">heavy elements</a>
+    <h1>Neutron stars</h1>
+    <p class="sub">About 1.4 solar masses inside a sphere some 23 km across: the matter of an atomic nucleus at the scale of a city. The star is cut open at published layer depths for a typical 1.4 M<sub>☉</sub> star; the column beside it magnifies the outer kilometre.</p>
+  </div>
+  <div class="grp">
+    <div class="lab">View</div>
+    <div class="seg" id="view">
+      <button data-v="star">whole star</button>
+      <button data-v="crust">the crust</button>
+      <button data-v="city">for scale</button>
+    </div>
+  </div>
+  <div class="grp">
+    <div class="lab">Mass-radius curve (plot)</div>
+    <div class="seg" id="eos">
+      <button data-v="SLy">SLy</button>
+      <button data-v="APR">APR</button>
+      <button data-v="FPS">FPS</button>
+    </div>
+    <label class="lab" for="ms">Mass</label>
+    <div class="row"><input id="ms" type="range" min="1" max="2.2" step="0.01"><output id="mout"></output></div>
+    <dl class="kv" id="info"></dl>
+    <p class="src" id="infonote"></p>
+  </div>
+  <div class="grp">
+    <div class="lab">Rendering</div>
+    <div class="seg" id="qmode">
+      <button data-v="high" title="shadows, ambient occlusion, bloom">cinematic</button>
+      <button data-v="low">fast</button>
+    </div>
+    <p class="src" id="vnote"></p>
+  </div>
+</aside>
+
+<aside id="side" class="panel glass glass-deep" data-glass data-glass-bevel="22" data-glass-scale="42">
+  <div class="cap"><b>Mass and radius</b><span>published curves and measurements</span></div>
+  <canvas id="pmr" class="plot" aria-label="mass against radius"></canvas>
+  <div class="leg" id="legmr"></div>
+  <div class="cap"><b>Layers of a 1.4 M<sub>☉</sub> star</b><span>SLy, depth below the surface</span></div>
+  <table class="ly" id="layers"></table>
+  <details>
+    <summary>What nuclear physics decides</summary>
+    <div class="grp src" id="nuc"></div>
+  </details>
+  <details>
+    <summary>Sources</summary>
+    <div class="grp src" id="srcs"></div>
+  </details>
+</aside>
+
+<div id="labels"></div>
+<div id="stamp"></div>
+<div class="hint">drag to orbit · scroll to zoom</div>
+
+<script src="assets/three-bundle.js"></script>
+<script src="assets/three-post.js"></script>
+<script src="assets/wave-stage.js"></script>
+<script src="assets/neutronstar-data.js"></script>
+<script src="assets/neutronstar.js"></script>
+<script>
+"use strict";
+const D = window.NS_DATA, OBS = NSTAR.OBS;
+const L10 = Math.log10;
+// ---------- the star drawn: SLy, 1.4 Msun (Douchin & Haensel 2001, Fig. 6), crust depths from Chamel & Haensel 2008
+const M0 = 1.4;
+const R0 = NSTAR.radiusAt(D.mr.SLy, M0);                         // 11.73 km
+const zDrip = D.crust.SLy.z[0], zCC = D.crust.SLy.z[1];         // proper depths, km
+const dDrip = NSTAR.radialDepth(zDrip, M0, R0), dCC = NSTAR.radialDepth(zCC, M0, R0);
+// pasta: the FPS crust of Chamel & Haensel Fig. 38 has it between these proper depths; SLy has none (illustrative)
+const dPasta = NSTAR.radialDepth(D.crust.FPS.z[2] - D.crust.FPS.z[1], M0, NSTAR.radiusAt(D.mr.FPS, M0));   // FPS star's own R(1.4)
+// inner core: n > 2 n0 = 0.32 fm^-3, a convention; its fractional radius read from APR's 1.41 Msun star (Fig. 19)
+const APR = D.apr141, RAPR = APR[APR.length - 1][0];
+function aprR(n) { for (let i = 1; i < APR.length; i++) { const a = APR[i - 1], b = APR[i]; if ((a[1] - n) * (b[1] - n) <= 0 && a[1] !== b[1]) return a[0] + (b[0] - a[0]) * (n - a[1]) / (b[1] - a[1]); } return null; }
+const fIC = aprR(0.32) / RAPR;
+const RS0 = NSTAR.rs(M0);
+const LAY = {
+  R: R0, drip: R0 - dDrip, cc: R0 - dCC, pasta: R0 - dCC + dPasta, ic: fIC * R0,
+};
+const COL = { oc: "#7fa6d8", ic: "#a98be0", pasta: "#e07ab8", core: "#ff9a52", inner: "#ffe2b0" };
+
+// ---------- state
+const S = { eos: "SLy", M: 1.4, view: "star" };
+
+// ---------- scene
+const stage = document.getElementById("stage");
+const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.setSize(innerWidth, innerHeight);
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.05;
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+stage.appendChild(renderer.domElement);
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(34, innerWidth / innerHeight, 0.05, 600);
+const SKY = WaveStage.skyGLSL(new THREE.Vector3(-0.35, 0.8, 0.5));
+scene.environment = WaveStage.environment(renderer, SKY);
+scene.fog = new THREE.Fog("#0b0d12", 90, 220);
+// The ground colour #0b0d12 is drawn untouched on the direct path; on the bloom path OutputPass runs it through
+// ACES, so there the background takes the linear colour that ACES (exposure 1.05) maps back to #0b0d12.
+const GROUND = new THREE.Color("#0b0d12");
+const GROUND_PRE_ACES = new THREE.Color().setRGB(0.0115476, 0.0131218, 0.0174740, THREE.LinearSRGBColorSpace);
+scene.background = GROUND.clone();
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true; controls.dampingFactor = 0.08;
+controls.minDistance = 6; controls.maxDistance = 160;
+controls.maxPolarAngle = Math.PI * 0.495;
+const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+const RIG = WaveStage.rig(scene, SKY, 120, 40);
+const POST = WaveStage.post(renderer, scene, camera, [0.55, 0.55, 0.8], { intensity: 0.8, radius: 1.6, thickness: 1 });
+const composer = POST.composer;
+const FLOORY = -R0 - 2.2;
+scene.add(WaveStage.floor(140, FLOORY, 16, 0.6));
+
+// ---------- the star: outer surface with the quadrant x > 0, z > 0 removed
+const star = new THREE.Group(); scene.add(star);
+const surfMat = new THREE.MeshPhysicalMaterial({ color: "#1b1f28", metalness: 0.7, roughness: 0.5, clearcoat: 0.2, clearcoatRoughness: 0.55,
+  envMapIntensity: 0.4, roughnessMap: WaveStage.noiseTexture(256, 10, 0.55, 1.0, 17) });
+const SURFU = { uSpot: { value: new THREE.Vector3(0.35, 0.86, -0.36).normalize() }, uT: { value: 0 } };
+surfMat.onBeforeCompile = (sh) => {
+  Object.assign(sh.uniforms, SURFU);
+  sh.vertexShader = sh.vertexShader.replace("#include <common>", "#include <common>\nvarying vec3 vOp;")
+    .replace("#include <begin_vertex>", "#include <begin_vertex>\nvOp = position;");
+  sh.fragmentShader = sh.fragmentShader.replace("#include <common>", "#include <common>\nvarying vec3 vOp; uniform vec3 uSpot; uniform float uT;")
+    .replace("#include <clipping_planes_fragment>", "#include <clipping_planes_fragment>\nif (vOp.x > 0.0 && vOp.z > 0.0) discard;")
+    .replace("#include <emissivemap_fragment>", `#include <emissivemap_fragment>
+      vec3 nO = normalize(vOp);
+      float fr = pow(1.0 - abs(dot(normalize(vNormal), normalize(vViewPosition))), 3.0);
+      // two hot polar caps on a tilted magnetic axis (schematic) and a faint thermal glow toward the limb
+      float cap = smoothstep(0.93, 0.995, abs(dot(nO, uSpot)));
+      totalEmissiveRadiance += vec3(0.22, 0.40, 1.0) * (0.04 + 0.6 * fr) + vec3(0.75, 0.88, 1.0) * cap * 2.2;`);
+};
+surfMat.customProgramCacheKey = () => "nssurf";
+const surf = new THREE.Mesh(new THREE.SphereGeometry(R0, 192, 128), surfMat);
+surf.castShadow = true; surf.receiveShadow = true;
+star.add(surf);
+
+// density profile of APR's 1.41 Msun star (Fig. 19) as a 1D texture in r / R
+const NTX = 256, ntex = new Uint8Array(NTX * 4);
+for (let i = 0; i < NTX; i++) {
+  const r = (i / (NTX - 1)) * RAPR; let n = 0;
+  for (let k = 1; k < APR.length; k++) if (APR[k][0] >= r) { const a = APR[k - 1], b = APR[k]; n = a[1] + (b[1] - a[1]) * (r - a[0]) / Math.max(1e-9, b[0] - a[0]); break; }
+  const v = Math.round(255 * Math.max(0, Math.min(1, n / APR[0][1])));
+  ntex[4 * i] = ntex[4 * i + 1] = ntex[4 * i + 2] = v; ntex[4 * i + 3] = 255;
+}
+const nTex = new THREE.DataTexture(ntex, NTX, 1, THREE.RGBAFormat);
+nTex.magFilter = nTex.minFilter = THREE.LinearFilter; nTex.needsUpdate = true;
+
+// the two cut faces, coloured by radius: core by APR's density, crust layers by kind, boundaries as lines
+const faceMat = new THREE.ShaderMaterial({
+  uniforms: { uR: { value: R0 }, uDrip: { value: LAY.drip }, uCC: { value: LAY.cc }, uPasta: { value: LAY.pasta }, uIC: { value: LAY.ic },
+    uRs: { value: RS0 }, uN: { value: nTex }, uSel: { value: R0 }, uT: { value: 0 } },
+  vertexShader: `varying vec3 vP; varying vec3 vW; void main(){ vP = position; vec4 w = modelMatrix * vec4(position, 1.0); vW = w.xyz; gl_Position = projectionMatrix * viewMatrix * w; }`,
+  fragmentShader: `uniform float uR, uDrip, uCC, uPasta, uIC, uRs, uSel, uT; uniform sampler2D uN; varying vec3 vP; varying vec3 vW;
+    float hash(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+    float line(float r, float r0, float w){ return 1.0 - smoothstep(0.0, w * fwidth(r), abs(r - r0)); }
+    void main(){
+      float r = length(vP);
+      vec2 q = vec2(vP.y, length(vP.xz));                  // in-plane coordinates of the face
+      float n = texture2D(uN, vec2(clamp(r / uR, 0.0, 1.0), 0.5)).r;   // n / n_centre, APR 1.41 Msun
+      vec3 col;
+      if (r < uCC) {
+        // the core: warm white at the centre to deep red at the crust-core boundary, by density
+        vec3 c0 = vec3(0.30, 0.03, 0.14), c1 = vec3(0.72, 0.10, 0.08), c2 = vec3(0.95, 0.42, 0.10), c3 = vec3(1.0, 0.82, 0.50);
+        col = n < 0.3 ? mix(c0, c1, n / 0.3) : (n < 0.65 ? mix(c1, c2, (n - 0.3) / 0.35) : mix(c2, c3, (n - 0.65) / 0.35));
+        col *= 0.9 + 0.1 * hash(floor(q * 40.0));
+      } else if (r < uPasta) {
+        // pasta (illustrative): stripes
+        float s = step(0.5, fract((q.x + q.y) * 18.0));
+        col = mix(vec3(0.55, 0.20, 0.45), vec3(0.85, 0.40, 0.70), s);
+      } else if (r < uDrip) {
+        // inner crust: nuclei in a neutron gas, a speckle
+        float h = hash(floor(q * 90.0));
+        col = mix(vec3(0.30, 0.22, 0.55), vec3(0.62, 0.52, 0.92), smoothstep(0.86, 1.0, h));
+      } else {
+        // outer crust: a lattice, regular dots
+        vec2 g = fract(q * 70.0) - 0.5;
+        col = mix(vec3(0.20, 0.30, 0.46), vec3(0.62, 0.78, 1.0), 1.0 - smoothstep(0.18, 0.3, length(g)));
+      }
+      // boundaries: crust-core and drip solid, inner core dashed (a convention, not a sharp layer)
+      float dash = step(0.5, fract(atan(q.x, q.y) * 40.0));
+      float b = line(r, uCC, 1.6) + line(r, uDrip, 1.4) + line(r, uIC, 2.6) * dash + line(r, uR - 0.004, 2.5);
+      col = mix(col, vec3(1.0, 0.97, 0.9), clamp(b, 0.0, 1.0) * 0.85);
+      // Schwarzschild radius of this star: a cyan dashed circle
+      float rs = line(r, uRs, 3.2) * step(0.4, fract(atan(q.x, q.y) * 30.0));
+      col = mix(col, vec3(0.0, 0.32, 0.42), rs);
+      gl_FragColor = vec4(col * 0.8, 1.0);
+      #include <tonemapping_fragment>
+      #include <colorspace_fragment>
+    }`,
+  side: THREE.DoubleSide,
+});
+faceMat.extensions = { derivatives: true };
+const faceA = new THREE.Mesh(new THREE.CircleGeometry(R0, 256, -Math.PI / 2, Math.PI).rotateY(-Math.PI / 2), faceMat);
+const faceB = new THREE.Mesh(new THREE.CircleGeometry(R0, 256, -Math.PI / 2, Math.PI), faceMat);
+faceA.receiveShadow = faceB.receiveShadow = true;
+star.add(faceA, faceB);
+
+// ring at the radius of the selected star on the mass-radius plot (equatorial)
+const selRing = new THREE.Mesh(new THREE.TorusGeometry(1, 0.035, 8, 256),
+  new THREE.MeshBasicMaterial({ color: "#f2c14e", transparent: true, opacity: 0.85, depthWrite: false }));
+selRing.rotation.x = Math.PI / 2; selRing.userData.noAO = true; selRing.renderOrder = 5;
+star.add(selRing);
+
+// ---------- the magnified column: the outer kilometre, depths to scale (x MAG), contents symbolic
+const MAG = 15, CW = 4.2;                                  // magnification and column width (world units)
+const COLC = new THREE.Vector3(12.8, 0.3, -10.2);   // centre of the column
+const TOPY = COLC.y + MAG * 0.5;                            // depth 0 at the top, 1 km at the bottom
+const yAt = (d) => TOPY - MAG * d;                          // depth (km) -> world y
+const column = new THREE.Group(); scene.add(column);
+{
+  // glass box
+  const gm = new THREE.MeshPhysicalMaterial({ color: "#a8c6ff", metalness: 0, roughness: 0.08, transmission: 0, transparent: true, opacity: 0.08,
+    envMapIntensity: 1.2, clearcoat: 1, side: THREE.DoubleSide, depthWrite: false });
+  const box = new THREE.Mesh(new THREE.BoxGeometry(CW, MAG, CW), gm);
+  box.position.copy(COLC); box.userData.noAO = true; box.renderOrder = 7;
+  const edges = new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(CW, MAG, CW)),
+    new THREE.LineBasicMaterial({ color: "#8ea6c8", transparent: true, opacity: 0.45 }));
+  edges.position.copy(COLC);
+  column.add(box, edges);
+  // layer floors: thin glowing planes at the drip and the crust-core interface
+  const slab = (d, c, o) => { const m = new THREE.Mesh(new THREE.PlaneGeometry(CW, CW).rotateX(-Math.PI / 2),
+    new THREE.MeshBasicMaterial({ color: c, transparent: true, opacity: o, depthWrite: false, side: THREE.DoubleSide, blending: THREE.AdditiveBlending }));
+    m.position.set(COLC.x, yAt(d), COLC.z); m.userData.noAO = true; column.add(m); };
+  slab(dDrip, "#9fc3ff", 0.25); slab(dCC, "#ffb070", 0.3); slab(dCC - dPasta, "#e07ab8", 0.18);
+  const rnd = (() => { let s = 7; return () => ((s = (s * 16807) % 2147483647) / 2147483647); })();
+  const nuc = (r, c) => new THREE.MeshPhysicalMaterial({ color: c, roughness: 0.3, clearcoat: 1, clearcoatRoughness: 0.1, emissive: c, emissiveIntensity: 0.15, sheen: 0.4 });
+  // outer crust: a body-centred cubic lattice of nuclei, growing toward the drip (sizes symbolic)
+  const half = CW / 2 - 0.25, pts = [];
+  const a = 0.62;
+  for (let y = TOPY - 0.3; y > yAt(dDrip) + 0.1; y -= a / 2) {
+    const layer = Math.round((TOPY - 0.3 - y) / (a / 2)), off = layer % 2 ? a / 2 : 0;
+    for (let x = -half + off; x <= half; x += a) for (let z = -half + off; z <= half; z += a) pts.push([x, y, z]);
+  }
+  const outer = new THREE.InstancedMesh(new THREE.SphereGeometry(1, 20, 14), nuc(1, "#a8cdf2"), pts.length);
+  const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), sc = new THREE.Vector3(), pv = new THREE.Vector3();
+  pts.forEach((p, i) => { const f = (TOPY - p[1]) / (TOPY - yAt(dDrip)); sc.setScalar(0.07 + 0.09 * f); pv.set(COLC.x + p[0], p[1], COLC.z + p[2]); m4.compose(pv, q, sc); outer.setMatrixAt(i, m4); });
+  outer.castShadow = true; column.add(outer);
+  // inner crust: bigger, sparser nuclei in a neutron gas
+  const ipts = [], b = 1.0;
+  for (let y = yAt(dDrip) - 0.45; y > yAt(dCC - dPasta) + 0.3; y -= b * 0.8)
+    for (let x = -half + 0.2; x <= half; x += b) for (let z = -half + 0.2; z <= half; z += b) ipts.push([x + 0.12 * (rnd() - 0.5), y, z + 0.12 * (rnd() - 0.5)]);
+  const inner = new THREE.InstancedMesh(new THREE.SphereGeometry(1, 24, 16), nuc(1, "#c3a6ef"), ipts.length);
+  ipts.forEach((p, i) => { const f = (yAt(dDrip) - p[1]) / (yAt(dDrip) - yAt(dCC)); sc.setScalar(0.17 + 0.12 * f); pv.set(COLC.x + p[0], p[1], COLC.z + p[2]); m4.compose(pv, q, sc); inner.setMatrixAt(i, m4); });
+  inner.castShadow = true; column.add(inner);
+  // the neutron gas and, in the core, the neutron-proton liquid: points
+  const gas = [], gcol = [];
+  const addPts = (d0, d1, n, c, jit) => { for (let i = 0; i < n; i++) { const y = yAt(d0 + (d1 - d0) * rnd()); gas.push(COLC.x + (rnd() - 0.5) * (CW - 0.1), y, COLC.z + (rnd() - 0.5) * (CW - 0.1)); const k = jit && rnd() < 0.06 ? [1.0, 0.6, 0.3] : c; gcol.push(...k); } };
+  addPts(dDrip, dCC - dPasta, 2600, [0.55, 0.65, 1.0], false);
+  addPts(dCC, 1.0, 9000, [0.75, 0.82, 1.0], true);
+  const gg = new THREE.BufferGeometry();
+  gg.setAttribute("position", new THREE.Float32BufferAttribute(gas, 3));
+  gg.setAttribute("color", new THREE.Float32BufferAttribute(gcol, 3));
+  const gpm = new THREE.PointsMaterial({ size: 0.05, vertexColors: true, transparent: true, opacity: 0.75, depthWrite: false, blending: THREE.AdditiveBlending });
+  const gp = new THREE.Points(gg, gpm); gp.userData.noAO = true; column.add(gp);
+  // pasta (illustrative): rods along x in the upper half of the band, slabs below
+  const pm = nuc(1, "#e891c8");
+  const y0 = yAt(dCC - dPasta), y1 = yAt(dCC), ym = (y0 + y1) / 2;
+  for (let z = -half + 0.2; z <= half; z += 0.55) {
+    const rod = new THREE.Mesh(new THREE.CylinderGeometry(0.11, 0.11, CW - 0.3, 16).rotateZ(Math.PI / 2), pm);
+    rod.position.set(COLC.x, (y0 + ym) / 2, COLC.z + z); rod.castShadow = true; column.add(rod);
+  }
+  const slabM = new THREE.Mesh(new RoundedBoxGeometry(CW - 0.3, Math.max(0.12, (ym - y1) * 0.45), CW - 0.3, 3, 0.05), pm);
+  slabM.position.set(COLC.x, (ym + y1) / 2, COLC.z); slabM.castShadow = true; column.add(slabM);
+  // leader lines from the crust on the cut face to the column
+  const lm = new THREE.LineDashedMaterial({ color: "#8ea6c8", dashSize: 0.35, gapSize: 0.25, transparent: true, opacity: 0.6 });
+  const pA = new THREE.Vector3(R0 * 0.999, 0, 0.02), pB = new THREE.Vector3(R0 - 1.0, 0, 0.02);
+  for (const [p, y] of [[pA, TOPY], [pB, yAt(1.0)]]) {
+    const l = new THREE.Line(new THREE.BufferGeometry().setFromPoints([p, new THREE.Vector3(COLC.x - CW / 2, y, COLC.z + CW / 2)]), lm);
+    l.computeLineDistances(); column.add(l);
+  }
+}
+
+// ---------- a city for scale: 20 km x 20 km of blocks on the floor, building heights up to 0.4 km
+const CITY = new THREE.Vector3(-26, FLOORY, -8);
+{
+  const N = 44, cell = 20 / N, pos = [];
+  const rnd = (() => { let s = 99; return () => ((s = (s * 16807) % 2147483647) / 2147483647); })();
+  for (let i = 0; i < N; i++) for (let j = 0; j < N; j++) {
+    if (i % 6 === 5 || j % 6 === 5) continue;              // avenues
+    const x = -10 + (i + 0.5) * cell, z = -10 + (j + 0.5) * cell, rc = Math.hypot(x, z);
+    const h = 0.02 + 0.38 * Math.pow(rnd(), 3) * Math.exp(-rc * rc / 30) + 0.03 * rnd();
+    pos.push([x, h, z]);
+  }
+  const g = new THREE.BoxGeometry(1, 1, 1); g.translate(0, 0.5, 0);
+  const im = new THREE.InstancedMesh(g, new THREE.MeshStandardMaterial({ color: "#8f9bb2", roughness: 0.65, metalness: 0.15, emissive: "#ffcf8a", emissiveIntensity: 0.05 }), pos.length);
+  const m4 = new THREE.Matrix4();
+  pos.forEach((p, k) => { m4.makeScale(cell * 0.78, p[1], cell * 0.78); m4.setPosition(CITY.x + p[0], CITY.y, CITY.z + p[2]); im.setMatrixAt(k, m4); });
+  im.castShadow = true; im.receiveShadow = true; scene.add(im);
+  const pad = new THREE.Mesh(new THREE.PlaneGeometry(20.6, 20.6).rotateX(-Math.PI / 2), new THREE.MeshStandardMaterial({ color: "#141821", roughness: 0.9 }));
+  pad.position.set(CITY.x, FLOORY + 0.005, CITY.z); pad.receiveShadow = true; scene.add(pad);
+}
+// ---------- labels
+const labels = document.getElementById("labels"), LAB = {};
+function lab(key, cls) {
+  if (!LAB[key]) { const el = document.createElement("div"); el.className = "axlab " + (cls || ""); labels.appendChild(el); LAB[key] = el; }
+  return LAB[key];
+}
+const tmpV = new THREE.Vector3();
+function place(el, p, html) {
+  tmpV.copy(p).project(camera);
+  const vis = tmpV.z < 1 && Math.abs(tmpV.x) < 1 && Math.abs(tmpV.y) < 1;
+  el.hidden = !vis || html === "";
+  if (vis && html !== "") { el.style.left = (tmpV.x * 0.5 + 0.5) * innerWidth + "px"; el.style.top = (-tmpV.y * 0.5 + 0.5) * innerHeight + "px"; if (html != null && el._h !== html) { el.innerHTML = html; el._h = html; } }
+}
+const km = (x) => x >= 1 ? `${x.toFixed(2)} km` : `${Math.round(x * 1000)} m`;
+const onFace = (r, ang) => new THREE.Vector3(r * Math.cos(ang), r * Math.sin(ang), 0.05);   // face z = 0, x > 0
+function drawLabels() {
+  const lx = COLC.x + CW / 2 + 0.5, lz = COLC.z - CW / 2 - 0.5, L = S.view === "crust";
+  const sm = (t) => L ? ` <small>· ${t}</small>` : "";
+  place(lab("c0", "l"), new THREE.Vector3(lx, (TOPY + yAt(dDrip)) / 2, lz), `outer crust${sm("nuclei on a lattice, electron sea")}`);
+  place(lab("c1", "l hot"), new THREE.Vector3(lx, yAt(dDrip), lz), `neutron drip${L ? ` <small>· ${km(dDrip)}</small>` : ""}`);
+  place(lab("c2", "l"), new THREE.Vector3(lx, (yAt(dDrip) + yAt(dCC - dPasta)) / 2, lz), `inner crust${sm("neutron-rich nuclei in a neutron gas")}`);
+  place(lab("c3", "l"), new THREE.Vector3(lx, yAt(dCC - dPasta / 2) + 0.2, lz), `pasta${L ? " <small>· illustrative</small>" : ""}`);
+  place(lab("c4", "l hot"), new THREE.Vector3(lx, yAt(dCC) - 0.3, lz), `crust-core${L ? ` <small>· ${km(dCC)}</small>` : ""}`);
+  place(lab("c5", "l"), new THREE.Vector3(lx, (yAt(dCC) + yAt(1)) / 2, lz), `outer core${sm("neutrons, a few % protons, electrons")}`);
+  place(lab("c6"), new THREE.Vector3(COLC.x, TOPY + 0.8, COLC.z), `the outer 1 km, depth ×${MAG}`);
+  place(lab("f0"), onFace(0.45 * LAY.ic, 0.25), `inner core <small>n &gt; 2n₀</small>`);
+  place(lab("f1"), onFace((LAY.ic + LAY.cc) / 2, -0.55), `outer core`);
+  place(lab("f2", "hot"), onFace(RS0, -0.95), `r<sub>s</sub> = 2GM/c² = ${RS0.toFixed(2)} km`);
+  place(lab("f3"), new THREE.Vector3(0, R0 + 1.4, 0), `R = ${R0.toFixed(1)} km`);
+  place(lab("city"), new THREE.Vector3(CITY.x + 4, FLOORY + 0.8, CITY.z + 11), `a 20 km × 20 km city`);
+  const rr = S.R || R0, sel = new THREE.Vector3(rr * 0.6, 0.6, rr * 0.8);
+  place(lab("sel", "hot"), sel, Math.abs(rr - R0) > 0.05 || S.eos !== "SLy" ? `ring: ${S.eos} at ${S.M.toFixed(2)} M<sub>☉</sub>` : "");
+}
+
+// ---------- mass-radius plot
+function setupCanvas(c) {
+  const d = Math.min(devicePixelRatio, 2), w = c.clientWidth, h = c.clientHeight;
+  c.width = w * d; c.height = h * d;
+  const x = c.getContext("2d"); x.setTransform(d, 0, 0, d, 0, 0);
+  return { x, w, h };
+}
+const ECOL = { SLy: "#f2c14e", APR: "#5fd4e6", FPS: "#c39bd3" };
+function drawMR() {
+  const { x: ctx, w, h } = setupCanvas(document.getElementById("pmr"));
+  const PL = 34, PR = 8, PT = 8, PB = 22, xr = [8, 16], yr = [0.8, 2.7];
+  const X = (R) => PL + (R - xr[0]) / (xr[1] - xr[0]) * (w - PL - PR), Y = (M) => PT + (yr[1] - M) / (yr[1] - yr[0]) * (h - PT - PB);
+  ctx.font = "10px ui-monospace,Menlo,monospace"; ctx.lineWidth = 1;
+  for (let R = 8; R <= 16; R += 1) { ctx.strokeStyle = "#1c2230"; ctx.beginPath(); ctx.moveTo(X(R), PT); ctx.lineTo(X(R), h - PB); ctx.stroke(); if (R % 2 === 0) { ctx.fillStyle = "#8a92a6"; ctx.textAlign = "center"; ctx.fillText(R, X(R), h - 8); } }
+  for (let M = 1; M <= 2.6; M += 0.2) { const Mv = +M.toFixed(1); ctx.strokeStyle = "#1c2230"; ctx.beginPath(); ctx.moveTo(PL, Y(Mv)); ctx.lineTo(w - PR, Y(Mv)); ctx.stroke(); if (Math.abs(Mv * 2 - Math.round(Mv * 2)) < 1e-6) { ctx.fillStyle = "#8a92a6"; ctx.textAlign = "right"; ctx.fillText(Mv.toFixed(1), PL - 4, Y(Mv) + 3); } }
+  ctx.fillStyle = "#8a92a6"; ctx.textAlign = "right"; ctx.fillText("R (km)", w - PR - 2, h - PB - 4); ctx.textAlign = "left"; ctx.fillText("M (M☉)", PL + 4, PT + 10);
+  ctx.save(); ctx.beginPath(); ctx.rect(PL, PT, w - PL - PR, h - PT - PB); ctx.clip();
+  // forbidden by general relativity: R < 9GM/4c^2 (Buchdahl; Douchin & Haensel Fig. 6)
+  ctx.beginPath(); ctx.moveTo(X(xr[0]), Y(yr[0]));
+  for (let M = yr[0]; M <= yr[1] + 1e-9; M += 0.02) ctx.lineTo(X(2.25 * NSTAR.MSUN_KM * M), Y(M));
+  ctx.lineTo(X(xr[0]), Y(yr[1])); ctx.closePath(); ctx.fillStyle = "rgba(120,130,150,0.12)"; ctx.fill();
+  // pulsar masses
+  const band = (o, c, a) => { ctx.fillStyle = c.replace(")", `,${a})`).replace("rgb", "rgba"); ctx.fillRect(PL, Y(o.M + o.hi), w - PL - PR, Y(o.M - o.lo) - Y(o.M + o.hi)); };
+  band(OBS.j0740M, "rgb(127,209,185)", 0.16); band(OBS.j0952M, "rgb(127,209,185)", 0.07);
+  // GW170817 box
+  const g = OBS.gw170817;
+  ctx.setLineDash([4, 3]); ctx.strokeStyle = "#ff9656"; ctx.lineWidth = 1.3;
+  ctx.strokeRect(X(g.R - g.Rlo), Y(g.M2), X(g.R + g.Rhi) - X(g.R - g.Rlo), Y(g.M1) - Y(g.M2)); ctx.setLineDash([]);
+  // NICER: crosses with the quoted intervals (Riley filled, Miller open)
+  const cross = (o, c, open) => {
+    ctx.strokeStyle = c; ctx.lineWidth = 1.4;
+    ctx.beginPath(); ctx.moveTo(X(o.R - o.Rlo), Y(o.M)); ctx.lineTo(X(o.R + o.Rhi), Y(o.M)); ctx.moveTo(X(o.R), Y(o.M - o.Mlo)); ctx.lineTo(X(o.R), Y(o.M + o.Mhi)); ctx.stroke();
+    ctx.beginPath(); ctx.arc(X(o.R), Y(o.M), 3.2, 0, 2 * Math.PI); if (open) { ctx.fillStyle = "#0b0d12"; ctx.fill(); ctx.stroke(); } else { ctx.fillStyle = c; ctx.fill(); }
+  };
+  cross(OBS.j0740Riley, "#7fd1b9", false); cross(OBS.j0740Miller, "#7fd1b9", true);
+  cross(OBS.j0030Riley, "#a8cdf2", false); cross(OBS.j0030Miller, "#a8cdf2", true);
+  // the published curves (Douchin & Haensel 2001, Fig. 6), up to the maximum mass
+  for (const k of ["FPS", "APR", "SLy"]) {
+    const c = D.mr[k]; ctx.beginPath(); ctx.strokeStyle = ECOL[k]; ctx.lineWidth = k === S.eos ? 2.6 : 1.3; ctx.globalAlpha = k === S.eos ? 1 : 0.6;
+    c.forEach((p, i) => (i ? ctx.lineTo(X(p[1]), Y(p[0])) : ctx.moveTo(X(p[1]), Y(p[0])))); ctx.stroke(); ctx.globalAlpha = 1;
+    const mx = NSTAR.maxMass(c); ctx.fillStyle = ECOL[k]; ctx.beginPath(); ctx.arc(X(mx[1]), Y(mx[0]), 2.4, 0, 2 * Math.PI); ctx.fill();
+    ctx.font = "10px ui-monospace,Menlo,monospace"; ctx.textAlign = "left"; ctx.fillText(k, X(mx[1]) + 4, Y(mx[0]) - 3);
+  }
+  // the drawn star and the selected point
+  ctx.strokeStyle = "#ffffff"; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.arc(X(R0), Y(M0), 5.5, 0, 2 * Math.PI); ctx.stroke();
+  if (S.R) { ctx.fillStyle = ECOL[S.eos]; ctx.beginPath(); ctx.arc(X(S.R), Y(S.M), 4.2, 0, 2 * Math.PI); ctx.fill(); ctx.strokeStyle = "#0b0d12"; ctx.lineWidth = 1; ctx.stroke(); }
+  ctx.fillStyle = "#8a92a6"; ctx.font = "9.5px ui-monospace,Menlo,monospace"; ctx.textAlign = "left";
+  ctx.fillText("J0740+6620 mass", X(8.15), Y(OBS.j0740M.M) + 3); ctx.fillText("J0952−0607", X(8.15), Y(OBS.j0952M.M) + 3);
+  ctx.fillText("R < 9GM/4c²", X(8.15), Y(1.0)); ctx.fillStyle = "#ff9656"; ctx.fillText("GW170817", X(g.R + g.Rhi) + 3, Y(g.M1) - 2);
+  ctx.restore();
+  document.getElementById("legmr").innerHTML = ["SLy", "APR", "FPS"].map((k) => `<span><i style="border-color:${ECOL[k]}"></i>${k}</span>`).join("") +
+    `<span><i class="b" style="border-color:#7fd1b9;background:rgba(127,209,185,.25)"></i>pulsar mass, 68%</span><span>● NICER, Riley · ○ Miller</span><span><i class="d" style="border-color:#ff9656"></i>GW170817, 90%</span><span>◯ the star drawn</span>`;
+}
+
+// ---------- text
+const fmt = (v, d) => v.toFixed(d);
+function drawInfo() {
+  const c = D.mr[S.eos], mx = NSTAR.maxMass(c), R = NSTAR.radiusAt(c, S.M);
+  S.R = R;
+  const info = document.getElementById("info");
+  if (R == null) { info.innerHTML = `<dt>R</dt><dd>above the maximum mass of ${S.eos}, ${mx[0].toFixed(2)} M<sub>☉</sub></dd>`; return; }
+  const rs = NSTAR.rs(S.M), g = NSTAR.gravity(S.M, R), C = NSTAR.compactness(S.M, R);
+  info.innerHTML = `<dt>R</dt><dd class="hi">${fmt(R, 2)} km <span style="color:var(--muted)">(read off the curve)</span></dd>
+    <dt>r<sub>s</sub></dt><dd>2GM/c² = ${fmt(rs, 2)} km</dd>
+    <dt>GM/Rc²</dt><dd>${fmt(C, 3)}</dd>
+    <dt>g</dt><dd>${(g / 1e12).toFixed(2)}×10¹² m/s² <span style="color:var(--muted)">(${(g / 9.80665 / 1e11).toFixed(1)}×10¹¹ g on Earth)</span></dd>
+    <dt>M<sub>max</sub></dt><dd>${mx[0].toFixed(2)} M<sub>☉</sub> at ${fmt(mx[1], 1)} km</dd>`;
+  document.getElementById("infonote").innerHTML = `R(M) is the ${S.eos} curve of Douchin &amp; Haensel (2001, Fig. 6), read between the points they drew. r<sub>s</sub> and g = GM/(R²√(1 − r<sub>s</sub>/R)) are computed from M and R (Chamel &amp; Haensel 2008, Eq. (99)). The 3D star stays the SLy 1.4 M<sub>☉</sub> star; the gold ring around it marks this radius.`;
+  document.getElementById("stamp").innerHTML = `<b>1.4 M<sub>☉</sub> in ${R0.toFixed(1)} km</b><small>SLy · crust ${km(dCC)} thick · r<sub>s</sub> = ${RS0.toFixed(2)} km${S.eos !== "SLy" || Math.abs(S.M - 1.4) > 0.005 ? ` · ring: ${S.eos}, ${S.M.toFixed(2)} M<sub>☉</sub>, ${fmt(R, 1)} km` : ""}</small>`;
+}
+function drawStatic() {
+  const sw = (c) => `<i style="background:${c}"></i>`;
+  document.getElementById("layers").innerHTML = `<tr><th>layer</th><th>what is there</th><th style="text-align:right">depth</th></tr>
+    <tr><td>${sw("#7fa6d8")}outer crust</td><td>nuclei on a lattice in a degenerate electron gas, more neutron-rich with depth; ends at neutron drip, ρ ≈ 4×10¹¹ g/cm³ (the drip mark of the figure the depth is read from sits at 3.5×10¹¹)</td><td class="n">0 to ${km(dDrip)}</td></tr>
+    <tr><td>${sw("#a98be0")}inner crust</td><td>neutron-rich nuclei in a gas of free neutrons; ends at n = 0.076 fm⁻³, ρ ≈ 1.3×10¹⁴ g/cm³</td><td class="n">to ${km(dCC)}</td></tr>
+    <tr><td>${sw("#e07ab8")}pasta</td><td>rods and slabs at the bottom of the crust: absent for SLy, ${km(dPasta)} thick for FPS (illustrative here)</td><td class="n">model</td></tr>
+    <tr><td>${sw("#ff9a52")}outer core</td><td>uniform liquid of neutrons with a few per cent protons, electrons and muons</td><td class="n">to ${km(R0 - LAY.ic)}</td></tr>
+    <tr><td>${sw("#ffe2b0")}inner core</td><td>n above 2n₀ (a convention); its composition is open</td><td class="n">${fmt(LAY.ic, 1)} km radius</td></tr>`;
+  document.getElementById("nuc").innerHTML = `
+    <span>The crust is nuclear physics you can almost touch: the nuclei of the outer crust follow from measured and extrapolated masses, the inner crust and the core from the same nuclear interaction. SLy (Douchin &amp; Haensel 2001) does both with one Skyrme force, which is why its crust and core fit together.</span>
+    <span>The radius of a 1.4 M<sub>☉</sub> star is set mostly by the pressure of neutron-rich matter at one to two times saturation density, and that pressure is mostly the <b>symmetry energy</b>: the cost of having more neutrons than protons, J at saturation and its slope L. The same slope sets how far the neutrons of a heavy nucleus stick out beyond its protons, the <b>neutron skin</b>.</span>
+    <span><b>PREX-II</b> (Adhikari et al., PRL 126, 172502 (2021)), parity-violating electron scattering on ²⁰⁸Pb: R<sub>n</sub> − R<sub>p</sub> = 0.283 ± 0.071 fm. Within one family of relativistic functionals this means L = 106 ± 37 MeV and 13.25 ≲ R<sub>1.4</sub> ≲ 14.26 km (Reed, Fattoyev, Horowitz, Piekarewicz, PRL 126, 172503 (2021)).</span>
+    <span><b>CREX</b> (Adhikari et al., PRL 129, 042501 (2022)), the same method on ⁴⁸Ca: R<sub>n</sub> − R<sub>p</sub> = 0.121 ± 0.026 (exp) ± 0.024 (model) fm, a thin skin. Reinhard, Roca-Maza and Nazarewicz (PRL 129, 232501 (2022)) find that functionals fitted to global nuclear data cannot describe both asymmetries within one standard deviation.</span>
+    <span>An open question, then: the two skins pull the symmetry-energy slope in different directions, and the step from a skin to L is model dependent. The NICER and gravitational-wave points on the plot constrain the same pressure from the other side.</span>`;
+  document.getElementById("srcs").innerHTML = `
+    <span><b>Curves.</b> Douchin &amp; Haensel, A&amp;A 380, 151 (2001), arXiv:astro-ph/0111092, Fig. 6 (SLy, FPS, and APR as they drew it), taken from the vector paths of the figure; maximum mass of SLy 2.05 M<sub>☉</sub> at 9.99 km (their Table 6). As a check, the curves give M<sub>max</sub> and R(1.4) of 2.049, 11.73 km (SLy), 2.213, 11.41 km (APR), 1.799, 10.84 km (FPS), against 2.049, 11.736; 2.213, 11.428 (AP4); 1.799, 10.850 in Table III of Read, Lackey, Owen, Friedman, PRD 79, 124032 (2009).</span>
+    <span><b>Crust.</b> Chamel &amp; Haensel, Living Rev. Relativ. 11, 10 (2008), arXiv:0812.3955, Figs. 37 (SLy) and 38 (FPS), right panels: proper depth z of the neutron drip, ${zDrip.toFixed(2)} km, and of the crust-core interface, ${zCC.toFixed(2)} km, for M = 1.4 M<sub>☉</sub>; converted to radial depth with R − r = z√(1 − r<sub>s</sub>/R), their Eq. (97). Drip density and the interface (n = 0.076 fm⁻³): Douchin &amp; Haensel 2001, Sect. 3.</span>
+    <span><b>Core.</b> Density profile of the 1.41 M<sub>☉</sub> star of Akmal, Pandharipande &amp; Ravenhall, PRC 58, 1804 (1998), Fig. 19 (vector paths), used for the colour of the core and for where n = 2n₀ = 0.32 fm⁻³ falls, at ${(fIC * 100).toFixed(0)}% of the radius.</span>
+    <span><b>Observations.</b> ${Object.values(OBS).map((o) => o.src).join("; ")}. Intervals as each paper quotes them; the radius intervals are posterior intervals with the paper's own priors.</span>`;
+}
+
+// ---------- views
+const VIEWS = {
+  star: { t: [6.6, -3.4, -3.6], p: [47.4, 16.4, 55.3] },
+  crust: { t: [COLC.x + 4.5, COLC.y - 0.5, COLC.z - 3.5], p: [COLC.x + 24, COLC.y + 5, COLC.z + 28] },
+  city: { t: [-10, FLOORY + 6, -4], p: [30, 26, 62] },
+};
+let fly = null;
+function setView(v, instant) {
+  S.view = VIEWS[v] ? v : "star";
+  for (const b of document.querySelectorAll("#view button")) b.setAttribute("aria-pressed", b.dataset.v === S.view ? "true" : "false");
+  const V = VIEWS[S.view], wide = innerWidth / innerHeight;
+  const tt = new THREE.Vector3(...V.t), pp = new THREE.Vector3(...V.p);
+  if (wide < 1.1) pp.sub(tt).multiplyScalar(2.1).add(tt);          // portrait: step back
+  if (instant || reduce) { controls.target.copy(tt); camera.position.copy(pp); fly = null; }
+  else fly = { t0: performance.now(), a: controls.target.clone(), b: tt, pa: camera.position.clone(), pb: pp };
+  setHash();
+}
+function setEOS(k) {
+  S.eos = D.mr[k] ? k : "SLy";
+  for (const b of document.querySelectorAll("#eos button")) b.setAttribute("aria-pressed", b.dataset.v === S.eos ? "true" : "false");
+  const mx = NSTAR.maxMass(D.mr[S.eos])[0];
+  const ms = document.getElementById("ms"); ms.max = Math.floor(mx * 100) / 100;
+  setM(Math.min(S.M, +ms.max));
+}
+function setM(M) {
+  S.M = Math.max(1, M);
+  const ms = document.getElementById("ms"); S.M = Math.min(S.M, +ms.max);
+  ms.value = S.M; document.getElementById("mout").textContent = `${S.M.toFixed(2)} M☉`;
+  drawInfo(); drawMR();
+  if (S.R) { selRing.geometry.dispose(); selRing.geometry = new THREE.TorusGeometry(S.R + 0.02, 0.05, 8, 256); }
+  setHash();
+}
+function setHash() {
+  const h = `#${S.eos}@${S.M.toFixed(2)}/${S.view}`;
+  if (location.hash !== h) history.replaceState(null, "", h);
+}
+function parseHash() {
+  const m = location.hash.slice(1).match(/^(SLy|APR|FPS)(?:@([0-9.]+))?(?:\/(star|crust|city))?$/);
+  return m ? { eos: m[1], M: m[2] ? +m[2] : null, view: m[3] || null } : null;
+}
+document.getElementById("view").addEventListener("click", (e) => { const b = e.target.closest("button"); if (b) setView(b.dataset.v); });
+document.getElementById("eos").addEventListener("click", (e) => { const b = e.target.closest("button"); if (b) setEOS(b.dataset.v); });
+document.getElementById("ms").addEventListener("input", (e) => setM(+e.target.value));
+addEventListener("hashchange", () => { const h = parseHash(); if (!h) return; if (h.eos !== S.eos) setEOS(h.eos); if (h.M) setM(h.M); if (h.view && h.view !== S.view) setView(h.view); });
+addEventListener("resize", () => {
+  camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight); composer.setSize(innerWidth, innerHeight);
+  drawMR();
+});
+let quality = innerWidth < 700 ? "low" : "high";
+function applyQuality() {
+  const g = quality === "high" ? GROUND_PRE_ACES : GROUND;
+  scene.background.copy(g); scene.fog.color.copy(g);
+  renderer.shadowMap.enabled = quality === "high";
+  RIG.key.castShadow = quality === "high";
+  for (const b of document.querySelectorAll("#qmode button")) b.setAttribute("aria-pressed", b.dataset.v === quality ? "true" : "false");
+  document.getElementById("vnote").innerHTML = `To scale: the star (radius ${R0.toFixed(2)} km), its layer boundaries, the Schwarzschild circle (cyan, dashed), and the city (blocks up to 0.4 km tall). The column magnifies the outer kilometre ×${MAG} in depth with the boundaries at their depths; what fills it is a symbol (nuclei are some 10⁻¹⁴ of the sizes drawn, and the lattice, gas and liquid are not counted). Pasta is drawn though SLy has none. The inner-core boundary (dashed) is a convention, not a sharp layer, and its place comes from a different model (APR). The polar hot spots, the surface glow and all materials are presentation.`;
+}
+document.getElementById("qmode").addEventListener("click", (e) => { const b = e.target.closest("button"); if (!b) return; quality = b.dataset.v; applyQuality(); });
+
+// ---------- start
+drawStatic();
+applyQuality();
+{
+  const h = parseHash();
+  S.eos = h ? h.eos : "SLy"; S.M = h && h.M ? h.M : 1.4;
+  setEOS(S.eos); setM(S.M);
+  setView(h && h.view ? h.view : "star", true);
+}
+let last = performance.now();
+function animate(now) {
+  requestAnimationFrame(animate);
+  const dt = Math.min(0.1, Math.max(0, (now - last) / 1000)); last = now;
+  if (fly) {
+    const u = Math.min(1, (now - fly.t0) / 1400), e = u < 0.5 ? 4 * u * u * u : 1 - Math.pow(-2 * u + 2, 3) / 2;
+    controls.target.lerpVectors(fly.a, fly.b, e); camera.position.lerpVectors(fly.pa, fly.pb, e);
+    if (u >= 1) fly = null;
+  }
+  if (!reduce) star.rotation.y = 0;            // the star does not spin on screen: the cut must face the camera
+  controls.update();
+  if (quality === "high") composer.render(); else renderer.render(scene, camera);
+  drawLabels();
+}
+renderer.domElement.addEventListener("pointerdown", () => { fly = null; });
+renderer.domElement.addEventListener("wheel", () => { fly = null; }, { passive: true });
+requestAnimationFrame(animate);
+</script>
+<script src="assets/glass.js"></script>
+</body>
+</html>

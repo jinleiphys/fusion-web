@@ -1,0 +1,792 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Elastic Scattering · nuclearjs</title>
+<link rel="stylesheet" href="assets/glass.css">
+<style>
+body{margin:0}
+:root{
+  color-scheme:dark;
+  --ground:#0b0d12; --line:#262c3a;
+  --ink:#e6e8ee; --muted:#8a92a6; --accent:#f2c14e;
+  --neu:#a8cdf2; --pro:#ff9656; --deu:#d9a3ff; --alp:#8fe0a8; --data:#f2c14e;
+  --sans:"Avenir Next","Futura","Helvetica Neue","PingFang SC","Noto Sans SC",system-ui,sans-serif;
+  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+}
+html,body{height:100%}
+body{background:var(--ground);color:var(--ink);font-family:var(--sans);overflow:hidden}
+#stage{position:fixed;inset:0}
+#stage canvas{display:block;touch-action:none}
+.panel{position:fixed;border-radius:18px;padding:16px 18px;display:flex;flex-direction:column;gap:12px;overflow:auto;box-sizing:border-box}
+.panel{z-index:2}
+.panel>*{flex-shrink:0}
+#ctl{left:16px;top:calc(16px + env(safe-area-inset-top,0px));width:min(300px,calc(100% - 32px));max-height:calc(100% - 32px)}
+#side{right:16px;top:calc(16px + env(safe-area-inset-top,0px));width:380px;max-height:calc(100% - 32px);gap:8px}
+h1{margin:0;font-size:22px;font-weight:600;letter-spacing:.01em}
+h1 sup{font-size:.6em}
+.sub{margin:2px 0 0;color:var(--muted);font-size:13px;line-height:1.45}
+.grp{display:flex;flex-direction:column;gap:6px}
+.lab{font-size:11px;text-transform:uppercase;letter-spacing:.12em;color:var(--muted)}
+.seg{display:flex;border:1px solid var(--line);border-radius:4px;overflow:hidden}
+.seg button{flex:1;background:none;border:0;color:var(--muted);font:500 12px var(--mono);padding:6px 3px;cursor:pointer;min-width:0}
+.seg button+button{border-left:1px solid var(--line)}
+.seg button[aria-pressed="true"]{background:#1f2533;color:var(--ink)}
+button:focus-visible,input:focus-visible,summary:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+input[type=text]{background:#0f121a;border:1px solid var(--line);border-radius:4px;color:var(--ink);font:13px var(--mono);padding:6px 8px;width:100%;box-sizing:border-box}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chips button{background:#161a24;border:1px solid var(--line);border-radius:4px;color:var(--ink);font:12px var(--mono);padding:5px 8px;cursor:pointer}
+.chips button:hover{border-color:var(--muted)}
+.chips button.data{border-color:#5a4a20}
+.row{display:flex;gap:8px;align-items:center;font:12px var(--mono);color:var(--muted)}
+.row input[type=range]{flex:1;accent-color:var(--accent);min-width:0}
+.row output{min-width:70px;text-align:right;color:var(--ink);font-variant-numeric:tabular-nums}
+.row span{min-width:44px}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:3px 10px;font:12px var(--mono);font-variant-numeric:tabular-nums}
+.kv dt{color:var(--muted)}.kv dd{margin:0}
+.home{font:12px var(--mono);color:var(--muted);text-decoration:none}.home:hover{color:var(--ink)}
+.src{font-size:11px;color:var(--muted);line-height:1.45}
+.warn{font-size:12px;color:var(--accent);line-height:1.4}
+.plot{width:100%;height:170px;display:block}
+.plot.s{height:120px}
+.cap{display:flex;justify-content:space-between;align-items:baseline;font:11px var(--mono);color:var(--muted)}
+.cap b{font:600 13px var(--sans);color:var(--ink)}
+.cite{font:10.5px var(--mono);color:var(--muted);line-height:1.4}
+.cite i{font-style:normal;color:var(--data)}
+#stamp{position:fixed;left:50%;bottom:calc(26px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);text-align:center;pointer-events:none}
+#stamp b{display:block;font:600 clamp(28px,4.2vw,50px)/1 var(--sans);letter-spacing:-.01em}
+#stamp b sup{font-size:.55em}
+.gk{font-family:"Helvetica Neue","PingFang SC",system-ui,sans-serif}
+#stamp small{display:block;font:500 12px var(--mono);color:var(--muted);margin-top:6px}
+.tag{position:fixed;font:500 11px var(--mono);color:var(--accent);pointer-events:none;transform:translate(-50%,-50%);opacity:.85;white-space:nowrap}
+.hint{position:fixed;left:50%;transform:translateX(-50%);top:calc(14px + env(safe-area-inset-top,0px));font:11px var(--mono);color:var(--muted)}
+@media (max-width:900px){
+  #ctl{max-height:42vh}
+  #side{left:16px;right:16px;width:auto;top:auto;bottom:calc(12px + env(safe-area-inset-bottom,0px));max-height:44vh}
+  #stamp,.hint,.tag{display:none}
+}
+@media (max-width:560px){.panel{padding:10px 12px;gap:9px}h1{font-size:18px}}
+</style>
+<script data-goatcounter="https://jinleiphys.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
+</head>
+<body>
+
+<div id="stage"></div>
+
+<aside id="ctl" class="panel glass glass-deep" data-glass data-glass-bevel="22" data-glass-scale="42">
+  <div>
+    <a class="home" id="toNucleus" href="nucleus.html">← its shell structure</a> &nbsp; <a class="home" href="https://vibeinscience.com/nuclides.html">nuclide chart</a>
+    <h1>Elastic scattering</h1>
+    <p class="sub">A projectile wave meets a nucleus that both bends it and swallows part of it. The surface shows the wave itself: behind the nucleus a shadow forms, from absorption and from interference of the bent waves.</p>
+  </div>
+  <div class="grp">
+    <div class="lab">Projectile</div>
+    <div class="seg" id="proj"><button data-v="n">neutron</button><button data-v="p">proton</button><button data-v="d">deuteron</button><button data-v="a">alpha</button></div>
+  </div>
+  <div class="grp">
+    <label class="lab" for="find">Target</label>
+    <input id="find" type="text" placeholder="208Pb, 40Ca, 90Zr" autocomplete="off" spellcheck="false">
+    <div class="chips" id="chips">
+      <button data-t="40Ca">40Ca</button><button data-t="58Ni">58Ni</button><button data-t="90Zr">90Zr</button><button data-t="208Pb">208Pb</button>
+    </div>
+  </div>
+  <div class="grp">
+    <div class="row"><span>E<sub>lab</sub></span><input id="E" type="range" min="0" max="1" step="0.001"><output id="Eout"></output></div>
+    <div class="row"><span>W ×</span><input id="W" type="range" min="0" max="2" step="0.05" value="1"><output id="Wout">1.00</output></div>
+    <div class="seg" id="so"><button data-v="1" aria-pressed="true">spin-orbit on</button><button data-v="0" aria-pressed="false">off</button></div>
+    <p class="warn" id="warn" hidden></p>
+    <p class="sub" id="wnote"></p>
+  </div>
+  <div class="grp">
+    <div class="lab">Kinematics</div>
+    <div class="seg" id="kin"><button data-v="rel">relativistic</button><button data-v="nr">non-relativistic</button></div>
+    <p class="sub" id="kinnote"></p>
+  </div>
+  <div class="grp" id="datagrp" hidden>
+    <div class="lab">Measured data (EXFOR)</div>
+    <div class="chips" id="datachips"></div>
+  </div>
+  <div class="grp">
+    <div class="lab" id="potname">Optical potential</div>
+    <dl class="kv" id="pot"></dl>
+  </div>
+  <div class="grp">
+    <div class="lab">Scope</div>
+    <p class="src">The target is treated as spin 0 and inert: no target spin, no excitation (a warning gives its NUBASE2020 J<sup>π</sup> when that is not 0<sup>+</sup>); targets must be NUBASE2020 nuclides. The result is shape (direct) elastic scattering only: compound-nucleus elastic, which adds to the measured elastic cross section at low incident energies (KD02 Sec. 2.3), is not included, so at low energies a measured elastic cross section can lie above the curve for that reason alone.</p>
+  </div>
+  <div class="grp">
+    <div class="lab">Rendering</div>
+    <div class="seg" id="qmode"><button data-v="high" title="bloom">cinematic</button><button data-v="low">fast</button></div>
+    <p class="src">What is drawn: the surface height is Re(ψ e<sup>−iωt</sup>) (exaggerated vertically, ω not to scale) and its colour is |ψ|² on a log scale (|ψ|² = 1 is the undisturbed beam; darker blue is shadow, gold is focus). The water look (sky reflections at the Fresnel factor of water, a key-light glint, troughs tinted deeper, light through the crests) is lighting only, and the reflection is capped so the colour stays readable. The glass sphere has the radius R<sub>V</sub> of the real potential; the amber glow inside it is the absorptive potential −W(r) as solved (volume plus surface term, times W ×), drawn as emission proportional to −W along the line of sight, upper half only; at W × 0 it is empty. The basin, plinth, beam source and lights are decoration.</p>
+  </div>
+  <div class="src">Potentials: n, p from Koning &amp; Delaroche, Nucl. Phys. A 713, 231 (2003), transcribed from Koning's kd02.f; d from Han, Shi &amp; Shen, Phys. Rev. C 74, 044615 (2006), Eqs. (1) to (13) and Table I; α from Avrigeanu, Avrigeanu &amp; Mănăilescu, Phys. Rev. C 90, 044612 (2014), Table II. Solved live: Numerov in each (l, j), matched to Coulomb functions (Steed's method). Checked against ECIS-06 (the code KD02 was fitted with) in 14 configurations, relativistic and non-relativistic, n, p, d, α to 200 MeV: k, μ, η to 5×10<sup>−11</sup>, σ<sub>R</sub> to 4×10<sup>−8</sup>, and up to 52 MeV dσ/dΩ to 5×10<sup>−5</sup> and A<sub>y</sub>, iT<sub>11</sub> to 4×10<sup>−5</sup>. At 100 to 200 MeV the two differ at back angles by the step error of each: against its own finest step, this solver converges as h<sup>4</sup> (Numerov) down to about 10<sup>−4</sup>, ECIS as h<sup>3</sup> (shown for p and n + <sup>208</sup>Pb at 200 MeV and d + <sup>208</sup>Pb at 140 MeV). Against FRESCO in 14 configurations (non-relativistic, and relativistic for neutrons): σ<sub>R</sub> to 1×10<sup>−6</sup>, dσ/dΩ to 5×10<sup>−5</sup>, iT<sub>11</sub> to 3×10<sup>−5</sup>. In the nine configurations tested (n, p, d, α, 19 to 200 MeV), the step, matching radius and partial waves used here put σ<sub>R</sub> within 4×10<sup>−5</sup>, dσ/dΩ within 10<sup>−3</sup> and iT<sub>11</sub> within 2×10<sup>−4</sup> of converged values; other configurations are not covered by these numbers. Data: EXFOR, each table cross-checked against the IAEA's own parse.</div>
+</aside>
+
+<aside id="side" class="panel glass glass-deep" data-glass data-glass-bevel="22" data-glass-scale="42">
+  <div class="cap"><b id="xtitle">Cross section</b><span id="xunit"></span></div>
+  <canvas id="xs" class="plot"></canvas>
+  <div id="polgrp">
+    <div class="cap"><b id="poltitle">Analyzing power A<sub>y</sub></b><span>θ<sub>c.m.</sub> (deg)</span></div>
+    <canvas id="ay" class="plot s"></canvas>
+  </div>
+  <div class="cap"><b>S-matrix |S<sub>lj</sub>|</b><span id="smleg"></span></div>
+  <canvas id="sm" class="plot s"></canvas>
+  <div id="totgrp" hidden>
+    <div class="cap"><b>Total cross section σ<sub>tot</sub>(E)</b><span>E<sub>lab</sub> (MeV)</span></div>
+    <canvas id="tot" class="plot s"></canvas>
+  </div>
+  <div class="cite" id="cite"></div>
+  <dl class="kv" id="xsec"></dl>
+</aside>
+
+<div id="tagBeam" class="tag">beam →</div>
+<div id="stamp"></div>
+<div class="hint">drag to orbit · scroll to zoom</div>
+
+<script src="assets/three-bundle.js"></script>
+<script src="assets/three-post.js"></script>
+<script src="assets/wave-stage.js"></script>
+<script src="assets/nubase.js"></script>
+<script src="assets/omp.js"></script>
+<script>window.ELASTIC_DATA = window.ELASTIC_DATA || [];</script>
+<script src="assets/elastic-data.js" onerror="void 0"></script>
+<script>
+"use strict";
+// ---------- data
+const NUC = window.NUC, SYM = {}, ELEM = {}, ROW = new Map();     // NUC rows: [Z, N, sym, log10 T1/2, mode, B/A, est, J^pi, year]
+for (const r of NUC) { SYM[r[2].toLowerCase()] = r[0]; ELEM[r[0]] = r[2]; ROW.set(r[0] + "," + r[1], r); }
+const DATA = window.ELASTIC_DATA || [];
+const PSYM = { n: "n", p: "p", d: "d", a: "α" };
+const PCOL = { n: "#a8cdf2", p: "#ff9656", d: "#d9a3ff", a: "#8fe0a8" };
+function parseTarget(s) {
+  s = s.trim().toLowerCase().replace(/[-\s]/g, "");
+  const m = s.match(/^(\d+)([a-z]+)$/) || s.match(/^([a-z]+)(\d+)$/);
+  if (!m) return null;
+  let A, el;
+  if (/^\d/.test(m[1])) { A = +m[1]; el = m[2]; } else { el = m[1]; A = +m[2]; }
+  const Z = SYM[el];
+  if (Z == null || A <= Z || Z < 2) return null;
+  if (!ROW.has(Z + "," + (A - Z))) return null;       // not a nuclide in NUBASE2020
+  return { Z, A };
+}
+
+// ---------- state
+const S = { proj: "p", Z: 82, A: 208, E: 30.3, W: 1, so: 1, kin: "rel", res: null, alt: null, ang: null, tot: null };
+const EMIN = 1, EMAX = 200;
+const e2s = (E) => Math.log(E / EMIN) / Math.log(EMAX / EMIN);
+const s2e = (x) => EMIN * Math.pow(EMAX / EMIN, x);
+const charged = () => OMP.PROJ[S.proj].Z > 0;
+const spin = () => OMP.PROJ[S.proj].s;
+
+// ---------- scene
+const stage = document.getElementById("stage");
+const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.setSize(innerWidth, innerHeight);
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.05;
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+stage.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(36, innerWidth / innerHeight, 0.1, 800);
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+// lighting only: a studio sky with soft panels (assets/wave-stage.js), the key panel placed so that
+// it glints on the wave slopes from the default camera
+const SKY = WaveStage.skyGLSL(new THREE.Vector3(0.62, 0.72, -0.32),
+  { rim: new THREE.Vector3(0.62, 0.22, 0.75), fill: new THREE.Vector3(-0.85, 0.35, 0.4) });
+scene.environment = WaveStage.environment(renderer, SKY);
+const POST = WaveStage.post(renderer, scene, camera, [0.3, 0.3, 1.15], { intensity: 0.85, radius: 2.5, thickness: 1.5 });
+const composer = POST.composer, bloom = POST.bloom;
+// the ground #0b0d12, and the linear colour that ACES (exposure 1.05) maps back to it on the
+// bloom path (same constant and derivation as nucleus.html)
+const GROUND = new THREE.Color("#0b0d12");
+const GROUND_PRE_ACES = new THREE.Color().setRGB(0.0115476, 0.0131218, 0.0174740, THREE.LinearSRGBColorSpace);
+scene.background = GROUND.clone();
+scene.fog = new THREE.Fog("#0b0d12", 90, 260);
+
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true; controls.dampingFactor = 0.08;
+controls.minDistance = 10; controls.maxDistance = 220;
+controls.maxPolarAngle = Math.PI * 0.49;
+const RIG = WaveStage.rig(scene, SKY, 160, 60);
+
+// ---------- the wave surface: x across, z along the beam, height = Re(psi e^{-i w t})
+const NG = innerWidth < 700 ? 161 : 241;             // vertices per side
+let HALF = 22;                                        // half-width of the field in fm, set per nucleus
+const nv = NG * NG;
+const surfGeo = new THREE.PlaneGeometry(1, 1, NG - 1, NG - 1);
+surfGeo.rotateX(-Math.PI / 2);                        // plane in x-z, +y up
+const aRe = new Float32Array(nv), aIm = new Float32Array(nv);
+const aGx = new Float32Array(nv * 2), aGz = new Float32Array(nv * 2);   // d/dx and d/dz of (Re, Im)
+surfGeo.setAttribute("aRe", new THREE.BufferAttribute(aRe, 1));
+surfGeo.setAttribute("aIm", new THREE.BufferAttribute(aIm, 1));
+surfGeo.setAttribute("aGx", new THREE.BufferAttribute(aGx, 2));
+surfGeo.setAttribute("aGz", new THREE.BufferAttribute(aGz, 2));
+const surfMat = new THREE.ShaderMaterial({
+  uniforms: {
+    uT: { value: 0 }, uAmp: { value: 0.55 }, uSize: { value: 44 }, uAlpha: { value: 0.92 }, uHalf: { value: 22 },
+    uLight: { value: SKY.key.clone() }, uFogNear: { value: 90 }, uFogFar: { value: 260 },
+    uFog: { value: new THREE.Color("#0b0d12") }, uRefl: { value: 1 },
+  },
+  vertexShader: `
+    attribute float aRe; attribute float aIm; attribute vec2 aGx; attribute vec2 aGz;
+    uniform float uT, uAmp, uSize;
+    varying float vI; varying vec3 vN; varying vec3 vW; varying float vRe;
+    void main(){
+      float c = cos(uT), s = sin(uT);
+      float re = aRe * c + aIm * s;                 // Re(psi e^{-i t})
+      vec3 p = vec3(position.x * uSize, re * uAmp, position.z * uSize);
+      float dx = (aGx.x * c + aGx.y * s) * uAmp, dz = (aGz.x * c + aGz.y * s) * uAmp;
+      vN = normalize(vec3(-dx, 1.0, -dz));
+      vI = aRe * aRe + aIm * aIm; vRe = re;
+      vec4 w = modelMatrix * vec4(p, 1.0); vW = w.xyz;
+      gl_Position = projectionMatrix * viewMatrix * w;
+    }`,
+  fragmentShader: `
+    uniform vec3 uLight, uFog; uniform float uFogNear, uFogFar, uAlpha, uHalf, uRefl, uAmp;
+    varying float vI; varying vec3 vN; varying vec3 vW; varying float vRe;
+    ${SKY.glsl}
+    vec3 ramp(float x){                              // |psi|^2: deep blue, cyan, pale gold
+      x = clamp(x, 0.0, 1.0);
+      vec3 a = vec3(0.02, 0.04, 0.10), b = vec3(0.10, 0.42, 0.72), c = vec3(1.0, 0.80, 0.45);
+      return x < 0.5 ? mix(a, b, x * 2.0) : mix(b, c, x * 2.0 - 1.0);
+    }
+    void main(){
+      vec3 n = normalize(vN), v = normalize(cameraPosition - vW);
+      if (dot(n, v) < 0.0) n = -n;                     // seen from below the sheet
+      float nv = max(dot(n, v), 0.0);
+      // |psi|^2 = 1 is the undisturbed beam; log scale so shadow (< 1) and focus (> 1) both read.
+      // This colour is the body of the water: what comes back from under the surface.
+      float x = 0.5 + 0.28 * log(max(vI, 1e-4)) / log(4.0);
+      vec3 body = ramp(x);
+      // depth tint: a trough is a thicker layer, so its body colour is a little darker and
+      // more saturated; a crest is thin and lets the key light through (subsurface)
+      float hgt = vRe * uAmp;
+      float trough = clamp(-hgt / 2.5, 0.0, 1.0), crest = clamp(hgt / 2.5, 0.0, 1.0);
+      body *= mix(1.0, 0.7, trough);
+      float d = max(dot(n, uLight), 0.0), wrap = max((dot(n, uLight) + 0.35) / 1.35, 0.0);
+      vec3 lit = body * (0.34 + 0.42 * wrap + 0.22 * d);
+      float sss = pow(max(dot(-v, uLight) * 0.5 + 0.5, 0.0), 3.0) * (0.25 + crest);
+      lit += body * vec3(0.55, 0.85, 1.0) * 0.45 * sss;
+      // Fresnel (water, n = 1.33: F0 = 0.02) reflection of the studio sky, capped so that the
+      // colour map stays readable at grazing view
+      float F = min(0.02 + 0.98 * pow(1.0 - nv, 5.0), 0.3) * uRefl;
+      vec3 env = min(studioSky(reflect(-v, n)), vec3(0.6));
+      // a sharp sun glint on top of the soft panel reflection
+      vec3 hv = normalize(uLight + v);
+      float spec = pow(max(dot(n, hv), 0.0), 250.0) * 0.08 * uRefl;
+      vec3 col = lit * (1.0 - F) + env * F * 0.55 + vec3(1.0, 0.97, 0.92) * spec;
+      float f = smoothstep(uFogNear, uFogFar, length(vW - cameraPosition));
+      // round diorama: the field fades out before the square edge of the grid
+      float edge = 1.0 - smoothstep(0.90, 0.99, length(vW.xz) / uHalf);
+      if (edge <= 0.0) discard;
+      gl_FragColor = vec4(mix(col, uFog, f), uAlpha * edge);
+      #include <tonemapping_fragment>
+      #include <colorspace_fragment>
+    }`,
+  transparent: true, side: THREE.DoubleSide, depthWrite: true,
+});
+const surf = new THREE.Mesh(surfGeo, surfMat);
+surf.userData.noAO = true;
+scene.add(surf);
+
+// the nucleus: a sphere of the real-potential radius, rim-lit like the nucleus page
+const nuc = new THREE.Group();
+// no body: the wave inside the nucleus is physics too, so only a rim and a ring at R on the field
+const ring = new THREE.LineLoop(new THREE.BufferGeometry().setFromPoints(
+  Array.from({ length: 128 }, (_, i) => new THREE.Vector3(Math.cos(i / 128 * 2 * Math.PI), 0, Math.sin(i / 128 * 2 * Math.PI)))),
+  new THREE.LineBasicMaterial({ color: "#ffb070", transparent: true, opacity: 0.7, depthTest: false }));
+ring.renderOrder = 5;
+nuc.add(ring);
+scene.add(nuc);
+// The nucleus as a volume, ray-marched in its own bounding sphere (radius RB fm, unscaled world
+// units = fm): a glass shell at the real-potential radius R_V (Fresnel reflection of the studio sky
+// only, no body), and inside it an amber emission whose density is the absorptive potential -W(r)
+// of the solved optical potential (volume + surface terms, times W x), read from S.res.Ui. Emission
+// and extinction are both proportional to -W / 10 MeV; only the half above the wave is marched.
+const NWT = 128;
+const wTex = new THREE.DataTexture(new Uint16Array(NWT * 4), NWT, 1, THREE.RGBAFormat, THREE.HalfFloatType);   // half float: linear filtering is core in WebGL2
+wTex.magFilter = wTex.minFilter = THREE.LinearFilter; wTex.needsUpdate = true;
+const volMat = new THREE.ShaderMaterial({
+  uniforms: { uW: { value: wTex }, uRB: { value: 10 }, uRv: { value: 7 }, uSteps: { value: 56 }, uGain: { value: 1 } },
+  vertexShader: `varying vec3 vO; void main(){ vO = (modelMatrix * vec4(position, 1.0)).xyz; gl_Position = projectionMatrix * viewMatrix * vec4(vO, 1.0); }`,
+  fragmentShader: `
+    uniform sampler2D uW; uniform float uRB, uRv, uSteps, uGain; varying vec3 vO;
+    ${SKY.glsl}
+    vec2 hitSphere(vec3 o, vec3 d, float r){ float b = dot(o, d), c = dot(o, o) - r * r, h = b * b - c; if (h < 0.0) return vec2(1e9, -1e9); h = sqrt(h); return vec2(-b - h, -b + h); }
+    void main(){
+      vec3 o = cameraPosition, d = normalize(vO - cameraPosition);
+      vec2 tb = hitSphere(o, d, uRB);
+      float t0 = max(tb.x, 0.0), t1 = tb.y;
+      // keep only y > 0: the lower half lies under the wave surface
+      if (d.y < 0.0) t1 = min(t1, -o.y / d.y); else t0 = max(t0, -o.y / d.y);
+      vec3 acc = vec3(0.0); float T = 1.0;
+      if (t1 > t0) {
+        float ds = (t1 - t0) / uSteps;
+        for (int i = 0; i < 96; i++) {
+          if (float(i) >= uSteps) break;
+          vec3 p = o + d * (t0 + (float(i) + 0.5) * ds);
+          float r = length(p);
+          float w = texture2D(uW, vec2(r / uRB * ${(NWT - 1) / NWT} + ${0.5 / NWT}, 0.5)).r;   // -W(r) / 10 MeV
+          // single-scattering look: the side towards the key panel is a little brighter
+          float lit = 0.75 + 0.5 * max(dot(normalize(p), ${"vec3(" + SKY.key.toArray().map((x) => x.toFixed(4)).join(",") + ")"}), 0.0);
+          acc += T * vec3(1.0, 0.56, 0.22) * w * lit * 0.035 * uGain * ds;
+          T *= exp(-w * 0.03 * ds);
+        }
+      }
+      // the glass shell at R_V: Fresnel reflection of the sky at the entry point, upper half only
+      vec2 tv = hitSphere(o, d, uRv);
+      float a = 1.0 - T;
+      if (tv.x > 0.0 && tv.x < 1e8) {
+        vec3 p = o + d * tv.x;
+        if (p.y > 0.0) {
+          vec3 n = normalize(p);
+          float F = 0.04 + 0.96 * pow(1.0 - max(dot(n, -d), 0.0), 5.0);
+          acc += studioSky(reflect(d, n)) * F * 0.9 + vec3(1.0, 0.82, 0.58) * pow(1.0 - max(dot(n, -d), 0.0), 3.0) * 0.12;
+          a = max(a, F * 0.5);
+        }
+      }
+      gl_FragColor = vec4(acc, clamp(a, 0.0, 0.6));
+      #include <tonemapping_fragment>
+      #include <colorspace_fragment>
+    }`,
+  transparent: true, depthWrite: false, blending: THREE.CustomBlending,
+  blendSrc: THREE.OneFactor, blendDst: THREE.OneMinusSrcAlphaFactor,
+});
+const vol = new THREE.Mesh(new THREE.SphereGeometry(1, 48, 32), volMat);
+vol.renderOrder = 6; vol.userData.noAO = true;
+scene.add(vol);
+function updateVolume() {
+  const res = S.res, Rv = res.R.v, RB = Math.max(Rv, res.R.d) + 6 * Math.max(res.P.aw, res.P.awd, res.P.av) + 1;
+  const a = wTex.image.data;
+  for (let i = 0; i < NWT; i++) {
+    const r = i / (NWT - 1) * RB, k = Math.min(res.n, Math.round(r / res.h));
+    const w = Math.max(0, -res.Ui[k]) / 10;            // emissive W_D < 0 is not drawn as glow
+    a[4 * i] = a[4 * i + 1] = a[4 * i + 2] = THREE.DataUtils.toHalfFloat(w); a[4 * i + 3] = THREE.DataUtils.toHalfFloat(1);
+  }
+  wTex.needsUpdate = true;
+  vol.scale.setScalar(RB);
+  volMat.uniforms.uRB.value = RB; volMat.uniforms.uRv.value = Rv;
+}
+
+// ---------- the diorama: a glazed ceramic basin on a turned-metal plinth, a beam source upstream
+// (all in units of HALF, the group is scaled by HALF; decoration, not physics)
+const dio = new THREE.Group();
+scene.add(dio);
+{
+  const prof = [[0, -0.14], [0.9, -0.14], [0.96, -0.135], [0.99, -0.115], [1.0, -0.08], [1.0, 0.015], [1.006, 0.03], [1.02, 0.04],
+    [1.04, 0.04], [1.056, 0.031], [1.064, 0.012], [1.068, -0.05], [1.076, -0.15], [1.088, -0.185], [1.084, -0.2], [0, -0.2]]
+    .reverse().map(([r, y]) => new THREE.Vector2(r, y));   // bottom-up so LatheGeometry's normals face out of the ceramic
+  const ceramic = new THREE.MeshPhysicalMaterial({
+    color: "#161a23", roughness: 0.5, metalness: 0.0, clearcoat: 1.0, clearcoatRoughness: 0.1, envMapIntensity: 1.0,
+    roughnessMap: WaveStage.noiseTexture(256, 5, 0.55, 1.0, 5), sheen: 0.4, sheenColor: new THREE.Color("#3a4a66"), sheenRoughness: 0.6,
+  });
+  const basin = new THREE.Mesh(new THREE.LatheGeometry(prof, 160), ceramic);
+  basin.castShadow = true; basin.receiveShadow = true;
+  const metal = new THREE.MeshStandardMaterial({ color: "#2e323a", metalness: 1.0, roughness: 0.42, roughnessMap: WaveStage.turnedTexture(), envMapIntensity: 1.1 });
+  const plinth = new THREE.Mesh(BufferGeometryUtils.mergeGeometries([
+    new THREE.CylinderGeometry(1.17, 1.19, 0.045, 128, 1).translate(0, -0.2225, 0),
+    new THREE.CylinderGeometry(1.19, 1.15, 0.02, 128, 1).translate(0, -0.255, 0)]), metal);
+  plinth.castShadow = true; plinth.receiveShadow = true;
+  dio.add(basin, plinth);
+  dio.add(WaveStage.floor(3.6, -0.265, 1.6, 0.75));
+}
+// the beam source: a collimator on a post, upstream of the basin, its aperture lit in the
+// projectile colour, and a beam arrow pointing downstream (+z)
+const src = new THREE.Group();
+const apMat = new THREE.MeshBasicMaterial({ color: "#ff9656" });
+const beamMat = new THREE.MeshBasicMaterial({ color: "#ff9656", transparent: true, opacity: 0.55, depthWrite: false });
+{
+  const metal = new THREE.MeshStandardMaterial({ color: "#8d939e", metalness: 1.0, roughness: 0.28, envMapIntensity: 1.2 });
+  const dark = new THREE.MeshStandardMaterial({ color: "#20242c", metalness: 0.6, roughness: 0.45 });
+  const body = new THREE.Mesh(BufferGeometryUtils.mergeGeometries([
+    new THREE.CylinderGeometry(0.035, 0.035, 0.16, 40).rotateX(Math.PI / 2),
+    new THREE.CylinderGeometry(0.045, 0.045, 0.02, 40).rotateX(Math.PI / 2).translate(0, 0, -0.07),
+    new THREE.CylinderGeometry(0.042, 0.042, 0.015, 40).rotateX(Math.PI / 2).translate(0, 0, 0.075),
+    new THREE.CylinderGeometry(0.012, 0.012, 0.3, 16).translate(0, -0.15, -0.02),
+    new THREE.CylinderGeometry(0.06, 0.07, 0.015, 40).translate(0, -0.3, -0.02)]), metal);
+  body.castShadow = true;
+  const bore = new THREE.Mesh(new THREE.CircleGeometry(0.022, 32).translate(0, 0, 0.0832), dark);
+  const ap = new THREE.Mesh(new THREE.CircleGeometry(0.012, 24).translate(0, 0, 0.0835), apMat);
+  const arrow = new THREE.Mesh(BufferGeometryUtils.mergeGeometries([
+    new THREE.CylinderGeometry(0.006, 0.006, 0.06, 12).rotateX(Math.PI / 2).translate(0, 0, 0.12),
+    new THREE.ConeGeometry(0.018, 0.045, 20).rotateX(Math.PI / 2).translate(0, 0, 0.17)]), beamMat);
+  arrow.userData.noAO = true;
+  src.add(body, bore, ap, arrow);
+  src.position.set(0, 0.035, -1.15);
+}
+dio.add(src);
+
+// ---------- physics -> surface
+// draft = true while a slider is being dragged: the comparison with the other kinematics waits for
+// the release, and, where the grid resolves the wavelength (k dx <= 0.35), the field is summed on every
+// other grid point and interpolated with the incident phase e^{ikz} taken out (OMP.fieldGrid), kept only if
+// an exact sum on about 1/7 of the interpolated points agrees with it.
+// last settings that solved; a failed solve (omp.js throws on any non-finite result) restores them and says so
+let GOOD = null;
+function safeCompute(draft) {
+  try { compute(draft); S.err = ""; GOOD = { proj: S.proj, Z: S.Z, A: S.A, E: S.E, W: S.W, so: S.so, kin: S.kin }; }
+  catch (err) {
+    const what = `${PSYM[S.proj]} + ${S.A}${ELEM[S.Z]} at ${S.E} MeV`;
+    if (!GOOD) throw err;
+    Object.assign(S, GOOD); compute(draft);
+    S.err = `The calculation failed for ${what} (${err.message}); showing the last settings that solved instead.`;
+  }
+}
+function compute(draft) {
+  const P = OMP.potential(S.proj, S.Z, S.A, S.E);
+  const v = OMP.viewNumerics(S.proj, S.Z, S.A, S.E, S.kin, P);    // the same settings tests/check_omp.py checks
+  HALF = v.HALF;
+  const base = { proj: S.proj, Z: S.Z, A: S.A, E: S.E, P, scaleW: S.W, so: S.so };
+  S.res = OMP.solve({ ...base, kin: S.kin, rplot: v.rplot, lmax: v.lmax });
+  // the other kinematics with the same grid, matching radius and partial waves, for the size of the difference
+  S.alt = draft ? null : OMP.solve({ ...base, kin: S.kin === "rel" ? "nr" : "rel", wave: false, h: S.res.h, rmatch: S.res.rmatch, lmax: S.res.lmax });
+  const th = []; for (let t = 1; t <= 179; t += 0.5) th.push(t);
+  S.ang = OMP.angular(S.res, th);
+  S.R = v.R;
+  // draft: every other point, the rest interpolated, but only where the grid resolves the wavelength well
+  // enough (OMP.draftStride, k dx <= 0.35); otherwise the full grid even while dragging.
+  // fieldGrid then checks the draft a posteriori on a sample of the interpolated points and falls back to the
+  // full grid if any of them is off by more than 25% in |psi|^2; S.stride is the stride actually used
+  S.stride = buildField(draft ? OMP.draftStride(S.res.k, NG, HALF) : 1);
+}
+
+// psi on the surface grid: OMP.fieldGrid, the same code tests/check_field.js runs on this grid (full and draft).
+// PlaneGeometry after rotateX(-pi/2): row iy sits at z = iy/(NG-1) - 1/2, so rows run downstream with the
+// beam (checked: row 0 is at z = -0.5), which is fieldGrid's layout
+function buildField(stride) {
+  const used = OMP.fieldGrid(OMP.fieldCoeffs(S.res), NG, HALF, stride || 1, aRe, aIm);
+  // gradients by central differences, in the shader's units (field per scaled coordinate)
+  const dx = 2 * HALF / (NG - 1);
+  for (let iy = 0; iy < NG; iy++) for (let ix = 0; ix < NG; ix++) {
+    const v = iy * NG + ix;
+    const xl = ix > 0 ? v - 1 : v, xr = ix < NG - 1 ? v + 1 : v;
+    const zl = iy > 0 ? v - NG : v, zr = iy < NG - 1 ? v + NG : v;     // z grows with the row index
+    const sx = (ix > 0 && ix < NG - 1 ? 2 : 1) * dx, sz = (iy > 0 && iy < NG - 1 ? 2 : 1) * dx;
+    aGx[2 * v] = (aRe[xr] - aRe[xl]) / sx; aGx[2 * v + 1] = (aIm[xr] - aIm[xl]) / sx;
+    aGz[2 * v] = (aRe[zr] - aRe[zl]) / sz; aGz[2 * v + 1] = (aIm[zr] - aIm[zl]) / sz;
+  }
+  for (const a of ["aRe", "aIm", "aGx", "aGz"]) surfGeo.attributes[a].needsUpdate = true;
+  surfMat.uniforms.uSize.value = 2 * HALF;
+  surfMat.uniforms.uHalf.value = HALF;
+  nuc.scale.setScalar(S.R);
+  updateVolume();
+  dio.scale.setScalar(HALF);
+  const sc = RIG.key.shadow.camera, sh = 1.75 * HALF;
+  sc.left = sc.bottom = -sh; sc.right = sc.top = sh; sc.updateProjectionMatrix();
+  apMat.color.set(PCOL[S.proj]); beamMat.color.set(PCOL[S.proj]);
+  return used;
+}
+
+// ---------- plots
+function setupCanvas(c) {
+  const d = Math.min(devicePixelRatio, 2), w = c.clientWidth, h = c.clientHeight;
+  c.width = w * d; c.height = h * d;
+  const x = c.getContext("2d"); x.setTransform(d, 0, 0, d, 0, 0);
+  x.font = "10px ui-monospace,Menlo,monospace";
+  return { x, w, h };
+}
+function axes(ctx, w, h, X, Y, xt, yt, fy) {
+  ctx.strokeStyle = "#1e2432"; ctx.fillStyle = "#8a92a6"; ctx.lineWidth = 1;
+  for (const v of yt) { ctx.beginPath(); ctx.moveTo(X.a, Y(v)); ctx.lineTo(w - 6, Y(v)); ctx.stroke(); ctx.textAlign = "right"; ctx.fillText(fy(v), X.a - 4, Y(v) + 3); }
+  ctx.textAlign = "center";
+  for (const v of xt) ctx.fillText(v, X(v), h - 3);
+}
+// datasets for this system within 3% of the energy: "xs" = dsigma/dOmega or ratio to Rutherford, "pol" = Ay or iT11
+function matchData(kind) {
+  const pol = (q) => q === "ay" || q === "it11";
+  return DATA.filter((d) => d.proj === S.proj && d.Z === S.Z && d.A === S.A && d.E_lab != null &&
+    Math.abs(d.E_lab - S.E) / S.E < 0.03 && (kind === "pol" ? pol(d.quantity) : (d.quantity === "dsdo" || d.quantity === "ratio_ruth")));
+}
+function drawXS() {
+  const { x: ctx, w, h } = setupCanvas(document.getElementById("xs"));
+  const isC = charged(), y = isC ? S.ang.ratio : S.ang.dsdo, th = S.ang.theta;
+  document.getElementById("xtitle").innerHTML = isC ? "σ / σ<sub>Rutherford</sub>" : "dσ/dΩ";
+  document.getElementById("xunit").textContent = isC ? "ratio" : "mb/sr";
+  const ds = matchData("xs");
+  let lo = Infinity, hi = 0;
+  for (const v of y) { lo = Math.min(lo, v); hi = Math.max(hi, v); }
+  for (const d of ds) for (const p of d.points) { const v = toPlot(d, p[0], p[1]); if (v > 0) { lo = Math.min(lo, v); hi = Math.max(hi, v); } }
+  lo = Math.max(lo, hi * 1e-12);
+  const l0 = Math.floor(Math.log10(Math.max(lo, 1e-12))), l1 = Math.ceil(Math.log10(hi));
+  const X = (t) => 38 + (t / 180) * (w - 44); X.a = 38;
+  const Y = (v) => 6 + (l1 - Math.log10(Math.max(v, 1e-30))) / (l1 - l0) * (h - 22);
+  const yt = []; const st = l1 - l0 > 8 ? 2 : 1; for (let e = l0; e <= l1; e += st) yt.push(Math.pow(10, e));
+  axes(ctx, w, h, X, Y, [0, 30, 60, 90, 120, 150, 180], yt, (v) => { const e = Math.round(Math.log10(v)); return e === 0 ? "1" : "10" + toSup(e); });
+  ctx.beginPath(); ctx.strokeStyle = PCOL[S.proj]; ctx.lineWidth = 1.8;
+  th.forEach((t, i) => (i ? ctx.lineTo(X(t), Y(y[i])) : ctx.moveTo(X(t), Y(y[i])))); ctx.stroke();
+  drawPoints(ctx, ds, X, Y, toPlot, true);
+}
+// EXFOR points are in whatever quantity the dataset carries; convert to what is plotted. A measured cross
+// section of a charged projectile is divided by the point-Coulomb Rutherford cross section at the dataset's
+// own E_lab (never the slider energy), c.m. angle, target mass A u, with the kinematics selected on the page:
+// at the dataset energy the points and the curve then share one denominator, so the ratio comparison is the
+// absolute one. A ratio published by the authors (ratio_ruth) is shown as given, in their convention.
+function toPlot(d, th, v) {
+  if (d.quantity === "ratio_ruth") return charged() ? v : null;
+  if (d.quantity === "dsdo") return charged() ? v / OMP.rutherford(d.proj, d.Z, d.A, d.E_lab, th, S.kin) : v;
+  return v;
+}
+function drawPoints(ctx, ds, X, Y, conv, logy) {
+  ctx.fillStyle = "#f2c14e"; ctx.strokeStyle = "#f2c14e"; ctx.lineWidth = 1;
+  for (const d of ds) for (const p of d.points) {
+    const sus = (d.suspect || []).some((q) => q[0] === p[0]);
+    const v = conv(d, p[0], p[1]);
+    if (v == null || (logy && v <= 0)) continue;
+    const e = p[2] != null ? Math.abs(conv(d, p[0], p[1] + p[2]) - v) : null;
+    const xx = X(p[0]), yy = Y(v);
+    if (e != null && e > 0) { ctx.beginPath(); ctx.moveTo(xx, Y(logy ? Math.max(v - e, v * 0.05) : v - e)); ctx.lineTo(xx, Y(v + e)); ctx.stroke(); }
+    ctx.beginPath(); ctx.arc(xx, yy, 2.4, 0, 2 * Math.PI);
+    if (sus) ctx.stroke(); else ctx.fill();
+  }
+}
+const SUPD = { "-": "⁻", 0: "⁰", 1: "¹", 2: "²", 3: "³", 4: "⁴", 5: "⁵", 6: "⁶", 7: "⁷", 8: "⁸", 9: "⁹" };
+const toSup = (e) => String(e).split("").map((c) => SUPD[c]).join("");
+function drawPol() {
+  const s = spin();
+  document.getElementById("polgrp").hidden = s === 0;
+  if (s === 0) return;
+  document.getElementById("poltitle").innerHTML = s === 1 ? "Vector analyzing power iT<sub>11</sub>" : "Analyzing power A<sub>y</sub>";
+  const { x: ctx, w, h } = setupCanvas(document.getElementById("ay"));
+  const y = s === 1 ? S.ang.it11 : S.ang.ay;
+  const X = (t) => 38 + (t / 180) * (w - 44); X.a = 38;
+  const Y = (v) => 6 + (1 - v) / 2 * (h - 22);
+  axes(ctx, w, h, X, Y, [0, 30, 60, 90, 120, 150, 180], [-1, -0.5, 0, 0.5, 1], (v) => v);
+  ctx.beginPath(); ctx.strokeStyle = PCOL[S.proj]; ctx.lineWidth = 1.6;
+  S.ang.theta.forEach((t, i) => (i ? ctx.lineTo(X(t), Y(y[i])) : ctx.moveTo(X(t), Y(y[i])))); ctx.stroke();
+  drawPoints(ctx, matchData("pol"), X, Y, (d, th, v) => v, false);
+}
+// |S_lj| for each j = l - s .. l + s, as adjacent bars
+const JCOL = ["#f2c14e", "#e6e8ee", "#a8cdf2"];          // j = l - s, (l), l + s
+function drawS() {
+  const { x: ctx, w, h } = setupCanvas(document.getElementById("sm"));
+  const res = S.res, s2 = Math.round(2 * spin()), nj = s2 + 1;
+  const leg = s2 === 0 ? `<span style="color:${JCOL[2]}">■</span> j = l`
+    : s2 === 1 ? `<span style="color:${JCOL[2]}">■</span> j = l+½ &nbsp;<span style="color:${JCOL[0]}">■</span> j = l−½`
+    : `<span style="color:${JCOL[2]}">■</span> l+1 &nbsp;<span style="color:${JCOL[1]}">■</span> l &nbsp;<span style="color:${JCOL[0]}">■</span> j = l−1`;
+  document.getElementById("smleg").innerHTML = leg;
+  let lg = 0;                                         // show up to where |S| > 0.999
+  for (let l = 0; l <= res.lmax; l++) for (const x of res.S[l]) if (x && Math.hypot(...x) < 0.999) lg = l;
+  const lm = Math.max(8, Math.min(res.lmax, Math.ceil(lg * 1.4) + 3));
+  const X = (l) => 38 + (l / lm) * (w - 44); X.a = 38;
+  const Y = (v) => 6 + (1 - v) * (h - 22);
+  const xt = []; const st = lm > 40 ? 20 : lm > 16 ? 10 : 4; for (let l = 0; l <= lm; l += st) xt.push(l);
+  axes(ctx, w, h, X, Y, xt, [0, 0.5, 1], (v) => v);
+  const slot = (w - 44) / (lm + 1), bw = Math.max(0.6, slot / nj - 0.4);
+  for (let l = 0; l <= lm; l++) for (let kk = 0; kk < nj; kk++) {
+    const x = res.S[l][kk]; if (!x) continue;
+    const a = Math.hypot(...x), c = s2 === 0 ? JCOL[2] : s2 === 1 ? JCOL[kk ? 2 : 0] : JCOL[kk];
+    ctx.fillStyle = c; ctx.fillRect(X(l) - slot / 2 + kk * (slot / nj), Y(a), bw, Y(0) - Y(a));
+  }
+}
+
+// ---------- neutron total cross section across energy, computed lazily when the target or the potential changes
+const NTOT = 40;
+let totTimer = 0;
+function totKey() { return `${S.Z},${S.A},${S.W},${S.so},${S.kin}`; }
+function scheduleTot() {
+  document.getElementById("totgrp").hidden = S.proj !== "n";
+  if (S.proj !== "n") return;
+  if (S.tot && S.tot.key === totKey()) { drawTot(); return; }
+  drawTot();                                          // stale curve (or none) until the sweep is done
+  clearTimeout(totTimer);
+  totTimer = setTimeout(() => {
+    const key = totKey(), E = [], s = [];
+    for (let i = 0; i < NTOT; i++) {
+      const e = EMIN * Math.pow(EMAX / EMIN, i / (NTOT - 1));
+      const r = OMP.solve({ proj: "n", Z: S.Z, A: S.A, E: e, scaleW: S.W, so: S.so, kin: S.kin, wave: false });
+      E.push(e); s.push(r.sigTot);
+    }
+    S.tot = { key, E, s };
+    if (S.proj === "n") drawTot();
+  }, 120);
+}
+function drawTot() {
+  const { x: ctx, w, h } = setupCanvas(document.getElementById("tot"));
+  const ds = DATA.filter((d) => d.quantity === "sigtot" && d.Z === S.Z && d.A === S.A);
+  const fresh = S.tot && S.tot.key === totKey();
+  let hi = 0;
+  if (S.tot) for (const v of S.tot.s) hi = Math.max(hi, v);
+  for (const d of ds) for (const p of d.points) hi = Math.max(hi, p[1]);
+  hi = Math.max(hi, S.res.sigTot || 0);
+  const ymax = Math.ceil(hi / 1000) * 1000 || 1000;
+  const X = (E) => 38 + Math.log(E / EMIN) / Math.log(EMAX / EMIN) * (w - 44); X.a = 38;
+  const Y = (v) => 6 + (1 - v / ymax) * (h - 22);
+  const yt = []; for (let v = 0; v <= ymax; v += ymax > 4000 ? 2000 : 1000) yt.push(v);
+  axes(ctx, w, h, X, Y, [1, 2, 5, 10, 20, 50, 100, 200], yt, (v) => (v / 1000) + " b");
+  ctx.fillStyle = "#f2c14e";
+  for (const d of ds) for (const p of d.points) { ctx.fillRect(X(p[0]) - 1, Y(p[1]) - 1, 2, 2); }
+  if (S.tot) {
+    ctx.beginPath(); ctx.strokeStyle = PCOL.n; ctx.globalAlpha = fresh ? 1 : 0.35; ctx.lineWidth = 1.6;
+    S.tot.E.forEach((e, i) => (i ? ctx.lineTo(X(e), Y(S.tot.s[i])) : ctx.moveTo(X(e), Y(S.tot.s[i])))); ctx.stroke();
+    ctx.globalAlpha = 1;
+  }
+  if (S.res.sigTot != null) {                         // the live value at the current energy
+    ctx.beginPath(); ctx.arc(X(S.E), Y(S.res.sigTot), 3.2, 0, 2 * Math.PI); ctx.strokeStyle = "#e6e8ee"; ctx.lineWidth = 1.4; ctx.stroke();
+  }
+}
+
+function drawInfo() {
+  const P = S.res.P, f = (v, d = 2) => v.toFixed(d), pr = OMP.PROJ[S.proj], pot = OMP.POT[pr.pot];
+  document.getElementById("potname").textContent = `Optical potential: ${pot.label}`;
+  const soRow = pr.s === 0 ? "" : pr.s === 1
+    ? `<dt>V<sub>so</sub></dt><dd>${f(2 * P.Vso)} MeV · W<sub>so</sub> ${f(2 * P.Wso)} (L·S form, Eq. 5)</dd>`
+    : `<dt>V<sub>so</sub></dt><dd>${f(P.Vso)} MeV · W<sub>so</sub> ${f(P.Wso)}</dd>`;
+  document.getElementById("pot").innerHTML = `
+    <dt>V</dt><dd>${f(P.V)} MeV · r ${f(P.rv, 3)} · a ${f(P.av, 3)}</dd>
+    <dt>W</dt><dd>${f(P.W)} MeV · r ${f(P.rw, 3)} · a ${f(P.aw, 3)} (×${f(S.W)})</dd>
+    <dt>W<sub>D</sub></dt><dd>${f(P.Wd)} MeV · r ${f(P.rwd, 3)} · a ${f(P.awd, 3)}</dd>
+    ${soRow}
+    ${pr.Z ? `<dt>r<sub>C</sub></dt><dd>${f(P.rc, 3)} fm</dd>` : ""}`;
+  // warnings: outside the published fit, and an emissive surface term
+  const fr = OMP.fitRange(S.proj, S.A, S.E), w = [];
+  if (!fr.ok) {
+    const what = [];
+    if (fr.out.includes("A")) what.push(`A = ${S.A} (fitted ${fr.range.A[0]} to ${fr.range.A[1]})`);
+    if (fr.out.includes("E")) what.push(`E = ${S.E.toFixed(1)} MeV (fitted ${fr.range.E[0] > 0.01 ? fr.range.E[0] : 0} to ${fr.range.E[1]} MeV)`);
+    w.push(`Outside the published fit of ${pot.label}: ${what.join(", ")}. These numbers are an extrapolation.`);
+  }
+  if (P.Wd < 0) w.push("W_D < 0 here: the surface term of Eq. (9) is emissive at this energy (kept as published).");
+  const tr = ROW.get(S.Z + "," + (S.A - S.Z)), tJ = tr && tr[7] ? tr[7] : "?";
+  if (!/^\(?0\+\)?$/.test(tJ)) w.push(`Target ground state J^π = ${tJ} (NUBASE2020): the calculation treats it as spin 0 and inert, so spin-spin terms and target excitation are left out.`);
+  if (S.err) w.unshift(S.err);
+  const W = document.getElementById("warn");
+  W.hidden = !w.length; W.textContent = w.join(" ");
+  document.getElementById("wnote").innerHTML = (pr.s === 0 ? "Spin 0: the surface is the whole wave ψ."
+    : pr.s === 1 ? "Spin 1: the surface is the m = +1 → +1 component of ψ, spin quantized along the beam (spin flip and m = 0 are not drawn)."
+    : "Spin ½: the surface is the spin-non-flip part of ψ for spin up along the beam.") +
+    ` W × 0 removes absorption: the nucleus becomes a lens and focuses the wave behind it, and interference alone still leaves deep minima there. W × 1 is the global potential; absorption deepens and smooths the shadow, but a dark spot on the surface is not flux that went into reactions: the flux removed is σ<sub>R</sub>, set by the absorptive potential W.`;
+  const r = S.res, a = S.alt, rel = S.kin === "rel";
+  // below 1e-3 mb sigma_R is at the round-off of 1 - |S|^2 (deep below a Coulomb barrier): no digits shown
+  const sg = (v, d) => Math.abs(v) < 1e-3 ? "< 10⁻³" : f(v, d);
+  const dR = a && Math.abs(a.sigR) >= 1e-3 ? (r.sigR / a.sigR - 1) * 100 : null, dk = a ? (r.k / a.k - 1) * 100 : 0;
+  document.getElementById("kinnote").innerHTML = rel
+    ? "Exact c.m. momentum; the reduced total energy E<sub>1</sub>E<sub>2</sub>/(E<sub>1</sub>+E<sub>2</sub>) replaces μ in front of the nuclear and Coulomb potentials, the prescription KD02 was fitted with." +
+      (S.proj === "d" || S.proj === "a" ? " The deuteron and alpha papers do not state which kinematics their fits used." : "")
+    : "μ = m<sub>1</sub>m<sub>2</sub>/(m<sub>1</sub>+m<sub>2</sub>), E<sub>c.m.</sub> = E<sub>lab</sub> m<sub>2</sub>/(m<sub>1</sub>+m<sub>2</sub>).";
+  document.getElementById("xsec").innerHTML = `
+    <dt>σ<sub>R</sub></dt><dd>${sg(r.sigR, 1)} mb</dd>
+    ${r.sigTot != null ? `<dt>σ<sub>tot</sub></dt><dd>${f(r.sigTot, 1)} mb</dd>` : ""}
+    <dt>k, η</dt><dd>${f(r.k, 3)} fm⁻¹ · ${f(r.eta, 3)}</dd>
+    <dt>E<sub>c.m.</sub></dt><dd>${f(r.Ecm, 2)} MeV</dd>
+    <dt>kinematics</dt><dd>${rel ? "relativistic" : "non-relativistic"}; ${a ? `${rel ? "non-rel." : "rel."} would give σ<sub>R</sub> ${sg(a.sigR, 1)} mb, k ${f(a.k, 3)} (${dR == null ? "" : `σ<sub>R</sub> ${dR >= 0 ? "+" : ""}${f(dR, 2)}%, `}k ${dk >= 0 ? "+" : ""}${f(dk, 2)}% here)` : "comparison with the other kinematics on release"}</dd>`;
+  const QL = { dsdo: "dσ/dΩ", ratio_ruth: "σ/σ<sub>R</sub>", ay: "A<sub>y</sub>", it11: "iT<sub>11</sub>" };
+  const ds = [...matchData("xs"), ...matchData("pol")];
+  const tots = S.proj === "n" ? DATA.filter((d) => d.quantity === "sigtot" && d.Z === S.Z && d.A === S.A) : [];
+  // each dataset: citation, then its caveats from the data file, and its correlated scale uncertainty, which is
+  // not in the drawn (point-wise) error bars
+  const norm = (d) => d.norm_unc ? `scale (normalization) uncertainty ${d.norm_unc.relation === "=" ? "±" : d.norm_unc.relation + " "}${d.norm_unc.value}%, common to all points and not in the error bars` : "";
+  // (the ERR-1 sentence of the caveats is the same number as norm_unc: shown once)
+  const cav = (d) => { const t = [norm(d), (d.caveats || "").replace(/An overall normalization uncertainty ERR-1[^.]*\.\s*/, "").trim()].filter(Boolean).join(". ");
+    return t ? `<br>&nbsp;&nbsp;<span style="opacity:.85">${t}</span>` : ""; };
+  const cvt = (d) => d.quantity === "dsdo" && charged() ? ` Shown as σ/σ<sub>Ruth</sub>, Rutherford at the data's ${d.E_lab} MeV with the ${S.kin === "rel" ? "relativistic" : "non-relativistic"} kinematics selected.` : "";
+  const lines = ds.map((d) => `<i>●</i> ${QL[d.quantity]} ${d.E_lab} MeV${Math.abs(d.E_lab - S.E) > 0.005 ? ` <b style="color:var(--accent)">(data at ${d.E_lab} MeV, curve at ${S.E.toFixed(2)} MeV)</b>` : ""}: ${d.exfor.first_author}${d.exfor.n_authors > 1 ? " et al." : ""}, ${d.exfor.reference} (EXFOR ${d.exfor.entry}.${String(d.exfor.subentry).slice(-3)}).${cvt(d)}` +
+    cav(d) + (d.suspect ? `<br>&nbsp;&nbsp;<i>○</i> flagged: ${d.suspect.map((q) => `${q[0]}°, ${q[1]}`).join("; ")}` : ""));
+  for (const d of tots) lines.push(`<i>▪</i> σ<sub>tot</sub>: ${d.exfor.first_author} et al., ${d.exfor.reference} (EXFOR ${d.exfor.entry}.${String(d.exfor.subentry).slice(-3)})` + cav(d));
+  document.getElementById("cite").innerHTML = lines.length ? lines.join("<br>") + `<br>The global potentials were not fitted to these data here. The calculation is shape elastic only (see the note at left).` : "";
+  const A = S.A, el = ELEM[S.Z];
+  document.getElementById("stamp").innerHTML = `<b>${S.proj === "a" ? `<span class="gk">α</span>` : PSYM[S.proj]} + <sup>${A}</sup>${el}</b><small>E<sub>lab</sub> = ${S.E.toFixed(1)} MeV · σ<sub>R</sub> = ${sg(r.sigR, 0)} mb${S.W !== 1 ? ` · W × ${f(S.W)}` : ""}${S.so || pr.s === 0 ? "" : " · no spin-orbit"}${rel ? "" : " · non-relativistic"}</small>`;
+  document.title = `${PSYM[S.proj]} + ${A}${el} ${S.E.toFixed(1)} MeV · nuclearjs`;
+  document.getElementById("toNucleus").href = `nucleus.html#${A}${el}`;
+  for (const b of document.querySelectorAll("#proj button")) b.setAttribute("aria-pressed", b.dataset.v === S.proj ? "true" : "false");
+  for (const b of document.querySelectorAll("#kin button")) b.setAttribute("aria-pressed", b.dataset.v === S.kin ? "true" : "false");
+  document.getElementById("so").style.display = pr.s === 0 ? "none" : "";
+  document.getElementById("E").value = e2s(S.E);
+  document.getElementById("Eout").textContent = S.E.toFixed(S.E < 10 ? 2 : 1) + " MeV";
+  // data presets
+  const dg = document.getElementById("datagrp"), dc = document.getElementById("datachips");
+  const seen = new Map();
+  for (const d of DATA) if (d.quantity === "dsdo" || d.quantity === "ratio_ruth") seen.set(`${d.proj}|${d.Z}|${d.A}|${d.E_lab}`, d);
+  dg.hidden = !seen.size;
+  dc.innerHTML = [...seen.values()].map((d) => `<button class="data" data-p="${d.proj}" data-z="${d.Z}" data-a="${d.A}" data-e="${d.E_lab}">${PSYM[d.proj]}+${d.A}${ELEM[d.Z]} ${d.E_lab}</button>`).join("");
+}
+function redraw() { drawXS(); drawPol(); drawS(); scheduleTot(); drawInfo(); }
+let pending = false;
+let draftNext = false;
+function update(draft) {
+  draftNext = !!draft;                                  // the latest request decides
+  if (pending) return;
+  pending = true;
+  requestAnimationFrame(() => { pending = false; safeCompute(draftNext); redraw(); syncHash(); });
+}
+function syncHash() {
+  const h = `#${S.proj}${S.A}${ELEM[S.Z]}@${+S.E.toFixed(2)}${S.kin === "nr" ? "~nr" : ""}`;
+  if (location.hash !== h) history.replaceState(null, "", h);
+}
+
+// ---------- UI
+document.getElementById("proj").addEventListener("click", (e) => { const b = e.target.closest("button"); if (!b) return; S.proj = b.dataset.v; update(); });
+document.getElementById("kin").addEventListener("click", (e) => { const b = e.target.closest("button"); if (!b) return; S.kin = b.dataset.v; update(); });
+document.getElementById("chips").addEventListener("click", (e) => { const b = e.target.closest("button"); if (!b) return; Object.assign(S, parseTarget(b.dataset.t)); update(); });
+document.getElementById("datachips").addEventListener("click", (e) => {
+  const b = e.target.closest("button"); if (!b) return;
+  S.proj = b.dataset.p; S.Z = +b.dataset.z; S.A = +b.dataset.a; S.E = +b.dataset.e; update();
+});
+const find = document.getElementById("find");
+find.addEventListener("keydown", (e) => {
+  if (e.key !== "Enter") return;
+  const t = parseTarget(find.value);
+  if (!t) { find.setCustomValidity("not a nuclide in NUBASE2020"); find.reportValidity(); return; }
+  find.setCustomValidity(""); Object.assign(S, t); update();
+});
+find.addEventListener("input", () => find.setCustomValidity(""));
+document.getElementById("E").addEventListener("input", (e) => { S.E = +s2e(+e.target.value).toFixed(2); document.getElementById("Eout").textContent = S.E.toFixed(S.E < 10 ? 2 : 1) + " MeV"; update(true); });
+document.getElementById("W").addEventListener("input", (e) => { S.W = +e.target.value; document.getElementById("Wout").textContent = S.W.toFixed(2); update(true); });
+for (const id of ["E", "W"]) document.getElementById(id).addEventListener("change", () => update(false));
+document.getElementById("so").addEventListener("click", (e) => {
+  const b = e.target.closest("button"); if (!b) return;
+  S.so = +b.dataset.v;
+  for (const x of document.querySelectorAll("#so button")) x.setAttribute("aria-pressed", x === b ? "true" : "false");
+  update();
+});
+let quality = innerWidth < 700 ? "low" : "high";
+function applyQuality() {
+  const g = quality === "high" ? GROUND_PRE_ACES : GROUND;
+  scene.background.copy(g); scene.fog.color.copy(g); surfMat.uniforms.uFog.value.copy(g);
+  // fast: no shadow maps, fewer volume steps (the composer with AO and SMAA runs only in cinematic)
+  renderer.shadowMap.enabled = quality === "high";
+  RIG.key.castShadow = quality === "high";
+  volMat.uniforms.uSteps.value = quality === "high" ? 56 : 20;
+  for (const b of document.querySelectorAll("#qmode button")) b.setAttribute("aria-pressed", b.dataset.v === quality ? "true" : "false");
+}
+document.getElementById("qmode").addEventListener("click", (e) => { const b = e.target.closest("button"); if (!b) return; quality = b.dataset.v; applyQuality(); });
+applyQuality();
+addEventListener("resize", () => {
+  camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight); composer.setSize(innerWidth, innerHeight);
+  redraw();
+});
+
+// ---------- start: #p208Pb@30, #d208Pb@22, #a90Zr@40~nr, or defaults
+{
+  const m = location.hash.match(/^#([npda])(\d+)([A-Za-z]+)@([\d.]+)(~nr)?$/);
+  if (m && isFinite(+m[4])) { const t = parseTarget(m[2] + m[3]); if (t) Object.assign(S, t, { proj: m[1], E: Math.min(EMAX, Math.max(EMIN, +m[4])), kin: m[5] ? "nr" : "rel" }); }
+  safeCompute(); redraw(); syncHash();
+  // from the side: beam runs left to right, the shadow lies to the right of the nucleus
+  camera.position.set(-0.98, 0.84, 0.16).setLength(HALF * 3.7);
+  controls.target.set(0, -1, HALF * 0.08);
+}
+
+// ---------- loop
+const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+const tag = document.getElementById("tagBeam"), tv = new THREE.Vector3();
+let last = performance.now(), phase = 0;
+function animate(now) {
+  requestAnimationFrame(animate);
+  const dt = Math.min(0.1, Math.max(0, (now - last) / 1000)); last = now;
+  if (!reduce) phase += dt * 2.2;                     // one oscillation every ~3 s
+  surfMat.uniforms.uT.value = phase;
+  controls.update();
+  if (quality === "high") composer.render(); else renderer.render(scene, camera);
+  tv.set(0, 1.5, -HALF * 0.9).project(camera);
+  const vis = tv.z < 1 && Math.abs(tv.x) < 1 && Math.abs(tv.y) < 1;
+  tag.hidden = !vis;
+  if (vis) { tag.style.left = (tv.x * 0.5 + 0.5) * innerWidth + "px"; tag.style.top = (-tv.y * 0.5 + 0.5) * innerHeight + "px"; }
+}
+requestAnimationFrame(animate);
+</script>
+<script src="assets/glass.js"></script>
+</body>
+</html>

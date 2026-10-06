@@ -1,0 +1,928 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>¹²C(α,γ)¹⁶O · nuclearjs</title>
+<link rel="stylesheet" href="assets/glass.css">
+<style>
+body{margin:0}
+:root{
+  color-scheme:dark;
+  --ground:#0b0d12; --line:#262c3a;
+  --ink:#e6e8ee; --muted:#8a92a6; --accent:#f2c14e;
+  --sans:"Avenir Next","Futura","Helvetica Neue","PingFang SC","Noto Sans SC",system-ui,sans-serif;
+  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+}
+html,body{height:100%}
+body{background:var(--ground);color:var(--ink);font-family:var(--sans);overflow:hidden}
+#stage{position:fixed;inset:0}
+#stage canvas{display:block;touch-action:none}
+.panel{position:fixed;border-radius:18px;padding:16px 18px;display:flex;flex-direction:column;gap:12px;overflow:auto;box-sizing:border-box;z-index:2}
+.panel>*{flex-shrink:0}
+#ctl{left:16px;top:calc(16px + env(safe-area-inset-top,0px));width:min(318px,calc(100% - 32px));max-height:calc(100% - 56px)}
+#side{right:16px;top:calc(16px + env(safe-area-inset-top,0px));width:372px;max-height:calc(100% - 32px);gap:8px}
+h1{margin:0;font-size:22px;font-weight:600;letter-spacing:.01em}
+h1 sup{font-size:.6em}
+.sub{margin:2px 0 0;color:var(--muted);font-size:13px;line-height:1.45}
+.sub sup,.src sup,.kv sup,.cap sup,.leg sup,td sup,th sup{font-size:.7em}
+.grp{display:flex;flex-direction:column;gap:6px}
+.lab{font-size:11px;text-transform:uppercase;letter-spacing:.12em;color:var(--muted)}
+.seg{display:flex;border:1px solid var(--line);border-radius:4px;overflow:hidden}
+.seg button{flex:1;background:none;border:0;color:var(--muted);font:500 12px var(--mono);padding:6px 4px;cursor:pointer}
+.seg button+button{border-left:1px solid var(--line)}
+.seg button[aria-pressed="true"]{background:#1f2533;color:var(--ink)}
+.seg.mini button{font-size:11px;padding:3px 4px}
+button:focus-visible,input:focus-visible,summary:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:3px 10px;font:12px var(--mono);font-variant-numeric:tabular-nums}
+.kv dt{color:var(--muted)}.kv dd{margin:0}
+.row{display:flex;gap:8px;align-items:center;font:12px var(--mono);color:var(--muted)}
+.row input[type=range]{flex:1;accent-color:var(--accent);min-width:0}
+.row output{min-width:70px;text-align:right;color:var(--ink);font-variant-numeric:tabular-nums}
+details summary{cursor:pointer;font-size:11px;text-transform:uppercase;letter-spacing:.12em;color:var(--muted);list-style:none}
+details summary::before{content:"▸ ";}
+details[open] summary::before{content:"▾ ";}
+details .grp{margin-top:8px}
+.home{font:12px var(--mono);color:var(--muted);text-decoration:none}.home:hover{color:var(--ink)}
+.src{font-size:11px;color:var(--muted);line-height:1.45}
+.src a{color:var(--muted)}
+.plot{width:100%;height:250px;display:block}
+#sceneOnly{position:fixed;z-index:4;left:16px;bottom:calc(10px + env(safe-area-inset-bottom,0px));padding:8px 12px;border:1px solid var(--line);border-radius:8px;color:var(--ink);cursor:pointer;font:12px var(--mono)}
+body.scene-only .panel{display:none}
+@media (max-width:900px){#sceneOnly{bottom:auto;top:calc(42vh + 24px);padding:5px 9px;font-size:11px}}
+.cap{display:flex;flex-wrap:wrap;gap:2px 8px;justify-content:space-between;align-items:baseline;font:11px var(--mono);color:var(--muted)}
+.cap b{font:600 13px var(--sans);color:var(--ink)}
+.leg{display:flex;flex-wrap:wrap;gap:3px 12px;font:11px var(--mono);color:var(--muted)}
+.leg i{display:inline-block;width:14px;height:0;border-top:2px solid;vertical-align:middle;margin-right:4px}
+.leg i.d{border-top-style:dashed}
+.leg i.p{width:6px;height:6px;border:0;border-radius:50%;margin-right:5px}
+.leg i.b{height:8px;border:0;width:12px}
+table.wp{width:100%;border-collapse:collapse;font:11px var(--mono);font-variant-numeric:tabular-nums}
+table.wp th{color:var(--muted);font-weight:500;text-align:right;padding:2px 3px;border-bottom:1px solid var(--line)}
+table.wp td{text-align:right;padding:3px 3px;border-bottom:1px solid #191e2a}
+table.wp th:first-child,table.wp td:first-child{text-align:left}
+.axlab{position:fixed;font:500 11px var(--mono);pointer-events:none;transform:translate(-50%,-50%);white-space:nowrap;text-shadow:0 0 6px #000,0 0 2px #000}
+.axlab.l{transform:translate(-100%,-50%)}
+.axlab.r{transform:translate(0,-50%)}
+.axlab sup{font-size:.75em}
+#stamp{position:fixed;left:50%;bottom:calc(22px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);text-align:center;pointer-events:none;width:min(700px,56vw)}
+#stamp b{display:block;font:600 clamp(20px,2.4vw,30px)/1.1 var(--sans);letter-spacing:-.01em}
+#stamp b sup,#stamp small sup{font-size:.6em}
+#stamp small{display:block;font:500 12px var(--mono);color:var(--muted);margin-top:6px;line-height:1.5}
+.hint{position:fixed;left:170px;bottom:calc(14px + env(safe-area-inset-bottom,0px));font:11px var(--mono);color:var(--muted)}
+@media (max-width:900px){
+  #ctl{max-height:42vh}
+  #side{left:16px;right:16px;width:auto;top:auto;bottom:calc(12px + env(safe-area-inset-bottom,0px));max-height:44vh}
+  #stamp,.hint,.axlab{display:none}
+}
+@media (max-width:560px){.panel{padding:10px 12px;gap:9px}h1{font-size:18px}}
+</style>
+<script data-goatcounter="https://jinleiphys.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
+</head>
+<body>
+
+<div id="stage"></div>
+<button id="sceneOnly" class="glass" aria-pressed="false" title="Hide or show the panels (H)">hide panels · H</button>
+
+<aside id="ctl" class="panel glass glass-deep" data-glass data-glass-bevel="22" data-glass-scale="42">
+  <div>
+    <a class="home" href="index.html">← nuclearjs</a> &nbsp; <a class="home" href="https://vibeinscience.com/nuclides.html">nuclide chart</a> &nbsp; <a class="home" href="nucleosynthesis.html">heavy elements</a>
+    <h1><sup>12</sup>C(α,γ)<sup>16</sup>O</h1>
+    <p class="sub">The “holy grail of nuclear astrophysics”. A helium-burning core makes carbon through the Hoyle state of <sup>12</sup>C; part of that carbon then captures one more α and becomes oxygen. How much of each is left sets the rest of a massive star's life, the composition of white dwarfs, supernova yields and even where the black-hole mass gap begins. At the stellar energy the capture cross section is about 10<sup>−17</sup> b, far below anything measured, so the rate is extrapolated from data above about 1 MeV through the levels of <sup>16</sup>O.</p>
+  </div>
+  <div class="grp">
+    <div class="lab">Show</div>
+    <div class="seg mini" id="viewsel">
+      <button data-v="capture" title="the alpha meets the Coulomb barrier, tunnels, and 16O emits a gamma ray">capture</button>
+      <button data-v="threshold" title="the levels next to the alpha threshold">threshold</button>
+      <button data-v="data" title="the measured S factors and their extrapolation">data</button>
+      <button data-v="star" title="where it happens: the helium-burning core">star</button>
+    </div>
+    <p class="sub" id="viewtxt"></p>
+  </div>
+  <div class="grp">
+    <div class="lab">Helium-burning temperature</div>
+    <div class="row"><span>T<sub>9</sub></span><input id="t9" type="range" min="0.1" max="1" step="0.01" aria-label="temperature in GK"><output id="t9o"></output></div>
+    <dl class="kv" id="live"></dl>
+  </div>
+  <div class="grp">
+    <div class="lab">Star (MESA models of deBoer et al.)</div>
+    <div class="seg mini" id="msel"><button data-v="3">3 M☉</button><button data-v="15">15 M☉</button><button data-v="25">25 M☉</button></div>
+    <div class="seg mini" id="rsel"><button data-v="L" title="lower limit of the rate">lower rate</button><button data-v="A" title="adopted rate">adopted</button><button data-v="U" title="upper limit of the rate">upper rate</button></div>
+    <dl class="kv" id="starinfo"></dl>
+  </div>
+  <div class="grp">
+    <div class="lab">Rendering</div>
+    <div class="seg" id="qmode">
+      <button data-v="high" title="glass plates, soft bloom">cinematic</button>
+      <button data-v="low" title="opaque plates, no bloom, for phones">fast</button>
+    </div>
+    <p class="sub" id="vnote"></p>
+  </div>
+  <details>
+    <summary>Why it cannot be measured</summary>
+    <div class="grp">
+      <p class="sub">An α particle at E<sub>0</sub> ≈ 0.3 MeV meets a Coulomb barrier of a few MeV and turns around about 60 fm out, more than ten times the nuclear radius; the tunnelling factor e<sup>−2πη</sup> is about 10<sup>−16</sup>. The review of deBoer et al. (2017) estimates σ(300 keV) ≈ 2×10<sup>−17</sup> b, about five orders of magnitude below the few picobarns reached by the best measurements, whose lowest points lie near E<sub>c.m.</sub> ≈ 1 MeV.</p>
+      <p class="sub">The extrapolation is hard because the cross section there is made of tails. The ground-state transition has an E1 part, carried by the subthreshold 1<sup>−</sup> state at 7.12 MeV (45 keV below the α threshold) interfering with the broad 1<sup>−</sup> at 9.585 MeV, and an E2 part, carried by the subthreshold 2<sup>+</sup> at 6.92 MeV and by direct capture. Isospin suppresses E1 in this N = Z system, so the two parts are of similar size; cascades through the bound excited states add about 5% at 300 keV (deBoer et al., Sects. I, V.C).</p>
+    </div>
+  </details>
+  <details>
+    <summary>Indirect routes and underground labs</summary>
+    <div class="grp">
+      <p class="sub"><b style="color:var(--ink)">α transfer.</b> Sub-Coulomb <sup>12</sup>C(<sup>6</sup>Li,d) and (<sup>7</sup>Li,t) transfer fixes the asymptotic normalization coefficients of the subthreshold 2<sup>+</sup> and 1<sup>−</sup> states, which set the size of their tails (Brune et al., PRL 83, 4025 (1999); Avila et al., PRL 114, 071101 (2015), who also measured the 6.05 and 6.13 MeV states).</p>
+      <p class="sub"><b style="color:var(--ink)">β-delayed α decay of <sup>16</sup>N.</b> <sup>16</sup>N β-decays into 1<sup>−</sup> strength of <sup>16</sup>O above the α threshold, which breaks up into α + <sup>12</sup>C; the low-energy shape of the α spectrum constrains the subthreshold 1<sup>−</sup> contribution (Azuma et al., PRC 50, 1194 (1994); Tang et al., PRC 81, 045809 (2010)).</p>
+      <p class="sub"><b style="color:var(--ink)">Trojan horse.</b> In the review the Trojan-horse method appears only for the related <sup>15</sup>N(p,α)<sup>12</sup>C reaction. <sup>16</sup>O = α + <sup>12</sup>C has itself served as a Trojan-horse nucleus for carbon fusion (Li et al., PLB 879, 140675 (2026), arXiv:2609.08819); I found no Trojan-horse determination of <sup>12</sup>C(α,γ)<sup>16</sup>O.</p>
+      <p class="sub"><b style="color:var(--ink)">Underground.</b> In 2017 the review lists LUNA (waiting for the 3.5 MV LUNA MV machine, since the old one gives α beams only up to 400 keV), CASPAR and Jinping. JUNA in Jinping ran <sup>12</sup>C(α,γ)<sup>16</sup>O in 2021 with a beam near 1 emA, reaching an upper-limit sensitivity of 10<sup>−13</sup> b at E<sub>c.m.</sub> = 538 keV, with the analysis then still in progress (Liu et al., EPJ Web Conf. 260, 08001 (2022)).</p>
+    </div>
+  </details>
+  <details>
+    <summary>Open question</summary>
+    <div class="grp">
+      <p class="sub">Extrapolated S(300 keV) values have scattered by factors of several over fifty years (deBoer et al., Table IV; Kunz et al. 2002, Table 1). The 2017 global R-matrix analysis gives 140 ± 21 (MC) <sup>+18</sup><sub>−11</sub> (model) keV b, while other recent analyses sit near 160 keV b (side table); the stated goal is about 10%. From the edge of the black-hole mass gap seen in the first ten gravitational-wave black holes, Farmer et al. (ApJL 902, L36 (2020)) infer S<sub>300</sub> &gt; 175 keV b at 68% confidence, a stellar-model inference whose degeneracies, they write, need further study. This page does not take a side.</p>
+    </div>
+  </details>
+  <details>
+    <summary>Sources and formulas</summary>
+    <div class="grp src" id="model"></div>
+  </details>
+</aside>
+
+<aside id="side" class="panel glass glass-deep" data-glass data-glass-bevel="22" data-glass-scale="42">
+  <div class="cap"><b>S factor, measured and extrapolated</b><span class="seg mini" id="ssel" style="display:inline-flex"><button data-v="e1e2">E1 · E2</button><button data-v="tot">total</button></span></div>
+  <canvas id="pS" class="plot"></canvas>
+  <div class="leg" id="legS"></div>
+  <div class="src" id="srcS"></div>
+  <div class="cap"><b>S(300 keV), keV b</b><span>extrapolations</span></div>
+  <table class="wp" id="s300"></table>
+  <div class="cap"><b>Central C/O after core He burning</b><span>mass fractions</span></div>
+  <canvas id="pCO" class="plot" style="height:118px"></canvas>
+  <div class="leg" id="legCO"></div>
+  <div class="src">deBoer et al., Rev. Mod. Phys. 89, 035007 (2017), arXiv:1709.03144, Table XX (MESA, end of core He burning, central He below 10<sup>−5</sup>). The lower and upper rates bracket the uncertainty of their rate.</div>
+</aside>
+
+<div id="labs"></div>
+<div id="stamp"></div>
+<div class="hint">drag to orbit · right-drag to pan · scroll to zoom</div>
+
+<script src="assets/three-bundle.js"></script>
+<script src="assets/three-post.js"></script>
+<script src="assets/vol.js"></script>
+<script src="assets/shells-data.js"></script>
+<script src="assets/holygrail-data.js"></script>
+<script src="assets/holygrail.js"></script>
+<script>
+"use strict";
+// ---------- data
+const DATA = window.GRAIL_DATA;
+GRAIL.init(window.AME);
+const Q = GRAIL.Q();                                 // alpha threshold in 16O, MeV (AME2020)
+const BAR = GRAIL.barrier();
+// 3-alpha threshold in 12C (AME2020), for the star view
+const dme = (Z, N) => window.AME.find((r) => r[0] === Z && r[1] === N)[2] / 1000;
+const Q3A = 3 * dme(2, 2) - dme(6, 6);
+// 16O levels: ENSDF adopted levels (Tilley et al., NPA 564, 1 (1993), via NuDat 3), the set drawn in deBoer
+// et al. Fig. 2 up to 13.1 MeV (11.49 and 13.09 from that figure). [Ex MeV, J^pi, width MeV (0: bound or not drawn)]
+const LEVELS = [
+  [0, "0+", 0], [6.0494, "0+", 0], [6.12989, "3-", 0], [6.9171, "2+", 0], [7.11685, "1-", 0],
+  [9.585, "1-", 0.420], [9.8445, "2+", 0.00062], [10.356, "4+", 0.026], [11.49, "3-", 0], [11.52, "2+", 0.071],
+  [12.44, "1-", 0.091], [13.09, "1-", 0],
+];
+// 12C levels (ENSDF, Kelley, Purcell, Sheu, NPA 968, 71 (2017), via NuDat 3)
+const C12 = [[0, "0+"], [4.43982, "2+"], [7.65407, "0+"]];
+const JCOL = { "0+": "#e9edf5", "1-": "#ff8a6a", "2+": "#5fd4e6", "3-": "#b79cff", "4+": "#f2c14e" };
+const S = { T9: 0.2, view: "capture", M: 15, rate: "A", sv: "e1e2" };
+const jp = (j) => j[0] + "<sup>" + (j[1] === "-" ? "−" : "+") + "</sup>";
+// log interpolation in a digitized [E, S] curve
+function curveAt(c, E) {
+  if (E <= c[0][0]) return c[0][1];
+  for (let i = 1; i < c.length; i++) if (c[i][0] >= E) {
+    const a = c[i - 1], b = c[i], t = (E - a[0]) / (b[0] - a[0]);
+    return Math.exp(Math.log(a[1]) * (1 - t) + Math.log(b[1]) * t);
+  }
+  return c[c.length - 1][1];
+}
+const EMIN_DATA = Math.min(...DATA.fig9.E1.map((r) => r[0]), ...DATA.fig9.E2.map((r) => r[0]));
+
+// ---------- scene
+const stage = document.getElementById("stage");
+const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.setSize(innerWidth, innerHeight);
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.05;
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.localClippingEnabled = true;
+stage.appendChild(renderer.domElement);
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(34, innerWidth / innerHeight, 0.1, 600);
+const composer = new EffectComposer(renderer);
+composer.addPass(new RenderPass(scene, camera));
+const bloom = new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), 0.45, 0.5, 0.72);
+composer.addPass(bloom);
+composer.addPass(new OutputPass());
+composer.addPass(new SMAAPass(innerWidth * renderer.getPixelRatio(), innerHeight * renderer.getPixelRatio()));
+scene.environment = VOL.studioEnv(renderer);
+VOL.lightRig(scene);
+// The ground colour #0b0d12 is drawn untouched on the direct path, but OutputPass runs it through ACES, whose toe
+// crushes it to black; on the bloom path background and fog take the linear colour that ACES (exposure 1.05) maps
+// back to #0b0d12 (as on the other pages).
+const GROUND = new THREE.Color("#0b0d12");
+const GROUND_PRE_ACES = new THREE.Color().setRGB(0.0115476, 0.0131218, 0.0174740, THREE.LinearSRGBColorSpace);
+scene.background = GROUND.clone();
+scene.fog = new THREE.Fog("#0b0d12", 60, 200);
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true; controls.dampingFactor = 0.08;
+controls.minDistance = 2; controls.maxDistance = 140;
+const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+const narrow = innerWidth < 700;
+
+// one vertical scale for everything: y = excitation energy in 16O (MeV); E_cm = y - Q
+const Y = (Ex) => Ex;
+const SHADER_END = `
+  #include <tonemapping_fragment>
+  #include <colorspace_fragment>`;
+const V3 = (x, y, z) => new THREE.Vector3(x, y, z);
+
+// floor
+const floor = new THREE.Mesh(new THREE.PlaneGeometry(400, 400), new THREE.MeshStandardMaterial({ color: "#10141c", roughness: 0.9, envMapIntensity: 0.25 }));
+floor.rotation.x = -Math.PI / 2; floor.position.y = -0.6; scene.add(floor);
+const grid = new THREE.GridHelper(120, 60, "#1c2230", "#161b26");
+grid.position.y = -0.59; grid.material.transparent = true; grid.material.opacity = 0.6; scene.add(grid);
+
+// soft additive glow volume: vertical Gaussian of half-width uH (local units), faded at the x and z edges
+function glowMat(color, op, uH, edge) {
+  return new THREE.ShaderMaterial({
+    uniforms: { uCol: { value: new THREE.Color(color) }, uOp: { value: op }, uH: { value: uH }, uHalf: { value: new THREE.Vector3(1, 1, 1) }, uEdge: { value: edge || 0.15 } },
+    vertexShader: `varying vec3 vP; void main(){ vP = position; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
+    fragmentShader: `uniform vec3 uCol; uniform float uOp, uH, uEdge; uniform vec3 uHalf; varying vec3 vP;
+      void main(){
+        float g = exp(-pow(vP.y / max(uH, 1e-4), 2.0));
+        float ex = smoothstep(uHalf.x, uHalf.x * (1.0 - uEdge), abs(vP.x));
+        float ez = smoothstep(uHalf.z, uHalf.z * (1.0 - uEdge * 2.0), abs(vP.z));
+        float a = g * ex * ez * uOp;
+        gl_FragColor = vec4(uCol * a, a);` + SHADER_END + `
+      }`,
+    transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide,
+  });
+}
+function glowBox(w, h, d, color, op, uH, edge) {
+  const m = glowMat(color, op, uH, edge);
+  m.uniforms.uHalf.value.set(w / 2, h / 2, d / 2);
+  return new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m);
+}
+
+// ---------- the 16O tower
+const TW = 4.6, TD = 2.8;                            // plate width (x), depth (z)
+const tower = new THREE.Group(); scene.add(tower);
+const plateGlass = VOL.glassMaterial({ thickness: 0.1, roughness: 0.05, envMapIntensity: 0.35, clearcoat: 0.4 });
+const plateFast = new THREE.MeshStandardMaterial({ color: "#2a3142", roughness: 0.4, metalness: 0.1, envMapIntensity: 0.6 });
+const plateGeo = new RoundedBoxGeometry(TW, 0.05, TD, 2, 0.02);
+const plates = [];
+for (const [Ex, J, G] of LEVELS) {
+  const col = new THREE.Color(JCOL[J]);
+  const m = new THREE.Mesh(plateGeo, plateGlass); m.position.y = Y(Ex); tower.add(m); plates.push(m);
+  // lit rim: the plate's outline as a bright line (the eye reads the level as this edge)
+  const rim = new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(TW, 0.05, TD)),
+    new THREE.LineBasicMaterial({ color: col.clone().multiplyScalar(Ex < Q ? 1.6 : 1.1) }));
+  rim.position.y = Y(Ex); tower.add(rim);
+  if (G > 0) {                                        // resonance: a glow slab whose 1/e half height is Gamma/2
+    const h = Math.max(G, 0.02);
+    const g = glowBox(TW * 0.98, Math.max(4 * h, 0.12), TD * 0.98, col.clone().multiplyScalar(G > 0.2 ? 0.9 : 1.4), G > 0.2 ? 0.55 : 0.9, Math.max(h / 2, 0.012));
+    g.position.y = Y(Ex); tower.add(g);
+  }
+}
+{
+  const sp = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, 14.1, 12), new THREE.MeshStandardMaterial({ color: "#3a4256", roughness: 0.35, metalness: 0.6 }));
+  sp.position.set(-TW / 2 - 0.25, 14.1 / 2 - 0.6, -TD / 2 + 0.2); tower.add(sp);
+}
+// subthreshold tails: the two states just below threshold reach up into the Gamow window (a picture, not computed)
+const tails = [];
+for (const [Ex, J] of [[6.9171, "2+"], [7.11685, "1-"]]) {
+  const h = 1.3, g = glowBox(TW * 0.96, h, TD * 0.96, new THREE.Color(JCOL[J]), 0.0, 0.5);
+  g.material.fragmentShader = g.material.fragmentShader.replace("float g = exp(-pow(vP.y / max(uH, 1e-4), 2.0));",
+    "float yy = vP.y + " + (h / 2).toFixed(3) + "; float g = yy < 0.0 ? 0.0 : exp(-yy / uH);");
+  g.position.y = Y(Ex) + h / 2; tower.add(g); tails.push(g);
+}
+
+// ---------- the alpha threshold plane
+const thrMat = (() => {
+  const m = new THREE.ShaderMaterial({
+    uniforms: { uCol: { value: new THREE.Color(0.35, 0.8, 1.0) }, uOp: { value: 0.32 } },
+    vertexShader: `varying vec2 vU; varying vec3 vW; void main(){ vU = uv; vec4 w = modelMatrix * vec4(position, 1.0); vW = w.xyz; gl_Position = projectionMatrix * viewMatrix * w; }`,
+    fragmentShader: `uniform vec3 uCol; uniform float uOp; varying vec2 vU; varying vec3 vW;
+      void main(){
+        vec2 c = abs(vU - 0.5) * 2.0;
+        float fade = (1.0 - smoothstep(0.55, 1.0, c.x)) * (1.0 - smoothstep(0.45, 1.0, c.y));
+        vec2 gq = abs(fract(vW.xz) - 0.5);
+        float line = smoothstep(0.465, 0.5, max(gq.x, gq.y));
+        float a = (0.10 + 0.55 * line) * fade * uOp;
+        gl_FragColor = vec4(uCol * a, a);` + SHADER_END + `
+      }`,
+    transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide,
+  });
+  const p = new THREE.Mesh(new THREE.PlaneGeometry(34, 16), m);
+  p.rotation.x = -Math.PI / 2; p.position.set(-3, Y(Q), -1); scene.add(p);
+  const e = new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(TW + 0.6, 0.001, TD + 0.6)), new THREE.LineBasicMaterial({ color: new THREE.Color(0.6, 1.4, 2.0) }));
+  e.position.y = Y(Q); tower.add(e);
+  return m;
+})();
+
+// ---------- the entrance channel: alpha + 12C on the Coulomb barrier (an energy diagram turned into a surface of revolution)
+const VX = -9.6, VZ = -1.2, KR = 0.095;              // centre, scene units per fm
+const RMAX = 72;                                      // fm
+const volcano = new THREE.Group(); volcano.position.set(VX, Y(Q), VZ); scene.add(volcano);
+let volMesh;
+{
+  const prof = [new THREE.Vector2(0.001, -1.2), new THREE.Vector2(BAR.R * 0.55 * KR, -1.2), new THREE.Vector2(BAR.R * 0.82 * KR, -0.4), new THREE.Vector2(BAR.R * 0.96 * KR, BAR.V * 0.85)];
+  for (let i = 0; i <= 140; i++) { const r = BAR.R * Math.pow(RMAX / BAR.R, i / 140); prof.push(new THREE.Vector2(r * KR, BAR.V * BAR.R / r)); }
+  prof.push(new THREE.Vector2(RMAX * KR + 0.4, 0.0));
+  const mat = new THREE.ShaderMaterial({
+    uniforms: { uKey: { value: V3(-0.3, 1, 0.35).normalize() }, uOp: { value: 0.72 }, uRt: { value: 1 } },
+    vertexShader: `varying vec3 vN; varying vec3 vL; varying vec3 vV;
+      void main(){ vL = position; vN = normalize(normalMatrix * normal); vec4 mv = modelViewMatrix * vec4(position, 1.0); vV = -mv.xyz; gl_Position = projectionMatrix * mv; }`,
+    fragmentShader: `uniform vec3 uKey; uniform float uOp, uRt; varying vec3 vN; varying vec3 vL; varying vec3 vV;
+      void main(){
+        vec3 n = normalize(vN), v = normalize(vV);
+        float h = vL.y;                                       // MeV above threshold
+        float r = length(vL.xz);
+        vec3 base = mix(vec3(0.07, 0.09, 0.13), vec3(0.34, 0.19, 0.12), clamp(h / 3.0, 0.0, 1.0));
+        float dif = 0.35 + 0.65 * max(dot(n, normalize((viewMatrix * vec4(uKey, 0.0)).xyz)), 0.0);
+        float fr = pow(1.0 - abs(dot(n, v)), 3.0);
+        float cl = abs(fract(h / 0.5 + 0.5) - 0.5);           // contour every 0.5 MeV
+        float line = (1.0 - smoothstep(0.0, 0.05, cl)) * step(0.05, h);
+        float ring = 1.0 - smoothstep(0.0, 0.035, abs(r - uRt)); // the classical turning point
+        vec3 col = base * dif + vec3(1.0, 0.55, 0.3) * line * 0.5 + vec3(0.5, 0.75, 1.0) * fr * 0.55 + vec3(1.6, 1.1, 0.45) * ring;
+        gl_FragColor = vec4(col, uOp * (0.55 + 0.45 * fr) + ring * 0.4);` + SHADER_END + `
+      }`,
+    transparent: true, depthWrite: false, side: THREE.DoubleSide,
+  });
+  volMesh = new THREE.Mesh(new THREE.LatheGeometry(prof, 160), mat); volMesh.renderOrder = 2; volcano.add(volMesh);
+}
+// nucleons: radius 0.085 units = 0.9 fm at the barrier's radial scale
+const nucGeo = new THREE.SphereGeometry(0.085, 24, 16);
+const PROT = new THREE.MeshPhysicalMaterial({ color: "#e0574a", roughness: 0.28, clearcoat: 1, clearcoatRoughness: 0.2, envMapIntensity: 1.1 });
+const NEUT = new THREE.MeshPhysicalMaterial({ color: "#9fb2cc", roughness: 0.3, clearcoat: 1, clearcoatRoughness: 0.2, envMapIntensity: 1.1 });
+function cluster(nZ, nN, R) {
+  const g = new THREE.Group(), n = nZ + nN, pts = [];
+  if (n === 4) { const a = R * 0.8; pts.push([a, a, a], [-a, -a, a], [-a, a, -a], [a, -a, -a]); }
+  else { pts.push([0, 0, 0]); for (let i = 0; i < n - 1; i++) { const y = 1 - 2 * (i + 0.5) / (n - 1), rr = Math.sqrt(1 - y * y), th = i * 2.39996; pts.push([R * rr * Math.cos(th), R * y, R * rr * Math.sin(th)]); } }
+  pts.forEach((p, i) => { const m = new THREE.Mesh(nucGeo, i % 2 === 0 ? PROT : NEUT); m.position.set(...p); g.add(m); });
+  return g;
+}
+const c12 = cluster(6, 6, 0.16);
+const alpha = cluster(2, 2, 0.068);
+volcano.add(c12, alpha);
+// energy line E = E0: solid outside the turning point, dashed through the wall
+const eLineOut = new THREE.Line(new THREE.BufferGeometry(), new THREE.LineBasicMaterial({ color: new THREE.Color(1.6, 1.1, 0.4) }));
+const eLineIn = new THREE.Line(new THREE.BufferGeometry(), new THREE.LineDashedMaterial({ color: new THREE.Color(1.2, 0.85, 0.35), dashSize: 0.08, gapSize: 0.08, transparent: true, opacity: 0.8 }));
+volcano.add(eLineOut, eLineIn);
+const flash = new THREE.Mesh(new THREE.SphereGeometry(0.5, 24, 16), new THREE.MeshBasicMaterial({ color: new THREE.Color(2.2, 1.6, 0.9), transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending }));
+volcano.add(flash);
+const ALPHA_DIR = V3(1, 0, 0.35).normalize();         // the alpha comes in from the tower side of the barrier
+
+// ---------- the Gamow window: one band at E_cm = E0 through the entrance channel, the 16O tower and the data wall
+const band = glowBox(1, 1, 1, "#ffb347", 0.42, 0.5, 0.06);
+band.renderOrder = 3; scene.add(band);
+const AX = TW / 2 - 0.45, AZ = TD / 2;
+const bead = new THREE.Mesh(new THREE.SphereGeometry(0.11, 24, 16), new THREE.MeshBasicMaterial({ color: new THREE.Color(2.4, 1.7, 0.8) }));
+scene.add(bead);
+
+// ---------- gamma transitions: arcs in the y-z plane at the front of the tower, bulging toward the viewer
+const arcs = [];
+function buildArcs() {
+  for (const a of arcs) { tower.remove(a.mesh); a.mesh.geometry.dispose(); }
+  arcs.length = 0;
+  const yc = Y(Q + gw().E0);
+  const add = (y0, y1, x, bulge, col, op, r, kind, dashed) => {
+    const c = new THREE.QuadraticBezierCurve3(V3(x, y0, AZ), V3(x + 0.5 * bulge, (y0 + y1) / 2, AZ + 0.85 * bulge), V3(x, y1, AZ));
+    const mat = dashed ? new THREE.ShaderMaterial({
+      uniforms: { uCol: { value: new THREE.Color(col) } },
+      vertexShader: `varying float vS; void main(){ vS = uv.x; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
+      fragmentShader: `uniform vec3 uCol; varying float vS; void main(){ float a = step(0.5, fract(vS * 18.0)) * 0.6; gl_FragColor = vec4(uCol * a, a);` + SHADER_END + ` }`,
+      transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
+    }) : new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: op, depthWrite: false, blending: THREE.AdditiveBlending });
+    const m = new THREE.Mesh(new THREE.TubeGeometry(c, 64, r, 8, false), mat);
+    tower.add(m); arcs.push({ curve: c, mesh: m, kind, op });
+  };
+  add(yc, Y(0), AX, 2.6, new THREE.Color(1.6, 1.25, 0.6), 0.8, 0.035, "gs");                     // ground-state capture, E1 + E2
+  add(yc, Y(6.9171), AX - 0.5, 0.55, new THREE.Color(JCOL["2+"]), 0.55, 0.016, "c692");
+  add(yc, Y(7.11685), AX - 0.8, 0.4, new THREE.Color(JCOL["1-"]), 0.55, 0.016, "c712");
+  add(yc, Y(6.12989), AX - 1.1, 0.8, new THREE.Color(JCOL["3-"]), 0.45, 0.012, "c613");
+  add(yc, Y(6.0494), AX - 1.4, 0.95, new THREE.Color(JCOL["0+"]), 0.4, 0.012, "c605");
+  add(Y(6.9171), Y(0), AX - 0.5, 2.0, new THREE.Color(JCOL["2+"]), 0.35, 0.012, "g692");
+  add(Y(7.11685), Y(0), AX - 0.8, 2.2, new THREE.Color(JCOL["1-"]), 0.35, 0.012, "g712");
+  add(Y(6.12989), Y(0), AX - 1.1, 1.8, new THREE.Color(JCOL["3-"]), 0.3, 0.01, "g613");
+  add(Y(6.0494), Y(0), AX - 1.4, 1.6, new THREE.Color(JCOL["0+"]), 0.6, 0.01, "e605", true);   // 0+ -> 0+: pair emission, no single gamma
+}
+// the photon: a short wiggle travelling along an arc
+const PH_N = 48;
+const photon = new THREE.Line(new THREE.BufferGeometry().setAttribute("position", new THREE.BufferAttribute(new Float32Array(PH_N * 3), 3)),
+  new THREE.LineBasicMaterial({ color: new THREE.Color(2.6, 2.2, 1.2) }));
+photon.frustumCulled = false; tower.add(photon);
+const photonHead = new THREE.Mesh(new THREE.SphereGeometry(0.06, 16, 12), new THREE.MeshBasicMaterial({ color: new THREE.Color(3, 2.6, 1.6) }));
+tower.add(photonHead);
+
+// ---------- the data wall: E_cm upward on the same scale as Ex, log10 S across
+const WALL = new THREE.Group(); WALL.position.set(3.9, 0, -0.4); WALL.rotation.y = -0.2; scene.add(WALL);
+const LS0 = -4.6, LS1 = 1.3, WX = 1.42;              // log10 S range (MeV b), scene units per decade
+const WW = (LS1 - LS0) * WX;
+const wx = (S) => (Math.log10(S) - LS0) * WX;
+const wy = (E) => Y(Q + E);
+const E_TOP = 6.5;
+{
+  const back = new THREE.Mesh(new THREE.BoxGeometry(WW + 0.3, E_TOP + 0.3, 0.04), VOL.glassMaterial({ thickness: 0.04, roughness: 0.08, envMapIntensity: 0.7 }));
+  back.position.set(WW / 2, wy(E_TOP / 2), -0.06); WALL.add(back); WALL.userData.back = back;
+  const gp = [];
+  for (let d = Math.ceil(LS0); d <= LS1; d++) gp.push(wx(10 ** d), wy(0), 0, wx(10 ** d), wy(E_TOP), 0);
+  for (let e = 0; e <= E_TOP; e++) gp.push(0, wy(e), 0, WW, wy(e), 0);
+  WALL.add(new THREE.LineSegments(new THREE.BufferGeometry().setAttribute("position", new THREE.Float32BufferAttribute(gp, 3)), new THREE.LineBasicMaterial({ color: "#3a4560", transparent: true, opacity: 0.7 })));
+  // the unmeasured strip, from threshold to the lowest data point
+  const gap = new THREE.Mesh(new THREE.PlaneGeometry(WW, EMIN_DATA), new THREE.ShaderMaterial({
+    transparent: true, depthWrite: false,
+    vertexShader: `varying vec3 vP; void main(){ vP = position; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
+    fragmentShader: `varying vec3 vP; void main(){ float s = step(0.5, fract((vP.x + vP.y) * 6.0)); float a = 0.05 + 0.07 * s; gl_FragColor = vec4(vec3(0.55, 0.6, 0.75) * a, a);` + SHADER_END + ` }`,
+  }));
+  gap.position.set(WW / 2, wy(EMIN_DATA / 2), 0.01); WALL.add(gap);
+}
+// curves: measured part solid, extrapolated part (below the lowest data point) a flowing dashed tube
+const flowMats = [];
+function wallCurve(c, col) {
+  const meas = [], extr = [];
+  for (const [E, Sv] of c) {
+    if (E > E_TOP || Sv <= 0) continue;
+    const p = V3(wx(Math.max(Sv, 10 ** LS0)), wy(E), 0.03);
+    if (E >= EMIN_DATA) meas.push(p); else extr.push(p);
+  }
+  extr.push(meas[0].clone());
+  const tube = (pts) => new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts, false, "centripetal"), Math.min(1200, pts.length * 2), 0.028, 8, false);
+  const fm = new THREE.ShaderMaterial({
+    uniforms: { uCol: { value: col.clone().multiplyScalar(1.6) }, uT: { value: 0 } },
+    vertexShader: `varying float vS; void main(){ vS = uv.x; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
+    fragmentShader: `uniform vec3 uCol; uniform float uT; varying float vS; void main(){ float a = 0.25 + 0.75 * step(0.45, fract(vS * 9.0 + uT)); gl_FragColor = vec4(uCol * a, a);` + SHADER_END + ` }`,
+    transparent: true, depthWrite: false,
+  });
+  flowMats.push(fm);
+  WALL.add(new THREE.Mesh(tube(meas), new THREE.MeshBasicMaterial({ color: col.clone().multiplyScalar(1.25) })), new THREE.Mesh(tube(extr), fm));
+}
+wallCurve(DATA.fig9.cE1, new THREE.Color("#ff8a6a"));
+wallCurve(DATA.fig9.cE2, new THREE.Color("#5fd4e6"));
+function wallData(rows, col) {
+  const ok = rows.filter((r) => r[0] <= E_TOP);
+  const im = new THREE.InstancedMesh(new THREE.SphereGeometry(0.032, 10, 8), new THREE.MeshBasicMaterial({ color: col }), ok.length);
+  const d = new THREE.Object3D(), bars = [];
+  ok.forEach((r, i) => {
+    d.position.set(wx(Math.max(r[1], 10 ** LS0)), wy(r[0]), 0.05); d.updateMatrix(); im.setMatrixAt(i, d.matrix);
+    if (r.length > 2) bars.push(wx(Math.max(r[2], 10 ** LS0)), wy(r[0]), 0.05, wx(r[3]), wy(r[0]), 0.05);
+  });
+  const bl = new THREE.LineSegments(new THREE.BufferGeometry().setAttribute("position", new THREE.Float32BufferAttribute(bars, 3)), new THREE.LineBasicMaterial({ color: col, transparent: true, opacity: 0.32 }));
+  WALL.add(im, bl);
+}
+wallData(DATA.fig9.E1, new THREE.Color("#ffd2c4"));
+wallData(DATA.fig9.E2, new THREE.Color("#c4f2fa"));
+const s0E1 = new THREE.Mesh(new THREE.SphereGeometry(0.09, 20, 14), new THREE.MeshBasicMaterial({ color: new THREE.Color(2.4, 1.2, 0.8) }));
+const s0E2 = new THREE.Mesh(new THREE.SphereGeometry(0.09, 20, 14), new THREE.MeshBasicMaterial({ color: new THREE.Color(0.7, 2.0, 2.4) }));
+WALL.add(s0E1, s0E2);
+// leader lines from the resonances in the tower to the same energy on the wall
+{
+  WALL.updateMatrixWorld(true);
+  const pts = [];
+  for (const [Ex] of LEVELS) if (Ex > Q && Ex - Q < E_TOP) pts.push(V3(TW / 2, Y(Ex), 0), WALL.localToWorld(V3(0, wy(Ex - Q), 0)));
+  const ll = new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints(pts), new THREE.LineDashedMaterial({ color: "#56607a", dashSize: 0.12, gapSize: 0.1, transparent: true, opacity: 0.7 }));
+  ll.computeLineDistances(); scene.add(ll);
+}
+
+// ---------- the star: a red giant cut open, its helium-burning core and the C/O mix left behind (schematic)
+const STAR = new THREE.Group(); STAR.position.set(-38, 7.5, -14); scene.add(STAR);
+const RSTAR = 7.5, RCORE = 2.3;
+const cutA = new THREE.Plane(V3(-1, 0, 0), 0), cutB = new THREE.Plane(V3(0, 0, -1), 0);
+let envMesh, starCore;
+{
+  // envelope: limb-brightened red surface with slow convection cells; the wedge x > 0, z > 0 (toward the camera) is cut away
+  const em = new THREE.ShaderMaterial({
+    uniforms: { uT: { value: 0 } },
+    vertexShader: `varying vec3 vN; varying vec3 vV; varying vec3 vP;
+      #include <clipping_planes_pars_vertex>
+      void main(){ vP = position; vN = normalize(normalMatrix * normal); vec4 mvPosition = modelViewMatrix * vec4(position, 1.0); vV = -mvPosition.xyz; gl_Position = projectionMatrix * mvPosition;
+      #include <clipping_planes_vertex>
+      }`,
+    fragmentShader: `uniform float uT; varying vec3 vN; varying vec3 vV; varying vec3 vP;
+      #include <clipping_planes_pars_fragment>
+      float hh(vec3 p){ return fract(sin(dot(p, vec3(12.9898, 78.233, 37.719))) * 43758.5453); }
+      float n3(vec3 p){ vec3 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f);
+        return mix(mix(mix(hh(i), hh(i + vec3(1,0,0)), f.x), mix(hh(i + vec3(0,1,0)), hh(i + vec3(1,1,0)), f.x), f.y),
+                   mix(mix(hh(i + vec3(0,0,1)), hh(i + vec3(1,0,1)), f.x), mix(hh(i + vec3(0,1,1)), hh(i + vec3(1,1,1)), f.x), f.y), f.z); }
+      void main(){
+        #include <clipping_planes_fragment>
+        vec3 n = normalize(vN), v = normalize(vV);
+        float mu = abs(dot(n, v));
+        float g = n3(vP * 0.9 + uT * 0.05) * 0.6 + n3(vP * 2.3 - uT * 0.08) * 0.4;
+        vec3 c = mix(vec3(0.55, 0.09, 0.03), vec3(1.0, 0.36, 0.1), g) * (0.45 + 0.55 * pow(mu, 0.6));
+        if (!gl_FrontFacing) c = vec3(0.30, 0.06, 0.02) * (0.5 + 0.5 * g);
+        gl_FragColor = vec4(c, 1.0);` + SHADER_END + `
+      }`,
+    clipping: true, clippingPlanes: [cutA, cutB], clipIntersection: true, side: THREE.DoubleSide,
+  });
+  envMesh = new THREE.Mesh(new THREE.SphereGeometry(RSTAR, 96, 64), em); STAR.add(envMesh);
+  // the two cut faces: hot toward the centre, with a hole where the core sits
+  const RH = (RCORE * 1.25 / RSTAR).toFixed(3);
+  const faceMat = new THREE.ShaderMaterial({
+    vertexShader: `varying vec2 vP; void main(){ vP = position.xy; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
+    fragmentShader: `varying vec2 vP; void main(){ float r = length(vP) / ${RSTAR.toFixed(2)}; if (r > 1.0 || r < ${RH}) discard;
+      vec3 c = mix(vec3(1.0, 0.62, 0.25), vec3(0.42, 0.06, 0.02), smoothstep(0.3, 1.0, r));
+      float ring = 1.0 - smoothstep(0.0, 0.02, abs(r - ${RH} - 0.01));
+      gl_FragColor = vec4(c * 0.75 + vec3(1.5, 0.8, 0.3) * ring, 1.0);` + SHADER_END + ` }`,
+    side: THREE.DoubleSide,
+  });
+  const half = new THREE.CircleGeometry(RSTAR, 96, -Math.PI / 2, Math.PI);   // half disc x >= 0 in the xy plane
+  const f2 = new THREE.Mesh(half, faceMat); STAR.add(f2);                     // plane z = 0, x >= 0
+  const f1 = new THREE.Mesh(half, faceMat); f1.rotation.y = -Math.PI / 2; STAR.add(f1); // plane x = 0, z >= 0
+  // helium-burning shell around the core
+  STAR.add(new THREE.Mesh(new THREE.SphereGeometry(RCORE * 1.2, 48, 32), new THREE.ShaderMaterial({
+    vertexShader: `varying vec3 vN; varying vec3 vV; void main(){ vN = normalize(normalMatrix * normal); vec4 mv = modelViewMatrix * vec4(position, 1.0); vV = -mv.xyz; gl_Position = projectionMatrix * mv; }`,
+    fragmentShader: `varying vec3 vN; varying vec3 vV; void main(){ float f = pow(1.0 - abs(dot(normalize(vN), normalize(vV))), 2.0); vec3 c = vec3(1.6, 0.9, 0.35) * f; gl_FragColor = vec4(c, f);` + SHADER_END + ` }`,
+    transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
+  })));
+  // the core: 1000 dots, coloured in proportion to the central mass fractions
+  const NDOT = 1000;
+  starCore = new THREE.InstancedMesh(new THREE.SphereGeometry(0.075, 10, 8), new THREE.MeshStandardMaterial({ roughness: 0.4, metalness: 0.05, envMapIntensity: 0.8 }), NDOT);
+  const d = new THREE.Object3D();
+  let seed = 7; const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+  for (let i = 0; i < NDOT; i++) {
+    let p; do { p = V3(rnd() * 2 - 1, rnd() * 2 - 1, rnd() * 2 - 1); } while (p.lengthSq() > 1);
+    d.position.copy(p.multiplyScalar(RCORE)); d.updateMatrix(); starCore.setMatrixAt(i, d.matrix); starCore.setColorAt(i, new THREE.Color(1, 1, 1));
+  }
+  STAR.add(starCore);
+}
+// 12C level ladder next to the star: carbon is made through a state just above its threshold
+const C12G = new THREE.Group(); C12G.position.set(-27, 0, -12); scene.add(C12G);
+{
+  for (const [Ex, J] of C12) {
+    const m = new THREE.Mesh(new RoundedBoxGeometry(3, 0.05, 2, 2, 0.02), plateGlass); m.position.y = Y(Ex); C12G.add(m); plates.push(m);
+    const rim = new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(3, 0.05, 2)), new THREE.LineBasicMaterial({ color: new THREE.Color(Ex > 7 ? "#ffd27a" : JCOL[J]).multiplyScalar(1.3) }));
+    rim.position.y = Y(Ex); C12G.add(rim);
+  }
+  const t = new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(3.6, 0.001, 2.6)), new THREE.LineBasicMaterial({ color: new THREE.Color(0.6, 1.4, 2.0) }));
+  t.position.y = Y(Q3A); C12G.add(t);
+  const hg = glowBox(2.9, 0.5, 1.9, "#ffd27a", 0.9, 0.06); hg.position.y = Y(7.65407); C12G.add(hg);
+}
+
+// ---------- labels
+const labDiv = document.getElementById("labs");
+const LABS = [];
+function addLab(html, color, fn, views, cls) { const el = document.createElement("div"); el.className = "axlab" + (cls ? " " + cls : ""); el.style.color = color; el.innerHTML = html; labDiv.appendChild(el); LABS.push({ el, fn, views }); return el; }
+const NOTSTAR = ["capture", "threshold", "data"];
+for (const [Ex, J, G] of LEVELS) {
+  const dy = Ex > 6 && Ex < 6.2 ? (J === "0+" ? -0.14 : 0.14) : Ex > 11.4 && Ex < 11.6 ? (J === "3-" ? -0.15 : 0.15) : 0;
+  addLab(`${Ex === 0 ? "0" : Ex.toFixed(Ex === 9.585 ? 3 : 2)} ${jp(J)}${G > 0.2 ? ` <span style="color:#8a92a6">Γ ${(G * 1000).toFixed(0)} keV</span>` : ""}`, JCOL[J],
+    () => V3(-TW / 2 - 0.15, Y(Ex) + dy, TD / 2), NOTSTAR, "l");
+}
+addLab("<sup>16</sup>O", "#e6e8ee", () => V3(0, Y(-0.45), TD / 2 + 0.3), NOTSTAR);
+addLab(`α + <sup>12</sup>C threshold, Q = ${(Q * 1000).toFixed(1)} keV`, "#7fd8ff", () => V3(-5.5, Y(Q), 5.6), ["capture", "data"]);
+addLab(`α threshold ${Q.toFixed(3)}`, "#7fd8ff", () => V3(0.5, Y(Q) + 0.07, TD / 2 + 0.05), ["threshold"], "r");
+const labE0 = addLab("", "#ffc46b", () => V3(-TW / 2 - 0.15, Y(Q + gw().E0) + 0.2, TD / 2), NOTSTAR, "l");   // lifted clear of the 7.12 and 6.92 labels
+addLab("subthreshold 1<sup>−</sup>, 45 keV below", "#ff8a6a", () => V3(-0.3, Y(7.117) - 0.1, TD / 2 + 0.05), ["threshold"]);
+addLab("subthreshold 2<sup>+</sup>, 245 keV below", "#5fd4e6", () => V3(-0.3, Y(6.917) - 0.1, TD / 2 + 0.05), ["threshold"]);
+addLab("γ<sub>0</sub>: E1 + E2 to the ground state", "#ffd28a", () => { const a = arcs.find((x) => x.kind === "gs"); return a ? tower.localToWorld(a.curve.getPoint(0.55)) : null; }, ["capture", "threshold"], "r");
+addLab("cascades, ≈ 5%", "#b9c1d4", () => { const a = arcs.find((x) => x.kind === "g613"); return a ? tower.localToWorld(a.curve.getPoint(0.3)) : null; }, ["threshold"], "r");
+addLab("6.05 → 0: e<sup>+</sup>e<sup>−</sup> pair", "#c9ced9", () => { const a = arcs.find((x) => x.kind === "e605"); return a ? tower.localToWorld(a.curve.getPoint(0.75)) : null; }, ["threshold"], "r");
+addLab("<sup>12</sup>C", "#ffd9d2", () => volcano.localToWorld(c12.position.clone().add(V3(0, 0.42, 0))), ["capture", "threshold"]);
+addLab("α", "#ffd9d2", () => (alpha.visible ? volcano.localToWorld(alpha.position.clone().add(V3(0, 0.28, 0))) : null), ["capture", "threshold"]);
+addLab(`Coulomb barrier ≈ ${BAR.V.toFixed(1)} MeV`, "#e8b48c", () => volcano.localToWorld(V3(0, BAR.V + 0.35, 0)), ["capture"]);
+const labRt = addLab("", "#ffc46b", () => volcano.localToWorld(ALPHA_DIR.clone().multiplyScalar(GRAIL.rTurn(gw().E0) * KR).setY(-0.65)), ["capture"], "l");   // text runs away from the level tower
+addLab("tunnelling", "#ffc46b", () => volcano.localToWorld(ALPHA_DIR.clone().multiplyScalar(22 * KR).setY(gw().E0 + 0.3)), ["capture"]);
+addLab("E<sub>c.m.</sub> (MeV)", "#8a92a6", () => WALL.localToWorld(V3(-0.1, wy(E_TOP) + 0.4, 0)), ["data", "capture"]);
+for (let e = 0; e <= 6; e++) addLab(String(e), "#6f778a", () => WALL.localToWorld(V3(-0.12, wy(e), 0)), ["data"], "l");
+for (let d = -4; d <= 1; d++) addLab(`10<sup>${d}</sup>`, "#6f778a", () => WALL.localToWorld(V3(wx(10 ** d), wy(0) - 0.25, 0)), ["data"]);
+addLab("S (MeV b)", "#8a92a6", () => WALL.localToWorld(V3(WW + 0.1, wy(0) - 0.25, 0)), ["data"], "r");
+addLab("S<sub>E1</sub>", "#ff8a6a", () => WALL.localToWorld(V3(wx(0.3), wy(5.3) + 0.2, 0.1)), ["data", "capture"]);
+addLab("S<sub>E2</sub>", "#5fd4e6", () => WALL.localToWorld(V3(wx(1.0) + 0.2, wy(4.36), 0.1)), ["data", "capture"], "r");
+addLab("no data below here", "#9aa3b5", () => WALL.localToWorld(V3(wx(10 ** -3.5), wy(EMIN_DATA) + 0.18, 0.1)), ["data"]);
+addLab("1<sup>−</sup> 9.585", "#ff8a6a", () => WALL.localToWorld(V3(wx(0.07) + 0.15, wy(9.585 - Q), 0.1)), ["data"], "r");
+addLab("2<sup>+</sup> 11.52", "#5fd4e6", () => WALL.localToWorld(V3(wx(0.6) - 0.15, wy(11.52 - Q) + 0.25, 0.1)), ["data"], "l");
+addLab("S(E<sub>0</sub>), extrapolated", "#ffc46b", () => WALL.localToWorld(V3(Math.max(s0E1.position.x, s0E2.position.x) + 0.25, wy(gw().E0), 0.1)), ["data"], "r");
+addLab("red giant (schematic)", "#ffb08a", () => STAR.localToWorld(V3(0, RSTAR + 0.8, 0)), ["star"]);
+addLab("helium-burning core", "#ffc46b", () => STAR.localToWorld(V3(RCORE * 1.1, RCORE * 1.5, RCORE * 1.1)), ["star"], "r");
+const labCO = addLab("", "#e6e8ee", () => STAR.localToWorld(V3(RCORE * 0.6, -RCORE - 0.9, RCORE * 0.6)), ["star"]);
+addLab("<sup>12</sup>C", "#e6e8ee", () => C12G.localToWorld(V3(0, Y(-0.45), 1.1)), ["star"]);
+addLab("Hoyle state 7.654 0<sup>+</sup>", "#ffd27a", () => C12G.localToWorld(V3(1.6, Y(7.654) + 0.12, 1)), ["star"], "r");
+addLab(`3α threshold ${Q3A.toFixed(3)}`, "#7fd8ff", () => C12G.localToWorld(V3(1.6, Y(Q3A) - 0.14, 1)), ["star"], "r");
+addLab("4.44 2<sup>+</sup>", "#5fd4e6", () => C12G.localToWorld(V3(1.6, Y(4.44), 1)), ["star"], "r");
+addLab("0 0<sup>+</sup>", "#e9edf5", () => C12G.localToWorld(V3(1.6, Y(0), 1)), ["star"], "r");
+const tmpV = new THREE.Vector3();
+function drawLabs() {
+  for (const L of LABS) {
+    const p = L.views.includes(S.view) ? L.fn() : null;
+    if (!p) { L.el.hidden = true; continue; }
+    tmpV.copy(p).project(camera);
+    const vis = tmpV.z < 1 && Math.abs(tmpV.x) < 0.98 && Math.abs(tmpV.y) < 0.98;
+    L.el.hidden = !vis;
+    if (vis) { L.el.style.left = (tmpV.x * 0.5 + 0.5) * innerWidth + "px"; L.el.style.top = (-tmpV.y * 0.5 + 0.5) * innerHeight + "px"; }
+  }
+}
+
+// ---------- state-dependent geometry
+const gw = () => GRAIL.gamow(S.T9);
+function placeBand() {
+  const { E0, dE } = gw();
+  const x0 = VX - 0.8, x1 = 3.9 + Math.cos(0.2) * WW + 0.3;
+  const h = Math.max(dE * 2.4, 0.08);
+  band.scale.set(x1 - x0, h, 2.8); band.position.set((x0 + x1) / 2, Y(Q + E0), -0.5);
+  band.material.uniforms.uHalf.value.set(0.5, 0.5, 0.5);
+  band.material.uniforms.uH.value = (dE / 2) / h;     // profile exp(-(2(E-E0)/dE)^2): 1/e full width dE (deBoer et al. Eq. (5))
+  bead.position.set(AX, Y(Q + E0), AZ);
+  const rt = GRAIL.rTurn(E0), out = [], inn = [];
+  for (let r = RMAX; r > rt; r -= 1) out.push(ALPHA_DIR.clone().multiplyScalar(r * KR).setY(E0));
+  out.push(ALPHA_DIR.clone().multiplyScalar(rt * KR).setY(E0));
+  for (let r = rt; r >= 0; r -= 0.5) inn.push(ALPHA_DIR.clone().multiplyScalar(r * KR).setY(E0));
+  eLineOut.geometry.dispose(); eLineOut.geometry = new THREE.BufferGeometry().setFromPoints(out);
+  eLineIn.geometry.dispose(); eLineIn.geometry = new THREE.BufferGeometry().setFromPoints(inn); eLineIn.computeLineDistances();
+  volMesh.material.uniforms.uRt.value = rt * KR;
+  c12.position.set(0, E0, 0);
+  s0E1.position.set(wx(curveAt(DATA.fig9.cE1, E0)), wy(E0), 0.06);
+  s0E2.position.set(wx(curveAt(DATA.fig9.cE2, E0)), wy(E0), 0.06);
+  buildArcs();
+  labE0.innerHTML = `Gamow window E<sub>0</sub> = ${(E0 * 1000).toFixed(0)} keV`;
+  labRt.innerHTML = `turning point ${rt.toFixed(0)} fm (barrier at ${BAR.R.toFixed(1)} fm)`;
+}
+function placeStar() {
+  const row = DATA.mesa.find((r) => r[1] === S.M && r[2] === S.rate);
+  const n = starCore.count, nc = Math.round(n * row[4]), no = Math.round(n * row[5]);
+  const CC = new THREE.Color("#454b5c"), CO = new THREE.Color("#5aa8ff"), CR = new THREE.Color("#c7a3ff");
+  const idx = [...Array(n).keys()].sort((a, b) => ((a * 7919) % 1009) - ((b * 7919) % 1009));
+  idx.forEach((k, j) => starCore.setColorAt(k, j < nc ? CC : j < nc + no ? CO : CR));
+  starCore.instanceColor.needsUpdate = true;
+  labCO.innerHTML = `centre: X(<sup>12</sup>C) = ${row[4].toFixed(2)} (grey), X(<sup>16</sup>O) = ${row[5].toFixed(2)} (blue)`;
+}
+
+// ---------- views and camera flights
+const VIEWS = {
+  capture: { t: V3(-4.0, 6.4, -0.6), p: V3(-0.6, 12.0, 33), pn: V3(-1, 15, 50) },
+  threshold: { t: V3(-0.3, 7.0, 0.5), p: V3(-5.4, 8.5, 14.6), pn: V3(-6, 9.5, 21) },
+  data: { t: V3(8.0, 10.6, 0), p: V3(7.0, 12.0, 17.5), pn: V3(7, 12.5, 25) },
+  star: { t: V3(-31.5, 6.2, -13), p: V3(-15.5, 13, 21), pn: V3(-12, 15, 34) },
+};
+let fly = null;
+function goView(v, instant) {
+  const V = VIEWS[v], p = narrow ? V.pn : V.p;
+  if (instant || reduce) { controls.target.copy(V.t); camera.position.copy(p); fly = null; return; }
+  fly = { t0: performance.now(), a: { t: controls.target.clone(), p: camera.position.clone() }, b: { t: V.t, p } };
+}
+function applyOffset() {
+  const a = document.getElementById("ctl").getBoundingClientRect(), b = document.getElementById("side").getBoundingClientRect();
+  const free = innerWidth > 900 && !document.body.classList.contains("scene-only") ? 0.5 * (a.right + b.left) : innerWidth / 2, dx = innerWidth / 2 - free;
+  if (Math.abs(dx) > 1) camera.setViewOffset(innerWidth, innerHeight, dx, 0, innerWidth, innerHeight); else camera.clearViewOffset();
+}
+
+// ---------- side plots
+function setupCanvas(c) {
+  const d = Math.min(devicePixelRatio, 2), w = c.clientWidth, h = c.clientHeight;
+  c.width = w * d; c.height = h * d;
+  const x = c.getContext("2d"); x.setTransform(d, 0, 0, d, 0, 0);
+  return { x, w, h };
+}
+const L0 = 40, R0 = 8, T0 = 8, B0 = 20;
+const supE = (e) => "10" + String(e).replace("-", "⁻").replace(/\d/g, (d) => "⁰¹²³⁴⁵⁶⁷⁸⁹"[d]);
+const e10 = (v, d) => { const e = Math.floor(Math.log10(v)); return `${(v / 10 ** e).toFixed(d)}×10<sup>${e}</sup>`; };
+function drawS() {
+  const { x: ctx, w, h } = setupCanvas(document.getElementById("pS"));
+  const xlo = 0, xhi = 6.5, ylo = -4.5, yhi = 1;
+  const Xf = (E) => L0 + (E - xlo) / (xhi - xlo) * (w - L0 - R0), Yf = (Sv) => T0 + (yhi - Math.log10(Sv)) / (yhi - ylo) * (h - T0 - B0);
+  ctx.font = "10px ui-monospace,Menlo,monospace"; ctx.lineWidth = 1;
+  ctx.fillStyle = "rgba(140,150,180,0.10)"; ctx.fillRect(Xf(0), T0, Xf(EMIN_DATA) - Xf(0), h - T0 - B0);
+  const { E0, dE } = gw();
+  const a0 = Math.max(0, E0 - dE), a1 = E0 + dE;
+  const gg = ctx.createLinearGradient(Xf(a0), 0, Xf(a1), 0);
+  gg.addColorStop(0, "rgba(255,179,71,0)"); gg.addColorStop(0.5, "rgba(255,179,71,0.35)"); gg.addColorStop(1, "rgba(255,179,71,0)");
+  ctx.fillStyle = gg; ctx.fillRect(Xf(a0), T0, Xf(a1) - Xf(a0), h - T0 - B0);
+  ctx.strokeStyle = "#1e2432"; ctx.fillStyle = "#8a92a6";
+  for (let e = ylo; e <= yhi; e++) { if (e !== Math.round(e)) continue; ctx.beginPath(); ctx.moveTo(L0, Yf(10 ** e)); ctx.lineTo(w - R0, Yf(10 ** e)); ctx.stroke(); ctx.textAlign = "right"; ctx.fillText(supE(e), L0 - 4, Yf(10 ** e) + 3); }
+  ctx.textAlign = "center";
+  for (let E = 0; E <= 6; E++) { ctx.beginPath(); ctx.moveTo(Xf(E), T0); ctx.lineTo(Xf(E), h - B0); ctx.stroke(); ctx.fillText(E, Xf(E), h - 6); }
+  ctx.textAlign = "right"; ctx.fillText("E c.m. (MeV)", w - R0, h - 6 - 12);
+  ctx.textAlign = "left"; ctx.fillText("S (MeV b)", L0 + 4, T0 + 10);
+  ctx.save(); ctx.beginPath(); ctx.rect(L0, T0, w - L0 - R0, h - T0 - B0); ctx.clip();
+  const line = (c, col, lw, dash) => { ctx.beginPath(); ctx.strokeStyle = col; ctx.lineWidth = lw; ctx.setLineDash(dash || []); c.forEach(([E, Sv], i) => (i ? ctx.lineTo(Xf(E), Yf(Sv)) : ctx.moveTo(Xf(E), Yf(Sv)))); ctx.stroke(); ctx.setLineDash([]); };
+  const pts = (rows, col) => { ctx.strokeStyle = col; ctx.fillStyle = col; ctx.lineWidth = 0.8; for (const r of rows) { if (r.length > 2) { ctx.beginPath(); ctx.moveTo(Xf(r[0]), Yf(Math.max(r[2], 1e-6))); ctx.lineTo(Xf(r[0]), Yf(r[3])); ctx.stroke(); } ctx.beginPath(); ctx.arc(Xf(r[0]), Yf(r[1]), 1.5, 0, 7); ctx.fill(); } };
+  const split = (c) => [c.filter((r) => r[0] <= EMIN_DATA + 0.01), c.filter((r) => r[0] >= EMIN_DATA)];
+  if (S.sv === "e1e2") {
+    pts(DATA.fig9.E1, "rgba(255,180,160,0.75)"); pts(DATA.fig9.E2, "rgba(150,225,240,0.75)");
+    for (const [c, col] of [[DATA.fig9.cE1, "#ff8a6a"], [DATA.fig9.cE2, "#5fd4e6"]]) { const [a, b] = split(c); line(b, col, 1.6); line(a, col, 1.6, [4, 3]); }
+    for (const [c, col] of [[DATA.fig9.cE1, "#ff8a6a"], [DATA.fig9.cE2, "#5fd4e6"]]) { ctx.beginPath(); ctx.fillStyle = col; ctx.arc(Xf(E0), Yf(curveAt(c, E0)), 3.2, 0, 7); ctx.fill(); }
+  } else {
+    const F = DATA.fig25;
+    ctx.beginPath(); ctx.fillStyle = "rgba(242,193,78,0.28)";
+    F.hi.forEach(([E, Sv], i) => (i ? ctx.lineTo(Xf(E), Yf(Sv)) : ctx.moveTo(Xf(E), Yf(Sv))));
+    for (let i = F.lo.length - 1; i >= 0; i--) ctx.lineTo(Xf(F.lo[i][0]), Yf(F.lo[i][1]));
+    ctx.closePath(); ctx.fill();
+    const [a, b] = split(F.best); line(b, "#f2c14e", 1.5); line(a, "#f2c14e", 1.5, [4, 3]);
+    ctx.beginPath(); ctx.fillStyle = "#f2c14e"; ctx.arc(Xf(E0), Yf(curveAt(F.best, E0)), 3.2, 0, 7); ctx.fill();
+  }
+  ctx.restore();
+  ctx.fillStyle = "#9aa3b5"; ctx.textAlign = "left"; ctx.fillText("no data", Xf(0.04), h - B0 - 5);
+  document.getElementById("legS").innerHTML = S.sv === "e1e2"
+    ? `<span><i style="border-color:#ff8a6a"></i>S<sub>E1</sub></span><span><i style="border-color:#5fd4e6"></i>S<sub>E2</sub></span><span><i class="d" style="border-color:#aab"></i>extrapolated</span><span><i class="p" style="background:#ccd"></i>data, 12 experiments, normalized in the fit</span><span><i class="b" style="background:rgba(255,179,71,.5)"></i>Gamow window</span>`
+    : `<span><i style="border-color:#f2c14e"></i>total S, best fit</span><span><i class="b" style="background:rgba(242,193,78,.4)"></i>total uncertainty</span><span><i class="b" style="background:rgba(255,179,71,.5)"></i>Gamow window</span>`;
+  document.getElementById("srcS").innerHTML = S.sv === "e1e2"
+    ? `Ground-state transition, deBoer et al. (2017) Fig. 9, data and R-matrix curves read from the vector figure. At E<sub>0</sub> = ${(E0 * 1000).toFixed(0)} keV the curves read S<sub>E1</sub> = ${(1000 * curveAt(DATA.fig9.cE1, E0)).toFixed(0)} and S<sub>E2</sub> = ${(1000 * curveAt(DATA.fig9.cE2, E0)).toFixed(0)} keV b. Their Table IV gives 86.3 and 45.3 keV b at 300 keV; the drawn E2 curve reads 38 there, lower by more than the reading precision (about 2%), for a reason I do not know.`
+    : `All transitions, deBoer et al. (2017) Fig. 25a, best fit and total uncertainty (Monte Carlo and model, in quadrature), read from the vector figure: at E<sub>0</sub> = ${(E0 * 1000).toFixed(0)} keV, S = ${(1000 * curveAt(DATA.fig25.best, E0)).toFixed(0)} keV b, band ${(1000 * curveAt(DATA.fig25.lo, E0)).toFixed(0)} to ${(1000 * curveAt(DATA.fig25.hi, E0)).toFixed(0)}.`;
+}
+const S300 = [
+  ["deBoer 2017", "86.3", "45.3", "7", "140 ± 21 <sup>+18</sup><sub>−11</sub>", "Rev. Mod. Phys. 89, 035007, Table IV"],
+  ["An 2015", "98.0 ± 7.0", "56 ± 4.1", "8.7 ± 1.8", "162.7 ± 7.3", "as listed in RMP Table IV"],
+  ["Hammer 2005", "77 ± 17", "81 ± 22", "", "162 ± 39", "as listed in RMP Table IV"],
+  ["Kunz 2001", "76 ± 20", "85 ± 30", "4 ± 4", "165 ± 50", "Kunz et al., ApJ 567, 643 (2002), Table 1"],
+  ["Farmer 2020", "", "", "", "&gt; 175", "ApJL 902, L36: 68% lower limit from gravitational-wave black-hole masses"],
+];
+function drawS300() {
+  let h = `<tr><th></th><th>E1</th><th>E2</th><th>casc.</th><th>total</th></tr>`;
+  for (const r of S300) h += `<tr title="${r[5]}"><td>${r[0]}</td><td>${r[1]}</td><td>${r[2]}</td><td>${r[3]}</td><td>${r[4]}</td></tr>`;
+  document.getElementById("s300").innerHTML = h + `<tr><td colspan="5" style="text-align:left;color:var(--muted);font-size:10.5px;border:0">Hover a row for the source. Farmer et al.: from the black-hole mass gap (gravitational waves), not a nuclear measurement.</td></tr>`;
+}
+function drawCO() {
+  const { x: ctx, w, h } = setupCanvas(document.getElementById("pCO"));
+  ctx.font = "10px ui-monospace,Menlo,monospace";
+  const rows = DATA.mesa, ms = [3, 15, 25], rs = ["L", "A", "U"];
+  const x0 = 34, gapG = 10, bw = (w - x0 - 6 - 2 * gapG) / 9 - 5, H = h - T0 - 28;
+  ctx.fillStyle = "#8a92a6"; ctx.textAlign = "right";
+  for (const v of [0, 0.5, 1]) { const y = T0 + (1 - v) * H; ctx.fillText(v, x0 - 6, y + 3); ctx.strokeStyle = "#1e2432"; ctx.beginPath(); ctx.moveTo(x0, y); ctx.lineTo(w - 4, y); ctx.stroke(); }
+  ms.forEach((m, gi) => {
+    rs.forEach((rr, ri) => {
+      const r = rows.find((q) => q[1] === m && q[2] === rr), X = x0 + 4 + (gi * 3 + ri) * (bw + 5) + gi * gapG;
+      const sel = m === S.M && rr === S.rate;
+      ctx.fillStyle = sel ? "#6b7386" : "#454b5c"; ctx.fillRect(X, T0 + H * (1 - r[4]), bw, H * r[4]);
+      ctx.fillStyle = sel ? "#8cc4ff" : "#4a86c8"; ctx.fillRect(X, T0 + H * (1 - r[4] - r[5]), bw, H * r[5]);
+      if (sel) { ctx.strokeStyle = "#f2c14e"; ctx.lineWidth = 1.5; ctx.strokeRect(X - 1, T0 + H * (1 - r[4] - r[5]) - 1, bw + 2, H * (r[4] + r[5]) + 2); ctx.lineWidth = 1; }
+      ctx.fillStyle = sel ? "#e6e8ee" : "#8a92a6"; ctx.textAlign = "center"; ctx.fillText(rr, X + bw / 2, h - 16);
+    });
+    const Xm = x0 + 4 + (gi * 3 + 1) * (bw + 5) + gi * gapG + bw / 2;
+    ctx.fillStyle = "#8a92a6"; ctx.textAlign = "center"; ctx.fillText(m + " M☉", Xm, h - 3);
+  });
+  document.getElementById("legCO").innerHTML = `<span><i class="b" style="background:#4a86c8"></i>X(<sup>16</sup>O)</span><span><i class="b" style="background:#454b5c"></i>X(<sup>12</sup>C)</span><span>L, A, U: lower, adopted, upper rate</span>`;
+}
+
+// ---------- panel text
+const VIEWTXT = {
+  capture: "An α at the Gamow energy climbs the Coulomb barrier of <sup>12</sup>C (left), turns around far outside it, and only very rarely tunnels in. The <sup>16</sup>O so formed sits just above the α threshold (the amber band runs on through the level tower) and reaches its ground state by emitting a γ ray, mostly directly (E1 and E2), sometimes through a bound excited state.",
+  threshold: "The α threshold of <sup>16</sup>O lies at 7.162 MeV. Just below it sit a 1<sup>−</sup> state (45 keV below) and a 2<sup>+</sup> state (245 keV below). They cannot be formed as resonances, but their tails reach into the Gamow window and carry much of the E1 and E2 capture there; how strong they are is the crux of the extrapolation.",
+  data: "Measured S factors of the ground-state transition (deBoer et al. 2017, Fig. 9) with the energy upward, on the same scale as the levels: the E1 bump is the broad 1<sup>−</sup> at 9.585 MeV, the sharp E2 peak the 2<sup>+</sup> at 11.52 MeV. Below about 0.9 MeV there are no data; the fit curves (flowing) carry the trend down to the Gamow window.",
+  star: "A helium-burning core: three α make <sup>12</sup>C through the Hoyle state, 0.38 MeV above the 3α threshold, and some of that carbon captures a further α. The dots are the central carbon and oxygen mass fractions at the end of core helium burning in the MESA models of deBoer et al., for the chosen mass and rate.",
+};
+function drawLive() {
+  const { E0, dE } = gw(), eta = GRAIL.eta(E0), pen = Math.exp(-2 * Math.PI * eta);
+  const sTot = curveAt(DATA.fig25.best, E0), sig = GRAIL.sigma(sTot, E0);
+  const rr = DATA.rate.reduce((b, r) => (Math.abs(Math.log(r[0] / S.T9)) < Math.abs(Math.log(b[0] / S.T9)) ? r : b));
+  document.getElementById("t9o").textContent = `${S.T9.toFixed(2)} GK`;
+  document.getElementById("live").innerHTML = `
+    <dt>E<sub>0</sub>, ΔE</dt><dd style="color:var(--accent)">${(E0 * 1000).toFixed(0)} keV, ${(dE * 1000).toFixed(0)} keV</dd>
+    <dt>E<sub>x</sub>(<sup>16</sup>O)</dt><dd>Q + E<sub>0</sub> = ${(Q + E0).toFixed(3)} MeV</dd>
+    <dt>Q</dt><dd>${(Q * 1000).toFixed(2)} keV (AME2020)</dd>
+    <dt>barrier</dt><dd>${BAR.V.toFixed(2)} MeV at ${BAR.R.toFixed(2)} fm</dd>
+    <dt>turning pt</dt><dd>${GRAIL.rTurn(E0).toFixed(1)} fm</dd>
+    <dt>η, e<sup>−2πη</sup></dt><dd>${eta.toFixed(2)}, ${e10(pen, 1)}</dd>
+    <dt>σ(E<sub>0</sub>)</dt><dd>${e10(sig, 1)} b <span style="color:var(--muted)">(S = ${(sTot * 1000).toFixed(0)} keV b)</span></dd>
+    <dt>N<sub>A</sub>⟨σv⟩</dt><dd>${e10(rr[1], 2)} cm³/(mol s) <span style="color:var(--muted)">at T<sub>9</sub> = ${rr[0]}, range ${e10(rr[2], 2)} to ${e10(rr[3], 2)} (Table XXV)</span></dd>`;
+  document.getElementById("viewtxt").innerHTML = VIEWTXT[S.view];
+  const row = DATA.mesa.find((r) => r[1] === S.M && r[2] === S.rate);
+  document.getElementById("starinfo").innerHTML = `<dt>central C/O</dt><dd style="color:var(--accent)">${row[6].toFixed(2)} (X = ${row[4].toFixed(2)} and ${row[5].toFixed(2)})</dd><dt>CO core</dt><dd>${row[3]} M<sub>☉</sub></dd>`;
+  const st = document.getElementById("stamp");
+  if (S.view === "star") st.innerHTML = `<b>3α → <sup>12</sup>C, then <sup>12</sup>C + α → <sup>16</sup>O</b><small>${S.M} M☉, ${S.rate === "A" ? "adopted" : S.rate === "L" ? "lower" : "upper"} rate: central C/O = ${row[6].toFixed(2)} at the end of core He burning (deBoer et al. 2017, Table XX)</small>`;
+  else if (S.view === "data") st.innerHTML = `<b>Measured above 0.9 MeV, needed at ${(E0 * 1000).toFixed(0)} keV</b><small>S(300 keV) = 140 ± 21 (MC) <sup>+18</sup>/<sub>−11</sub> (model) keV b, deBoer et al. 2017 · σ(E<sub>0</sub>) ≈ ${e10(sig, 1)} b</small>`;
+  else st.innerHTML = `<b><sup>12</sup>C + α → <sup>16</sup>O + γ at E<sub>0</sub> = ${(E0 * 1000).toFixed(0)} keV</b><small>tunnelling factor e<sup>−2πη</sup> = ${e10(pen, 1)} · E<sub>x</sub> = ${(Q + E0).toFixed(3)} MeV, ${(1000 * (Q + E0 - 7.11685)).toFixed(0)} keV above the subthreshold 1<sup>−</sup></small>`;
+}
+function drawModel() {
+  document.getElementById("model").innerHTML = `
+  <span><b style="color:var(--ink)">Live formulas, the only computation on the page.</b> Q = Δ(<sup>4</sup>He) + Δ(<sup>12</sup>C) − Δ(<sup>16</sup>O) from AME2020 (Wang et al., Chin. Phys. C 45, 030003 (2021)); reduced mass μ̂ from the atomic masses. Gamow peak and width, deBoer et al. Eqs. (4), (5): E<sub>0</sub> = 0.122 (Z<sub>1</sub><sup>2</sup>Z<sub>2</sub><sup>2</sup>μ̂T<sub>9</sub><sup>2</sup>)<sup>1/3</sup> MeV, ΔE = 0.236 (Z<sub>1</sub><sup>2</sup>Z<sub>2</sub><sup>2</sup>μ̂T<sub>9</sub><sup>5</sup>)<sup>1/6</sup> MeV. Barrier: touching spheres, R = 1.2 (4<sup>1/3</sup> + 12<sup>1/3</sup>) fm, V = Z<sub>1</sub>Z<sub>2</sub>e<sup>2</sup>/R, an estimate (another radius convention moves it by tens of percent). η = Z<sub>1</sub>Z<sub>2</sub>α(μc<sup>2</sup>/2E)<sup>1/2</sup>; turning point Z<sub>1</sub>Z<sub>2</sub>e<sup>2</sup>/E; σ = (S/E) e<sup>−2πη</sup> with S read from the best-fit curve of Fig. 25a. At 300 keV this gives about 2×10<sup>−17</sup> b, the review's own estimate (Sect. III). The 3α threshold of <sup>12</sup>C is 3Δ(<sup>4</sup>He) − Δ(<sup>12</sup>C), AME2020.</span>
+  <span><b style="color:var(--ink)">Published numbers.</b> S factors, the rate (Table XXV, the row nearest to T<sub>9</sub>, no interpolation) and the MESA C/O (Table XX): R. J. deBoer et al., Rev. Mod. Phys. 89, 035007 (2017), arXiv:1709.03144. R. Kunz et al., ApJ 567, 643 (2002). R. Farmer, M. Renzo, S. E. de Mink, M. Fishbach, S. Justham, ApJL 902, L36 (2020), arXiv:2006.06678 (the maximum black-hole mass below the gap moves from about 40 to 90 M<sub>☉</sub> with this rate). JUNA: W. Liu et al., EPJ Web Conf. 260, 08001 (2022). Levels: ENSDF adopted levels, <sup>16</sup>O Tilley et al., NPA 564, 1 (1993), <sup>12</sup>C Kelley, Purcell, Sheu, NPA 968, 71 (2017), via NuDat 3; the <sup>16</sup>O set is the one drawn in deBoer et al. Fig. 2.</span>
+  <span><b style="color:var(--ink)">How the curves were read.</b> Figs. 9 and 25 of the arXiv version are vector graphics; scripts/build_holygrail_data.py takes the curves and the data points (centre and error bar) from the PDF's drawing commands, calibrated on the drawn axis ticks. Checks: the 300 keV marker falls at 0.300 MeV; at 300 keV the curves read S<sub>E1</sub> = 88 (Table IV: 86.3), S<sub>E2</sub> = 38 (45.3, see the note under the plot) and total 138 (140) keV b.</span>
+  <span><b style="color:var(--ink)">Checked</b> (tests/check_holygrail.js): E<sub>0</sub>, ΔE, Q, barrier, η and σ(300 keV) against independent hand calculations; the read curves at 300 keV against the tabulated values; no console errors in all views and both rendering modes.</span>`;
+}
+
+// ---------- state, hash
+function setHash() {
+  const h = `#T9=${S.T9.toFixed(2)}&view=${S.view}&M=${S.M}&rate=${S.rate}&S=${S.sv}`;
+  if (location.hash !== h) history.replaceState(null, "", h);
+}
+function parseHash() {
+  const q = new URLSearchParams(location.hash.slice(1));
+  const v = parseFloat(q.get("T9")); if (isFinite(v) && v >= 0.1 && v <= 1) S.T9 = v;
+  if (VIEWS[q.get("view")]) S.view = q.get("view");
+  const m = +q.get("M"); if ([3, 15, 25].includes(m)) S.M = m;
+  if (["L", "A", "U"].includes(q.get("rate"))) S.rate = q.get("rate");
+  if (["e1e2", "tot"].includes(q.get("S"))) S.sv = q.get("S");
+}
+let quality = narrow ? "low" : "high";
+function syncUI() {
+  document.getElementById("t9").value = S.T9;
+  const press = (id, v) => { for (const b of document.querySelectorAll(`#${id} button`)) b.setAttribute("aria-pressed", b.dataset.v === String(v) ? "true" : "false"); };
+  press("viewsel", S.view); press("qmode", quality); press("msel", S.M); press("rsel", S.rate); press("ssel", S.sv);
+}
+function seg(id, fn) { document.getElementById(id).addEventListener("click", (e) => { const b = e.target.closest("button"); if (!b) return; fn(b.dataset.v); syncUI(); setHash(); }); }
+seg("viewsel", (v) => { S.view = v; tLoop = 0; goView(v); drawLive(); });
+seg("msel", (v) => { S.M = +v; placeStar(); drawLive(); drawCO(); });
+seg("rsel", (v) => { S.rate = v; placeStar(); drawLive(); drawCO(); });
+seg("ssel", (v) => { S.sv = v; drawS(); });
+seg("qmode", (v) => { quality = v; applyQuality(); });
+let pend = false;
+document.getElementById("t9").addEventListener("input", (e) => {
+  S.T9 = +e.target.value;
+  if (pend) return; pend = true;
+  requestAnimationFrame(() => { pend = false; placeBand(); drawLive(); drawS(); setHash(); });
+});
+document.getElementById("sceneOnly").addEventListener("click", () => {
+  const hidden = document.body.classList.toggle("scene-only"), b = document.getElementById("sceneOnly");
+  b.setAttribute("aria-pressed", String(hidden)); b.textContent = hidden ? "show panels · H" : "hide panels · H";
+  applyOffset(); camera.updateProjectionMatrix();
+});
+addEventListener("keydown", (e) => { if (e.code === "KeyH" && !e.repeat && !e.ctrlKey && !e.metaKey && !e.altKey && !e.target.closest("input,textarea")) document.getElementById("sceneOnly").click(); });
+addEventListener("hashchange", () => { const v = S.view; parseHash(); syncUI(); placeBand(); placeStar(); drawLive(); drawS(); drawCO(); if (S.view !== v) goView(S.view); });
+addEventListener("resize", () => {
+  camera.aspect = innerWidth / innerHeight; applyOffset(); camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight); composer.setSize(innerWidth, innerHeight);
+  drawS(); drawCO();
+});
+function applyQuality() {
+  const hi = quality === "high";
+  const g = hi ? GROUND_PRE_ACES : GROUND;
+  scene.background.copy(g); scene.fog.color.copy(g); renderer.setClearColor(g);
+  for (const p of plates) p.material = hi ? plateGlass : plateFast;
+  WALL.userData.back.visible = hi;
+  document.getElementById("vnote").innerHTML = (hi ? "Glass plates, soft bloom. " : "Opaque plates, no bloom. ") +
+    "One vertical scale for everything: excitation energy in <sup>16</sup>O, 1 MeV per unit, so E<sub>c.m.</sub> is the height above the threshold plane. Plates are the levels, coloured by J<sup>π</sup>; the glow around a resonance has the width Γ, drawn at least 20 keV thick so the narrow ones show. The barrier at the left is Z<sub>1</sub>Z<sub>2</sub>e<sup>2</sup>/r (MeV, the same vertical scale) turned into a surface of revolution, 0.095 units per fm radially, so the turning point and the nuclear radius are to scale; inside the nucleus the well is schematic. The upward glow above the two subthreshold states pictures their tails; it is not computed. γ arcs: bright, the direct ground-state transition; thin, cascades through bound states; dashed, the 0<sup>+</sup> → 0<sup>+</sup> decay of the 6.05 MeV state, which goes by pair emission. The data wall plots the published S factors with energy upward. The star, its layers and its size are schematic; only the C/O shares of the dots are data. Colours, glow and timing are presentation.";
+  syncUI();
+}
+
+// ---------- start
+parseHash();
+applyOffset();
+goView(S.view, true);
+placeBand(); placeStar();
+applyQuality();
+drawLive(); drawModel(); drawS(); drawS300(); drawCO();
+setHash();
+
+// ---------- loop: the capture story, 10 s per cycle
+let last = performance.now(), tsec = 0, tLoop = 0, cycle = 0;
+const PERIOD = 10;
+const sm = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
+const XN = V3(1, 0, 0), nrm = new THREE.Vector3();
+function animate(now) {
+  requestAnimationFrame(animate);
+  const dt = Math.min(0.1, Math.max(0, (now - last) / 1000)); last = now; tsec += dt; tLoop += dt;
+  if (fly) {
+    const u = sm(0, 1, (now - fly.t0) / 1600);
+    controls.target.lerpVectors(fly.a.t, fly.b.t, u); camera.position.lerpVectors(fly.a.p, fly.b.p, u);
+    if (u >= 1) fly = null;
+  }
+  controls.update();
+  const { E0 } = gw(), rt = GRAIL.rTurn(E0);
+  if (!reduce && tLoop >= PERIOD) { tLoop -= PERIOD; cycle++; }
+  // phases: approach 0-3.4 s, tunnel 3.4-4.9, merge 4.9-5.4, gamma 5.4-8.6
+  const t = reduce ? 6.2 : tLoop;
+  let r = 0;
+  if (t < 3.4) r = RMAX + 6 - (RMAX + 6 - rt) * sm(0, 3.4, t);
+  else if (t < 4.9) r = 3.2 + (rt - 3.2) * (1 - sm(3.4, 4.9, t));
+  alpha.position.copy(ALPHA_DIR).multiplyScalar(r * KR).setY(E0);
+  alpha.visible = t < 4.95;
+  const ghost = t >= 3.4 && t < 4.9;
+  for (const ch of alpha.children) ch.visible = !ghost || Math.sin(tsec * 40) > -0.3;
+  c12.rotation.y += dt * 0.25; alpha.rotation.y -= dt * 0.6;
+  flash.material.opacity = 0.9 * Math.max(0, 1 - Math.abs(t - 5.0) / 0.45);
+  flash.position.set(0, E0, 0); flash.scale.setScalar(0.5 + 1.2 * sm(4.8, 5.4, t));
+  bead.scale.setScalar(t > 4.9 && t < 5.7 ? 1.8 : 1);
+  // gamma: direct to the ground state; every fourth cycle a cascade (through 6.92 2+, or 7.12 1-)
+  const casc = cycle % 4 === 3 ? (cycle % 8 === 7 ? ["c712", "g712"] : ["c692", "g692"]) : ["gs"];
+  const pos = photon.geometry.attributes.position.array;
+  let shown = false, active = null;
+  if (t > 5.4 && t < 8.6) {
+    const u = (t - 5.4) / 3.2, k = Math.min(casc.length - 1, Math.floor(u * casc.length)), uu = u * casc.length - k;
+    const a = arcs.find((x) => x.kind === casc[k]);
+    if (a) {
+      active = a.kind;
+      const head = sm(0, 1, uu), tail = Math.max(0, head - 0.16);
+      for (let i = 0; i < PH_N; i++) {
+        const s = tail + (head - tail) * i / (PH_N - 1), p = a.curve.getPoint(s), tg = a.curve.getTangent(s);
+        nrm.copy(XN).cross(tg).normalize();
+        const wv = Math.sin(i * 1.3 - tsec * 30) * 0.07 * Math.sin(Math.PI * i / (PH_N - 1));
+        pos[3 * i] = p.x + nrm.x * wv; pos[3 * i + 1] = p.y + nrm.y * wv; pos[3 * i + 2] = p.z + nrm.z * wv;
+      }
+      photonHead.position.copy(a.curve.getPoint(head));
+      shown = true;
+    }
+  }
+  for (const x of arcs) if (x.mesh.material.isMeshBasicMaterial) x.mesh.material.opacity = active ? (x.kind === active ? 1 : x.op * 0.6) : x.op;
+  photon.visible = photonHead.visible = shown;
+  photon.geometry.attributes.position.needsUpdate = true;
+  for (const m of flowMats) m.uniforms.uT.value = reduce ? 0 : -tsec * 0.6;
+  envMesh.material.uniforms.uT.value = reduce ? 0 : tsec;
+  cutA.set(V3(-1, 0, 0), STAR.position.x); cutB.set(V3(0, 0, -1), STAR.position.z);
+  for (const tl of tails) tl.material.uniforms.uOp.value = S.view === "threshold" ? 0.16 : 0.12;
+  band.material.uniforms.uOp.value = S.view === "threshold" ? 0.1 : 0.3;
+  thrMat.uniforms.uOp.value = S.view === "threshold" ? 0.14 : 0.32;
+  if (quality === "high") composer.render(); else renderer.render(scene, camera);
+  drawLabs();
+}
+requestAnimationFrame(animate);
+</script>
+<script src="assets/glass.js"></script>
+</body>
+</html>

@@ -1,0 +1,1023 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>X-ray bursts and the rp process · nuclearjs</title>
+<link rel="stylesheet" href="assets/glass.css">
+<style>
+body{margin:0}
+:root{
+  color-scheme:dark;
+  --ground:#0b0d12; --line:#262c3a;
+  --ink:#e6e8ee; --muted:#8a92a6; --accent:#f2c14e;
+  --pg:#f2c14e; --beta:#6fd3c1; --alpha:#ff7aa8; --hot:#ff9a3c; --wp:#ffb05a; --sn:#b99cff; --red:#ff5a4f; --blue:#7f9dff;
+  --sans:"Avenir Next","Futura","Helvetica Neue","PingFang SC","Noto Sans SC",system-ui,sans-serif;
+  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+}
+html,body{height:100%}
+body{background:var(--ground);color:var(--ink);font-family:var(--sans);overflow:hidden}
+#stage{position:fixed;inset:0}
+#stage canvas{display:block;touch-action:none}
+.panel{position:fixed;border-radius:18px;padding:16px 18px;display:flex;flex-direction:column;gap:12px;overflow:auto;box-sizing:border-box;z-index:2}
+.panel>*{flex-shrink:0}
+#ctl{left:16px;top:calc(16px + env(safe-area-inset-top,0px));width:min(330px,calc(100% - 32px));max-height:calc(100% - 56px)}
+#side{right:16px;top:calc(16px + env(safe-area-inset-top,0px));width:392px;max-height:calc(100% - 32px);gap:8px}
+h1{margin:0;font-size:22px;font-weight:600;letter-spacing:.01em}
+.sub{margin:2px 0 0;color:var(--muted);font-size:13px;line-height:1.45}
+.sub sup,.src sup,.kv sup,.cap sup,.leg sup,table sup,#tip sup,.axlab sup{font-size:.7em}
+.grp{display:flex;flex-direction:column;gap:6px}
+.lab{font-size:11px;text-transform:uppercase;letter-spacing:.12em;color:var(--muted)}
+.seg{display:flex;border:1px solid var(--line);border-radius:4px;overflow:hidden}
+.seg button{flex:1;background:none;border:0;color:var(--muted);font:500 12px var(--mono);padding:6px 4px;cursor:pointer}
+.seg button+button{border-left:1px solid var(--line)}
+.seg button[aria-pressed="true"]{background:#1f2533;color:var(--ink)}
+.seg.mini button{font-size:11px;padding:3px 4px}
+.chips{display:flex;flex-wrap:wrap;gap:5px}
+.chips button{background:none;border:1px solid var(--line);border-radius:4px;color:var(--ink);font:500 12px var(--mono);padding:4px 7px;cursor:pointer}
+.chips button:hover{border-color:var(--muted)}
+.chips button[aria-pressed="true"]{border-color:var(--accent);color:var(--accent)}
+button:focus-visible,input:focus-visible,summary:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:3px 10px;font:12px var(--mono);font-variant-numeric:tabular-nums}
+.kv dt{color:var(--muted)}.kv dd{margin:0}
+.kv .hi{color:var(--accent)}
+.row{display:flex;gap:8px;align-items:center;font:12px var(--mono);color:var(--muted)}
+.row input[type=range]{flex:1;accent-color:var(--accent);min-width:0}
+.row output{min-width:86px;text-align:right;color:var(--ink);font-variant-numeric:tabular-nums}
+.row span.k{min-width:38px}
+details summary{cursor:pointer;font-size:11px;text-transform:uppercase;letter-spacing:.12em;color:var(--muted);list-style:none}
+details summary::before{content:"▸ ";}
+details[open] summary::before{content:"▾ ";}
+details .grp{margin-top:8px}
+.home{font:12px var(--mono);color:var(--muted);text-decoration:none}.home:hover{color:var(--ink)}
+.src{font-size:11px;color:var(--muted);line-height:1.5}
+.src b{color:var(--ink);font-weight:600}
+.warn{font-size:11.5px;color:var(--accent);line-height:1.45}
+.plot{width:100%;height:170px;display:block}
+.cap{display:flex;flex-wrap:wrap;gap:2px 8px;justify-content:space-between;align-items:baseline;font:11px var(--mono);color:var(--muted)}
+.cap b{font:600 13px var(--sans);color:var(--ink)}
+.leg{display:flex;flex-wrap:wrap;gap:3px 11px;font:10.5px var(--mono);color:var(--muted);line-height:1.4}
+.leg i{display:inline-block;width:14px;height:0;border-top:2px solid;vertical-align:middle;margin-right:4px}
+.leg i.d{border-top-style:dashed}
+.leg i.p{width:6px;height:6px;border:0;border-radius:50%;margin-right:5px}
+.leg i.b{width:9px;height:8px;border:0;margin-right:5px}
+table.pub{width:100%;border-collapse:collapse;font:11px var(--mono);font-variant-numeric:tabular-nums}
+table.pub th{font-weight:500;color:var(--muted);text-align:right;padding:3px 3px;border-bottom:1px solid #262c3a}
+table.pub th:first-child,table.pub th:nth-child(2){text-align:left}
+table.pub td{padding:3px 3px;border-bottom:1px solid #191e2a;color:var(--ink);line-height:1.35;text-align:right}
+table.pub td:first-child,table.pub td:nth-child(2){text-align:left}
+table.pub tr.on td{color:var(--accent)}
+table.pub tr.click{cursor:pointer}
+table.pub tr.click:hover td{background:#161b26}
+table.pub small{color:var(--muted);font-size:10px}
+.tabwrap{max-height:210px;overflow:auto}
+.axlab{position:fixed;font:500 11px var(--mono);pointer-events:none;transform:translate(-50%,-50%);white-space:nowrap;text-shadow:0 0 6px #000,0 0 2px #000;line-height:1.3;text-align:center}
+.axlab small{display:block;font-size:10px;color:#9aa3b6}
+#stamp{position:fixed;left:50%;bottom:calc(22px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);text-align:center;pointer-events:none;width:min(640px,44vw)}
+#stamp b{display:block;font:600 clamp(19px,2.3vw,30px)/1.08 var(--sans);letter-spacing:-.01em}
+#stamp b sup{font-size:.55em}
+#stamp small{display:block;font:500 12px var(--mono);color:var(--muted);margin-top:6px;line-height:1.5}
+#stamp small sup{font-size:.75em}
+#tip{position:fixed;pointer-events:none;z-index:5;font:11.5px var(--mono);line-height:1.45;background:rgba(9,12,18,.9);border:1px solid var(--line);border-radius:6px;padding:6px 8px;transform:translate(14px,14px);display:none;max-width:300px}
+#sceneOnly{position:fixed;z-index:4;left:16px;bottom:calc(10px + env(safe-area-inset-bottom,0px));padding:8px 12px;border:1px solid var(--line);border-radius:8px;color:var(--ink);cursor:pointer;font:12px var(--mono)}
+body.scene-only .panel{display:none}
+.hint{position:fixed;left:170px;bottom:calc(14px + env(safe-area-inset-bottom,0px));font:11px var(--mono);color:var(--muted)}
+button.play{background:none;border:1px solid var(--line);border-radius:4px;color:var(--ink);font:500 12px var(--mono);padding:3px 8px;cursor:pointer;min-width:62px}
+@media (max-width:900px){
+  #ctl{max-height:40vh}
+  #side{left:16px;right:16px;width:auto;top:auto;bottom:calc(12px + env(safe-area-inset-bottom,0px));max-height:42vh}
+  #stamp,.hint,.axlab{display:none}
+  #sceneOnly{bottom:auto;top:calc(40vh + 24px);padding:5px 9px;font-size:11px}
+}
+@media (max-width:560px){.panel{padding:10px 12px;gap:9px}h1{font-size:18px}}
+</style>
+<script data-goatcounter="https://jinleiphys.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
+</head>
+<body>
+
+<div id="stage"></div>
+<button id="sceneOnly" class="glass" aria-pressed="false" title="Hide or show the panels (H)">hide panels · H</button>
+
+<aside id="ctl" class="panel glass glass-deep" data-glass data-glass-bevel="22" data-glass-scale="42">
+  <div>
+    <a class="home" href="index.html">← nuclearjs</a> &nbsp; <a class="home" href="hburning.html#cno">CNO cycle</a> &nbsp; <a class="home" href="neutronstar.html">neutron stars</a> &nbsp; <a class="home" href="nucleosynthesis.html">r process</a>
+    <h1>X-ray bursts and the rp process</h1>
+    <p class="sub">A neutron star pulls hydrogen and helium off a companion. Between bursts the hydrogen burns in the hot CNO cycle, held back only by the β⁺ decays of ¹⁴O and ¹⁵O. When the layer ignites, α captures break out of the cycle, the αp process can extend up to Sc, depending on the peak temperature, and then a chain of proton captures and β⁺ decays, the rp process, runs along the proton drip line. Where a proton is barely bound or not bound at all the flow stalls on a β⁺ decay that takes seconds to a minute: the waiting points <sup>64</sup>Ge, <sup>68</sup>Se, <sup>72</sup>Kr. That slowness is the burst's long tail.</p>
+  </div>
+  <div class="grp">
+    <div class="lab">View</div>
+    <div class="seg mini" id="viewsel">
+      <button data-v="path" title="the whole path and the star">path</button>
+      <button data-v="cno" title="the hot CNO cycle and its breakout">hot CNO</button>
+      <button data-v="ap" title="the alpha-p process">αp</button>
+      <button data-v="rp" title="the rp process and its waiting points">rp</button>
+      <button data-v="end" title="the SnSbTe cycle of Schatz et al. 2001">end</button>
+    </div>
+    <div class="row"><button class="play" id="play" type="button">pause</button><span class="k">burst</span><input id="tb" type="range" min="-30" max="120" step="0.5" aria-label="burst time"><output id="tbo"></output></div>
+  </div>
+  <div class="grp">
+    <div class="lab">Path drawn from Cyburt et al. 2016</div>
+    <div class="seg mini" id="modelsel">
+      <button data-v="mz" title="KEPLER multi-zone model, flows averaged over all zones">multi-zone</button>
+      <button data-v="sz" title="ONEZONE single-zone model">one-zone</button>
+    </div>
+    <div class="seg mini" id="senssel">
+      <button data-v="none">flows only</button>
+      <button data-v="lc" title="reactions that change the light curve">light curve</button>
+      <button data-v="ab" title="reactions that change the ashes">ashes</button>
+    </div>
+    <p class="src" id="pathnote"></p>
+  </div>
+  <div class="grp">
+    <div class="lab">Waiting point: (p,γ)⇄(γ,p) along the isotone</div>
+    <div class="chips" id="wpsel"></div>
+    <div class="row"><span class="k">T<sub>9</sub></span><input id="t9" type="range" min="0.2" max="2.5" step="0.05" aria-label="temperature T9"><output id="t9o"></output></div>
+    <div class="row"><span class="k">ρ</span><input id="lrho" type="range" min="4" max="7.5" step="0.1" aria-label="log10 density"><output id="lrhoo"></output></div>
+    <div class="row"><span class="k">X<sub>H</sub></span><input id="xh" type="range" min="0.01" max="0.75" step="0.01" aria-label="hydrogen mass fraction"><output id="xho"></output></div>
+    <dl class="kv" id="wpinfo"></dl>
+    <p class="src" id="wpnote"></p>
+  </div>
+  <div class="grp">
+    <div class="lab">Hot CNO between bursts</div>
+    <div class="row"><span class="k">Z<sub>CNO</sub></span><input id="zcno" type="range" min="0.001" max="0.05" step="0.001" aria-label="CNO mass fraction"><output id="zcnoo"></output></div>
+    <dl class="kv" id="cnoinfo"></dl>
+    <p class="src" id="cnonote"></p>
+  </div>
+  <div class="grp">
+    <div class="lab">Rendering</div>
+    <div class="seg" id="qmode">
+      <button data-v="high" title="glass tiles, bloom">cinematic</button>
+      <button data-v="low" title="opaque tiles, no bloom, for phones">fast</button>
+    </div>
+    <p class="src" id="vnote"></p>
+  </div>
+  <details>
+    <summary>What this page does not compute</summary>
+    <div class="grp">
+      <p class="sub">No reaction network runs here. The path on the chart is the time-integrated net reaction flow of Cyburt et al. (2016), read from the vector drawing of their figure, and the ashes and the model light curves are theirs too. The way the flow front advances with burst time, the speed of the sparks and the spreading of the flame over the star are drawn, not computed.</p>
+      <p class="sub">The live numbers are the masses and what follows from them (S<sub>p</sub>, the proton drip line, the equilibrium along an isotone), the half-lives, and the closed form for the hot CNO cycle. The equilibrium only tells how matter shares out between a waiting point and the next isotones while (p,γ) and (γ,p) are both fast. It does not give how much matter leaks past by a second proton capture, which needs the capture rates. Half-lives are terrestrial (NUBASE2020); Meisel et al. (2018) note that uncertainties remain in the corrections needed for high temperature and density.</p>
+    </div>
+  </details>
+  <details>
+    <summary>Model and sources</summary>
+    <div class="grp src" id="model"></div>
+  </details>
+</aside>
+
+<aside id="side" class="panel glass glass-deep" data-glass data-glass-bevel="22" data-glass-scale="42">
+  <div class="cap"><b>GS 1826−24, the clocked burster</b><span class="seg mini" id="epsel" style="display:inline-flex;vertical-align:middle"></span></div>
+  <canvas id="plc" class="plot" aria-label="Observed burst light curve of GS 1826-24 and model light curves"></canvas>
+  <div class="leg" id="leglc"></div>
+  <div class="seg mini" id="lcmsel"><button data-v="none">observed only</button><button data-v="mz">+ multi-zone model</button><button data-v="sz">+ one-zone model</button></div>
+  <dl class="kv" id="lcinfo"></dl>
+  <p class="src" id="lcnote"></p>
+  <div class="cap"><b>Ashes</b><span>mass fraction by A, Cyburt et al. 2016</span></div>
+  <canvas id="pab" class="plot" aria-label="Burst ashes by mass number"></canvas>
+  <div class="leg" id="legab"></div>
+  <div class="cap"><b>Along the isotone</b><span id="chname"></span></div>
+  <canvas id="pch" class="plot" aria-label="Equilibrium shares and proton separation energies along the isotone"></canvas>
+  <div class="leg" id="legch"></div>
+  <div class="cap"><b>Waiting points</b><span>T<sub>½</sub> NUBASE2020, S<sub>p</sub> AME2020</span></div>
+  <table class="pub" id="wptab"></table>
+  <p class="src" id="wptabnote"></p>
+  <div class="cap"><b>Which rates matter</b><span class="seg mini" id="tabsel" style="display:inline-flex;vertical-align:middle"><button data-v="mzLC">MZ light curve</button><button data-v="szLC">1-zone light curve</button><button data-v="mzAB">MZ ashes</button></span></div>
+  <div class="tabwrap"><table class="pub" id="senstab"></table></div>
+  <p class="src" id="sensnote"></p>
+  <details>
+    <summary>Flags in the sources</summary>
+    <div class="grp src" id="flags"></div>
+  </details>
+</aside>
+
+<div id="labs"></div>
+<div id="stamp"></div>
+<div id="tip"></div>
+<div class="hint">drag to orbit · right-drag to pan · scroll to zoom · click a nucleus on the chart</div>
+
+<script src="assets/three-bundle.js"></script>
+<script src="assets/three-post.js"></script>
+<script src="assets/vol.js"></script>
+<script src="assets/nubase.js"></script>
+<script src="assets/shells-data.js"></script>
+<script src="assets/beta-data.js"></script>
+<script src="assets/betadecay.js"></script>
+<script src="assets/nucleosynthesis.js"></script>
+<script src="assets/xrayburst-data.js"></script>
+<script src="assets/xrayburst.js"></script>
+<script>
+"use strict";
+// ---------- data
+const NUC = window.NUC, D = window.XRB_DATA;
+XRB.init({ AME: window.AME, SPINS: D.spins });
+const ELEM = {}, ROW = new Map();
+for (const r of NUC) { ELEM[r[0]] = r[2]; ROW.set(r[0] * 1000 + r[1], r); }
+ELEM[0] = "n";
+const sup = (A) => `<sup>${A}</sup>`;
+const nucH = (Z, N) => `${sup(Z + N)}${ELEM[Z] || "Z" + Z}`;
+const isStable = (r) => r && r[3] != null && r[3] >= 15;
+const ZMAX = 54, NMAX = 62;
+// waiting points offered: those named by Meisel et al. 2018 (56Ni, 64Ge, 68Se, 72Kr, 100Sn) and 60Zn (Cyburt et al. 2016)
+const WPS = [["56Ni", 28, 28], ["60Zn", 30, 30], ["64Ge", 32, 32], ["68Se", 34, 34], ["72Kr", 36, 36], ["100Sn", 50, 50]];
+const WPK = Object.fromEntries(WPS.map((w) => [w[0], w]));
+const HT14 = window.HT2020.rows.find((r) => r[0] === "O" && r[2] === 14);       // Hardy and Towner 2020, 14O
+const HC = XRB.hcno({ Zcno: 1, T14: D.hl["14O"][0], T15: D.hl["15O"][0], tPart14: HT14[8] / 1000, Qsa14: HT14[3] / 1000 });
+const LPEAK_MZ = Math.max(...D.lc.t.map((t, i) => (D.lc.mzHi[i] != null ? 0.5 * (D.lc.mzHi[i] + D.lc.mzLo[i]) : 0)));
+
+const S = { view: "path", model: "mz", sens: "none", wp: "64Ge", T9: 1.2, lrho: 6, X: 0.7, Zcno: D.gal.Zcno, epoch: "2000 Sep", lcm: "mz", tab: "mzLC", hl: null, tb: -20, play: true };
+
+// ---------- scene
+const stage = document.getElementById("stage");
+const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.setSize(innerWidth, innerHeight);
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.05;
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+stage.appendChild(renderer.domElement);
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(36, innerWidth / innerHeight, 0.5, 3000);
+const composer = new EffectComposer(renderer);
+composer.addPass(new RenderPass(scene, camera));
+const bloom = new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), 0.42, 0.45, 0.8);
+composer.addPass(bloom);
+composer.addPass(new OutputPass());
+composer.addPass(new SMAAPass(innerWidth * renderer.getPixelRatio(), innerHeight * renderer.getPixelRatio()));
+scene.environment = VOL.studioEnv(renderer);
+VOL.lightRig(scene);
+// The ground colour #0b0d12 is drawn untouched on the direct path; on the bloom path OutputPass runs it through ACES,
+// so there background and fog take the linear colour that ACES (exposure 1.05) maps back to #0b0d12 (as on the other pages).
+const GROUND = new THREE.Color("#0b0d12");
+const GROUND_PRE_ACES = new THREE.Color().setRGB(0.0115476, 0.0131218, 0.0174740, THREE.LinearSRGBColorSpace);
+scene.background = GROUND.clone();
+scene.fog = new THREE.Fog("#0b0d12", 300, 900);
+
+// chart coordinates: one cell per nuclide, N along +x, Z along -z (away from the camera)
+const N0 = 27, Z0 = 26;
+const X = (N) => N - N0, Zc = (Z) => -(Z - Z0);
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true; controls.dampingFactor = 0.08;
+controls.screenSpacePanning = false; controls.maxPolarAngle = Math.PI * 0.48;
+controls.minDistance = 8; controls.maxDistance = 400;
+const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+const narrow = innerWidth < 700;
+const VIEWS = {
+  path: { N: 21, Z: 28, d: 112, dir: [0.3, 0.88, 0.36] },
+  cno: { N: 9, Z: 8.5, d: 30, dir: [0.4, 0.75, 0.53] },
+  ap: { N: 14, Z: 15, d: 40, dir: [0.4, 0.75, 0.53] },
+  rp: { N: 34, Z: 32, d: 46, dir: [0.4, 0.75, 0.53] },
+  end: { N: 52, Z: 49, d: 34, dir: [0.4, 0.75, 0.53] },
+};
+const camGoal = { t: new THREE.Vector3(), p: new THREE.Vector3(), k: 0 };
+function viewTarget(v) {
+  if (v === "wp") { const w = WPK[S.wp]; return { N: w[2] + 1, Z: w[1] + 1.5, d: 40, dir: [0.4, 0.75, 0.53] }; }
+  return VIEWS[v];
+}
+function aimCamera(v, jump) {
+  const o = viewTarget(v), t = new THREE.Vector3(X(o.N), 0, Zc(o.Z)), dir = new THREE.Vector3(...o.dir).normalize();
+  const p = t.clone().addScaledVector(dir, o.d * (narrow ? 1.45 : 1));
+  if (jump) { controls.target.copy(t); camera.position.copy(p); camGoal.k = 0; }
+  else { camGoal.t.copy(t); camGoal.p.copy(p); camGoal.k = 1; }
+}
+function applyOffset() {
+  const a = document.getElementById("ctl").getBoundingClientRect(), b = document.getElementById("side").getBoundingClientRect();
+  const free = innerWidth > 900 && !document.body.classList.contains("scene-only") ? 0.5 * (a.right + b.left) : innerWidth / 2, dx = innerWidth / 2 - free;
+  if (Math.abs(dx) > 1) camera.setViewOffset(innerWidth, innerHeight, dx, 0, innerWidth, innerHeight); else camera.clearViewOffset();
+}
+
+// floor and grid
+const floor = new THREE.Mesh(new THREE.PlaneGeometry(2000, 2000), new THREE.MeshStandardMaterial({ color: "#11151e", roughness: 0.92, envMapIntensity: 0.2 }));
+floor.rotation.x = -Math.PI / 2; floor.position.y = -0.02; scene.add(floor);
+const grid = new THREE.GridHelper(200, 200, "#1f2533", "#1a1f2b");
+grid.position.set(0.5, 0.003, 0.5); grid.material.transparent = true; grid.material.opacity = 0.45; scene.add(grid);
+// magic-number lanes Z = N = 20, 28, 50
+{
+  const pts = [];
+  for (const m of [20, 28, 50]) for (const s of [-0.5, 0.5]) {
+    pts.push(new THREE.Vector3(X(m) + s, 0.02, Zc(Math.max(1, m - 22))), new THREE.Vector3(X(m) + s, 0.02, Zc(Math.min(ZMAX + 2, m + 14))));
+    pts.push(new THREE.Vector3(X(Math.max(0, m - 14)), 0.02, Zc(m) + s), new THREE.Vector3(X(Math.min(NMAX, m + 22)), 0.02, Zc(m) + s));
+  }
+  scene.add(new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints(pts), new THREE.LineBasicMaterial({ color: "#f2c14e", transparent: true, opacity: 0.18 })));
+}
+
+// nuclides (NUBASE2020, Z <= 54, N <= 62) as flat tiles; colour from S_p (AME2020): stable lit, proton-unbound red
+const KNOWN = NUC.filter((r) => r[0] >= 1 && r[0] <= ZMAX && r[1] <= NMAX);
+const tileGeo = new RoundedBoxGeometry(0.9, 1, 0.9, 2, 0.12); tileGeo.translate(0, 0.5, 0);
+const tileGlass = new THREE.MeshPhysicalMaterial({ transmission: 0.5, thickness: 0.6, ior: 1.46, roughness: 0.14, metalness: 0,
+  clearcoat: 1, clearcoatRoughness: 0.05, envMapIntensity: 0.6, attenuationColor: "#ffffff", attenuationDistance: 3 });
+const tileFast = new THREE.MeshStandardMaterial({ roughness: 0.6, metalness: 0, envMapIntensity: 0.5 });
+const tiles = new THREE.InstancedMesh(tileGeo, tileGlass, KNOWN.length);
+const dummy = new THREE.Object3D();
+const C_TILE = new THREE.Color("#353c4e"), C_STAB = new THREE.Color("#8f97ab"), C_UNB = new THREE.Color("#6b2a2c"), C_UNBE = new THREE.Color("#4a2a33");
+KNOWN.forEach((r, i) => {
+  const st = isStable(r), sp = XRB.Sp(r[0], r[1]), unb = sp && sp.S < 0;
+  dummy.position.set(X(r[1]), 0, Zc(r[0]));
+  const w = sp && sp.est ? 0.62 : 1;
+  dummy.scale.set(w, st ? 0.34 : 0.12, w); dummy.updateMatrix();
+  tiles.setMatrixAt(i, dummy.matrix); tiles.setColorAt(i, st ? C_STAB : unb ? (sp.est ? C_UNBE : C_UNB) : C_TILE);
+});
+const STABLES = KNOWN.filter(isStable);
+const coreGeo = new RoundedBoxGeometry(0.46, 1, 0.46, 2, 0.08); coreGeo.translate(0, 0.5, 0);
+const cores = new THREE.InstancedMesh(coreGeo, new THREE.MeshBasicMaterial({ color: new THREE.Color(1.0, 0.98, 0.94), toneMapped: false }), STABLES.length);
+STABLES.forEach((r, i) => { dummy.position.set(X(r[1]), 0, Zc(r[0])); dummy.scale.set(1, 0.26, 1); dummy.updateMatrix(); cores.setMatrixAt(i, dummy.matrix); });
+scene.add(tiles, cores);
+
+// proton drip line of AME2020 (lightest isotope with S_p > 0 and S_2p > 0), dashed; dimmer where it rests on # masses
+const DRIP = [];
+for (let Z = 4; Z <= ZMAX; Z++) { const d = XRB.dripN(Z); if (d) DRIP.push({ Z, N: d.N, est: d.est }); }
+{
+  const mk = (est) => {
+    const p = [];
+    for (let i = 0; i < DRIP.length; i++) {
+      const d = DRIP[i]; if (d.est !== est) continue;
+      p.push(new THREE.Vector3(X(d.N) - 0.5, 0.05, Zc(d.Z) + 0.5), new THREE.Vector3(X(d.N) - 0.5, 0.05, Zc(d.Z) - 0.5));
+      const n = DRIP[i + 1];
+      if (n && n.Z === d.Z + 1) p.push(new THREE.Vector3(X(d.N) - 0.5, 0.05, Zc(d.Z) - 0.5), new THREE.Vector3(X(n.N) - 0.5, 0.05, Zc(d.Z) - 0.5));
+    }
+    const l = new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints(p), new THREE.LineDashedMaterial({ color: "#a99cf0", transparent: true, opacity: est ? 0.38 : 0.85, dashSize: 0.45, gapSize: 0.3 }));
+    l.computeLineDistances(); scene.add(l);
+  };
+  mk(false); mk(true);
+}
+
+// ---------- the drawn path: one cylinder per flow segment of the chosen model
+const KIND = (dN, dZ) => dZ === 1 && dN === 0 ? "pg" : dZ === -1 && dN === 0 ? "gp" : dZ === -1 && dN === 1 ? "b" : dZ === 1 && dN === -1 ? "bm"
+  : dN === 2 && dZ === 1 ? "ap" : dN === -2 && dZ === -1 ? "pa" : dN === 2 && dZ === 2 ? "ag" : dN === 4 && dZ === 4 ? "3a" : "other";
+const KCOL = { pg: "#f2c14e", gp: "#9aa3b6", b: "#6fd3c1", bm: "#8fb8ff", ap: "#ff7aa8", pa: "#ff9fc4", ag: "#ff7aa8", "3a": "#ff7aa8", other: "#c0c4cc" };
+const KLAB = { pg: "(p,γ)", gp: "net (γ,p)", b: "β⁺", bm: "β⁻", ap: "(α,p)", pa: "(p,α)", ag: "(α,γ)", "3a": "3α", other: "other" };
+const Y0P = 0.55;
+const cylGeo = new THREE.CylinderGeometry(1, 1, 1, 8, 1, false); cylGeo.translate(0, 0.5, 0); cylGeo.rotateX(Math.PI / 2);   // along +z, length 1
+const P = {};                                   // per model: { segs, mesh, hot, graph }
+const up = new THREE.Vector3(0, 1, 0), tmpA = new THREE.Vector3(), tmpB = new THREE.Vector3(), tmpC = new THREE.Color();
+const segObj = new THREE.Object3D();
+function segMatrix(a, b, r) { segObj.position.copy(a); segObj.lookAt(b); segObj.scale.set(r, r, a.distanceTo(b)); segObj.updateMatrix(); return segObj.matrix; }
+function buildModel(k) {
+  const src = D.path[k], segs = [];
+  for (const f of src.flow) {
+    let [Na, Za, Nb, Zb, w] = f;
+    // the figure draws no arrows: each step is oriented toward higher A, beta decays toward the lighter isobar, except the two
+    // (p,alpha) steps that close the CNO cycles, 15N(p,a)12C and 18F(p,a)15O, which go down in A
+    const A0 = Za + Na, A1 = Zb + Nb, key = [Za * 1000 + Na, Zb * 1000 + Nb].sort((x, y) => x - y).join(),
+      closeCNO = key === "6006,7008" || key === "8007,9009";
+    const ma = XRB.mass(Za, Na), mb = XRB.mass(Zb, Nb);         // same A: a beta decay, toward the lighter atom (AME2020)
+    const down = closeCNO ? A1 > A0 : (A1 < A0 || (A1 === A0 && ma && mb && mb.M > ma.M));
+    if (down) [Na, Za, Nb, Zb] = [Nb, Zb, Na, Za];
+    const kind = KIND(Nb - Na, Zb - Za);
+    if (kind === "other") continue;              // one segment from 21Mg to 4He in the one-zone figure (listed in the flags)
+    segs.push({ Na, Za, Nb, Zb, w, kind, a: new THREE.Vector3(X(Na), Y0P, Zc(Za)), b: new THREE.Vector3(X(Nb), Y0P, Zc(Zb)) });
+  }
+  const mesh = new THREE.InstancedMesh(cylGeo, new THREE.MeshBasicMaterial({ color: 0xffffff, toneMapped: true }), segs.length);
+  segs.forEach((s, i) => { mesh.setMatrixAt(i, segMatrix(s.a, s.b, s.w ? 0.075 : 0.045)); mesh.setColorAt(i, tmpC.set(KCOL[s.kind])); });
+  mesh.visible = false; scene.add(mesh);
+  // the highlighted reactions of the figure (red: significant, blue: varied without a significant change)
+  const hot = {};
+  for (const key of ["lcRed", "abRed", "lcBlue", "abBlue"]) {
+    const L = src[key] || [];
+    const m = new THREE.InstancedMesh(cylGeo, new THREE.MeshBasicMaterial({ color: key.endsWith("Red") ? new THREE.Color(2.2, 0.35, 0.3) : new THREE.Color(0.55, 0.7, 2.0), toneMapped: false, transparent: true, opacity: 0.9 }), Math.max(1, L.length));
+    L.forEach(([Na, Za, Nb, Zb], i) => m.setMatrixAt(i, segMatrix(tmpA.set(X(Na), Y0P + 0.05, Zc(Za)), tmpB.set(X(Nb), Y0P + 0.05, Zc(Zb)), 0.16)));
+    m.count = L.length; m.visible = false; scene.add(m); hot[key] = m;
+  }
+  // directed graph for the sparks: node key Z*1000+N -> outgoing edges
+  const graph = new Map();
+  segs.forEach((s, i) => { const k0 = s.Za * 1000 + s.Na; if (!graph.has(k0)) graph.set(k0, []); graph.get(k0).push(i); });
+  let zmax = 0; for (const s of segs) zmax = Math.max(zmax, s.Zb);
+  // nodes from which the drawn path still leads to its top end (reverse search), so sparks keep to the main flow
+  const deep = new Set(), into = new Map();
+  for (const s of segs) { const kb = s.Zb * 1000 + s.Nb; if (!into.has(kb)) into.set(kb, []); into.get(kb).push(s.Za * 1000 + s.Na); if (s.Zb >= zmax - 4) deep.add(kb); }
+  const queue = [...deep];
+  while (queue.length) { const q = queue.pop(); for (const r of into.get(q) || []) if (!deep.has(r)) { deep.add(r); queue.push(r); } }
+  P[k] = { segs, mesh, hot, graph, zmax, deep };
+}
+buildModel("mz"); buildModel("sz");
+
+// Schatz et al. 2001: the SnSbTe cycles as named in their text (drawn; the return along the Sn chain is not itemised there)
+const snGroup = new THREE.Group(); scene.add(snGroup);
+{
+  const at = (Z, A) => new THREE.Vector3(X(A - Z), Y0P + 0.1, Zc(Z));
+  const arc = (a, b, lift, col, op, dash) => {
+    const mid = a.clone().add(b).multiplyScalar(0.5); mid.y += lift;
+    const c = new THREE.QuadraticBezierCurve3(a, mid, b);
+    if (dash) {
+      const l = new THREE.Line(new THREE.BufferGeometry().setFromPoints(c.getPoints(40)), new THREE.LineDashedMaterial({ color: col, transparent: true, opacity: op, dashSize: 0.3, gapSize: 0.22 }));
+      l.computeLineDistances(); snGroup.add(l); return;
+    }
+    snGroup.add(new THREE.Mesh(new THREE.TubeGeometry(c, 30, 0.09, 8, false), new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: op })));
+  };
+  for (const [cyc, op] of [[D.schatz.cycle1, 1], [D.schatz.cycle2, 0.45]]) {
+    const pts = cyc.map((c) => at(c[0], c[1]));
+    for (let i = 0; i < pts.length - 1; i++) arc(pts[i], pts[i + 1], i === 2 ? 2.2 : 0.8, new THREE.Color(0.85, 0.7, 1.6), op, false);
+    arc(pts[pts.length - 1], pts[0], 1.2, "#b99cff", 0.6 * op, true);
+  }
+}
+
+// waiting points: rings and glass columns, height log10 of the half-life (presentation scale)
+const wpCol = new THREE.InstancedMesh(new RoundedBoxGeometry(0.8, 1, 0.8, 2, 0.1).translate(0, 0.5, 0), new THREE.MeshPhysicalMaterial({ color: "#ffb05a", emissive: "#ff8a2a", emissiveIntensity: 0.55, roughness: 0.25, transmission: 0.3, thickness: 0.5, clearcoat: 1 }), WPS.length);
+const WPH = (nm) => Math.max(0.8, 1.2 * Math.log10(D.hl[nm][0]) + 1.4);
+WPS.forEach(([nm, Z, N], i) => { dummy.position.set(X(N), 0, Zc(Z)); dummy.scale.set(1, WPH(nm), 1); dummy.updateMatrix(); wpCol.setMatrixAt(i, dummy.matrix); });
+scene.add(wpCol);
+const selRing = new THREE.Mesh(new THREE.TorusGeometry(0.85, 0.07, 8, 40).rotateX(Math.PI / 2), new THREE.MeshBasicMaterial({ color: new THREE.Color(2.2, 1.6, 0.6), toneMapped: false }));
+scene.add(selRing);
+// equilibrium shares along the selected isotone (Z, Z+1, ...): orange columns, height = share
+const shareCols = new THREE.InstancedMesh(new RoundedBoxGeometry(0.6, 1, 0.6, 2, 0.08).translate(0, 0.5, 0), new THREE.MeshBasicMaterial({ color: 0xffffff }), 6);
+shareCols.count = 0; scene.add(shareCols);
+// sensitivity-table row picked: a pulsing marker on that reaction
+const hlMesh = new THREE.InstancedMesh(cylGeo, new THREE.MeshBasicMaterial({ color: new THREE.Color(2.4, 2.0, 0.8), toneMapped: false, transparent: true }), 1);
+hlMesh.visible = false; scene.add(hlMesh);
+
+// ---------- the neutron star over the empty, proton-unbound corner of the chart
+const STAR = { N: 4, Z: 45, y: 12, R: 6 };
+const starPos = new THREE.Vector3(X(STAR.N), STAR.y, Zc(STAR.Z));
+const IGN = new THREE.Vector3(0.35, 0.75, 0.56).normalize();
+const starU = { uTheta: { value: 0 }, uL: { value: 0 }, uTime: { value: 0 }, uIgn: { value: IGN } };
+const star = new THREE.Mesh(new THREE.SphereGeometry(STAR.R, 96, 64), new THREE.ShaderMaterial({
+  uniforms: starU,
+  vertexShader: `varying vec3 vN; varying vec3 vV; varying vec3 vO;
+    void main(){ vO = normalize(position); vN = normalize(normalMatrix * normal); vec4 mv = modelViewMatrix * vec4(position,1.0); vV = normalize(-mv.xyz); gl_Position = projectionMatrix * mv; }`,
+  fragmentShader: `uniform float uTheta, uL, uTime; uniform vec3 uIgn; varying vec3 vN; varying vec3 vV; varying vec3 vO;
+    float h(vec3 p){ return fract(sin(dot(p, vec3(12.9898,78.233,37.719))) * 43758.5453); }
+    float n3(vec3 p){ vec3 i = floor(p), f = fract(p); f = f*f*(3.0-2.0*f);
+      return mix(mix(mix(h(i),h(i+vec3(1,0,0)),f.x),mix(h(i+vec3(0,1,0)),h(i+vec3(1,1,0)),f.x),f.y),
+                 mix(mix(h(i+vec3(0,0,1)),h(i+vec3(1,0,1)),f.x),mix(h(i+vec3(0,1,1)),h(i+vec3(1,1,1)),f.x),f.y),f.z); }
+    void main(){
+      float d = acos(clamp(dot(vO, uIgn), -1.0, 1.0));
+      float turb = n3(vO * 6.0 + vec3(0.0, uTime * 0.6, 0.0)) * 0.6 + n3(vO * 17.0 - vec3(uTime * 1.3)) * 0.4;
+      float burnt = smoothstep(uTheta + 0.05, uTheta - 0.12, d + 0.25 * (turb - 0.5));
+      float front = exp(-pow((d - uTheta) / 0.07, 2.0)) * step(0.02, uTheta) * step(uTheta, 3.1);
+      float mu = max(dot(vN, vV), 0.0);
+      vec3 base = vec3(0.10, 0.12, 0.17) * (0.35 + 0.65 * mu) + vec3(0.25, 0.35, 0.6) * pow(1.0 - mu, 3.0) * 0.6;
+      float limb = 0.45 + 0.55 * pow(mu, 0.6);
+      float cells = pow(turb, 1.6);
+      vec3 hot = mix(vec3(1.0, 0.22, 0.04), mix(vec3(1.0, 0.55, 0.15), vec3(0.7, 0.82, 1.0), cells), clamp(uL * 1.2, 0.0, 1.0));
+      vec3 col = base + hot * burnt * limb * (0.12 + 1.7 * uL) * (0.12 + 2.0 * cells) + vec3(1.5, 1.05, 0.65) * front * (0.9 + turb);
+      gl_FragColor = vec4(col, 1.0);
+      #include <tonemapping_fragment>
+      #include <colorspace_fragment>
+    }`,
+}));
+star.position.copy(starPos); scene.add(star);
+// the burning layer: a shell drawn far thicker than it is, glowing with the burst
+const shell = new THREE.Mesh(new THREE.SphereGeometry(STAR.R * 1.045, 64, 48), new THREE.ShaderMaterial({
+  uniforms: { uL: starU.uL },
+  vertexShader: `varying vec3 vN; varying vec3 vV; void main(){ vN = normalize(normalMatrix * normal); vec4 mv = modelViewMatrix * vec4(position,1.0); vV = normalize(-mv.xyz); gl_Position = projectionMatrix * mv; }`,
+  fragmentShader: `uniform float uL; varying vec3 vN; varying vec3 vV;
+    void main(){ float f = pow(1.0 - max(dot(vN, vV), 0.0), 2.4); vec3 c = mix(vec3(0.35,0.55,1.0), vec3(1.0,0.75,0.45), clamp(uL,0.0,1.0)) * f * (0.3 + 1.1 * uL);
+      gl_FragColor = vec4(c, f);
+      #include <tonemapping_fragment>
+      #include <colorspace_fragment>
+    }`,
+  transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.FrontSide,
+}));
+shell.position.copy(starPos); scene.add(shell);
+// a soft halo that follows the light curve (presentation)
+const halo = (() => {
+  const c = document.createElement("canvas"); c.width = c.height = 128;
+  const x = c.getContext("2d"), g = x.createRadialGradient(64, 64, 0, 64, 64, 64);
+  g.addColorStop(0, "rgba(255,255,255,1)"); g.addColorStop(0.35, "rgba(255,220,180,0.35)"); g.addColorStop(1, "rgba(255,200,150,0)");
+  x.fillStyle = g; x.fillRect(0, 0, 128, 128);
+  const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(c), color: "#ffb47a", transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, opacity: 0 }));
+  sp.scale.setScalar(STAR.R * 5); sp.position.copy(starPos); scene.add(sp); return sp;
+})();
+const starLight = new THREE.PointLight("#ffd2a0", 0, 90, 1.6); starLight.position.copy(starPos); scene.add(starLight);
+// accretion disc: a ring of points, slowly turning (presentation)
+const disc = (() => {
+  const n = 6000, pos = new Float32Array(n * 3), a = new Float32Array(n), g = new THREE.BufferGeometry();
+  for (let i = 0; i < n; i++) {
+    const r = STAR.R * (1.35 + 1.5 * Math.pow(Math.random(), 1.6)), th = Math.random() * Math.PI * 2;
+    pos[3 * i] = r * Math.cos(th); pos[3 * i + 1] = (Math.random() - 0.5) * 0.35; pos[3 * i + 2] = r * Math.sin(th); a[i] = 0.25 + 0.75 * Math.random();
+  }
+  g.setAttribute("position", new THREE.BufferAttribute(pos, 3)); g.setAttribute("aA", new THREE.BufferAttribute(a, 1));
+  const m = new THREE.ShaderMaterial({ uniforms: { uPix: { value: 600 } },
+    vertexShader: `attribute float aA; uniform float uPix; varying float vA; void main(){ vA = aA; vec4 mv = modelViewMatrix * vec4(position,1.0); gl_Position = projectionMatrix * mv; gl_PointSize = max(1.2, 0.22 * uPix / -mv.z); }`,
+    fragmentShader: `varying float vA; void main(){ vec2 d = gl_PointCoord - 0.5; float r2 = dot(d,d); if (r2 > 0.25) discard; float a = exp(-r2*14.0) * vA * 0.7; gl_FragColor = vec4(vec3(1.0,0.66,0.38) * a, a);
+      #include <tonemapping_fragment>
+      #include <colorspace_fragment>
+    }`, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending });
+  const p = new THREE.Points(g, m); p.position.copy(starPos); p.rotation.set(0.42, 0, -0.25); p.frustumCulled = false; scene.add(p);
+  return p;
+})();
+
+// ---------- sparks: abundance flow along the drawn path (a random walk on the flow graph; speed is presentation)
+const NSP = 700;
+const spark = (() => {
+  const pos = new Float32Array(NSP * 3), a = new Float32Array(NSP), col = new Float32Array(NSP * 3), g = new THREE.BufferGeometry();
+  g.setAttribute("position", new THREE.BufferAttribute(pos, 3)); g.setAttribute("aA", new THREE.BufferAttribute(a, 1)); g.setAttribute("aC", new THREE.BufferAttribute(col, 3));
+  const m = new THREE.ShaderMaterial({ uniforms: { uPix: { value: 600 } },
+    vertexShader: `attribute float aA; attribute vec3 aC; uniform float uPix; varying float vA; varying vec3 vC;
+      void main(){ vA = aA; vC = aC; vec4 mv = modelViewMatrix * vec4(position, 1.0); gl_Position = projectionMatrix * mv; gl_PointSize = aA > 0.0 ? clamp(0.42 * uPix / -mv.z, 1.8, 14.0) : 0.0; }`,
+    fragmentShader: `varying float vA; varying vec3 vC; void main(){ vec2 d = gl_PointCoord - 0.5; float r2 = dot(d, d); if (r2 > 0.25) discard;
+        float a = exp(-r2 * 15.0) * vA; gl_FragColor = vec4(vC * a, a);
+        #include <tonemapping_fragment>
+        #include <colorspace_fragment>
+      }`, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending });
+  const p = new THREE.Points(g, m); p.frustumCulled = false; scene.add(p);
+  return { p, pos, a, col, g, m, st: [] };
+})();
+const CNO_NODES = [[6, 6], [6, 7], [6, 8], [7, 7], [7, 8], [8, 7]];          // 12C, 13N, 14O, 14N, 15O, 15N as [Z, N]
+function respawn(s) { const c = CNO_NODES[(Math.random() * CNO_NODES.length) | 0]; s.Z = c[0]; s.N = c[1]; s.e = -1; s.u = 0; s.wait = Math.random() * 0.5; s.age = 0; }
+for (let i = 0; i < NSP; i++) { const s = {}; respawn(s); spark.st.push(s); }
+const WP_DWELL = new Map(WPS.map(([nm, Z, N]) => [Z * 1000 + N, 0.35 * Math.max(1, Math.log10(D.hl[nm][0]) + 1)]));
+// burst clock (model time of Cyburt et al.): the flow front advances with it (drawn), the star glows with their light curve
+const TB0 = -30, TB1 = 120, LOOP = 40;                 // seconds of burst time; one loop in 40 s of real time
+function zFront(t) { const zm = P[S.model].zmax; if (t < -8) return 9.5; const x = Math.min(1, (t + 8) / 70); return 9.5 + (zm - 9.5) * Math.pow(x * x * (3 - 2 * x), 0.7); }
+function Lmodel(t) {                                   // the multi-zone model's light curve, middle of its band, in units of its peak
+  const ts = D.lc.t; if (t < ts[0] || t > ts[ts.length - 1]) return 0;
+  const i = Math.min(ts.length - 2, Math.floor((t - ts[0]) / (ts[1] - ts[0]))), f = (t - ts[i]) / (ts[1] - ts[0]);
+  const v = (j) => (D.lc.mzHi[j] != null ? 0.5 * (D.lc.mzHi[j] + D.lc.mzLo[j]) : 0);
+  return Math.max(0, (v(i) * (1 - f) + v(i + 1) * f) / LPEAK_MZ);
+}
+const C_SP = { pg: new THREE.Color(1.5, 1.1, 0.45), b: new THREE.Color(0.5, 1.4, 1.25), ap: new THREE.Color(1.6, 0.55, 0.85) };
+// after a jump of the burst clock (slider, hash, test), replay the walk in steps of the loop's own pace so the sparks sit where they would
+function advanceSparks(t0, t1) {
+  const keep = S.tb;
+  if (t1 < t0) { for (const sp of spark.st) respawn(sp); t0 = TB0; }
+  const dtb = 0.5, dtr = dtb * LOOP / (TB1 - TB0);
+  for (let t = t0; t < t1; t += dtb) { S.tb = t; stepSparks(dtr, true); }
+  S.tb = keep; stepSparks(0);
+}
+function stepSparks(dt, quiet) {
+  const M = P[S.model], zf = zFront(S.tb), fade = S.tb > 100 ? Math.max(0, 1 - (S.tb - 100) / 20) : 1;
+  for (let i = 0; i < NSP; i++) {
+    const s = spark.st[i];
+    s.age += dt;
+    if (s.e < 0) {
+      s.wait -= dt;
+      if (s.wait <= 0) {
+        let out = (M.graph.get(s.Z * 1000 + s.N) || []).filter((k) => M.segs[k].Zb <= zf);
+        // side branches that end in the drawing (e.g. at 14C, 22Ne) are not followed while the main path goes on
+        const live = out.filter((k) => M.deep.has(M.segs[k].Zb * 1000 + M.segs[k].Nb));
+        if (live.length) out = live;
+        if (out.length) {
+          let tot = 0; for (const k of out) tot += M.segs[k].w ? 1 : 0.35;
+          let r = Math.random() * tot, pick = out[0];
+          for (const k of out) { r -= M.segs[k].w ? 1 : 0.35; if (r <= 0) { pick = k; break; } }
+          s.e = pick; s.u = 0;
+        } else if (!M.graph.has(s.Z * 1000 + s.N) && !M.deep.has(s.Z * 1000 + s.N)) respawn(s);   // a side branch ends: start again (presentation)
+        else s.wait = 0.2 + Math.random() * 0.4;
+      }
+    } else {
+      const sg = M.segs[s.e];
+      s.u += dt * (sg.kind === "b" ? 2.4 : 4.5);
+      if (s.u >= 1) { s.Z = sg.Zb; s.N = sg.Nb; s.e = -1; s.wait = 0.03 + 0.08 * Math.random() + (WP_DWELL.get(s.Z * 1000 + s.N) || 0) * (0.5 + Math.random()); }
+    }
+    if (quiet) continue;
+    let x, z, c = C_SP.pg;
+    if (s.e >= 0) { const sg = M.segs[s.e]; x = sg.a.x + (sg.b.x - sg.a.x) * s.u; z = sg.a.z + (sg.b.z - sg.a.z) * s.u; c = C_SP[sg.kind] || C_SP.pg; }
+    else { x = X(s.N) + 0.18 * Math.sin(i * 1.7 + s.age * 3); z = Zc(s.Z) + 0.18 * Math.cos(i * 2.3 + s.age * 2.6); }
+    spark.pos[3 * i] = x; spark.pos[3 * i + 1] = Y0P + 0.12; spark.pos[3 * i + 2] = z;
+    spark.a[i] = (s.e >= 0 ? 0.85 : 0.32) * fade;
+    spark.col[3 * i] = c.r; spark.col[3 * i + 1] = c.g; spark.col[3 * i + 2] = c.b;
+  }
+  if (quiet) return;
+  spark.g.attributes.position.needsUpdate = true; spark.g.attributes.aA.needsUpdate = true; spark.g.attributes.aC.needsUpdate = true;
+}
+// path segments light up as the front reaches them
+function paintPath() {
+  for (const k of ["mz", "sz"]) {
+    const M = P[k], on = k === S.model;
+    M.mesh.visible = on;
+    for (const h in M.hot) M.hot[h].visible = on && ((S.sens === "lc" && (h === "lcRed" || h === "lcBlue")) || (S.sens === "ab" && (h === "abRed" || h === "abBlue")));
+    if (!on) continue;
+    const zf = zFront(S.tb);
+    M.segs.forEach((s, i) => { tmpC.set(KCOL[s.kind]).multiplyScalar(s.Zb <= zf ? (s.w ? 1.25 : 0.85) : 0.16); M.mesh.setColorAt(i, tmpC); });
+    M.mesh.instanceColor.needsUpdate = true;
+  }
+}
+
+// ---------- labels in the scene
+const labDiv = document.getElementById("labs"), LABS = [];
+function addLab(html, color, fn) { const el = document.createElement("div"); el.className = "axlab"; el.style.color = color; el.innerHTML = html; labDiv.appendChild(el); LABS.push({ el, fn }); return el; }
+const at3 = (N, Z, y) => new THREE.Vector3(X(N), y || 0, Zc(Z));
+addLab("hot CNO cycle<small>β-limited: ¹⁴O, ¹⁵O</small>", "#6fd3c1", () => at3(4.5, 7.2, 0.5));
+addLab("<sup>15</sup>O(α,γ)<sup>19</sup>Ne", "#ff7aa8", () => (S.view === "cno" || S.view === "ap" ? at3(9.2, 9.3, 1) : null));
+addLab("<sup>18</sup>Ne(α,p)<sup>21</sup>Na", "#ff7aa8", () => (S.view === "cno" || S.view === "ap" ? at3(10.6, 10.0, 1) : null));
+addLab("breakout", "#ff7aa8", () => (S.view === "path" ? at3(8.5, 10.5, 1) : null));
+addLab("αp process<small>(α,p)(p,γ) to Ca, Sc</small>", "#ff9fc4", () => (S.view !== "end" ? at3(19, 13, 0.6) : null));
+addLab("rp process<small>(p,γ) and β⁺ along the drip line</small>", "#f2c14e", () => (S.view === "path" || S.view === "rp" ? at3(37, 31, 0.6) : null));
+addLab("proton drip line<small>AME2020</small>", "#a99cf0", () => { const d = DRIP.find((x) => x.Z === 24); return d && S.view !== "cno" && S.view !== "end" ? at3(d.N - 3.5, 25, 0) : null; });
+addLab("SnSbTe cycle<small>Schatz et al. 2001</small>", "#b99cff", () => (S.view === "path" || S.view === "end" ? at3(55.5, 52.5, 1.5) : null));
+addLab("accreting neutron star<small>burning layer drawn thick</small>", "#c9d6ff", () => (S.view === "path" ? starPos.clone().add(new THREE.Vector3(0, STAR.R + 3.2, 0)) : null));
+for (const [nm, Z, N] of WPS) addLab(`${sup(nm.match(/\d+/)[0])}${nm.replace(/\d+/, "")}<small>${D.hl[nm][1]}</small>`, "#ffb05a", () => (S.view === "rp" || S.view === "wp" || S.view === "end" || (S.view === "path" && (nm === "56Ni" || nm === "64Ge" || nm === "72Kr" || nm === "100Sn")) ? at3(N, Z, WPH(nm) + 1.1) : null));
+const tmpV = new THREE.Vector3();
+function drawLabs() {
+  for (const L of LABS) {
+    const p = L.fn();
+    if (!p) { L.el.hidden = true; continue; }
+    tmpV.copy(p).project(camera);
+    const vis = tmpV.z < 1 && Math.abs(tmpV.x) < 0.97 && Math.abs(tmpV.y) < 0.97;
+    L.el.hidden = !vis;
+    if (vis) { L.el.style.left = (tmpV.x * 0.5 + 0.5) * innerWidth + "px"; L.el.style.top = (-tmpV.y * 0.5 + 0.5) * innerHeight + "px"; }
+  }
+}
+
+// ---------- plots
+function setupCanvas(c) {
+  const d = Math.min(devicePixelRatio, 2), w = c.clientWidth, h = c.clientHeight;
+  c.width = w * d; c.height = h * d;
+  const x = c.getContext("2d"); x.setTransform(d, 0, 0, d, 0, 0);
+  return { x, w, h };
+}
+const L0 = 38, R0 = 34, T0 = 8, B0 = 18;
+function axes(ctx, w, h, Xf, Yf, xt, yt, xl, r) {
+  ctx.font = "10px ui-monospace,Menlo,monospace";
+  ctx.strokeStyle = "#1e2432"; ctx.fillStyle = "#8a92a6"; ctx.lineWidth = 1;
+  const RR = r == null ? R0 : r;
+  for (const [v, s] of yt) { ctx.beginPath(); ctx.moveTo(L0, Yf(v)); ctx.lineTo(w - RR, Yf(v)); ctx.stroke(); ctx.textAlign = "right"; ctx.fillText(s, L0 - 4, Yf(v) + 3); }
+  ctx.textAlign = "center";
+  for (const [v, s] of xt) { ctx.beginPath(); ctx.moveTo(Xf(v), T0); ctx.lineTo(Xf(v), h - B0); ctx.stroke(); ctx.fillText(s, Xf(v), h - 5); }
+  if (xl) { ctx.textAlign = "right"; ctx.fillText(xl, w - RR, h - B0 - 4); }
+}
+function poly(ctx, xs, ys, Xf, Yf, color, lw, dash, clip) {
+  ctx.save();
+  if (clip) { ctx.beginPath(); ctx.rect(clip[0], clip[1], clip[2], clip[3]); ctx.clip(); }
+  ctx.beginPath(); ctx.strokeStyle = color; ctx.lineWidth = lw; ctx.setLineDash(dash || []);
+  let on = false;
+  for (let i = 0; i < xs.length; i++) {
+    const y = ys[i];
+    if (y == null || !isFinite(y)) { on = false; continue; }
+    if (!on) { ctx.moveTo(Xf(xs[i]), Yf(y)); on = true; } else ctx.lineTo(Xf(xs[i]), Yf(y));
+  }
+  ctx.stroke(); ctx.restore();
+}
+const supE = (e) => "10" + String(e).replace("-", "⁻").replace(/\d/g, (d) => "⁰¹²³⁴⁵⁶⁷⁸⁹"[d]);
+const OBS = () => D.obs.find((o) => o.epoch === S.epoch);
+function obsPeak(o) { let m = -1, t = 0; for (const r of o.rows) if (r[2] > m) { m = r[2]; t = r[0] + r[1] / 2; } return { F: m, t }; }
+function drawLC() {
+  const { x: ctx, w, h } = setupCanvas(document.getElementById("plc"));
+  const o = OBS(), pk = obsPeak(o);
+  const xlo = -10, xhi = 160, ylo = 0, yhi = 34;
+  const Xf = (t) => L0 + (t - xlo) / (xhi - xlo) * (w - L0 - R0), Yf = (v) => T0 + (yhi - v) / (yhi - ylo) * (h - T0 - B0);
+  axes(ctx, w, h, Xf, Yf, [0, 40, 80, 120, 160].map((t) => [t, t]), [0, 10, 20, 30].map((v) => [v, v]), "t (s)");
+  const clip = [L0, T0, w - L0 - R0, h - T0 - B0];
+  // model on its own right axis (10^38 erg/s, neutron-star frame), peak moved to the observed peak bin
+  if (S.lcm !== "none") {
+    const yh2 = 2.0, Y2 = (v) => T0 + (yh2 - v) / yh2 * (h - T0 - B0);
+    ctx.fillStyle = "#6f8fff"; ctx.textAlign = "left";
+    for (const v of [0, 0.5, 1, 1.5, 2]) ctx.fillText(v.toFixed(1), w - R0 + 4, Y2(v) + 3);
+    if (S.lcm === "mz") {
+      ctx.save(); ctx.beginPath(); ctx.rect(...clip); ctx.clip();
+      ctx.beginPath(); let first = true;
+      D.lc.t.forEach((t, i) => { if (D.lc.mzHi[i] == null) return; const px = Xf(t + pk.t), py = Y2(D.lc.mzHi[i]); if (first) { ctx.moveTo(px, py); first = false; } else ctx.lineTo(px, py); });
+      for (let i = D.lc.t.length - 1; i >= 0; i--) if (D.lc.mzLo[i] != null) ctx.lineTo(Xf(D.lc.t[i] + pk.t), Y2(D.lc.mzLo[i]));
+      ctx.closePath(); ctx.fillStyle = "rgba(111,143,255,0.55)"; ctx.fill(); ctx.restore();
+    } else poly(ctx, D.lc.szT.map((t) => t + pk.t), D.lc.szL, Xf, Y2, "#ff6a5a", 1.6, [5, 3], clip);
+  }
+  // observed: flux per bin with its 1 sigma error, plotted at the bin centre
+  ctx.strokeStyle = "rgba(242,193,78,0.55)"; ctx.fillStyle = "#f2c14e";
+  for (const [t, dt, F, dF] of o.rows) {
+    const px = Xf(t + dt / 2); if (px < L0 || px > w - R0) continue;
+    ctx.beginPath(); ctx.moveTo(px, Yf(F - dF)); ctx.lineTo(px, Yf(F + dF)); ctx.stroke();
+    ctx.beginPath(); ctx.arc(px, Yf(F), 1.7, 0, 2 * Math.PI); ctx.fill();
+  }
+  // the scene's burst clock
+  const cx = Xf(S.tb + pk.t);
+  if (cx >= L0 && cx <= w - R0) { ctx.strokeStyle = "rgba(255,255,255,0.35)"; ctx.setLineDash([2, 3]); ctx.beginPath(); ctx.moveTo(cx, T0); ctx.lineTo(cx, h - B0); ctx.stroke(); ctx.setLineDash([]); }
+  ctx.fillStyle = "#8a92a6"; ctx.textAlign = "left"; ctx.fillText("F (10⁻⁹ erg cm⁻² s⁻¹)", L0 + 4, T0 + 9);
+  document.getElementById("leglc").innerHTML = `<span><i class="p" style="background:#f2c14e"></i>RXTE average, ${o.epoch} (${o.nav} burst${o.nav > 1 ? "s" : ""}), Galloway et al. 2017</span>` +
+    (S.lcm === "mz" ? `<span><i class="b" style="background:rgba(111,143,255,.6)"></i>KEPLER multi-zone, 1σ band, right axis (10³⁸ erg s⁻¹)</span>` : S.lcm === "sz" ? `<span><i class="d" style="border-color:#ff6a5a"></i>one-zone model, right axis (10³⁸ erg s⁻¹)</span>` : "");
+  const tau = o.Eb[0] / o.Fpk[0] * 1e3;
+  document.getElementById("lcinfo").innerHTML = `
+    <dt>recurrence</dt><dd>Δt = ${o.dt[0]} ± ${o.dt[1]} h${o.hdrDt[0] !== o.dt[0] ? ` <span style="color:var(--accent)">(data file header: ${o.hdrDtStr[0]} ± ${o.hdrDtStr[1]} h, flagged)</span>` : ""}</dd>
+    <dt>fluence, peak</dt><dd>E<sub>b</sub> = ${o.Eb[0]} ± ${o.Eb[1]} × 10⁻⁶ erg cm⁻², F<sub>pk</sub> = ${o.Fpk[0]} ± ${o.Fpk[1]} × 10⁻⁹ erg cm⁻² s⁻¹</dd>
+    <dt>τ = E<sub>b</sub>/F<sub>pk</sub></dt><dd class="hi">${tau.toFixed(1)} s (observer frame)</dd>
+    <dt>α</dt><dd>${o.alpha[0]} ± ${o.alpha[1]} (persistent over burst energy)</dd>
+    <dt>model</dt><dd>τ = ${D.cyb.tau[0]} ± ${D.cyb.tau[1]} s, Δt = ${D.cyb.trec[0]} ± ${D.cyb.trec[1]} min, L<sub>peak</sub> = (${(D.cyb.Lpeak[0] / 1e38).toFixed(1)} ± ${(D.cyb.Lpeak[1] / 1e38).toFixed(1)}) × 10³⁸ erg s⁻¹ (neutron-star frame)</dd>`;
+  document.getElementById("lcnote").innerHTML = `The observed curves are bolometric fluxes from time-resolved spectroscopy of averaged RXTE bursts; the model curves are luminosities at the neutron-star surface, not fitted to this source, with no redshift (Cyburt et al. use 10 km and 1.4 M☉ and leave out the transformation to a distant observer). Model time 0 is its peak, placed here at the highest observed bin (t = ${pk.t.toFixed(1)} s); the two axes are not converted into each other. For comparison, Galloway et al. fit a different KEPLER model to the 2000 Sep curve with 1 + z = ${D.gal.opz} and d = ${D.gal.d} kpc.`;
+}
+function drawAshes() {
+  const { x: ctx, w, h } = setupCanvas(document.getElementById("pab"));
+  const xlo = 0, xhi = 106, ylo = -6, yhi = 0;
+  const Xf = (A) => L0 + (A - xlo) / (xhi - xlo) * (w - L0 - 10), Yf = (v) => T0 + (yhi - v) / (yhi - ylo) * (h - T0 - B0);
+  axes(ctx, w, h, Xf, Yf, [0, 20, 40, 60, 80, 100].map((a) => [a, a]), [-6, -4, -2, 0].map((e) => [e, supE(e)]), "A", 10);
+  const w1 = Xf(1) - Xf(0), wp = WPK[S.wp];
+  for (const [nm, Z, N] of WPS) { ctx.fillStyle = nm === S.wp ? "rgba(242,193,78,0.22)" : "rgba(255,176,90,0.08)"; ctx.fillRect(Xf(Z + N - 0.5), T0, w1, h - T0 - B0); }
+  ctx.fillStyle = "rgba(160,168,186,0.75)";
+  D.ashes.A.forEach((A, i) => { const v = D.ashes.mz[i]; if (v == null) return; ctx.fillRect(Xf(A - 0.5), Yf(v), Math.max(1, w1 - 0.6), Yf(ylo) - Yf(v)); });
+  // the single-zone result as a step line
+  ctx.save(); ctx.beginPath(); ctx.rect(L0, T0, w - L0 - 10, h - T0 - B0); ctx.clip();
+  ctx.strokeStyle = "#ffffff"; ctx.lineWidth = 1.1; ctx.beginPath();
+  let pen = false;
+  D.ashes.A.forEach((A, i) => {
+    const v = D.ashes.sz[i];
+    if (v == null) { if (pen) { ctx.lineTo(Xf(A - 0.5), Yf(ylo)); pen = false; } return; }
+    if (!pen) { ctx.moveTo(Xf(A - 0.5), Yf(ylo)); pen = true; }
+    ctx.lineTo(Xf(A - 0.5), Yf(v)); ctx.lineTo(Xf(A + 0.5), Yf(v));
+  });
+  if (pen) ctx.lineTo(Xf(D.ashes.A[D.ashes.A.length - 1] + 0.5), Yf(ylo));
+  ctx.stroke(); ctx.restore();
+  ctx.fillStyle = "#f2c14e"; ctx.textAlign = "center"; ctx.font = "10px ui-monospace,Menlo,monospace";
+  ctx.fillText("A=" + (wp[1] + wp[2]), Xf(wp[1] + wp[2]), T0 + 9);
+  document.getElementById("legab").innerHTML = `<span><i class="b" style="background:rgba(160,168,186,.8)"></i>multi-zone (KEPLER), steady state</span><span><i style="border-color:#fff"></i>one-zone</span><span><i class="b" style="background:rgba(255,176,90,.35)"></i>waiting-point A</span>`;
+}
+function drawChain() {
+  const { x: ctx, w, h } = setupCanvas(document.getElementById("pch"));
+  const wp = WPK[S.wp], c = XRB.chain(wp[1], wp[2], S.T9, S.lrho, S.X, 5);
+  const z0 = wp[1] - 0.8, z1 = wp[1] + 4.8;
+  const Xf = (Z) => L0 + (Z - z0) / (z1 - z0) * (w - L0 - R0), Yf = (lg) => T0 + (0 - lg) / 12 * (h - T0 - B0);   // log10 share 0 .. -12
+  const Ys = (s) => T0 + (4 - s) / 7 * (h - T0 - B0);                                                                  // S_p from -3 to 4 MeV
+  axes(ctx, w, h, Xf, Yf, [], [0, -3, -6, -9, -12].map((e) => [e, supE(e)]), "", R0);
+  ctx.fillStyle = "#6fd3c1"; ctx.textAlign = "left";
+  for (const s of [-2, 0, 2, 4]) ctx.fillText(s, w - R0 + 5, Ys(s) + 3);
+  ctx.fillStyle = "#8a92a6"; ctx.textAlign = "center";
+  for (let Z = wp[1]; Z <= wp[1] + 4; Z++) ctx.fillText(`${Z + wp[2]}${ELEM[Z]}`, Xf(Z), h - 5);
+  // the S_p at which a step is even, -kT ln(n_p lambda^3 / 2)
+  const kT = NUCLEO.kT(S.T9), Seq = -kT * XRB.lnRatio(0, S.T9, S.lrho, S.X);              // spins aside
+  ctx.strokeStyle = "rgba(111,211,193,0.6)"; ctx.setLineDash([4, 3]); ctx.beginPath(); ctx.moveTo(L0, Ys(Seq)); ctx.lineTo(w - R0, Ys(Seq)); ctx.stroke();
+  ctx.strokeStyle = "rgba(111,211,193,0.25)"; ctx.beginPath(); ctx.moveTo(L0, Ys(0)); ctx.lineTo(w - R0, Ys(0)); ctx.stroke(); ctx.setLineDash([]);
+  const bw = (Xf(1) - Xf(0)) * 0.42;
+  c.Z.forEach((Z, i) => {
+    const lg = Math.log10(Math.max(1e-300, c.P[i]));
+    ctx.fillStyle = i === 0 ? "#ffb05a" : "#ff8a3c";
+    if (lg > -12) ctx.fillRect(Xf(Z) - bw / 2, Yf(lg), bw, Yf(-12) - Yf(lg));
+    if (c.Sp[i] != null) { ctx.beginPath(); ctx.arc(Xf(Z) + bw * 0.75, Ys(Math.max(-3, Math.min(4, c.Sp[i]))), 3, 0, 2 * Math.PI); if (c.est[i]) { ctx.strokeStyle = "#6fd3c1"; ctx.stroke(); } else { ctx.fillStyle = "#6fd3c1"; ctx.fill(); } }
+  });
+  document.getElementById("chname").innerHTML = `N = ${wp[2]}, from ${nucH(wp[1], wp[2])}`;
+  document.getElementById("legch").innerHTML = `<span><i class="b" style="background:#ff8a3c"></i>equilibrium share (log, left)</span><span><i class="p" style="background:#6fd3c1"></i>S<sub>p</sub> MeV, right (open: # mass)</span><span><i class="d" style="border-color:#6fd3c1"></i>S<sub>p</sub> = ${Seq.toFixed(2)} MeV: equal shares if spins are set aside</span>`;
+  return c;
+}
+
+// ---------- panels
+const sci = (v, n) => { if (!isFinite(v)) return "n/a"; if (v === 0) return "0"; const e = Math.floor(Math.log10(Math.abs(v))); if (e >= -2 && e <= 3) return v.toPrecision(n || 3); return `${(v / Math.pow(10, e)).toFixed((n || 3) - 1)}×10<sup>${e}</sup>`; };
+const lnSci = (ln) => { const l10 = ln / Math.LN10, e = Math.floor(l10); return Math.abs(l10) < 3 ? Math.exp(ln).toPrecision(3) : `${Math.pow(10, l10 - e).toFixed(2)}×10<sup>${e}</sup>`; };
+function fmtSp(s) { return s ? `${(1000 * s.S).toFixed(0)} keV${s.est ? " #" : ""}` : "n/a"; }
+function drawWP() {
+  const wp = WPK[S.wp], [nm, Z, N] = wp, c = drawChain();
+  const s1 = XRB.Sp(Z + 1, N), s2 = XRB.Sp(Z + 2, N), np = XRB.np(S.lrho, S.X);
+  const r1 = s1 ? XRB.lnRatio(s1.S, S.T9, S.lrho, S.X, XRB.gRatio(Z, N)) : null, r2 = s2 ? XRB.lnRatio(s2.S, S.T9, S.lrho, S.X, XRB.gRatio(Z + 1, N)) : null;
+  const jp = (z) => { const q = XRB.spin(z, N); return q ? `${q.txt || "none"}` : "not in NUBASE"; };
+  const mus = WPS.map(([, z, n]) => XRB.muFactor(z, n)).filter((v) => v != null), muLo = (1 - Math.max(...mus)) * 100, muHi = (1 - Math.min(...mus)) * 100;
+  const tauObs = OBS().Eb[0] / OBS().Fpk[0] * 1e3;
+  document.getElementById("t9o").textContent = `${S.T9.toFixed(2)} GK`;
+  document.getElementById("lrhoo").innerHTML = `10<sup>${S.lrho.toFixed(1)}</sup> g cm⁻³`;
+  document.getElementById("xho").textContent = S.X.toFixed(2);
+  document.getElementById("wpinfo").innerHTML = `
+    <dt>kT, n<sub>p</sub></dt><dd>${(NUCLEO.kT(S.T9) * 1000).toFixed(1)} keV, ${sci(np, 3)} cm⁻³</dd>
+    <dt>S<sub>p</sub>(${nucH(Z + 1, N)})</dt><dd>${fmtSp(s1)}</dd>
+    <dt>Y(${nucH(Z + 1, N)})/Y(${nucH(Z, N)})</dt><dd class="hi">${r1 != null ? lnSci(r1) : "n/a"}</dd>
+    <dt>S<sub>p</sub>(${nucH(Z + 2, N)})</dt><dd>${fmtSp(s2)}</dd>
+    <dt>Y(${nucH(Z + 2, N)})/Y(${nucH(Z + 1, N)})</dt><dd>${r2 != null ? lnSci(r2) : "n/a"}</dd>
+    <dt>J<sup>π</sup> (NUBASE)</dt><dd>${nucH(Z, N)} ${jp(Z)}, ${nucH(Z + 1, N)} ${jp(Z + 1)}, ${nucH(Z + 2, N)} ${jp(Z + 2)}</dd>
+    <dt>share kept by ${nucH(Z, N)}</dt><dd>${c.Z.length > 1 ? (100 * c.P[0]).toPrecision(3) + " %" : "n/a (no AME2020 mass above it)"}</dd>
+    <dt>T<sub>½</sub>(${nucH(Z, N)})</dt><dd>${D.hl[nm][1]} <span style="color:var(--muted)">(burst τ ≈ ${tauObs.toFixed(0)} s)</span></dd>`;
+  document.getElementById("wpnote").innerHTML = `Y(Z+1)/Y(Z) = n<sub>p</sub>(2πħ²/m<sub>u</sub>kT)<sup>3/2</sup> exp(S<sub>p</sub>/kT) (2J<sub>Z+1</sub>+1)/(2(2J<sub>Z</sub>+1)), n<sub>p</sub> = ρN<sub>A</sub>X<sub>H</sub>: ground-state spins only (NUBASE2020 J<sup>π</sup>; # and parentheses mark estimated and tentative values), no excited-state partition functions. With m<sub>u</sub> in place of the exact reduced mass each ratio comes out ${muLo.toFixed(2)} to ${muHi.toFixed(2)} % lower for the six waiting points (computed here from AME2020). A negative S<sub>p</sub> does not mean nothing is there: the equilibrium still holds a small share in the unbound isotone, and a second, bound proton can build up the Z + 2 share. Typical rp-process conditions per Meisel et al. 2018: ρ ≈ 10⁶ g cm⁻³, X(H) ≈ 0.7, T ≈ 1 GK. # marks an AME2020 estimate.`;
+  // scene: shares along the isotone
+  let k = 0;
+  c.Z.forEach((Zi, i) => { if (k >= 6) return; dummy.position.set(X(N), 0.05, Zc(Zi)); dummy.scale.set(1, Math.max(0.05, 4 * c.P[i]), 1); dummy.updateMatrix(); shareCols.setMatrixAt(k, dummy.matrix); shareCols.setColorAt(k, tmpC.setRGB(1.6, 0.75, 0.3).multiplyScalar(0.3 + 0.7 * Math.sqrt(c.P[i]))); k++; });
+  shareCols.count = k; shareCols.instanceMatrix.needsUpdate = true; if (shareCols.instanceColor) shareCols.instanceColor.needsUpdate = true;
+  selRing.position.set(X(N), 0.08, Zc(Z));
+  for (const b of document.querySelectorAll("#wpsel button")) b.setAttribute("aria-pressed", b.dataset.v === S.wp ? "true" : "false");
+  drawWPTable();
+}
+function drawWPTable() {
+  const tauObs = OBS().Eb[0] / OBS().Fpk[0] * 1e3;
+  let html = `<tr><th>nucleus</th><th>T<sub>½</sub></th><th>S<sub>p</sub>(Z+1)</th><th>S<sub>p</sub>(Z+2)</th><th>share</th><th>T<sub>½</sub>/τ</th></tr>`;
+  for (const [nm, Z, N] of WPS) {
+    const c = XRB.chain(Z, N, S.T9, S.lrho, S.X, 3);
+    html += `<tr class="click${nm === S.wp ? " on" : ""}" data-v="${nm}"><td>${nucH(Z, N)}</td><td>${D.hl[nm][1]}</td><td>${fmtSp(XRB.Sp(Z + 1, N))}</td><td>${fmtSp(XRB.Sp(Z + 2, N))}</td><td>${c.Z.length > 1 ? (100 * c.P[0]).toPrecision(3) + " %" : "n/a"}</td><td>${sci(D.hl[nm][0] / tauObs, 2)}</td></tr>`;
+  }
+  document.getElementById("wptab").innerHTML = html;
+  document.getElementById("wptabnote").innerHTML = `share: what the waiting point keeps of its isotone chain (itself, Z + 1, Z + 2; n/a where AME2020 has no mass for Z + 1, as for <sup>101</sup>Sb) at the chosen T<sub>9</sub>, ρ, X<sub>H</sub>. τ = E<sub>b</sub>/F<sub>pk</sub> of GS 1826−24 (${S.epoch}, ${tauObs.toFixed(1)} s). Half-lives are terrestrial: <sup>56</sup>Ni lives ${D.hl["56Ni"][1]} in the laboratory, yet in a burst S<sub>p</sub>(<sup>57</sup>Cu) = ${fmtSp(XRB.Sp(29, 28))} lets protons go past it. Schatz and Rehm (2006) give ${D.sr["68Se"]} for <sup>68</sup>Se and ${D.sr["72Kr"]} for <sup>72</sup>Kr, with their isotones <sup>69</sup>Br and <sup>73</sup>Rb particle-unbound.`;
+}
+function drawCNO() {
+  const eps = HC.coef * S.Zcno, pub = D.cyb.hcno * S.Zcno;
+  document.getElementById("zcnoo").textContent = S.Zcno.toFixed(3);
+  document.getElementById("cnoinfo").innerHTML = `
+    <dt>τ(<sup>14</sup>O), τ(<sup>15</sup>O)</dt><dd>${HC.tau14.toFixed(1)} s, ${HC.tau15.toFixed(1)} s</dd>
+    <dt>Q (4p → <sup>4</sup>He)</dt><dd>${HC.Q.toFixed(3)} MeV</dd>
+    <dt>⟨E<sub>ν</sub>⟩</dt><dd><sup>14</sup>O ${HC.e14.toFixed(3)}, <sup>15</sup>O ${HC.e15.toFixed(3)} MeV</dd>
+    <dt>heat per cycle</dt><dd>${HC.E.toFixed(3)} MeV</dd>
+    <dt>ε</dt><dd class="hi">${sci(eps, 3)} erg g⁻¹ s⁻¹</dd>
+    <dt>published</dt><dd>${(D.cyb.hcno / 1e15).toFixed(1)} × 10¹⁵ Z<sub>CNO</sub> = ${sci(pub, 2)} (ratio ${(eps / pub).toFixed(3)})</dd>`;
+  document.getElementById("cnonote").innerHTML = `ε = (Z<sub>CNO</sub>/Ā) N<sub>A</sub> (Q − ⟨E<sub>ν</sub>⟩₁₄ − ⟨E<sub>ν</sub>⟩₁₅)/(τ₁₄ + τ₁₅), Ā = ${HC.Abar.toFixed(2)}: while the cycle is β-limited (hot enough that every capture is faster than the two β⁺ decays, and below the breakout by α capture) each catalyst nucleus waits on the β⁺ decays alone, so ε does not depend on temperature or density there. Hydrogen then burns out at the base in X<sub>0</sub>Ā(τ₁₄ + τ₁₅)/(4Z<sub>CNO</sub>) = ${(D.gal.X0 * HC.Abar * (HC.tau14 + HC.tau15) / (4 * S.Zcno) / 3600).toFixed(2)} h at X<sub>0</sub> = ${D.gal.X0} (hydrogen mass taken as 1 u), against Galloway et al.'s Eq. (1), ${(D.gal.tCNO * 0.02 / S.Zcno).toFixed(2)} h. Default Z<sub>CNO</sub> = ${D.gal.Zcno}, the value Galloway et al. 2017 adopt for GS 1826−24. The published coefficient is quoted by Cyburt et al. 2016 from Strohmayer and Bildsten (2006). ⟨E<sub>ν</sub>⟩ from allowed spectra with F₀L₀; ¹⁴O's superallowed branch (${(100 * HC.br14).toFixed(2)} % = T<sub>½</sub>/t from Hardy and Towner 2020) is used for all its decays. ${(eps / pub - 1) * 100 > 0 ? "+" : ""}${((eps / pub - 1) * 100).toFixed(1)} % against the published number. The CNO cycle in the Sun, where the captures are the slow steps, is on the <a class="home" href="hburning.html#cno">hydrogen-burning page</a>.`;
+}
+function rname(r) { const [Za, Aa, a, b, Zb, Ab] = r, g = { a: "α", p: "p", g: "γ" }; return `${sup(Aa)}${ELEM[Za]}(${g[a]},${g[b]})${sup(Ab)}${ELEM[Zb]}`; }
+function drawSens() {
+  const T = D.tab[S.tab];
+  let html;
+  if (S.tab === "mzAB") {
+    html = `<tr><th>#</th><th>reaction</th><th>max ratio</th><th>A (max)</th><th>×10 at A</th></tr>` +
+      T.map((r, i) => `<tr class="click${S.hl === S.tab + i ? " on" : ""}" data-i="${i}"><td>${r[0]}</td><td>${rname(r[1])}</td><td>${r[2]}</td><td>${r[3]}</td><td>${r[4] || "<small>none</small>"}</td></tr>`).join("");
+  } else {
+    html = `<tr><th>rank</th><th>reaction</th><th>up/down</th><th>M<sub>LC</sub></th><th>cat.</th></tr>` +
+      T.map((r, i) => `<tr class="click${S.hl === S.tab + i ? " on" : ""}" data-i="${i}"><td>${r[0]}</td><td>${rname(r[1])}</td><td>${r[2] === "U" ? "up" : "down"}</td><td>${r[3]}</td><td>${r[4]}</td></tr>`).join("");
+  }
+  document.getElementById("senstab").innerHTML = html;
+  for (const b of document.querySelectorAll("#tabsel button")) b.setAttribute("aria-pressed", b.dataset.v === S.tab ? "true" : "false");
+  document.getElementById("sensnote").innerHTML = S.tab === "mzAB"
+    ? `Cyburt et al. 2016, multi-zone: each rate varied up and down (mostly by 100, less where known better); max ratio is the largest change of a mass chain with mass fraction above 10⁻⁴ between the two variations. Click a row to find the reaction on the chart.`
+    : `Cyburt et al. 2016: each rate (with its inverse) varied by a factor ${S.tab === "szLC" ? "100" : "of up to 100"}; M<sub>LC</sub> = ∫\|L<sub>i</sub> − L<sub>0</sub>\|dt in their printed unit (${S.tab === "szLC" ? "10¹⁷ erg g⁻¹ s⁻¹" : "10³⁸ erg s⁻¹"}, see the flags); category 1: would change how observations are read, 2: observable with averaged curves, 3: insignificant. ${S.tab === "mzLC" ? "The rows are in their order of significance, which is not the order of M<sub>LC</sub>: they say M<sub>LC</sub> is not always a reliable ranking." : ""} (p,α) reactions are listed as their inverse (α,p). Click a row to find the reaction on the chart.`;
+}
+function drawStamp() {
+  const L = Lmodel(S.tb), zf = zFront(S.tb);
+  const ph = S.tb < -8 ? "hot CNO between bursts" : S.tb < 0 ? "ignition: breakout and the αp process" : S.tb < 40 ? "the rp process climbs" : "the tail: waiting points decay";   // phase boundaries drawn
+  document.getElementById("stamp").innerHTML = `<b>${ph}</b><small>burst time ${S.tb.toFixed(0)} s (model time of Cyburt et al., peak at 0) · L = ${(L * LPEAK_MZ).toFixed(2)} × 10³⁸ erg s⁻¹ · flow front at Z ≈ ${Math.round(zf)}; phases and front drawn</small>`;
+  document.getElementById("tbo").textContent = `${S.tb.toFixed(1)} s`;
+}
+// integral of the read multi-zone curve (10^39 erg), trapezoid on its grid
+const LC_END = () => {                                   // last point of the read band, and the e-folding time over its last 20 s
+  const t = D.lc.t, m = (i) => 0.5 * (D.lc.mzHi[i] + D.lc.mzLo[i]); let j = t.length - 1; while (D.lc.mzHi[j] == null) j--;
+  let i = j; while (t[j] - t[i] < 20) i--; return { t: t[j], L: m(j), ef: (t[j] - t[i]) / Math.log(m(i) / m(j)) };
+};
+const E_READ = () => { const t = D.lc.t, m = (i) => (D.lc.mzHi[i] != null ? 0.5 * (D.lc.mzHi[i] + D.lc.mzLo[i]) : 0); let e = 0; for (let i = 1; i < t.length; i++) e += 0.5 * (m(i) + m(i - 1)) * (t[i] - t[i - 1]); return e / 10; };
+function drawModel() {
+  const nf = (k) => P[k].segs.length;
+  document.getElementById("pathnote").innerHTML = `Time-integrated net flows of the ${S.model === "mz" ? "KEPLER multi-zone model, a weighted average over all zones" : "ONEZONE single-zone model"} (${nf(S.model)} steps), read from the vector figure: thick and thin as the figure draws them (the caption does not say what the two weights mean). ${S.sens === "none" ? "" : `Red: reactions whose variation significantly changes the ${S.sens === "lc" ? "light curve" : "ashes"}${S.model === "mz" ? "; blue: varied in the multi-zone model without a significant change" : ""}.`} The figure draws no arrows; here every step points to higher A (decays to the lighter isobar of AME2020), except <sup>15</sup>N(p,α)<sup>12</sup>C and <sup>18</sup>F(p,α)<sup>15</sup>O, which close the CNO cycles; so cycles higher up (NiCu, ZnGa) are drawn but the sparks do not run round them. Colours: (p,γ) amber, β⁺ teal, (α,p), (α,γ), (p,α) pink. Their caption warns that proton-capture flows carry large uncertainties, being differences of large capture and photodisintegration flows.`;
+  document.getElementById("model").innerHTML = `
+    <span><b>The path and the ashes</b>: Cyburt, Amthor, Heger, Johnson, Keek, Meisel, Schatz, Smith, ApJ 830, 55 (2016), arXiv:1607.03416. KEPLER multi-zone model (solar accreted composition X = ${D.cyb.acc[0]}, Y = ${D.cyb.acc[1]}, <sup>14</sup>N ${D.cyb.acc[2]}, ${D.cyb.mdot.toExponential(2)} M☉/yr, about 10 % of Eddington; peak temperature ${D.cyb.Tpeak} GK in the hottest zone) and ONEZONE (ignition at ${D.cyb.Tign} GK, ${D.cyb.Pign.toExponential(2)} erg cm⁻³, X = ${D.cyb.XYign[0]}, Y = ${D.cyb.XYign[1]}). Read from the vector drawings of their figures in the arXiv source: the reaction-flow charts (cells 80 units, flows between cell centres), the ash histograms and the light curves (calibrated on the axis ticks). Their sensitivity tables are parsed from the LaTeX. Their <sup>12</sup>C mass fraction in the ashes: ${D.cyb.c12 * 100} %.</span>
+    <span><b>The endpoint</b>: Schatz et al., PRL 86, 3471 (2001), arXiv:astro-ph/0102418, a one-zone burst reaching ${D.schatz.Tpeak} GK at ignition density ${D.schatz.rho.toExponential(1)} g cm⁻³ (hotter than Cyburt's): the flow reaches Sn about ${D.schatz.snAfter} s after the peak, <sup>105</sup>Sn(p,γ)<sup>106</sup>Sb(p,γ)<sup>107</sup>Te(γ,α)<sup>103</sup>Sn closes the main SnSbTe cycle and <sup>106</sup>Sn(p,γ)<sup>107</sup>Sb(p,γ)<sup>108</sup>Te(γ,α)<sup>104</sup>Sn a weaker one (both as named in their text; the way back from <sup>103</sup>Sn to <sup>105</sup>Sn, along the Sn isotopes, is drawn dashed); the ashes lack nuclei heavier than A = 107; <sup>104</sup>Sn, ${D.schatz.hl104}, is the longest-lived nucleus in the cycle.</span>
+    <span><b>Observations</b>: Galloway, Goodwin, Keek, PASA 34, e019 (2017), arXiv:1703.07485, Tables 1 and 2, and the averaged light curves of their MINBAR reference library (burst.sci.monash.edu/reference).</span>
+    <span><b>Waiting points, equilibrium</b>: Meisel, Deibel, Keek, Shternin, Elfritz, J. Phys. G 45, 093001 (2018), arXiv:1807.01150; Schatz and Rehm, Nucl. Phys. A 777, 601 (2006), arXiv:astro-ph/0607624. The Saha form and its code: Arnould, Goriely, Takahashi, Phys. Rep. 450, 97 (2007), Eq. (24) (as on the <a class="home" href="nucleosynthesis.html">r-process page</a>).</span>
+    <span><b>Masses</b>: AME2020, Wang et al., Chin. Phys. C 45, 030003 (2021). <b>Half-lives</b>: NUBASE2020, Kondev et al., Chin. Phys. C 45, 030001 (2021). <b>¹⁴O</b>: Hardy and Towner, PRC 102, 045501 (2020), Q<sub>EC</sub> of the superallowed branch and its partial half-life. β spectra: assets/betadecay.js (F₀L₀ as written by Hayen et al. 2018).</span>
+    <span><b>Checked</b> (tests/check_xrayburst.py, tests/check_xrayburst.js): S<sub>p</sub> against AME's own printed column, the equilibrium against an independent statistical-mechanics evaluation, the CNO closed form and its ⟨E<sub>ν</sub>⟩ against an mpmath integration and Bahcall's printed ¹⁵O value, the figures re-read with a second renderer, the transcribed numbers re-read from the sources.</span>`;
+  const sz = D.path.sz.flow.filter((f) => KIND(f[2] - f[0], f[3] - f[1]) === "other");
+  document.getElementById("flags").innerHTML = `
+    <span><b>Cyburt et al. 2016, M<sub>LC</sub> unit.</b> Their Eq. (3) defines M<sub>LC</sub> = ∫\|⟨L<sub>i</sub>(t)⟩ − ⟨L<sub>0</sub>(t)⟩\|dt, an energy, but the tables print it in 10¹⁷ ergs/g/s (one-zone) and 10³⁸ ergs/s (multi-zone), units of a rate. Shown as printed.</span>
+    <span><b>Cyburt et al. 2016, flow chart.</b> The one-zone chart has ${sz.length} segment${sz.length === 1 ? "" : "s"} that is not a single reaction step (${sz.map((f) => `${nucH(f[1], f[0])} to ${nucH(f[3], f[2])}`).join(", ")}); the caption does not explain it, and it is not drawn here.</span>
+    <span><b>Cyburt et al. 2016, light-curve energy (unresolved).</b> Their text gives E<sub>tot</sub> = (${(D.cyb.Etot[0] / 1e39).toFixed(1)} ± ${(D.cyb.Etot[1] / 1e39).toFixed(1)}) × 10³⁹ erg and τ = E<sub>tot</sub>/L<sub>peak</sub> = ${D.cyb.tau[0]} ± ${D.cyb.tau[1]} s, which agree with each other (${(D.cyb.Etot[0] / D.cyb.Lpeak[0]).toFixed(0)} s). The multi-zone curve of their figure, as read here, integrates to ${E_READ().toFixed(2)} × 10³⁹ erg (E/L<sub>peak</sub> ≈ ${(E_READ() * 10 / LPEAK_MZ).toFixed(1)} s), while its peak, 10 to 90 % rise time and 10 %-to-10 % duration agree with their text (tests/check_xrayburst.py). The plotted curve stops at t = ${LC_END().t.toFixed(0)} s with L = ${LC_END().L.toFixed(3)} × 10³⁸ erg s⁻¹ still on; continuing it at its last e-folding time (${LC_END().ef.toFixed(0)} s) adds only ${(LC_END().L * LC_END().ef / 10).toFixed(2)} × 10³⁹ erg. They do not state over what time E<sub>tot</sub> is taken. Shown as drawn; the difference is not explained here, which does not make either number wrong.</span>
+    <span><b>Cyburt et al. 2016, one-zone ashes.</b> The text lists A = 76 among the one-zone mass chains above 10⁻²; their figure shows ${(100 * Math.pow(10, D.ashes.sz[D.ashes.A.indexOf(76)])).toFixed(2)} %.</span>
+    <span><b>Galloway et al. 2017, 1998 June.</b> Their Sec. 3.1 (selecting burst sequences) says the GS 1826−24 sample was augmented with optical bursts observed during the 1998 June RXTE observations; Sec. 3.2 (bolometric corrections) says bursts from the 1998 June observations were avoided in the data selection, because the persistent flux there may misestimate the accretion rate. Table 2 and the reference library still list a 1998 Jun profile (one RXTE burst, α = ${D.obs[0].alpha[0]}). How the two passages fit together is not said; shown, flagged.</span>
+    <span><b>Galloway et al. 2017, 2007 March.</b> The data file gs1826-24_3.530h.dat states "Average recurrence time is ${D.obs[2].hdrDtStr[0]} +/- ${D.obs[2].hdrDtStr[1]} hr" while Table 2 (and the file name) give ${D.obs[2].dtStr[0]} ± ${D.obs[2].dtStr[1]} h. The page uses Table 2; probably transposed digits in the header (not verified).</span>`;
+}
+
+// ---------- hover and click on the chart
+const ray = new THREE.Raycaster(), mouse = new THREE.Vector2(), plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0), hit = new THREE.Vector3();
+const tip = document.getElementById("tip");
+function cellAt(e) {
+  mouse.set(e.clientX / innerWidth * 2 - 1, -e.clientY / innerHeight * 2 + 1);
+  ray.setFromCamera(mouse, camera);
+  if (ray.intersectObject(star, false).length) return { star: true };
+  if (!ray.ray.intersectPlane(plane, hit)) return null;
+  return { Z: Math.round(Z0 - hit.z), N: Math.round(hit.x + N0) };
+}
+function tipText(c) {
+  if (c.star) return `<b>accreting neutron star</b><br>its glow follows the multi-zone model light curve (Cyburt et al. 2016); the flame spreading from one point is drawn`;
+  const { Z, N } = c;
+  if (!(Z >= 1 && Z <= ZMAX && N >= 0 && N <= NMAX) || !ELEM[Z]) return null;
+  const r = ROW.get(Z * 1000 + N), sp = XRB.Sp(Z, N), s2 = XRB.S2p(Z, N), M = P[S.model];
+  let s = `<b>${nucH(Z, N)}</b> Z = ${Z}, N = ${N}<br>`;
+  s += r ? `T<sub>½</sub> ${isStable(r) ? "stable" : r[3] == null ? "unknown" : fmtT(r[3])}${r[7] ? ", J<sup>π</sup> " + r[7] : ""}<br>` : "not in NUBASE2020<br>";
+  if (sp) s += `S<sub>p</sub> ${(1000 * sp.S).toFixed(0)} keV${sp.est ? " (# estimate)" : ""}${sp.S < 0 ? ", proton-unbound" : ""}<br>`;
+  if (s2) s += `S<sub>2p</sub> ${(1000 * s2.S).toFixed(0)} keV${s2.est ? " (#)" : ""}<br>`;
+  const outs = (M.graph.get(Z * 1000 + N) || []).map((k) => KLAB[M.segs[k].kind]);
+  const ins = M.segs.filter((sg) => sg.Zb === Z && sg.Nb === N).length;
+  if (outs.length || ins) s += `on the ${S.model === "mz" ? "multi-zone" : "one-zone"} path: ${ins} in, out by ${outs.join(", ") || "nothing"}`;
+  return s;
+}
+function fmtT(logT) {
+  const t = Math.pow(10, logT);
+  if (t < 1e-6) return (t * 1e9).toPrecision(3) + " ns";
+  if (t < 1e-3) return (t * 1e6).toPrecision(3) + " μs";
+  if (t < 1) return (t * 1e3).toPrecision(3) + " ms";
+  if (t < 120) return t.toPrecision(3) + " s";
+  if (t < 7200) return (t / 60).toPrecision(3) + " min";
+  if (t < 172800) return (t / 3600).toPrecision(3) + " h";
+  if (t < 3.15e7 * 2) return (t / 86400).toPrecision(3) + " d";
+  return (t / 3.156e7).toPrecision(3) + " y";
+}
+let downAt = null;
+renderer.domElement.addEventListener("pointerdown", (e) => { downAt = [e.clientX, e.clientY]; });
+renderer.domElement.addEventListener("pointerup", (e) => {
+  if (!downAt || Math.hypot(e.clientX - downAt[0], e.clientY - downAt[1]) > 4) return;
+  const c = cellAt(e); if (!c || c.star) return;
+  const w = WPS.find((x) => x[1] === c.Z && x[2] === c.N);
+  if (w) setWP(w[0]);
+});
+renderer.domElement.addEventListener("pointermove", (e) => {
+  if (e.buttons) { tip.style.display = "none"; return; }
+  const c = cellAt(e), t = c && tipText(c);
+  if (!t) { tip.style.display = "none"; return; }
+  tip.innerHTML = t; tip.style.display = "block"; tip.style.left = e.clientX + "px"; tip.style.top = e.clientY + "px";
+});
+renderer.domElement.addEventListener("pointerleave", () => { tip.style.display = "none"; });
+
+// ---------- state, hash
+// #path, #cno, #ap, #rp, #end (views) or #64Ge@1.2[/6.0/0.70] (waiting point, T9, log rho, X_H); suffixes ~mz/~sz, ~lc/~ab
+function setHash() {
+  const base = S.view === "wp" ? `${S.wp}@${S.T9.toFixed(2)}/${S.lrho.toFixed(1)}/${S.X.toFixed(2)}` : S.view;
+  const h = `#${base}${S.model === "sz" ? "~sz" : ""}${S.sens !== "none" ? "~" + S.sens : ""}`;
+  if (location.hash !== h) history.replaceState(null, "", h);
+}
+function parseHash() {
+  let s;
+  try { s = decodeURIComponent(location.hash.slice(1)); } catch (e) { return false; }
+  const parts = s.split("~"), head = parts[0], out = { model: "mz", sens: "none" };
+  for (const p of parts.slice(1)) { if (p === "sz" || p === "mz") out.model = p; else if (p === "lc" || p === "ab") out.sens = p; else return false; }
+  if (VIEWS[head]) out.view = head;
+  else {
+    const m = head.match(/^(\d+[A-Z][a-z]?)(?:@([0-9.]+)(?:\/([0-9.]+)(?:\/([0-9.]+))?)?)?$/);
+    if (!m || !WPK[m[1]]) return false;
+    out.view = "wp"; out.wp = m[1];
+    const num = (v, lo, hi) => { const x = parseFloat(v); return v != null && /^\d*\.?\d+$/.test(v) && isFinite(x) && x >= lo && x <= hi ? x : null; };
+    const t = num(m[2], 0.2, 2.5), r = num(m[3], 4, 7.5), x = num(m[4], 0.01, 0.75);
+    if (m[2] != null && t == null) return false;
+    if (t != null) out.T9 = t; if (r != null) out.lrho = r; if (x != null) out.X = x;
+  }
+  Object.assign(S, out);
+  return true;
+}
+function syncUI() {
+  const press = (id, v) => { for (const b of document.querySelectorAll(`#${id} button`)) b.setAttribute("aria-pressed", b.dataset.v === String(v) ? "true" : "false"); };
+  press("viewsel", S.view); press("modelsel", S.model); press("senssel", S.sens); press("qmode", quality); press("lcmsel", S.lcm); press("epsel", S.epoch);
+  document.getElementById("t9").value = S.T9; document.getElementById("lrho").value = S.lrho; document.getElementById("xh").value = S.X;
+  document.getElementById("zcno").value = S.Zcno; document.getElementById("tb").value = S.tb;
+  document.getElementById("play").textContent = S.play ? "pause" : "play";
+}
+function setView(v, jump) { S.view = v; aimCamera(v, jump); syncUI(); setHash(); }
+function setWP(nm) { S.wp = nm; S.view = "wp"; aimCamera("wp"); drawWP(); drawAshes(); syncUI(); setHash(); }
+document.getElementById("wpsel").innerHTML = WPS.map(([nm, Z, N]) => `<button data-v="${nm}">${nucH(Z, N)}</button>`).join("");
+document.getElementById("epsel").innerHTML = D.obs.map((o) => `<button data-v="${o.epoch}">${o.epoch}</button>`).join("");
+function seg(id, fn) { document.getElementById(id).addEventListener("click", (e) => { const b = e.target.closest("button"); if (!b) return; fn(b.dataset.v); syncUI(); }); }
+seg("viewsel", (v) => setView(v));
+seg("modelsel", (v) => { S.model = v; paintPath(); drawModel(); setHash(); for (const s of spark.st) respawn(s); });
+seg("senssel", (v) => { S.sens = v; paintPath(); drawModel(); setHash(); });
+seg("wpsel", (v) => setWP(v));
+seg("qmode", (v) => { quality = v; applyQuality(); });
+seg("lcmsel", (v) => { S.lcm = v; drawLC(); });
+seg("epsel", (v) => { S.epoch = v; drawLC(); drawWP(); });
+seg("tabsel", (v) => { S.tab = v; S.hl = null; hlMesh.visible = false; drawSens(); });
+document.getElementById("wptab").addEventListener("click", (e) => { const r = e.target.closest("tr[data-v]"); if (r) setWP(r.dataset.v); });
+document.getElementById("senstab").addEventListener("click", (e) => {
+  const r = e.target.closest("tr[data-i]"); if (!r) return;
+  const i = +r.dataset.i, [Za, Aa, , , Zb, Ab] = D.tab[S.tab][i][1];
+  S.hl = S.tab + i;
+  hlMesh.setMatrixAt(0, segMatrix(tmpA.set(X(Aa - Za), Y0P + 0.12, Zc(Za)), tmpB.set(X(Ab - Zb), Y0P + 0.12, Zc(Zb)), 0.24)); hlMesh.instanceMatrix.needsUpdate = true; hlMesh.visible = true;
+  const mid = { N: (Aa - Za + Ab - Zb) / 2, Z: (Za + Zb) / 2, d: 26, dir: [0.4, 0.75, 0.53] };
+  const t = new THREE.Vector3(X(mid.N), 0, Zc(mid.Z)); camGoal.t.copy(t); camGoal.p.copy(t).addScaledVector(new THREE.Vector3(...mid.dir).normalize(), mid.d); camGoal.k = 1;
+  drawSens();
+});
+let pend = false;
+function onWP() { if (pend) return; pend = true; requestAnimationFrame(() => { pend = false; drawWP(); setHash(); }); }
+document.getElementById("t9").addEventListener("input", (e) => { S.T9 = +e.target.value; if (S.view !== "wp") { S.view = "wp"; aimCamera("wp"); syncUI(); } onWP(); });
+document.getElementById("lrho").addEventListener("input", (e) => { S.lrho = +e.target.value; onWP(); });
+document.getElementById("xh").addEventListener("input", (e) => { S.X = +e.target.value; onWP(); });
+document.getElementById("zcno").addEventListener("input", (e) => { S.Zcno = +e.target.value; drawCNO(); });
+document.getElementById("tb").addEventListener("input", (e) => { const t0 = S.tb; S.tb = +e.target.value; advanceSparks(t0, S.tb); S.play = false; syncUI(); paintPath(); drawStamp(); drawLC(); });
+document.getElementById("play").addEventListener("click", () => { S.play = !S.play; syncUI(); });
+document.getElementById("sceneOnly").addEventListener("click", () => {
+  const hidden = document.body.classList.toggle("scene-only"), b = document.getElementById("sceneOnly");
+  b.setAttribute("aria-pressed", String(hidden)); b.textContent = hidden ? "show panels · H" : "hide panels · H";
+  applyOffset(); camera.updateProjectionMatrix();
+});
+addEventListener("keydown", (e) => { if (e.code === "KeyH" && !e.repeat && !e.ctrlKey && !e.metaKey && !e.altKey && !e.target.closest("input,textarea")) document.getElementById("sceneOnly").click(); });
+addEventListener("hashchange", () => { if (!parseHash()) return; aimCamera(S.view); paintPath(); drawModel(); drawWP(); drawAshes(); syncUI(); });
+addEventListener("resize", () => {
+  camera.aspect = innerWidth / innerHeight; applyOffset(); camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight); composer.setSize(innerWidth, innerHeight);
+  drawLC(); drawAshes(); drawChain();
+});
+let quality = narrow ? "low" : "high";
+function applyQuality() {
+  const hi = quality === "high", g = hi ? GROUND_PRE_ACES : GROUND;
+  scene.background.copy(g); scene.fog.color.copy(g); renderer.setClearColor(g);
+  tiles.material = hi ? tileGlass : tileFast;
+  document.getElementById("vnote").innerHTML = (hi ? "Glass tiles, bloom. " : "Opaque tiles, no bloom. ") +
+    "Floor: one cell per nuclide of NUBASE2020 up to Z = " + ZMAX + ", N to the right, Z away from you; lit tiles are stable, red ones proton-unbound in AME2020 (narrow where the mass is an estimate). Dashed violet: the proton drip line of AME2020. Lines: the drawn reaction path, lighting up as the flow front passes; sparks are matter moving along it and dwelling at the waiting points (orange columns, height the log of the half-life). Small orange columns at the chosen waiting point: the equilibrium shares along its isotone. Violet arcs: the SnSbTe cycle as Schatz et al. name it. The star's glow follows the published multi-zone light curve; the flame spreading over it, the disc and all speeds are presentation; the star is not to scale with the chart.";
+  syncUI();
+}
+
+// ---------- start
+const hashOK = parseHash();
+applyOffset();
+aimCamera(S.view, true);
+applyQuality();
+paintPath(); drawModel(); drawWP(); drawCNO(); drawLC(); drawAshes(); drawSens(); drawStamp();
+setHash();
+
+// ---------- loop
+let last = performance.now(), tsec = 0, lastLC = 0;
+function animate(now) {
+  requestAnimationFrame(animate);
+  const dt = Math.min(0.1, Math.max(0, (now - last) / 1000)); last = now; tsec += dt;
+  if (S.play && !reduce) {
+    const prev = S.tb;
+    S.tb += dt * (TB1 - TB0) / LOOP;
+    if (S.tb > TB1) { S.tb = TB0; for (const s of spark.st) respawn(s); }
+    if (Math.floor(prev) !== Math.floor(S.tb)) { paintPath(); drawStamp(); document.getElementById("tb").value = S.tb; }
+    if (tsec - lastLC > 0.25) { lastLC = tsec; drawLC(); }
+  }
+  stepSparks(reduce ? 0 : dt);
+  // the star: glow from the model light curve; the burning front spreads during the rise (drawn)
+  const L = Lmodel(S.tb);
+  starU.uL.value = Math.max(0.02, L); starU.uTime.value = tsec;
+  starU.uTheta.value = Math.PI * Math.min(1, Math.max(0, (S.tb + 8) / 7));
+  starLight.intensity = 25 * L; halo.material.opacity = 0.08 + 0.55 * L;
+  disc.rotation.y += dt * 0.05;
+  disc.material.uniforms.uPix.value = spark.m.uniforms.uPix.value = renderer.domElement.height / (2 * Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2));
+  if (hlMesh.visible) hlMesh.material.opacity = 0.55 + 0.45 * Math.sin(tsec * 5);
+  selRing.material.color.setRGB(2.2, 1.6, 0.6).multiplyScalar(0.7 + 0.3 * Math.sin(tsec * 3));
+  if (camGoal.k) {
+    const f = Math.min(1, dt * 3.2);
+    controls.target.lerp(camGoal.t, f); camera.position.lerp(camGoal.p, f);
+    if (camera.position.distanceTo(camGoal.p) < 0.05) camGoal.k = 0;
+  }
+  controls.update();
+  const d = camera.position.distanceTo(controls.target);
+  scene.fog.near = d * 1.6; scene.fog.far = d * 4.5;
+  if (quality === "high") composer.render(); else renderer.render(scene, camera);
+  drawLabs();
+}
+renderer.domElement.addEventListener("wheel", () => { camGoal.k = 0; }, { passive: true });
+renderer.domElement.addEventListener("pointerdown", () => { camGoal.k = 0; });
+requestAnimationFrame(animate);
+</script>
+<script src="assets/glass.js"></script>
+</body>
+</html>

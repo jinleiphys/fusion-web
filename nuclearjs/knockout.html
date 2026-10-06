@@ -1,0 +1,651 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>One-nucleon knockout · nuclearjs</title>
+<link rel="stylesheet" href="assets/glass.css">
+<style>
+body{margin:0}
+:root{
+  color-scheme:dark;
+  --ground:#0b0d12; --line:#262c3a;
+  --ink:#e6e8ee; --muted:#8a92a6; --accent:#f2c14e;
+  --neu:#a8cdf2; --pro:#ff9656;
+  --sans:"Avenir Next","Futura","Helvetica Neue","PingFang SC","Noto Sans SC",system-ui,sans-serif;
+  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+}
+html,body{height:100%}
+body{background:var(--ground);color:var(--ink);font-family:var(--sans);overflow:hidden}
+#stage{position:fixed;inset:0}
+#stage canvas{display:block;touch-action:none}
+.panel{position:fixed;border-radius:18px;padding:16px 18px;display:flex;flex-direction:column;gap:12px;overflow:auto;box-sizing:border-box;z-index:2}
+.panel>*{flex-shrink:0}
+#ctl{left:16px;top:calc(16px + env(safe-area-inset-top,0px));width:min(320px,calc(100% - 32px));max-height:calc(100% - 32px)}
+#side{right:16px;top:calc(16px + env(safe-area-inset-top,0px));width:390px;max-height:calc(100% - 32px);gap:10px}
+h1{margin:0;font-size:22px;font-weight:600;letter-spacing:.01em}
+.sub{margin:2px 0 0;color:var(--muted);font-size:13px;line-height:1.45}
+.sub sup,.src sup,.sub sub,.kv sup,.kv sub{font-size:.7em}
+.grp{display:flex;flex-direction:column;gap:6px}
+.lab{font-size:11px;text-transform:uppercase;letter-spacing:.12em;color:var(--muted)}
+.seg{display:flex;border:1px solid var(--line);border-radius:4px;overflow:hidden}
+.seg button{flex:1;background:none;border:0;color:var(--muted);font:500 12px var(--mono);padding:6px 4px;cursor:pointer;min-width:0}
+.seg button+button{border-left:1px solid var(--line)}
+.seg button[aria-pressed="true"]{background:#1f2533;color:var(--ink)}
+button:focus-visible,input:focus-visible,summary:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chips button{background:#161a24;border:1px solid var(--line);border-radius:4px;color:var(--ink);font:12px var(--mono);padding:5px 7px;cursor:pointer}
+.chips button:hover{border-color:var(--muted)}
+.chips button[aria-pressed="true"]{border-color:var(--accent);color:var(--accent)}
+.chips button sup{font-size:.72em}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:3px 10px;font:12px var(--mono);font-variant-numeric:tabular-nums}
+.kv dt{color:var(--muted)}.kv dd{margin:0}
+.kv dd.hi{color:var(--accent)}
+.row{display:flex;gap:8px;align-items:center;font:12px var(--mono);color:var(--muted)}
+.row input[type=range]{flex:1;accent-color:var(--accent);min-width:0}
+.row output{min-width:64px;text-align:right;color:var(--ink);font-variant-numeric:tabular-nums}
+.play{background:#161a24;border:1px solid var(--line);border-radius:4px;color:var(--ink);font:12px var(--mono);padding:4px 8px;cursor:pointer;min-width:58px}
+details summary{cursor:pointer;font-size:11px;text-transform:uppercase;letter-spacing:.12em;color:var(--muted);list-style:none}
+details summary::before{content:"▸ ";}
+details[open] summary::before{content:"▾ ";}
+details .grp{margin-top:8px}
+.home{font:12px var(--mono);color:var(--muted);text-decoration:none}.home:hover{color:var(--ink)}
+.src{font-size:11px;color:var(--muted);line-height:1.45}
+.src a{color:var(--muted)}
+.warn{font-size:12px;color:var(--accent);line-height:1.4;margin:0}
+.plot{width:100%;height:210px;display:block}
+.cap{display:flex;flex-wrap:wrap;gap:2px 8px;justify-content:space-between;align-items:baseline;font:11px var(--mono);color:var(--muted)}
+.cap b{font:600 13px var(--sans);color:var(--ink)}
+.leg{display:flex;flex-wrap:wrap;gap:4px 12px;font:11px var(--mono);color:var(--muted)}
+.leg i{display:inline-block;width:14px;height:0;border-top:2px solid;vertical-align:middle;margin-right:4px}
+.leg i.dot{width:7px;height:7px;border:0;border-radius:50%;vertical-align:middle}
+.leg i.sq{width:7px;height:7px;border:0;vertical-align:middle}
+.leg button{background:none;border:0;padding:0;font:inherit;color:inherit;cursor:pointer}
+.leg button[aria-pressed="false"]{opacity:.38}
+table.rad{width:100%;border-collapse:collapse;font:11px var(--mono);font-variant-numeric:tabular-nums}
+table.rad th{color:var(--muted);font-weight:500;text-align:right;padding:2px 3px;border-bottom:1px solid var(--line)}
+table.rad td{text-align:right;padding:3px 3px;border-bottom:1px solid #191e2a}
+table.rad th:first-child,table.rad td:first-child{text-align:left}
+table.rad tr.on td{color:var(--accent)}
+table.rad tr[data-id]{cursor:pointer}
+table.rad sup,table.rad sub{font-size:.72em}
+.axlab{position:fixed;font:500 11px var(--mono);pointer-events:none;transform:translate(-50%,-50%);white-space:nowrap;text-shadow:0 0 4px #000;z-index:1}
+#stamp{position:fixed;left:50%;bottom:calc(26px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);text-align:center;pointer-events:none}
+#stamp b{display:block;font:600 clamp(28px,4.2vw,50px)/1 var(--sans);letter-spacing:-.01em}
+#stamp b sup{font-size:.55em}
+#stamp small{display:block;font:500 12px var(--mono);color:var(--muted);margin-top:6px}
+.hint{position:fixed;left:50%;transform:translateX(-50%);top:calc(12px + env(safe-area-inset-top,0px));font:11px var(--mono);color:var(--muted);pointer-events:none}
+@media (max-width:900px){
+  #ctl{max-height:42vh}
+  #side{left:16px;right:16px;width:auto;top:auto;bottom:calc(12px + env(safe-area-inset-bottom,0px));max-height:44vh}
+  #stamp,.hint,.axlab{display:none}
+}
+@media (max-width:560px){.panel{padding:10px 12px;gap:9px}h1{font-size:18px}}
+</style>
+<script data-goatcounter="https://jinleiphys.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
+</head>
+<body>
+
+<div id="stage"></div>
+
+<aside id="ctl" class="panel glass glass-deep" data-glass data-glass-bevel="22" data-glass-scale="42">
+  <div>
+    <a class="home" href="index.html">← nuclearjs</a> &nbsp; <a class="home" href="halo.html">halo</a> &nbsp; <a class="home" href="quasifree.html">quasi-free</a> &nbsp; <a class="home" href="scatter.html">scattering</a>
+    <h1>One-nucleon knockout</h1>
+    <p class="sub">A fast projectile grazes a light target and loses one nucleon; the rest flies on and is detected. The target reaches only the part of the orbital that sticks out past the core, its surface and tail, so the count of such events, against a reaction model that knows the orbital's shape, measures how full the orbital is.</p>
+  </div>
+  <div class="grp">
+    <div class="lab">Measured cases, on <sup>9</sup>Be</div>
+    <div class="chips" id="chips"></div>
+  </div>
+  <div class="grp">
+    <div class="lab">What happens to the nucleon</div>
+    <div class="seg" id="mode">
+      <button data-v="str" title="the nucleon is absorbed by the target; the core flies on">stripping</button>
+      <button data-v="dif" title="the projectile comes apart; nucleon and core both fly on">diffraction</button>
+    </div>
+    <div class="row"><button class="play" id="play" type="button">pause</button><input id="ph" type="range" min="0" max="1" step="0.001" aria-label="stage of the collision"><output id="oph"></output></div>
+  </div>
+  <div class="grp">
+    <div class="lab">This case</div>
+    <dl class="kv" id="info"></dl>
+    <p class="warn" id="warn" hidden></p>
+  </div>
+  <div class="grp">
+    <div class="lab">Rendering</div>
+    <div class="seg" id="qmode">
+      <button data-v="high" title="ray-marched densities, soft bloom">cinematic</button>
+      <button data-v="low" title="fewer ray steps, no bloom, for phones">fast</button>
+    </div>
+    <p class="src" id="vnote"></p>
+  </div>
+  <details>
+    <summary>What happens</summary>
+    <div class="grp" id="whattext"></div>
+  </details>
+  <details>
+    <summary>The open question: R<sub>s</sub> against ΔS</summary>
+    <div class="grp" id="opentext"></div>
+  </details>
+</aside>
+
+<aside id="side" class="panel glass glass-deep" data-glass data-glass-bevel="22" data-glass-scale="42">
+  <div class="cap"><b id="pubh">Published numbers</b><span>σ in mb</span></div>
+  <table class="rad" id="pub"></table>
+  <div class="src" id="pubnote"></div>
+  <div class="cap"><b>R<sub>s</sub> = σ<sub>exp</sub>/σ<sub>th</sub> against ΔS</b><span>ΔS (MeV)</span></div>
+  <canvas id="pR" class="plot"></canvas>
+  <div class="leg" id="legR"></div>
+  <div class="src" id="srcR"></div>
+  <div class="cap"><b>Measured cases</b><span>as published</span></div>
+  <table class="rad" id="cases"></table>
+  <div class="src" id="srcC"></div>
+</aside>
+
+<div id="labT" class="axlab" style="color:#9aa6c0" hidden></div>
+<div id="labP" class="axlab" style="color:var(--ink)" hidden></div>
+<div id="labN" class="axlab" hidden></div>
+<div id="stamp"></div>
+<div class="hint">drag to orbit · scroll to zoom</div>
+
+<script src="assets/three-bundle.js"></script>
+<script src="assets/three-post.js"></script>
+<script src="assets/vol.js"></script>
+<script src="assets/shells-data.js"></script>
+<script src="assets/knockout-data.js"></script>
+<script>
+"use strict";
+// ================================================================ data and the simple formulas
+const DATA = window.KO_DATA;
+const ELEM = { 1: "H", 2: "He", 3: "Li", 4: "Be", 5: "B", 6: "C", 7: "N", 8: "O", 9: "F", 10: "Ne", 11: "Na", 12: "Mg", 13: "Al", 14: "Si", 15: "P", 16: "S" };
+const LN = "spdfgh";
+const sup = (A) => `<sup>${A}</sup>`;
+const nuc = (Z, N) => `${sup(Z + N)}${ELEM[Z]}`;
+const nucT = (Z, N) => `${Z + N}${ELEM[Z]}`;
+// AME2020 atomic mass excesses (MeV); separation energies from them (electron binding cancels to < 1 keV)
+const MEX = {};
+for (const e of window.AME) MEX[e[0] + "," + e[1]] = e[2] / 1000;
+const Sn = (Z, N) => MEX[Z + "," + (N - 1)] + MEX["0,1"] - MEX[Z + "," + N];
+const Sp = (Z, N) => MEX[(Z - 1) + "," + N] + MEX["1,0"] - MEX[Z + "," + N];
+const AMU = 931.49410242, HBARC = 197.3269804, MN = 939.0;
+// beam kinematics from the kinetic energy per atomic mass unit: gamma = 1 + T/(m_u c^2)
+function kinem(Eu) { const g = 1 + Eu / AMU, b = Math.sqrt(1 - 1 / (g * g)); return { gamma: g, beta: b }; }
+// 9Be: Gaussian point density of rms 2.36 fm (the target density of Gade et al. 2008 and Tostevin and Gade 2021);
+// the sharp sphere with the same rms has radius sqrt(5/3) rms
+const T_RMS = 2.36, T_S2 = T_RMS * T_RMS * 2 / 3, T_RSH = Math.sqrt(5 / 3) * T_RMS;
+
+const CASES = DATA.cases.map((c) => {
+  const S = c.q === "n" ? Sn(c.Z, c.N) : Sp(c.Z, c.N), So = c.q === "n" ? Sp(c.Z, c.N) : Sn(c.Z, c.N);
+  return { ...c, A: c.Z + c.N, Zc: c.q === "p" ? c.Z - 1 : c.Z, Nc: c.q === "n" ? c.N - 1 : c.N, S, dS: S - So };
+});
+
+// ================================================================ state
+const S = { cs: null, mode: "str", u: 0.08, playing: !matchMedia("(prefers-reduced-motion: reduce)").matches, geo: null };
+let quality = innerWidth < 700 ? "low" : "high";
+
+// ================================================================ scene
+const stage = document.getElementById("stage");
+const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.setSize(innerWidth, innerHeight);
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.05;
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+stage.appendChild(renderer.domElement);
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(34, innerWidth / innerHeight, 0.1, 4000);
+const composer = new EffectComposer(renderer);
+composer.addPass(new RenderPass(scene, camera));
+const bloom = new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), 0.22, 0.55, 0.9);
+composer.addPass(bloom);
+composer.addPass(new OutputPass());
+const smaa = new SMAAPass(innerWidth * renderer.getPixelRatio(), innerHeight * renderer.getPixelRatio());
+composer.addPass(smaa);
+scene.environment = VOL.studioEnv(renderer);
+VOL.lightRig(scene);
+scene.fog = new THREE.Fog("#0b0d12", 80, 260);
+// The ground colour is drawn untouched on the direct path; on the bloom path OutputPass runs it through ACES,
+// so there the background takes the linear colour that ACES (exposure 1.05) maps back to #0b0d12.
+const GROUND = new THREE.Color("#0b0d12");
+const GROUND_PRE_ACES = new THREE.Color().setRGB(0.0115476, 0.0131218, 0.0174740, THREE.LinearSRGBColorSpace);
+scene.background = GROUND.clone();
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true; controls.dampingFactor = 0.08;
+controls.minDistance = 8; controls.maxDistance = 400;
+const stage3 = new VOL.Stage(scene);
+const grid = new THREE.GridHelper(400, 200, "#2a3245", "#1d2333");
+grid.material.opacity = 0.55;
+stage3.fadeGrid(grid);
+scene.add(grid);
+const KEY = new THREE.Vector3(0.35, 1, 0.3).normalize();
+
+/* A nucleus as a ray-marched spherical density inside a sphere mesh (drawn from its back faces, so the camera may
+   be anywhere). Emission-absorption front to back; light per sample from a key direction on the radial normal; an
+   optional lit shell at the half-density radius. kind 0: Fermi (R, a); 1: Gaussian exp(-r^2/s2); 2: orbital tail
+   exp(-2 kappa (q - d)) d^2/q^2 with q = sqrt(r^2 + d^2) (log transfer over uLogD decades). The overlap with the
+   target (centre uTgt, radius uTgtR) can be tinted (uHot). Ends with the tone-mapping and colour-space chunks. */
+const BLOB_VS = `varying vec3 vW; void main(){ vec4 w = modelMatrix * vec4(position, 1.0); vW = w.xyz; gl_Position = projectionMatrix * viewMatrix * w; }`;
+const BLOB_FS = `
+  uniform vec3 uC; uniform float uR; uniform int uKind; uniform vec3 uP;
+  uniform vec3 uCol, uHotCol, uKey; uniform float uSig, uEm, uFade, uShellR, uShellA, uLogD, uGlow, uGam;
+  uniform vec3 uTgt; uniform float uTgtR, uHot;
+  varying vec3 vW;
+  float rho(float r){
+    if (uKind == 0) return 1.0 / (1.0 + exp((r - uP.x) / uP.y));
+    if (uKind == 1) return exp(-r * r / uP.x);
+    float q = sqrt(r * r + uP.y * uP.y); return exp(-2.0 * uP.x * (q - uP.y)) * uP.y * uP.y / (q * q);
+  }
+  float tf(float v){ return uLogD > 0.0 ? clamp(1.0 + log(max(v, 1e-12)) / (2.302585 * uLogD), 0.0, 1.0) : pow(clamp(v, 0.0, 1.0), uGam); }
+  void main(){
+    vec3 ro = cameraPosition - uC, rd = normalize(vW - cameraPosition);
+    float b = dot(ro, rd), c = dot(ro, ro) - uR * uR, D = b * b - c;
+    if (D <= 0.0) discard;
+    float s = sqrt(D), t0 = max(-b - s, 0.0), t1 = -b + s;
+    if (t1 <= t0) discard;
+    float ts = -1.0;
+    if (uShellR > 0.0) { float D2 = b * b - (dot(ro, ro) - uShellR * uShellR); if (D2 > 0.0) { float tt = -b - sqrt(D2); if (tt > t0) ts = tt; } }
+    float dt = (t1 - t0) / float(STEPS);
+    vec3 L = vec3(0.0); float T = 1.0; bool shell = ts < 0.0;
+    for (int i = 0; i < STEPS; i++) {
+      float t = t0 + (float(i) + 0.5) * dt;
+      if (!shell && t > ts) {
+        shell = true;
+        vec3 n = normalize(ro + rd * ts), h = normalize(uKey - rd);
+        float lam = max(dot(n, uKey), 0.0), fr = pow(1.0 - abs(dot(n, rd)), 3.0), sp = pow(max(dot(n, h), 0.0), 48.0);
+        float a = uShellA * (uLogD > 0.0 ? fr : 0.3 + 0.7 * fr) * uFade;
+        L += T * a * (uCol * (0.16 + 0.75 * lam) + vec3(0.7) * sp + uHotCol * uGlow * 0.5);
+        T *= 1.0 - a;
+      }
+      vec3 p = ro + rd * t; float r = length(p), x = tf(rho(r));
+      if (x <= 0.0) continue;
+      float h = uHot > 0.0 ? uHot * (1.0 - smoothstep(0.8 * uTgtR, 1.15 * uTgtR, length(p - uTgt))) : 0.0;
+      float sig = uSig * x * (1.0 + 2.0 * h), w = 1.0 - exp(-sig * dt);
+      float lit = 0.42 + 0.58 * clamp(0.5 + 0.5 * dot(p / max(r, 1e-3), uKey), 0.0, 1.0);
+      vec3 col = mix(uCol, uHotCol, h) * (1.0 + 3.0 * h) + uHotCol * uGlow;
+      L += T * w * col * uEm * (0.15 + 0.85 * x) * lit;
+      T *= exp(-sig * dt);
+      if (T < 0.01) break;
+    }
+    float a = (1.0 - T) * uFade;
+    gl_FragColor = vec4(L * uFade, a);
+    #include <tonemapping_fragment>
+    #include <colorspace_fragment>
+  }`;
+function blob(o) {
+  const u = {
+    uC: { value: new THREE.Vector3() }, uR: { value: 1 }, uKind: { value: o.kind }, uP: { value: new THREE.Vector3() },
+    uCol: { value: new THREE.Color(o.color) }, uHotCol: { value: new THREE.Color(o.hot || "#f2c14e") }, uKey: { value: KEY },
+    uSig: { value: o.sig }, uEm: { value: o.em }, uFade: { value: 1 }, uShellR: { value: 0 }, uShellA: { value: o.shellA || 0 },
+    uLogD: { value: o.logD || 0 }, uGam: { value: o.gam || 1 }, uGlow: { value: 0 }, uTgt: { value: new THREE.Vector3() }, uTgtR: { value: 1 }, uHot: { value: 0 },
+  };
+  const mk = (steps) => new THREE.ShaderMaterial({ uniforms: u, vertexShader: BLOB_VS, fragmentShader: BLOB_FS, defines: { STEPS: steps },
+    transparent: true, depthWrite: false, side: THREE.BackSide, blending: THREE.CustomBlending,
+    blendSrc: THREE.OneFactor, blendDst: THREE.OneMinusSrcAlphaFactor, blendSrcAlpha: THREE.OneFactor, blendDstAlpha: THREE.OneMinusSrcAlphaFactor });
+  const hi = mk(o.steps || 72), lo = mk(Math.round((o.steps || 72) / 2));
+  const m = new THREE.Mesh(new THREE.SphereGeometry(1, 48, 32), hi);
+  m.userData = { u, hi, lo };
+  m.renderOrder = o.order || 20;
+  m.onBeforeRender = () => { u.uC.value.copy(m.position); u.uR.value = m.scale.x; };
+  scene.add(m);
+  return m;
+}
+const target = blob({ kind: 1, color: "#8d9ab8", hot: "#ffb36b", sig: 0.6, em: 0.7, gam: 1, shellA: 0.45, order: 20 });
+const core = blob({ kind: 0, color: "#ded6c4", sig: 0.7, em: 0.62, gam: 1, shellA: 0.45, order: 21 });
+const orbital = blob({ kind: 2, color: "#4f8fe8", hot: "#f2c14e", sig: 0.025, em: 0.9, logD: 3, steps: 96, shellA: 0.1, order: 22 });
+const CQ = { n: "#a8cdf2", p: "#ff9656" }, CQV = { n: "#4f8fe8", p: "#f08a4b" };
+
+// the removed nucleon as a small lit sphere (radius 0.85 fm, about the nucleon's charge radius)
+const nucMat = new THREE.MeshStandardMaterial({ color: "#a8cdf2", emissive: "#a8cdf2", emissiveIntensity: 0.3, roughness: 0.35, metalness: 0, transparent: true });
+const nucleon = new THREE.Mesh(new THREE.SphereGeometry(0.85, 40, 28), nucMat);
+nucleon.renderOrder = 25;
+scene.add(nucleon);
+
+// soft contact shadows on the floor, one per body
+const shTex = (() => { const c = document.createElement("canvas"); c.width = c.height = 128; const x = c.getContext("2d"), g = x.createRadialGradient(64, 64, 0, 64, 64, 64);
+  g.addColorStop(0, "rgba(255,255,255,1)"); g.addColorStop(0.5, "rgba(255,255,255,0.45)"); g.addColorStop(1, "rgba(255,255,255,0)"); x.fillStyle = g; x.fillRect(0, 0, 128, 128); return new THREE.CanvasTexture(c); })();
+function shadow(k) {
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshBasicMaterial({ color: 0x000000, alphaMap: shTex, transparent: true, opacity: k, depthWrite: false }));
+  m.rotation.x = -Math.PI / 2; m.renderOrder = 3; scene.add(m); return m;
+}
+const shT = shadow(0.22), shC = shadow(0.22), shN = shadow(0.18);
+
+// trajectories: the projectile's straight line at impact parameter b, the nucleon's exit line in diffraction
+function lineMat(color, opacity, dashed) {
+  return dashed ? new THREE.LineDashedMaterial({ color, transparent: true, opacity, dashSize: 0.9, gapSize: 0.7, depthWrite: false })
+                : new THREE.LineBasicMaterial({ color, transparent: true, opacity, depthWrite: false });
+}
+const pathLine = new THREE.Line(new THREE.BufferGeometry(), lineMat("#e6e8ee", 0.28, true));
+const exitLine = new THREE.Line(new THREE.BufferGeometry(), lineMat("#a8cdf2", 0.5, true));
+pathLine.renderOrder = exitLine.renderOrder = 30;
+scene.add(pathLine, exitLine);
+// the impact parameter, drawn on the floor from the target's axis to the beam line
+const bLine = new THREE.Line(new THREE.BufferGeometry(), lineMat("#f2c14e", 0.7, false));
+bLine.renderOrder = 30; scene.add(bLine);
+
+// ================================================================ geometry of a case (drawing only, stated in the Rendering note)
+const X0 = 30;
+const rhoOrb = (g, r) => { const q = Math.sqrt(r * r + g.d * g.d); return Math.exp(-2 * g.kappa * (q - g.d)) * g.d * g.d / (q * q); };                                // the projectile is drawn from x = -X0 to +X0 (fm)
+function geometryOf(cs) {
+  const Ac = cs.Zc + cs.Nc, Rc = 1.1 * Math.cbrt(Ac), ac = 0.5;
+  const mu = MN * Ac / (Ac + 1), kappa = Math.sqrt(2 * mu * Math.max(cs.S, 0.02)) / HBARC;
+  const d = Rc;
+  const rhoV = (r) => { const q = Math.sqrt(r * r + d * d); return Math.exp(-2 * kappa * (q - d)) * d * d / (q * q); };
+  // the orbital cloud is drawn to where its density is 10^-3 of the centre value (three decades, log scale)
+  let rv = Rc + 1;
+  for (let r = 0; r < 80; r += 0.05) if (rhoV(r) > 1e-3) rv = r;
+  const b = Rc + T_RSH + 0.4;                 // grazing: the core passes just outside the target's sharp radius
+  // where the nucleon is taken from: the density-weighted centre of the orbital inside the target's sharp sphere,
+  // projectile at closest approach (core at (0, 0, b), target at the origin)
+  let sw = 0, sx = 0, sy = 0, sz = 0;
+  const h = 0.25;
+  for (let x = -T_RSH; x <= T_RSH; x += h) for (let y = -T_RSH; y <= T_RSH; y += h) for (let z = -T_RSH; z <= T_RSH; z += h) {
+    if (x * x + y * y + z * z > T_RSH * T_RSH) continue;
+    const w = rhoV(Math.sqrt(x * x + y * y + (z - b) * (z - b))) * Math.exp(-(x * x + y * y + z * z) / T_S2);
+    sw += w; sx += w * x; sy += w * y; sz += w * z;
+  }
+  const hit = new THREE.Vector3(sx / sw, sy / sw, sz / sw - b);   // relative to the core
+  return { Ac, Rc, ac, kappa, d, rv, b, hit, decay: 1 / (2 * kappa) };
+}
+
+function layoutCase() {
+  const g = S.geo, yF = -(Math.max(g.rv, T_RSH + 2, 8) + 2);
+  g.yF = yF;
+  target.position.set(0, 0, 0);
+  target.scale.setScalar(Math.sqrt(T_S2 * Math.log(400)));
+  target.userData.u.uP.value.set(T_S2, 0, 0);
+  target.userData.u.uShellR.value = Math.sqrt(T_S2 * Math.log(2));
+  core.scale.setScalar(g.Rc + 6 * g.ac);
+  core.userData.u.uP.value.set(g.Rc, g.ac, 0);
+  core.userData.u.uShellR.value = g.Rc;
+  orbital.scale.setScalar(g.rv);
+  orbital.userData.u.uP.value.set(g.kappa, g.d, 0);
+  orbital.userData.u.uTgtR.value = T_RSH;
+  // a faint shell where the orbital density is 10^-2 of its centre value marks the cloud's size
+  { let r1 = g.Rc; for (let r = 0; r < g.rv; r += 0.02) if (rhoOrb(g, r) > 1e-2) r1 = r; orbital.userData.u.uShellR.value = r1; g.r1 = r1; }
+  // a large halo cloud: less light per unit transfer value, so it does not fog the view
+  orbital.userData.u.uEm.value = 2.4 * Math.min(1, 9 / g.rv);
+  orbital.userData.u.uSig.value = 0.025 * Math.min(1, 9 / g.rv);
+  orbital.userData.u.uCol.value.set(CQV[S.cs.q]);
+  nucMat.color.set(CQ[S.cs.q]); nucMat.emissive.set(CQ[S.cs.q]);
+  exitLine.material.color.set(CQ[S.cs.q]);
+  pathLine.geometry.setFromPoints([new THREE.Vector3(-X0 - 6, 0, g.b), new THREE.Vector3(X0 + 6, 0, g.b)]);
+  pathLine.computeLineDistances();
+  bLine.geometry.setFromPoints([new THREE.Vector3(0, yF + 0.05, 0), new THREE.Vector3(0, yF + 0.05, g.b)]);
+  stage3.layout(yF, Math.max(14, g.rv * 0.8));
+  grid.position.y = yF + 0.01;
+  for (const s of [shT, shC, shN]) s.position.y = yF + 0.02;
+  shT.scale.setScalar(1.7 * T_RSH);
+  shC.scale.setScalar(2.0 * g.Rc);
+  shN.scale.setScalar(1.8);
+  fitTo = Math.max(44, 2.0 * g.rv + 22) * Math.max(1, 1.25 / camera.aspect);
+}
+
+// ================================================================ the collision as a function of the stage u in [0, 1)
+// u = 0.5: closest approach. Before it the projectile (core + orbital) moves along the beam line at impact parameter b;
+// in stripping the nucleon then sinks into the target and the target lights up; in diffraction nucleon and core fly on,
+// the nucleon deflected by a fixed, schematic 8 degrees. The orbital cloud fades once the nucleon is gone.
+const sm = (a, b, x) => { const t = Math.max(0, Math.min(1, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
+const tmpV = new THREE.Vector3();
+function place(u) {
+  const g = S.geo, x = -X0 + 2 * X0 * u;
+  core.position.set(x, 0, g.b);
+  orbital.position.copy(core.position);
+  const ou = orbital.userData.u, tu = target.userData.u;
+  // the overlap of the orbital with the target, tinted while they touch
+  ou.uTgt.value.set(-x, 0, -g.b);
+  ou.uHot.value = 0.9 * sm(0.34, 0.47, u) * (1 - sm(0.5, 0.56, u));
+  ou.uFade.value = 1 - sm(0.5, 0.6, u);
+  // the nucleon: fades in at its place in the overlap, then follows the chosen fate
+  const hit = tmpV.copy(g.hit).add(core.position);
+  let nv = sm(0.43, 0.49, u), glow = 0;
+  const h0 = new THREE.Vector3(g.hit.x, g.hit.y, g.hit.z + g.b);   // where it was at closest approach
+  if (u <= 0.5) nucleon.position.copy(hit);
+  else if (S.mode === "str") {
+    const k = sm(0.5, 0.6, u);
+    nucleon.position.set(h0.x * (1 - k), h0.y * (1 - k), h0.z * (1 - 0.65 * k));
+    nv *= 1 - sm(0.56, 0.63, u);
+    glow = sm(0.5, 0.58, u) * (1 - sm(0.62, 0.95, u));
+  } else {
+    const dx = x - 0;                          // distance travelled since closest approach
+    nucleon.position.set(h0.x + dx, h0.y + dx * 0.04, h0.z + dx * 0.14);
+  }
+  tu.uGlow.value = 0.85 * glow;
+  nucMat.opacity = nv; nucleon.visible = nv > 0.01;
+  nucleon.scale.setScalar(1 + 0.25 * glow);
+  // exit line of the diffracted nucleon
+  exitLine.visible = S.mode === "dif" && u > 0.5;
+  if (exitLine.visible) {
+    exitLine.geometry.setFromPoints([h0, nucleon.position.clone()]);
+    exitLine.computeLineDistances();
+  }
+  shC.position.x = x; shC.position.z = g.b;
+  shN.position.x = nucleon.position.x; shN.position.z = nucleon.position.z; shN.material.opacity = 0.18 * nv;
+  shT.position.set(0, shT.position.y, 0);
+}
+
+// ================================================================ panels
+function phaseText(u) {
+  if (u < 0.36) return "approach";
+  if (u < 0.5) return "contact";
+  if (u < 0.64) return S.mode === "str" ? "nucleon absorbed" : "projectile breaks up";
+  return "residue flies on";
+}
+function fmtE(E) { return E >= 1000 ? (E / 1000).toFixed(2) + " GeV/u" : E.toFixed(E < 100 ? 1 : 0) + " MeV/u"; }
+function drawInfo() {
+  const cs = S.cs, k = kinem(cs.E), g = S.geo, f = (x, d = 2) => x.toFixed(d);
+  const tCross = 2 * T_RSH / k.beta;                       // fm/c
+  document.getElementById("info").innerHTML = `
+    <dt>reaction</dt><dd>${nuc(cs.Z, cs.N)} + <sup>9</sup>Be → ${nuc(cs.Zc, cs.Nc)} + X</dd>
+    <dt>removed</dt><dd>${cs.q === "n" ? "neutron" : "proton"}, S<sub>${cs.q}</sub> = ${f(cs.S, 3)} MeV</dd>
+    <dt>ΔS</dt><dd>${f(cs.dS)} MeV (S<sub>${cs.q}</sub> − S<sub>${cs.q === "n" ? "p" : "n"}</sub>)</dd>
+    <dt>beam</dt><dd>${fmtE(cs.E)} (mid-target, as published)</dd>
+    <dt>β, γ</dt><dd>${f(k.beta, 3)}, ${f(k.gamma, 4)}</dd>
+    <dt>crossing</dt><dd>${f(tCross, 1)} fm/c across 2R<sub>T</sub> = ${f(2 * T_RSH, 1)} fm</dd>`;
+  document.getElementById("warn").hidden = !cs.note;
+  document.getElementById("warn").textContent = cs.note || "";
+  document.getElementById("stamp").innerHTML = `<b>${nuc(cs.Z, cs.N)}(−${cs.q})</b><small>${nuc(cs.Zc, cs.Nc)} + ${cs.q === "n" ? "neutron" : "proton"} · S = ${f(cs.S)} MeV · on <sup>9</sup>Be at ${fmtE(cs.E)} · ${S.mode === "str" ? "stripping" : "diffraction"}</small>`;
+}
+function drawPub() {
+  const cs = S.cs, orb = (c) => `${c.nr}${LN[c.l]}<sub>${c.j2}/2</sub>`;
+  document.getElementById("pubh").innerHTML = `${nuc(cs.Z, cs.N)}(−${cs.q}) on <sup>9</sup>Be, as published`;
+  const pubSp = (p) => !p ? "n/p" : p.str != null ? `${p.str} + ${p.dif}${p.C ? ` + ${p.C}<sup>C</sup>` : ""}` : `${p.sp}`;
+  const rows = cs.comps.map((c) => `<tr><td>${nuc(cs.Zc, cs.Nc)} ${c.Jf}${c.Ex ? ` (${c.Ex})` : ""}</td><td>${orb(c)}</td><td>${c.C2S}</td><td>${pubSp(c.pub)}</td></tr>`).join("");
+  document.getElementById("pub").innerHTML = `<tr><th>final state (E<sub>x</sub> MeV)</th><th>orbit</th><th>C²S</th><th>σ<sub>sp</sub>: str + diff</th></tr>${rows}` +
+    `<tr><td colspan="3">σ<sub>exp</sub> (inclusive)</td><td>${cs.sig[0]}(${cs.sig[1]})</td></tr>` +
+    `<tr><td colspan="3">σ<sub>th</sub></td><td>${cs.pubTh}</td></tr>` +
+    `<tr><td colspan="3">R<sub>s</sub></td><td>${cs.pubRs || "not printed"}</td></tr>`;
+  document.getElementById("pubnote").innerHTML = `${cs.ref}, ${cs.where}. C²S: ${cs.C2Ssrc}, as quoted there. Orbit as n l j with n counting radial nodes from 0. σ<sub>sp</sub> is the eikonal single-particle cross section of the paper (stripping + diffraction${cs.comps.some((c) => c.pub && c.pub.C) ? ", + Coulomb breakup where marked C" : ""}); "n/p": not printed per state. σ<sub>th</sub> = Σ<sub>f</sub> (A/(A−1))<sup>N</sup> C²S σ<sub>sp</sub> summed over the final states, R<sub>s</sub> = σ<sub>exp</sub>/σ<sub>th</sub>, both as the paper prints them.`;
+}
+function drawCases() {
+  const t = document.getElementById("cases");
+  t.innerHTML = `<tr><th>removal</th><th>ΔS</th><th>MeV/u</th><th>σ<sub>exp</sub></th><th>σ<sub>th</sub></th><th>R<sub>s</sub></th></tr>` +
+    CASES.map((cs) => `<tr data-id="${cs.id}" class="${cs === S.cs ? "on" : ""}"><td>${nuc(cs.Z, cs.N)}(−${cs.q})</td><td>${cs.dS.toFixed(1)}</td><td>${cs.E}</td><td>${cs.sig[0]}(${cs.sig[1]})</td><td>${cs.pubTh}</td><td>${cs.pubRs || "n/p"}</td></tr>`).join("");
+  document.getElementById("srcC").innerHTML = `<sup>8</sup>B, <sup>9</sup>C: Bazin et al., Phys. Rev. Lett. 102, 232501 (2009) (σ<sub>th</sub> includes Coulomb breakup and, for <sup>9</sup>C, a radial mismatch factor); <sup>14</sup>O, <sup>16</sup>C: Flavigny et al., Phys. Rev. Lett. 108, 252501 (2012) (sudden-eikonal σ<sub>th</sub>, no R<sub>s</sub> printed); <sup>24</sup>Si, <sup>28</sup>S: Gade et al., Phys. Rev. C 77, 044306 (2008), Table I. ΔS from AME2020 masses. "n/p": not printed. Click a row to load the case.`;
+}
+// R_s systematics, all as published
+const RS_ON = { ko: true, ee: true, qf: true, tr: true, fit: true };
+function setupCanvas(c) {
+  const d = Math.min(devicePixelRatio, 2), w = c.clientWidth, h = c.clientHeight;
+  c.width = w * d; c.height = h * d;
+  const x = c.getContext("2d"); x.setTransform(d, 0, 0, d, 0, 0);
+  return { x, w, h };
+}
+const L0 = 34, R0 = 8, T0 = 8, B0 = 18;
+function drawRs() {
+  const { x: ctx, w, h } = setupCanvas(document.getElementById("pR"));
+  const xlo = -28, xhi = 24, ylo = 0, yhi = 1.2;
+  const X = (v) => L0 + (v - xlo) / (xhi - xlo) * (w - L0 - R0), Y = (v) => T0 + (yhi - v) / (yhi - ylo) * (h - T0 - B0);
+  ctx.font = "10px ui-monospace,Menlo,monospace"; ctx.strokeStyle = "#1e2432"; ctx.fillStyle = "#8a92a6"; ctx.lineWidth = 1;
+  for (const v of [0, 0.25, 0.5, 0.75, 1]) { ctx.beginPath(); ctx.moveTo(L0, Y(v)); ctx.lineTo(w - R0, Y(v)); ctx.stroke(); ctx.textAlign = "right"; ctx.fillText(v === 0 || v === 1 ? String(v) : v.toFixed(2).slice(1), L0 - 4, Y(v) + 3); }
+  ctx.textAlign = "center";
+  for (const v of [-20, -10, 0, 10, 20]) { ctx.beginPath(); ctx.moveTo(X(v), T0); ctx.lineTo(X(v), h - B0); ctx.stroke(); ctx.fillText(String(v).replace("-", "−"), X(v), h - 5); }
+  ctx.save(); ctx.beginPath(); ctx.rect(L0, T0, w - L0 - R0, h - T0 - B0); ctx.clip();
+  const bar = (x, y, e, col) => { ctx.strokeStyle = col; ctx.beginPath(); ctx.moveTo(X(x), Y(y - e)); ctx.lineTo(X(x), Y(y + e)); ctx.stroke(); };
+  if (RS_ON.fit) for (const Ln of DATA.lines) {
+    ctx.strokeStyle = Ln.id === "tg" ? "#8a92a6" : Ln.id === "fl13" ? "#c39bd3" : "#7fd1b9";
+    ctx.setLineDash(Ln.id === "gmPH" ? [2, 3] : Ln.id === "tg" ? [] : [6, 3]);
+    ctx.beginPath(); ctx.moveTo(X(xlo), Y(Ln.a + Ln.b * xlo)); ctx.lineTo(X(xhi), Y(Ln.a + Ln.b * xhi)); ctx.stroke(); ctx.setLineDash([]);
+  }
+  const me = `${S.cs.A}${ELEM[S.cs.Z]}`;
+  let mine = null;
+  for (const p of DATA.fig1) {
+    const ee = p.rem === "e,e'p";
+    if (ee ? !RS_ON.ee : !RS_ON.ko) continue;
+    const col = ee ? "#5d6577" : "#b9c2d6";
+    bar(p.dS, p.Rs, p.e, col); ctx.fillStyle = col; ctx.strokeStyle = col;
+    if (p.m.startsWith("open")) ctx.strokeRect(X(p.dS) - 2.5, Y(p.Rs) - 2.5, 5, 5);
+    else if (ee) ctx.fillRect(X(p.dS) - 2.5, Y(p.Rs) - 2.5, 5, 5);
+    else { ctx.beginPath(); ctx.arc(X(p.dS), Y(p.Rs), 2.6, 0, 2 * Math.PI); ctx.fill(); }
+    if (!ee && p.p === me && p.rem === S.cs.q && p.m.startsWith("filled")) mine = p;
+  }
+  if (RS_ON.qf) for (const p of DATA.atar) {
+    const dS = Sp(p.Z, p.N) - Sn(p.Z, p.N);
+    bar(dS, p.R, p.e, "#7fd1b9"); ctx.fillStyle = "#7fd1b9";
+    ctx.beginPath(); ctx.moveTo(X(dS), Y(p.R) - 4); ctx.lineTo(X(dS) + 3.5, Y(p.R) + 2.5); ctx.lineTo(X(dS) - 3.5, Y(p.R) + 2.5); ctx.fill();
+  }
+  if (RS_ON.tr) for (const p of DATA.lee) {
+    bar(p.dS, p.jlm[0], p.jlm[1], "#c39bd3"); ctx.fillStyle = "#c39bd3";
+    ctx.beginPath(); ctx.moveTo(X(p.dS), Y(p.jlm[0]) - 4); ctx.lineTo(X(p.dS) + 4, Y(p.jlm[0])); ctx.lineTo(X(p.dS), Y(p.jlm[0]) + 4); ctx.lineTo(X(p.dS) - 4, Y(p.jlm[0])); ctx.fill();
+  }
+  if (mine) { ctx.strokeStyle = "#f2c14e"; ctx.lineWidth = 1.6; ctx.beginPath(); ctx.arc(X(mine.dS), Y(mine.Rs), 6.5, 0, 2 * Math.PI); ctx.stroke(); ctx.lineWidth = 1; }
+  ctx.restore();
+  const tg = (k, html) => `<button data-k="${k}" aria-pressed="${RS_ON[k]}">${html}</button>`;
+  document.getElementById("legR").innerHTML =
+    tg("ko", `<i class="dot" style="background:#b9c2d6"></i>knockout<sup>a</sup>`) +
+    tg("ee", `<i class="sq" style="background:#5d6577"></i>(e,e′p)<sup>a</sup>`) +
+    tg("qf", `<i class="dot" style="background:#7fd1b9;border-radius:0"></i>(p,2p) on O<sup>b</sup>`) +
+    tg("tr", `<i class="dot" style="background:#c39bd3;border-radius:0"></i>(p,d) on Ar<sup>c</sup>`) +
+    tg("fit", `<i style="border-color:#8a92a6"></i>fits<sup>d</sup>`) +
+    `<span>${mine ? `<i class="dot" style="background:none;border:1.5px solid #f2c14e;width:6px;height:6px"></i>this case in the compilation` : "this case is not in the compilation's Fig. 1"}</span>`;
+}
+document.getElementById("legR").addEventListener("click", (e) => { const b = e.target.closest("button[data-k]"); if (!b) return; RS_ON[b.dataset.k] = !RS_ON[b.dataset.k]; drawRs(); });
+function setTexts() {
+  document.getElementById("srcR").innerHTML =
+    `<sup>a</sup> Tostevin and Gade, Phys. Rev. C 103, 054610 (2021), Fig. 1, digitized from the figure's vector graphics (about ±0.01): filled circles knockout on <sup>9</sup>Be and <sup>12</sup>C, open squares other energies and targets, grey squares (e,e′p). ` +
+    `<sup>b</sup> Atar et al., Phys. Rev. Lett. 120, 052501 (2018), Table I, R against the independent-particle model, at ΔS = S<sub>p</sub> − S<sub>n</sub> of the projectile (AME2020). ` +
+    `<sup>c</sup> Lee et al., Phys. Rev. Lett. 104, 112701 (2010), Table 1, JLM+HF analysis (with CH89 potentials: 0.84, 1.09, 1.02). ` +
+    `<sup>d</sup> grey: R<sub>s</sub> = 0.61 − 0.016ΔS (Tostevin and Gade 2021, Eq. (2)); teal dashed and dotted: (p,2p) reanalysis with Dirac and Paris-Hamburg potentials (Gómez-Ramos and Moro, Phys. Lett. B 785, 511 (2018)); purple dashed: <sup>14</sup>O transfer (Flavigny et al., Phys. Rev. Lett. 110, 122503 (2013)).`;
+  document.getElementById("whattext").innerHTML = `
+  <p class="sub">At 50 to 100 MeV per nucleon the projectile crosses the target in a few fm/c, fast compared with the motion of the bound nucleon, so the collision sees a frozen snapshot of the projectile (the sudden approximation), and both pieces move on nearly straight lines. A nucleon is removed only where it overlaps the target while the core does not: the core must pass outside the target's strongly absorbing region or it is destroyed too, and the event is not counted. That selects grazing collisions and the part of the orbital that reaches out of the core toward the target, its surface and its tail.</p>
+  <p class="sub"><b>Stripping</b>: the nucleon is absorbed by the target, which is left excited or broken; the core flies on. <b>Diffraction</b>: the nucleon and the core both scatter at most elastically from the target, the projectile comes apart and both fly on. The measured inclusive cross section counts both, summed over the bound final states of the residue, which are separated by its γ rays.</p>
+  <p class="sub">The weakly bound nucleon of <sup>8</sup>B (S = 0.14 MeV) has a long tail and is removed easily; the deeply bound neutron of <sup>14</sup>O (S = 23 MeV) barely leaves the core, and the cross section is small. Dividing the measured cross section by the reaction model's single-particle value, times the shell model's spectroscopic factor C²S, gives R<sub>s</sub>.</p>
+  <p class="sub">Where the picture strains: at 53 MeV/u Flavigny et al. (2012) find the residue momentum distribution of <sup>14</sup>O(−n) strongly asymmetric and an adiabaticity parameter of 2.25, so the sudden approximation does not hold for that deeply bound neutron by the authors' own criterion.</p>`;
+  document.getElementById("opentext").innerHTML = `
+  <p class="sub">Knockout on light targets at 50 to 2000 MeV/u gives R<sub>s</sub> near 1 for the weakly bound species (ΔS ≈ −20 MeV) and near 0.3 for the deeply bound ones (ΔS ≈ +20 MeV). Tostevin and Gade (PRC 103, 054610 (2021)) summarise the trend as R<sub>s</sub> = 0.61 − 0.016ΔS (from Mutschler et al., PRC 93, 034333 (2016)), with a scatter of about 0.1, and find no sign that it comes from a breakdown of the sudden approximation, data up to 1.6 GeV/u included.</p>
+  <p class="sub">Other probes do not show the slope. Quasi-free (p,2p) on <sup>14–23</sup>O at 300 to 450 MeV/u gives R ≈ 0.66 with "weak or even no" dependence on the asymmetry (Atar et al., PRL 120, 052501 (2018)); a reanalysis finds slopes −2.5(12)×10<sup>−3</sup> and +0.4(13)×10<sup>−3</sup> per MeV with two optical potentials (Gómez-Ramos and Moro, PLB 785, 511 (2018)); (p,2p) on <sup>14,22,24</sup>O shows "no apparent dependence" (Kawase et al., PTEP 2018, 021D01). Transfer agrees: <sup>34,36,46</sup>Ar(p,d) allows the spectroscopic factor of <sup>34</sup>Ar to be reduced by 0 to 35% relative to <sup>46</sup>Ar but excludes much larger reductions (Lee et al., PRL 104, 112701 (2010)), and <sup>14</sup>O(d,t),(d,³He) gives a slope 0.0004(24)(12) per MeV (Flavigny et al., PRL 110, 122503 (2013)).</p>
+  <p class="sub">Proposed reaction-side explanations, none settled: secondary collisions of the struck nucleon with the core destroy the residue more often than the eikonal core survival allows (an explicit model lowers the knockout slope from −0.013 to −0.004 or −0.005 per MeV, Gómez-Ramos, Gómez-Camacho and Moro, PLB 847, 138284 (2023); a separate model finds the core survival lower by up to 9.5% but "no clear evidence" of a dependence on the binding, Bertulani, PLB 846, 138250 (2023)); non-sudden effects at low beam energy (Flavigny et al., PRL 108, 252501 (2012)). On the structure side the theoretical C²S, the orbital radii and the target densities all enter σ<sub>th</sub>. Aumann et al. (Prog. Part. Nucl. Phys. 118, 103847 (2021)) conclude that for −12 ≲ ΔS ≲ 12 MeV the probes agree on a quenching to 40 to 70%, and that the strong knockout trend has so far been analysed with one reaction model. The page shows the published numbers; it does not decide between the probes.</p>`;
+}
+function applyVis() {
+  const g = S.geo;
+  document.getElementById("vnote").innerHTML =
+    `Beam along the dashed line, at impact parameter b = ${g.b.toFixed(1)} fm (gold, on the floor) from the target's axis. Target (slate): Gaussian of rms 2.36 fm, the <sup>9</sup>Be density of Gade et al. and Tostevin and Gade, with its half-density shell. Core (bone): a Fermi shape, R = 1.1A<sup>1/3</sup> fm, a = 0.5 fm, schematic. Orbital (${S.cs.q === "n" ? "blue" : "orange"}): schematic, its density falls as e<sup>−2κr</sup>/r² with κ = √(2μS)/ħ, so the tail's decay length 1/2κ = ${g.decay.toFixed(2)} fm here; drawn on a log scale over three decades, with a faint shell where it is 1% of its centre value (r = ${g.r1.toFixed(1)} fm), its part inside the target tinted gold at contact. The nucleon (sphere, 0.85 fm) is placed at the density-weighted centre of that overlap. ` +
+    `b is fixed at a grazing value, R<sub>core</sub> + √(5/3)·rms<sub>T</sub> + 0.4 fm, for the drawing; real events spread over a range of b. Time is slowed down by about 10<sup>22</sup>; the diffracted nucleon leaves at a fixed 8°, schematic; the Lorentz contraction (γ ≈ ${kinem(S.cs.E).gamma.toFixed(2)}) is not drawn. ` +
+    (quality === "high" ? "72 to 96 ray steps per pixel, bloom." : "36 to 48 ray steps per pixel, no bloom.") + ` Colours, glow and the floor are presentation.`;
+}
+
+// ================================================================ loading, hash, UI
+let fitTo = 70;
+function loadCase(id, keepCam) {
+  const cs = CASES.find((c) => c.id === id) || CASES.find((c) => c.id === "16C-n");
+  S.cs = cs; S.geo = geometryOf(cs);
+  for (const b of document.querySelectorAll("#chips button")) b.setAttribute("aria-pressed", b.dataset.id === cs.id ? "true" : "false");
+  layoutCase(); place(S.u);
+  drawInfo(); drawPub(); drawCases(); drawRs(); applyVis(); syncControls(); setHash();
+  document.title = `${nucT(cs.Z, cs.N)}(−${cs.q}) knockout · nuclearjs`;
+}
+function syncControls() {
+  for (const b of document.querySelectorAll("#mode button")) b.setAttribute("aria-pressed", b.dataset.v === S.mode ? "true" : "false");
+  for (const b of document.querySelectorAll("#qmode button")) b.setAttribute("aria-pressed", b.dataset.v === quality ? "true" : "false");
+  document.getElementById("play").textContent = S.playing ? "pause" : "play";
+  document.getElementById("ph").value = S.u;
+  document.getElementById("oph").textContent = phaseText(S.u);
+}
+function setHash() {
+  const h = `#${S.cs.id}` + (S.mode === "dif" ? ",dif" : "");
+  if (location.hash !== h) history.replaceState(null, "", h);
+}
+function parseHash() {
+  let t; try { t = decodeURIComponent(location.hash.slice(1)).split(","); } catch (e) { return null; }   // malformed % escape
+  if (!CASES.some((c) => c.id === t[0])) return null;
+  return { id: t[0], mode: t.includes("dif") ? "dif" : "str" };
+}
+{
+  const ch = document.getElementById("chips");
+  ch.innerHTML = CASES.map((c) => `<button data-id="${c.id}" title="${c.ref}">${nuc(c.Z, c.N)}(−${c.q})</button>`).join("");
+  ch.addEventListener("click", (e) => { const b = e.target.closest("button"); if (b) loadCase(b.dataset.id); });
+}
+document.getElementById("cases").addEventListener("click", (e) => { const tr = e.target.closest("tr[data-id]"); if (tr) loadCase(tr.dataset.id); });
+document.getElementById("mode").addEventListener("click", (e) => { const b = e.target.closest("button"); if (!b) return; S.mode = b.dataset.v; place(S.u); drawInfo(); syncControls(); setHash(); });
+document.getElementById("play").addEventListener("click", () => { S.playing = !S.playing; syncControls(); });
+document.getElementById("ph").addEventListener("input", (e) => { S.u = +e.target.value; S.playing = false; place(S.u); syncControls(); });
+function applyQuality() {
+  const g = quality === "high" ? GROUND_PRE_ACES : GROUND;
+  scene.background.copy(g); scene.fog.color.copy(g); renderer.setClearColor(g);
+  for (const m of [target, core, orbital]) m.material = quality === "high" ? m.userData.hi : m.userData.lo;
+  if (S.geo) applyVis();
+  syncControls();
+}
+document.getElementById("qmode").addEventListener("click", (e) => { const b = e.target.closest("button"); if (!b) return; quality = b.dataset.v; applyQuality(); });
+addEventListener("hashchange", () => { const o = parseHash(); if (o) { S.mode = o.mode; loadCase(o.id); } });
+addEventListener("resize", () => {
+  camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight); composer.setSize(innerWidth, innerHeight);
+  drawRs();
+});
+
+// ================================================================ start
+setTexts();
+{
+  const o = parseHash();
+  if (o) S.mode = o.mode;
+  loadCase(o ? o.id : "16C-n");
+  applyQuality();
+  controls.target.set(0, -1, S.geo.b * 0.5);
+  camera.position.set(-0.28, 0.82, 0.5).setLength(fitTo).add(controls.target);
+}
+
+// ================================================================ loop
+const labT = document.getElementById("labT"), labP = document.getElementById("labP"), labN = document.getElementById("labN"), tv = new THREE.Vector3();
+function tag(el, p, text, color) {
+  tv.copy(p).project(camera);
+  const vis = tv.z < 1 && Math.abs(tv.x) < 0.95 && Math.abs(tv.y) < 0.95;
+  el.hidden = !vis;
+  if (vis) { el.innerHTML = text; el.style.left = (tv.x * 0.5 + 0.5) * innerWidth + "px"; el.style.top = (-tv.y * 0.5 + 0.5) * innerHeight + "px"; if (color) el.style.color = color; }
+}
+const PERIOD = 10;                           // seconds per pass
+let last = performance.now();
+function animate(now) {
+  requestAnimationFrame(animate);
+  const dt = Math.min(0.1, Math.max(0, (now - last) / 1000)); last = now;
+  if (S.playing) {
+    // slower through the contact, so the overlap can be seen
+    const slow = 1 - 0.6 * Math.exp(-(((S.u - 0.48) / 0.08) ** 2));
+    S.u = (S.u + dt / PERIOD * slow) % 1;
+    place(S.u);
+    document.getElementById("ph").value = S.u;
+    document.getElementById("oph").textContent = phaseText(S.u);
+  }
+  const dist = camera.position.distanceTo(controls.target);
+  if (fitTo && Math.abs(dist - fitTo) > 0.05) {
+    const k = 1 - Math.exp(-dt / 0.35);
+    camera.position.sub(controls.target).multiplyScalar((dist + (fitTo - dist) * k) / dist).add(controls.target);
+    if (Math.abs(dist - fitTo) < 0.1) fitTo = 0;
+  }
+  controls.update();
+  const dnow = camera.position.distanceTo(controls.target);
+  scene.fog.near = dnow * 1.4; scene.fog.far = dnow * 3.8;
+  stage3.update(camera);
+  if (quality === "high") composer.render(); else renderer.render(scene, camera);
+  if (S.geo) {
+    const cs = S.cs, after = S.u > 0.56;
+    tag(labT, tv.set(0, T_RSH + 2.2, 0).clone(), "<sup>9</sup>Be target");
+    tag(labP, tv.set(core.position.x, Math.max(S.geo.Rc + 2.5, Math.min(S.geo.rv * 0.55, 9)), core.position.z).clone(),
+      after ? `${nucT(cs.Zc, cs.Nc)} residue` : `${nucT(cs.Z, cs.N)} = ${nucT(cs.Zc, cs.Nc)} + ${cs.q}`);
+    if (nucleon.visible) tag(labN, tv.copy(nucleon.position).add(new THREE.Vector3(0, -1.8, 0)).clone(), cs.q === "n" ? "n" : "p", CQ[cs.q]); else labN.hidden = true;
+  }
+}
+requestAnimationFrame(animate);
+</script>
+<script src="assets/glass.js"></script>
+</body>
+</html>

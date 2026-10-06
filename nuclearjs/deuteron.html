@@ -1,0 +1,879 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>The deuteron · nuclearjs</title>
+<link rel="stylesheet" href="assets/glass.css">
+<style>
+body{margin:0}
+:root{
+  color-scheme:dark;
+  --ground:#0b0d12; --line:#262c3a;
+  --ink:#e6e8ee; --muted:#8a92a6; --accent:#f2c14e;
+  --neu:#a8cdf2; --pro:#ff9656; --pub:#7fd1b9; --pwa:#c9d3e6; --warn:#ef8a7a;
+  --sans:"Avenir Next","Futura","Helvetica Neue","PingFang SC","Noto Sans SC",system-ui,sans-serif;
+  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+}
+html,body{height:100%}
+body{background:var(--ground);color:var(--ink);font-family:var(--sans);overflow:hidden}
+#stage{position:fixed;inset:0}
+#stage canvas{display:block;touch-action:none}
+.panel{position:fixed;border-radius:18px;padding:16px 18px;display:flex;flex-direction:column;gap:12px;overflow:auto;box-sizing:border-box;z-index:2}
+.panel>*{flex-shrink:0}
+#ctl{left:16px;top:calc(16px + env(safe-area-inset-top,0px));width:min(318px,calc(100% - 32px));max-height:calc(100% - 56px)}
+#side{right:16px;top:calc(16px + env(safe-area-inset-top,0px));width:420px;max-height:calc(100% - 32px);gap:9px}
+h1{margin:0;font-size:22px;font-weight:600;letter-spacing:.01em}
+.sub{margin:2px 0 0;color:var(--muted);font-size:13px;line-height:1.45}
+.sub sup,.src sup,.kv sup,table sup,.cap sup{font-size:.7em}
+.grp{display:flex;flex-direction:column;gap:6px}
+.grp[hidden]{display:none}
+.lab{font-size:11px;text-transform:uppercase;letter-spacing:.12em;color:var(--muted)}
+.seg{display:flex;border:1px solid var(--line);border-radius:6px;overflow:hidden}
+.seg button{flex:1;background:none;border:0;color:var(--muted);font:500 12px var(--mono);padding:6px 4px;cursor:pointer}
+.seg button+button{border-left:1px solid var(--line)}
+.seg button[aria-pressed="true"]{background:#1f2533;color:var(--ink)}
+.chips{display:flex;flex-wrap:wrap;gap:5px}
+.chips button{background:none;border:1px solid var(--line);border-radius:4px;color:var(--ink);font:500 12px var(--mono);padding:4px 7px;cursor:pointer}
+.chips button:hover{border-color:var(--muted)}
+.chips button[aria-pressed="true"]{border-color:var(--accent);color:var(--accent)}
+button:focus-visible,input:focus-visible,summary:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:3px 10px;font:12px var(--mono);font-variant-numeric:tabular-nums}
+.kv dt{color:var(--muted)}.kv dd{margin:0}
+.kv .hi{color:var(--accent)} .kv small{color:var(--muted)}
+.row{display:flex;gap:8px;align-items:center;font:12px var(--mono);color:var(--muted)}
+.row input[type=range]{flex:1;accent-color:var(--accent);min-width:0}
+.row output{min-width:70px;text-align:right;color:var(--ink);font-variant-numeric:tabular-nums}
+.linkbtn{background:none;border:0;color:var(--muted);font:12px var(--mono);padding:0;cursor:pointer;text-decoration:underline;align-self:flex-start}
+details summary{cursor:pointer;font-size:11px;text-transform:uppercase;letter-spacing:.12em;color:var(--muted);list-style:none}
+details summary::before{content:"▸ ";}
+details[open] summary::before{content:"▾ ";}
+details .grp{margin-top:8px}
+.home{font:12px var(--mono);color:var(--muted);text-decoration:none}.home:hover{color:var(--ink)}
+.src{font-size:11px;color:var(--muted);line-height:1.5;margin:0}
+.src b{color:var(--ink);font-weight:600}
+.src a{color:var(--muted)}
+.warn{font-size:12px;color:var(--accent);line-height:1.4;margin:0}
+.plot{width:100%;height:180px;display:block}
+.plot.short{height:150px}
+.cap{display:flex;flex-wrap:wrap;gap:2px 8px;justify-content:space-between;align-items:baseline;font:11px var(--mono);color:var(--muted)}
+.cap b{font:600 13px var(--sans);color:var(--ink)}
+.leg{display:flex;flex-wrap:wrap;gap:3px 11px;font:10.5px var(--mono);color:var(--muted);line-height:1.4}
+.leg i{display:inline-block;width:14px;height:0;border-top:2px solid;vertical-align:middle;margin-right:4px}
+.leg i.dash{border-top-style:dashed}
+.leg i.dot{width:6px;height:6px;border:0;border-radius:50%;vertical-align:middle}
+table.pub{width:100%;border-collapse:collapse;font:10.5px var(--mono);font-variant-numeric:tabular-nums}
+table.pub th{font-weight:500;color:var(--muted);text-align:right;padding:3px 3px;border-bottom:1px solid #262c3a;vertical-align:bottom}
+table.pub th:first-child{text-align:left}
+table.pub td{padding:3px 3px;border-bottom:1px solid #191e2a;vertical-align:top;color:var(--ink);line-height:1.35;text-align:right}
+table.pub td:first-child{text-align:left;color:var(--muted)}
+table.pub td.m{color:var(--accent)} table.pub td.p{color:var(--pub)} table.pub td.w{color:var(--pwa)}
+table.pub td small{display:block;color:var(--muted);font-size:9.5px}
+.flag{color:var(--warn)}
+.axlab{position:fixed;font:500 11px var(--mono);color:#d6deea;pointer-events:none;transform:translate(-50%,-50%);white-space:nowrap;text-shadow:0 0 6px #000,0 0 2px #000;background:rgba(8,10,15,.55);padding:1px 6px;border-radius:4px;line-height:1.35;text-align:center}
+.axlab.hot{color:var(--accent)}
+.axlab small{color:var(--muted);font-size:10px;display:block}
+#stamp{position:fixed;left:50%;bottom:calc(22px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);text-align:center;pointer-events:none;width:min(640px,44vw)}
+#stamp b{display:block;font:600 clamp(22px,3vw,36px)/1.1 var(--sans);letter-spacing:-.01em}
+#stamp small{display:block;font:500 12px var(--mono);color:var(--muted);margin-top:6px;line-height:1.5}
+#stamp .hi{color:var(--accent)}
+.hint{position:fixed;left:16px;bottom:calc(14px + env(safe-area-inset-bottom,0px));font:11px var(--mono);color:var(--muted)}
+@media (max-width:900px){
+  #ctl{max-height:38vh}
+  #side{left:16px;right:16px;width:auto;top:auto;bottom:calc(12px + env(safe-area-inset-bottom,0px));max-height:40vh}
+  #stamp,.hint,.axlab{display:none}
+}
+@media (max-width:560px){.panel{padding:10px 12px;gap:9px}h1{font-size:18px}}
+</style>
+<script data-goatcounter="https://jinleiphys.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
+</head>
+<body>
+
+<div id="stage"></div>
+
+<aside id="ctl" class="panel glass glass-deep" data-glass data-glass-bevel="22" data-glass-scale="42">
+  <div>
+    <a class="home" href="index.html">← nuclearjs</a> &nbsp; <a class="home" href="halo.html">halo nuclei</a> &nbsp; <a class="home" href="scatter.html">scattering</a>
+    <h1>The deuteron</h1>
+    <p class="sub">One proton and one neutron, held together by 2.2 MeV, the only bound state of two nucleons. Its spins are aligned (J<sup>π</sup> = 1<sup>+</sup>), and the force between them depends on how those spins point relative to the line joining them: the tensor force. It mixes a little D wave into the S wave, and the deuteron stops being round. And it is so weakly bound that the neutron spends most of its time outside the range of the force that holds it.</p>
+  </div>
+  <div class="grp">
+    <div class="lab">Interaction</div>
+    <div class="seg" id="model">
+      <button data-v="av18" title="Argonne v18, solved live in the coupled 3S1-3D1 channels">Argonne v18</button>
+      <button data-v="toy" title="a single square well, S wave only: for intuition">toy: square well</button>
+    </div>
+  </div>
+  <div class="grp" id="gAV">
+    <div class="lab">Spin projection M<sub>J</sub> on the vertical axis</div>
+    <div class="seg" id="mj">
+      <button data-v="1">+1</button>
+      <button data-v="0">0</button>
+      <button data-v="-1">−1</button>
+    </div>
+    <label class="lab" for="lam">Strength of the tensor force</label>
+    <div class="row"><input id="lam" type="range" min="0.6" max="1.2" step="0.005" aria-label="tensor force scale"><output id="lamo"></output></div>
+    <button class="linkbtn" id="lam1" type="button">back to Argonne v18 as published</button>
+    <dl class="kv" id="infoAV"></dl>
+    <p class="warn" id="warnAV" hidden></p>
+  </div>
+  <div class="grp" id="gToy" hidden>
+    <p class="warn">A toy for intuition, not a model of the deuteron: one square well, S wave only, no tensor force, so no D state and no quadrupole moment.</p>
+    <label class="lab" for="v0">Depth V<sub>0</sub></label>
+    <div class="row"><input id="v0" type="range" min="10" max="120" step="0.1" aria-label="well depth"><output id="v0o"></output></div>
+    <label class="lab" for="rw">Radius R</label>
+    <div class="row"><input id="rw" type="range" min="1" max="3" step="0.01" aria-label="well radius"><output id="rwo"></output></div>
+    <button class="linkbtn" id="fitB" type="button">depth that binds by the measured 2.2246 MeV</button>
+    <dl class="kv" id="infoToy"></dl>
+  </div>
+  <div class="grp">
+    <div class="lab">Rendering</div>
+    <div class="seg" id="qmode">
+      <button data-v="high" title="ray-marched volume, soft bloom">cinematic</button>
+      <button data-v="low" title="point cloud, for phones">fast</button>
+    </div>
+    <div class="seg" id="cutmode">
+      <button data-v="0">whole</button>
+      <button data-v="1" title="remove the wedge that faces you">cut-away</button>
+    </div>
+    <p class="src" id="vnote"></p>
+  </div>
+</aside>
+
+<aside id="side" class="panel glass glass-deep" data-glass data-glass-bevel="22" data-glass-scale="42">
+  <div class="cap"><b>Deuteron properties</b><span id="capP"></span></div>
+  <table class="pub" id="props"></table>
+  <p class="src" id="propsNote"></p>
+  <div class="cap"><b id="wfTitle">Wave functions</b><span id="capW"></span></div>
+  <canvas id="pwf" class="plot" aria-label="Radial wave functions u(r) and w(r) of the deuteron"></canvas>
+  <div class="leg" id="legW"></div>
+  <p class="src" id="wfNote"></p>
+  <div class="cap"><b>The np force</b><span>MeV, against r (fm)</span></div>
+  <canvas id="ppot" class="plot short" aria-label="Argonne v18 in the 3S1-3D1 channels and in 1S0"></canvas>
+  <div class="leg" id="legV"></div>
+  <p class="src" id="potNote"></p>
+  <div class="cap"><b>np phase shifts</b><span id="capPh"></span></div>
+  <div class="chips" id="phch"></div>
+  <canvas id="pph" class="plot" aria-label="np phase shifts of Argonne v18 against the Nijmegen PWA93 analysis"></canvas>
+  <div class="leg" id="legPh"></div>
+  <p class="src" id="phNote"></p>
+  <details id="dlow">
+    <summary>Scattering lengths and effective ranges</summary>
+    <div class="grp">
+      <table class="pub" id="low"></table>
+      <p class="src" id="lowNote"></p>
+    </div>
+  </details>
+  <details>
+    <summary>What is simplified</summary>
+    <div class="grp src" id="simp"></div>
+  </details>
+  <details>
+    <summary>Sources</summary>
+    <div class="grp src" id="srcs"></div>
+  </details>
+</aside>
+
+<div id="labels"></div>
+<div id="stamp"></div>
+<div class="hint">drag to orbit · scroll to zoom · change M<sub>J</sub> or the tensor force</div>
+
+<script src="assets/three-bundle.js"></script>
+<script src="assets/three-post.js"></script>
+<script src="assets/vol.js"></script>
+<script src="assets/shells-data.js"></script>
+<script src="assets/deuteron-data.js"></script>
+<script src="assets/deuteron.js"></script>
+<script>
+"use strict";
+const D = DEUT_DATA, W = D.wss95, WF = D.deutwf, PW = D.pwa93;
+const L10 = Math.log10;
+
+// ================================================================ measured binding energy, computed here
+// AME2020 atomic mass excesses (window.AME rows [Z, N, Delta keV, sigma, estimated, ...]): B = Delta(1H) + Delta(n) - Delta(2H)
+const ME = {}; for (const e of window.AME) if (!e[4]) ME[e[0] + "," + e[1]] = [e[2], e[3]];
+const B_AME = (ME["1,0"][0] + ME["0,1"][0] - ME["1,1"][0]) / 1000;
+// nominal: the three mass uncertainties added in quadrature, correlations between them neglected
+const B_AME_ERR = Math.hypot(ME["1,0"][1], ME["0,1"][1], ME["1,1"][1]) / 1000;
+// CODATA nuclear masses: B = m_p + m_n - m_d. No uncertainty is derived from them: the adjusted masses are
+// correlated (m_n is fixed largely through the deuteron binding), and the listing gives no covariances.
+const CODY = D.codata_edition;
+const cv = (k) => +D.codata[k].v;
+const B_COD = cv("proton mass energy equivalent in MeV") + cv("neutron mass energy equivalent in MeV") - cv("deuteron mass energy equivalent in MeV");
+// the paper's mu_d (Lindgren 1965, as printed) against CODATA, in units of the paper's quoted error
+const MUD_PUB = W.deut.mud.exp.match(/^([\d.]+)\((\d+)\)$/), MUD_COD = cv("deuteron mag. mom. to nuclear magneton ratio");
+const MUD_SIG = (MUD_COD - +MUD_PUB[1]) / (+MUD_PUB[2] * Math.pow(10, -(MUD_PUB[1].split(".")[1].length)));
+const MPI = (DEUT.C.mpi0 + 2 * DEUT.C.mpic) / 3, RPI = DEUT.C.hc / MPI;   // the potential's average pion mass; hbar/(m_pi c)
+
+// ================================================================ state
+const S = { model: "av18", M: 1, lam: 1, V0: null, R: 2.0, sol: null, toy: null, ph: "3S1", lamc: null };
+let PH = null, LOW = null;
+let B0 = null, ETA80 = null, S0K = null;                       // Argonne v18 as published: B, and eta read off at 80 fm
+
+// ================================================================ scene
+const stage = document.getElementById("stage");
+const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance", preserveDrawingBuffer: true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.setSize(innerWidth, innerHeight);
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.05;
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+stage.appendChild(renderer.domElement);
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(36, innerWidth / innerHeight, 0.1, 600);
+const composer = new EffectComposer(renderer);
+composer.addPass(new RenderPass(scene, camera));
+const bloom = new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), 0.22, 0.6, 0.95);
+composer.addPass(bloom);
+composer.addPass(new OutputPass());
+const smaa = new SMAAPass(innerWidth * renderer.getPixelRatio(), innerHeight * renderer.getPixelRatio());
+composer.addPass(smaa);
+scene.environment = VOL.studioEnv(renderer);
+renderer.localClippingEnabled = true;
+VOL.lightRig(scene);
+scene.fog = new THREE.Fog("#0b0d12", 60, 180);
+// ACES maps this linear colour back to exactly #0b0d12 on the composer path (as on nucleus.html)
+const GROUND = new THREE.Color("#0b0d12");
+const GROUND_PRE_ACES = new THREE.Color().setRGB(0.0115476, 0.0131218, 0.0174740, THREE.LinearSRGBColorSpace);
+scene.background = GROUND.clone();
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true; controls.dampingFactor = 0.08;
+controls.minDistance = 4; controls.maxDistance = 200;
+const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+controls.autoRotate = !reduce; controls.autoRotateSpeed = 0.4;
+controls.addEventListener("start", () => { controls.autoRotate = false; fitTo = 0; });
+
+const stage3 = new VOL.Stage(scene);
+stage3.side = 1.25;
+const grid = new THREE.GridHelper(200, 200, "#2a3245", "#1d2333");
+grid.material.opacity = 0.55;
+stage3.fadeGrid(grid);
+scene.add(grid);
+const cut = new VOL.Cut();
+const vol = new VOL.Volume({ coarse: 1.2 }).useCut(cut);
+const gov = new VOL.Governor(vol);
+scene.add(vol.mesh);
+
+// camera-facing rings: 1/kappa (amber) and the range of one-pion exchange hbar/(m_pi c) (grey, dashed)
+function ringLine(color, opacity, dashed) {
+  const pts = [];
+  for (let i = 0; i <= 200; i++) { const t = i / 200 * 2 * Math.PI; pts.push(new THREE.Vector3(Math.cos(t), Math.sin(t), 0)); }
+  const g = new THREE.BufferGeometry().setFromPoints(pts);
+  const m = dashed ? new THREE.LineDashedMaterial({ color, transparent: true, opacity, dashSize: 0.05, gapSize: 0.04 })
+                   : new THREE.LineBasicMaterial({ color, transparent: true, opacity });
+  const l = new THREE.Line(g, m);
+  if (dashed) l.computeLineDistances();
+  l.renderOrder = 4; scene.add(l);
+  return l;
+}
+const ringK = ringLine("#f2c14e", 0.8, false);
+const ringPi = ringLine("#9aa6bd", 0.75, true);
+ringPi.scale.setScalar(RPI);
+// the toy's well: a thin glass sphere
+const wellGlass = new THREE.Mesh(new THREE.SphereGeometry(1, 96, 64),
+  VOL.glassMaterial({ clippingPlanes: cut.planes, clipIntersection: true, clearcoat: 0.25, clearcoatRoughness: 0.1, envMapIntensity: 0.4 }));
+wellGlass.renderOrder = 20; scene.add(wellGlass);
+// spin axis (the quantization axis, vertical) with an arrow head
+const axisMat = new THREE.LineDashedMaterial({ color: "#f2c14e", transparent: true, opacity: 0.55, dashSize: 0.25, gapSize: 0.2 });
+const axis = new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, -1, 0), new THREE.Vector3(0, 1, 0)]), axisMat);
+scene.add(axis);
+const axisHead = new THREE.Mesh(new THREE.ConeGeometry(0.16, 0.5, 24), new THREE.MeshStandardMaterial({ color: "#f2c14e", emissive: "#7a5a10", roughness: 0.4 }));
+scene.add(axisHead);
+// the proton at the origin: the cloud is where the neutron is found, seen from the proton (a point, not to scale)
+const GLOWTEX = (() => {
+  const c = document.createElement("canvas"); c.width = c.height = 128;
+  const x = c.getContext("2d"), g = x.createRadialGradient(64, 64, 0, 64, 64, 64);
+  g.addColorStop(0, "rgba(255,255,255,1)"); g.addColorStop(0.2, "rgba(255,255,255,0.55)"); g.addColorStop(0.55, "rgba(255,255,255,0.1)"); g.addColorStop(1, "rgba(255,255,255,0)");
+  x.fillStyle = g; x.fillRect(0, 0, 128, 128);
+  return new THREE.CanvasTexture(c);
+})();
+const pGlow = new THREE.Sprite(new THREE.SpriteMaterial({ map: GLOWTEX, color: "#ff9656", transparent: true, depthWrite: false, depthTest: false, blending: THREE.AdditiveBlending }));
+pGlow.scale.setScalar(0.9); pGlow.renderOrder = 30; scene.add(pGlow);
+
+// ---- the tensor-force picture: two np pairs beside the cloud, spins up (along the axis)
+const TP = new THREE.Group(); scene.add(TP);
+const nucMat = (c, e) => new THREE.MeshPhysicalMaterial({ color: c, emissive: e, emissiveIntensity: 0.35, roughness: 0.28, clearcoat: 0.7, clearcoatRoughness: 0.2 });
+const MATP = nucMat("#ff9656", "#7a3510"), MATN = nucMat("#a8cdf2", "#2a4a70");
+const ARMAT = new THREE.MeshStandardMaterial({ color: "#f4f6fb", emissive: "#8892a8", emissiveIntensity: 0.4, roughness: 0.35 });
+function spinArrow() {
+  const g = new THREE.Group();
+  const shaft = new THREE.Mesh(new THREE.CylinderGeometry(0.055, 0.055, 0.9, 16), ARMAT); shaft.position.y = 0.45;
+  const head = new THREE.Mesh(new THREE.ConeGeometry(0.15, 0.32, 20), ARMAT); head.position.y = 1.02;
+  g.add(shaft, head); return g;
+}
+const RN = 0.42;                                    // drawn nucleon radius (fm), smaller than the real 0.84 fm so the pair stays legible
+function pair(dir) {                               // dir: separation direction (unit), centre at the origin of the group
+  const g = new THREE.Group(), d = 1.6;             // drawn separation, fm
+  const p = new THREE.Mesh(new THREE.SphereGeometry(RN, 40, 28), MATP), n = new THREE.Mesh(new THREE.SphereGeometry(RN, 40, 28), MATN);
+  p.position.copy(dir).multiplyScalar(d / 2); n.position.copy(dir).multiplyScalar(-d / 2);
+  const ap = spinArrow(), an = spinArrow(); ap.position.copy(p.position).add(new THREE.Vector3(0, RN * 0.6, 0)); an.position.copy(n.position).add(new THREE.Vector3(0, RN * 0.6, 0));
+  const link = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, d, 8), new THREE.MeshBasicMaterial({ color: "#5d6577" }));
+  link.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir.clone().normalize());
+  g.add(p, n, ap, an, link);
+  return g;
+}
+const pairA = pair(new THREE.Vector3(0, 1, 0)), pairB = pair(new THREE.Vector3(1, 0, 0));
+TP.add(pairA, pairB);
+
+// ---- point cloud (fast mode): one point per draw from the density
+const NPTS = innerWidth < 700 ? 40000 : 100000;
+const pos = new Float32Array(NPTS * 3), from = new Float32Array(NPTS * 3);
+const cloudGeo = new THREE.BufferGeometry();
+cloudGeo.setAttribute("position", new THREE.BufferAttribute(pos, 3));
+cloudGeo.setAttribute("aFrom", new THREE.BufferAttribute(from, 3));
+const cloudMat = new THREE.ShaderMaterial({
+  uniforms: { uMix: { value: 1 }, uSize: { value: 0.11 }, uPix: { value: 600 }, uAlpha: { value: 0.42 }, uC: { value: new THREE.Color("#b8d8f6") },
+    uCut: { value: 0 }, uCutA: { value: cut.A }, uCutB: { value: cut.B } },
+  vertexShader: `
+    attribute vec3 aFrom; uniform float uMix, uSize, uPix, uCut; uniform vec3 uCutA, uCutB;
+    void main(){
+      vec3 p = mix(aFrom, position, uMix);
+      if (uCut > 0.5 && dot(p, uCutA) > 0.0 && dot(p, uCutB) > 0.0) { gl_Position = vec4(0.0, 0.0, 2.0, 1.0); gl_PointSize = 0.0; return; }
+      vec4 mv = modelViewMatrix * vec4(p, 1.0);
+      gl_Position = projectionMatrix * mv;
+      gl_PointSize = max(1.0, uSize * uPix / -mv.z);
+    }`,
+  fragmentShader: `
+    uniform float uAlpha; uniform vec3 uC;
+    void main(){
+      vec2 d = gl_PointCoord - 0.5; float r2 = dot(d, d);
+      if (r2 > 0.25) discard;
+      float a = exp(-r2 * 14.0) * uAlpha;
+      gl_FragColor = vec4(uC * a, a);
+      #include <tonemapping_fragment>
+      #include <colorspace_fragment>
+    }`,
+  transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
+});
+const cloud = new THREE.Points(cloudGeo, cloudMat);
+cloud.frustumCulled = false; scene.add(cloud);
+const CDEN = new THREE.Color("#a8cdf2");
+let quality = innerWidth < 700 ? "low" : "high", mix = 1, fitTo = 0;
+
+// ================================================================ physics on the page
+// the current radial functions on a uniform grid: { h, n, u, w }, w = 0 for the toy
+function radial() {
+  if (S.model === "av18") return { h: S.sol.h, n: S.sol.u.length - 1, u: S.sol.u, w: S.sol.w, kappa: S.sol.kappa };
+  const T = S.toy, h = 0.01, rm = Math.min(200, T.R + 16 / T.kappa), n = Math.round(rm / h);
+  const u = new Float64Array(n + 1), w = new Float64Array(n + 1);
+  for (let i = 0; i <= n; i++) u[i] = DEUT.toyU(T, i * h);
+  return { h, n, u, w, kappa: T.kappa };
+}
+const at = (a, h, r) => { const f = r / h, i = Math.floor(f); if (i >= a.length - 1) return 0; const t = f - i; return a[i] * (1 - t) + a[i + 1] * t; };
+// density of the relative coordinate, rho(r, cos theta) in fm^-3
+function rhoAt(Rd, r, c) {
+  if (r <= 0) return 0;
+  const u = at(Rd.u, Rd.h, r), w = at(Rd.w, Rd.h, r);
+  return Math.max(0, DEUT.density(u, w, S.model === "av18" ? S.M : 0, c)) / (4 * Math.PI * r * r);
+}
+const DEC = 2.5;                                   // decades of the log transfer function
+function buildField(fade) {
+  const Rd = radial();
+  let pk = 0;
+  for (let i = 1; i < Rd.n; i += 2) for (const c of [-1, 0, 1]) pk = Math.max(pk, rhoAt(Rd, i * Rd.h, c));
+  let rlast = 0;
+  for (let i = 1; i < Rd.n; i++) { const r = i * Rd.h; if (Math.max(rhoAt(Rd, r, 1), rhoAt(Rd, r, 0)) > Math.pow(10, -DEC - 0.3) * pk) rlast = r; }
+  const rmax = rlast * 1.03 + 0.3;
+  // iso shells, stated on the page: 3/4 of the peak density (the shape: two lobes for M = ±1, a ring for M = 0,
+  // since along the other direction the density never reaches 3/4 of its peak), and 1 % of it
+  const F = VOL.field({ rmax, NR: 256, NU: 96, tau: 1.6,
+    iso: [{ w: [1, 0, 0], level: 1 + L10(0.75) / DEC, alpha: 0.95 }, { w: [1, 0, 0], level: 1 + L10(0.01) / DEC, alpha: 0.16, rim: 1 }],
+    channels: [{ f: (r, c) => rhoAt(Rd, r, c), tf: { type: "log", D: DEC }, color: CDEN.clone().multiplyScalar(1.15) }] });
+  vol.setField(F, fade);
+  vol.setExposure(0.8);
+  vol.u.uFace.value = Math.max(1.5, 0.15 * rmax);
+  const fy = -rmax * 0.62 - 0.6;
+  stage3.layout(fy, Math.max(rmax * 0.62, 3), rmax > 9 ? 5 : 2);
+  stage3.setShadow(F, 2.5);
+  vol.u.uFloorY.value = fy;
+  grid.position.y = fy + 0.01;
+  S.rmaxField = rmax; S.floorY = fy;
+  axis.geometry.setFromPoints([new THREE.Vector3(0, fy + 0.05, 0), new THREE.Vector3(0, rmax * 0.62, 0)]); axis.computeLineDistances();
+  axisHead.position.set(0, rmax * 0.62 + 0.25, 0);
+  axis.visible = axisHead.visible = S.model === "av18";
+  TP.visible = S.model === "av18";
+  TP.position.set(5.8, 0.2, 0);
+  TP.scale.setScalar(0.62);
+  pairA.position.set(0, 1.9, 0); pairB.position.set(0, -1.7, 0);
+}
+// point cloud: r from (u^2 + w^2), then cos theta by rejection against 1 + c(r) P2
+function sampleCloud() {
+  for (let i = 0; i < pos.length; i++) from[i] = from[i] + (pos[i] - from[i]) * mix;
+  const Rd = radial(), n = Rd.n, h = Rd.h, cdf = new Float64Array(n + 1);
+  let s = 0;
+  for (let i = 1; i <= n; i++) { const a = Rd.u[i - 1] ** 2 + Rd.w[i - 1] ** 2, b = Rd.u[i] ** 2 + Rd.w[i] ** 2; s += 0.5 * (a + b) * h; cdf[i] = s; }
+  for (let i = 0; i <= n; i++) cdf[i] /= s;
+  const M = S.model === "av18" ? S.M : 0;
+  for (let k = 0; k < NPTS; k++) {
+    const x = Math.random();
+    let lo = 0, hi = n;
+    while (hi - lo > 1) { const m = (lo + hi) >> 1; if (cdf[m] < x) lo = m; else hi = m; }
+    const r = (lo + (cdf[hi] > cdf[lo] ? (x - cdf[lo]) / (cdf[hi] - cdf[lo]) : 0)) * h;
+    const u = at(Rd.u, h, r), w = at(Rd.w, h, r), q = u * u + w * w;
+    const c2 = q > 0 ? (3 * M * M - 2) * (Math.SQRT2 * u * w - 0.5 * w * w) / q : 0;   // rho ~ 1 + c2 P2(cos theta)
+    let ct;
+    do { ct = 2 * Math.random() - 1; } while (Math.random() * (1 + Math.abs(c2)) > 1 + c2 * 0.5 * (3 * ct * ct - 1));
+    const st = Math.sqrt(1 - ct * ct), ph = 2 * Math.PI * Math.random();
+    pos[3 * k] = r * st * Math.cos(ph); pos[3 * k + 1] = r * ct; pos[3 * k + 2] = r * st * Math.sin(ph);
+  }
+  cloudGeo.attributes.position.needsUpdate = true; cloudGeo.attributes.aFrom.needsUpdate = true;
+  mix = 0;
+}
+
+// ================================================================ solve
+function solveAV() {
+  const s = DEUT.bound({ tensor: S.lam, rmax: 70 });
+  S.sol = s.bound ? s : null;
+  if (S.sol) { const k = s.kappa, i = Math.round(15 / s.h), h0 = (z) => Math.exp(-z), h2 = (z) => Math.exp(-z) * (1 + 3 / z + 3 / (z * z));
+    S.sol.AS15 = s.u[i] / h0(k * 15); S.sol.eta15 = (s.w[i] / h2(k * 15)) / S.sol.AS15;
+    Object.assign(S.sol, DEUT.expectations(s, { tensor: S.lam })); }
+}
+function solveToy() { S.toy = DEUT.toy(S.V0, S.R); }
+function phaseCurves() {
+  const T = []; for (let t = 0.5; t < 10; t += 0.5) T.push(t); for (let t = 10; t <= 350; t += 5) T.push(t);
+  // without a bound state Levinson's theorem starts 3S1 at 0 deg, not 180
+  const c = DEUT.curves(T, { tensor: S.lam, unbound: !S.sol });
+  PH = c;
+}
+
+// ================================================================ labels
+const labelsEl = document.getElementById("labels"), LAB = {};
+function lab(key, cls) { if (!LAB[key]) { const d = document.createElement("div"); d.className = "axlab " + (cls || ""); labelsEl.appendChild(d); LAB[key] = d; } return LAB[key]; }
+const V = new THREE.Vector3();
+function place(el, obj, x, y, z, html) {
+  V.set(x, y, z); if (obj) obj.localToWorld(V); V.project(camera);
+  if (V.z > 1 || Math.abs(V.x) > 1.05 || Math.abs(V.y) > 1.05) { el.hidden = true; return; }
+  el.hidden = false; el.style.left = ((V.x + 1) / 2 * innerWidth) + "px"; el.style.top = ((1 - V.y) / 2 * innerHeight) + "px";
+  if (html != null && el._h !== html) { el.innerHTML = html; el._h = html; }
+}
+function ringTag(el, ring, html, ang) {          // label on a camera-facing ring at angle ang (from the top)
+  V.set(Math.sin(ang), Math.cos(ang), 0).multiplyScalar(ring.scale.x).applyQuaternion(camera.quaternion).project(camera);
+  if (!ring.visible || V.z > 1 || Math.abs(V.x) > 1 || Math.abs(V.y) > 1) { el.hidden = true; return; }
+  el.hidden = false; el.style.left = ((V.x + 1) / 2 * innerWidth) + "px"; el.style.top = ((1 - V.y) / 2 * innerHeight) + "px";
+  if (el._h !== html) { el.innerHTML = html; el._h = html; }
+}
+function vtAt(r) { const o = DEUT.av18op(r); return S.lam * (o[5] - 3 * o[6]); }   // strong T = 0 tensor function, MeV
+const RT = 1.6;                                    // the separation drawn in the pairs and where v_t is quoted
+function drawLabels() {
+  const av = S.model === "av18";
+  ringTag(lab("rk", "hot"), ringK, (av && !S.sol) ? "" : `1/κ = ${(1 / (av ? S.sol.kappa : S.toy.kappa)).toFixed(2)} fm`, 0.5);
+  ringTag(lab("rpi"), ringPi, `ħ/m<sub>π</sub>c = ${RPI.toFixed(2)} fm<small>range of one-pion exchange</small>`, -2.3);
+  if (av) place(lab("prot"), null, 0, 0, 0, "p"); else lab("prot").hidden = true;
+  if (av) {
+    place(lab("axis", "hot"), null, 0, (S.rmaxField || 6) * 0.62 + 0.9, 0, S.M === 0 ? "spin axis<small>M<sub>J</sub> = 0</small>" : `spin axis<small>M<sub>J</sub> = ${S.M > 0 ? "+1" : "−1"}</small>`);
+    const vt = vtAt(RT);
+    place(lab("pa"), TP, 0, 1.9 + 1.9, 0, `spins along the line: ⟨S<sub>12</sub>⟩ = +2<small>2v<sub>t</sub>(${RT} fm), v<sub>t</sub> the T = 0 tensor function: = ${(2 * vt).toFixed(1)} MeV</small>`);
+    place(lab("pb"), TP, 0, -1.7 - 1.0, 0, `spins across it: ⟨S<sub>12</sub>⟩ = −1<small>−v<sub>t</sub>(${RT} fm) = +${(-vt).toFixed(1)} MeV</small>`);
+  } else { for (const k of ["axis", "pa", "pb"]) lab(k).hidden = true; }
+  if (!av) place(lab("well"), null, 0, -S.R - 0.5, 0, `well, R = ${S.R.toFixed(2)} fm`); else lab("well").hidden = true;
+}
+
+// ================================================================ panels
+function setupCanvas(c) {
+  const d = Math.min(devicePixelRatio, 2), w = c.clientWidth, h = c.clientHeight;
+  c.width = Math.max(1, w * d); c.height = Math.max(1, h * d);
+  const x = c.getContext("2d"); x.setTransform(d, 0, 0, d, 0, 0);
+  return { x, w, h };
+}
+const COL = { u: "#f2c14e", w: "#ef8a7a", pub: "#7fd1b9", pwa: "#c9d3e6", s0: "#a8cdf2", grid: "#1c2230", text: "#8a92a6" };
+function frame(ctx, w, h, PL, PR, PT, PB) { ctx.strokeStyle = "#262c3a"; ctx.strokeRect(PL + 0.5, PT + 0.5, w - PL - PR, h - PT - PB); }
+function ticks(ctx, w, h, PL, PR, PT, PB, X, Y, xs, ys, xl) {
+  ctx.font = "10px ui-monospace,Menlo,monospace";
+  for (const v of ys) { ctx.strokeStyle = v === 0 ? "#3b4660" : COL.grid; ctx.beginPath(); ctx.moveTo(PL, Y(v)); ctx.lineTo(w - PR, Y(v)); ctx.stroke(); ctx.fillStyle = COL.text; ctx.textAlign = "right"; ctx.fillText(String(v).replace("-", "−"), PL - 4, Y(v) + 3); }
+  ctx.textAlign = "center";
+  // tick labels that would run into the axis title (right end) are left out
+  const xlw = xl ? ctx.measureText(xl).width + 14 : 0;
+  for (const v of xs) { ctx.strokeStyle = COL.grid; ctx.beginPath(); ctx.moveTo(X(v), PT); ctx.lineTo(X(v), h - PB); ctx.stroke(); if (X(v) < w - PR - xlw) { ctx.fillStyle = COL.text; ctx.fillText(String(v), X(v), h - PB + 12); } }
+  if (xl) { ctx.textAlign = "right"; ctx.fillStyle = COL.text; ctx.fillText(xl, w - PR, h - PB + 12); }
+}
+function line(ctx, X, Y, xs, ys, col, wd, dash) {
+  ctx.strokeStyle = col; ctx.lineWidth = wd; ctx.setLineDash(dash || []); ctx.beginPath(); let pen = false;
+  for (let i = 0; i < xs.length; i++) { const y = ys[i]; if (!isFinite(y)) { pen = false; continue; } if (pen) ctx.lineTo(X(xs[i]), Y(y)); else { ctx.moveTo(X(xs[i]), Y(y)); pen = true; } }
+  ctx.stroke(); ctx.setLineDash([]); ctx.lineWidth = 1;
+}
+function dots(ctx, X, Y, xs, ys, col, r) { ctx.fillStyle = col; for (let i = 0; i < xs.length; i++) { ctx.beginPath(); ctx.arc(X(xs[i]), Y(ys[i]), r || 2, 0, 2 * Math.PI); ctx.fill(); } }
+
+// ---- wave functions
+function drawWF() {
+  const { x: ctx, w, h } = setupCanvas(document.getElementById("pwf"));
+  const PL = 36, PR = 8, PT = 8, PB = 20, rmax = 12;
+  const Rd = (S.model === "av18" ? S.sol : S.toy.bound) ? radial() : null;
+  let ymax = 0.6;
+  if (Rd) for (let i = 0; i < Rd.n && i * Rd.h <= rmax; i++) ymax = Math.max(ymax, Math.abs(Rd.u[i]) * 1.08);
+  ymax = Math.ceil(ymax * 10) / 10;
+  const X = (r) => PL + r / rmax * (w - PL - PR), Y = (v) => PT + (ymax - v) / (ymax + 0.15) * (h - PT - PB);
+  const ys = []; for (let v = 0; v <= ymax + 1e-9; v += ymax > 0.8 ? 0.2 : 0.1) ys.push(+v.toFixed(1));
+  ticks(ctx, w, h, PL, PR, PT, PB, X, Y, [0, 2, 4, 6, 8, 10, 12], ys, "r (fm)");
+  ctx.save(); ctx.beginPath(); ctx.rect(PL, PT, w - PL - PR, h - PT - PB); ctx.clip();
+  // the range of one-pion exchange
+  ctx.fillStyle = "rgba(154,166,189,0.07)"; ctx.fillRect(PL, PT, X(RPI) - PL, h - PT - PB);
+  if (S.model === "toy") { ctx.fillStyle = "rgba(127,209,185,0.08)"; ctx.fillRect(PL, PT, X(S.R) - PL, h - PT - PB); }
+  const leg = [];
+  if (Rd) {
+    const rs = [], us = [], ws = [], ua = [], wa = [];
+    const k = Rd.kappa, AS = S.model === "av18" ? S.sol.AS15 : null, AD = AS != null ? S.sol.AS15 * S.sol.eta15 : null;
+    for (let i = 0; i <= Rd.n && i * Rd.h <= rmax; i += 4) {
+      const r = i * Rd.h; rs.push(r); us.push(Rd.u[i]); ws.push(Rd.w[i]);
+      if (AS != null && r > 0.3) { ua.push(AS * Math.exp(-k * r)); wa.push(AD * Math.exp(-k * r) * (1 + 3 / (k * r) + 3 / (k * r) ** 2)); } else { ua.push(NaN); wa.push(NaN); }
+    }
+    if (S.model === "av18") {
+      line(ctx, X, Y, rs, ua, COL.u, 1, [3, 3]); line(ctx, X, Y, rs, wa.map((v) => (v < ymax ? v : NaN)), COL.w, 1, [3, 3]);
+      line(ctx, X, Y, rs, ws, COL.w, 2);
+    }
+    line(ctx, X, Y, rs, us, COL.u, 2);
+    if (S.model === "av18" && S.lam === 1) {
+      const pr = [], pu = [], pw = [];
+      WF.r.forEach((r, i) => { if (Math.abs(r * 2 - Math.round(r * 2)) < 1e-6 && r <= rmax) { pr.push(r); pu.push(WF.u[i]); pw.push(WF.w[i]); } });
+      dots(ctx, X, Y, pr, pu, COL.pub, 2.2); dots(ctx, X, Y, pr, pw, COL.pub, 2.2);
+    }
+  }
+  ctx.restore(); frame(ctx, w, h, PL, PR, PT, PB);
+  if (S.model === "av18") {
+    document.getElementById("wfTitle").textContent = "Wave functions";
+    document.getElementById("capW").innerHTML = S.sol ? `u (S wave), w (D wave), fm<sup>−1/2</sup>` : "unbound";
+    document.getElementById("legW").innerHTML = `<span><i style="border-color:${COL.u}"></i>u(r)</span><span><i style="border-color:${COL.w}"></i>w(r)</span><span><i class="dash" style="border-color:${COL.u}"></i>A<sub>S</sub>e<sup>−κr</sup>, A<sub>D</sub>e<sup>−κr</sup>(1 + 3/κr + 3/κ²r²)</span>` +
+      (S.lam === 1 ? `<span><i class="dot" style="background:${COL.pub}"></i>Wiringa's table (deut.wf), every 0.5 fm</span>` : "") + `<span><i class="bar" style="display:inline-block;width:10px;height:8px;background:rgba(154,166,189,0.25);vertical-align:middle;margin-right:4px"></i>r &lt; ħ/m<sub>π</sub>c</span>`;
+    document.getElementById("wfNote").innerHTML = S.sol ? `ψ = (u/r) Y<sub>00</sub>χ<sub>1M</sub> + (w/r)[Y<sub>2</sub> ⊗ χ<sub>1</sub>]<sub>1M</sub>. The repulsive core empties r ≲ 0.5 fm; beyond the range of the force both functions are free decaying waves, and the pair spends ${(100 * tailFrac(RPI)).toFixed(0)} % of the time farther apart than ħ/m<sub>π</sub>c = ${RPI.toFixed(2)} fm (${(100 * tailFrac(1 / S.sol.kappa)).toFixed(0)} % farther than 1/κ).` +
+      (S.lam === 1 ? ` This page's u and w agree with Wiringa's table to 6×10<sup>−7</sup> fm<sup>−1/2</sup> at all its 1500 points.` : "") : "No bound state at this tensor strength.";
+  } else {
+    document.getElementById("wfTitle").textContent = "Square well, S wave";
+    document.getElementById("capW").innerHTML = S.toy.bound ? `u(r), fm<sup>−1/2</sup>` : "unbound";
+    document.getElementById("legW").innerHTML = `<span><i style="border-color:${COL.u}"></i>u(r) = sin kr inside, ∝ e<sup>−κr</sup> outside</span><span><i class="bar" style="display:inline-block;width:10px;height:8px;background:rgba(127,209,185,0.3);vertical-align:middle;margin-right:4px"></i>inside the well</span>`;
+    document.getElementById("wfNote").innerHTML = S.toy.bound ? `Inside, u = sin kr with k = √(V<sub>0</sub> − B)/√(ħ²/2μ); outside, u ∝ e<sup>−κr</sup>, κ = √B/√(ħ²/2μ). Matching u′/u at R gives k cot kR = −κ: a solution exists only when √(V<sub>0</sub>/(ħ²/2μ)) R &gt; π/2 (V<sub>0</sub>R² &gt; ${(Math.PI ** 2 / 4 * DEUT.H2M).toFixed(1)} MeV fm²).` : `No bound state: V<sub>0</sub>R² = ${(S.V0 * S.R * S.R).toFixed(1)} MeV fm² is below π²(ħ²/2μ)/4 = ${(Math.PI ** 2 / 4 * DEUT.H2M).toFixed(1)} MeV fm².`;
+  }
+}
+function tailFrac(R) {                             // probability with r > R (u^2 + w^2), trapezoid
+  const s = S.sol, h = s.h, i0 = Math.ceil(R / h), q = (i) => s.u[i] ** 2 + s.w[i] ** 2;
+  let a = 0;
+  for (let i = i0; i < s.u.length - 1; i++) a += 0.5 * h * (q(i) + q(i + 1));
+  // the piece from R up to the first grid point beyond it (linear interpolation of the density)
+  const d = i0 * h - R, qR = q(i0) + (q(i0 - 1) - q(i0)) * d / h;
+  return a + 0.5 * d * (qR + q(i0)) + (s.tail || 0);    // plus the analytic tail beyond the box
+}
+
+// ---- the potential
+function drawPot() {
+  const { x: ctx, w, h } = setupCanvas(document.getElementById("ppot"));
+  const PL = 36, PR = 8, PT = 8, PB = 20, rmax = 3, ymin = -150, ymax = 250;
+  const X = (r) => PL + r / rmax * (w - PL - PR), Y = (v) => PT + (ymax - v) / (ymax - ymin) * (h - PT - PB);
+  ticks(ctx, w, h, PL, PR, PT, PB, X, Y, [0, 0.5, 1, 1.5, 2, 2.5, 3], [-100, 0, 100, 200], "r (fm)");
+  ctx.save(); ctx.beginPath(); ctx.rect(PL, PT, w - PL - PR, h - PT - PB); ctx.clip();
+  const rs = [], a = [], b = [], c = [], d = [];
+  for (let r = 0.02; r <= rmax; r += 0.01) {
+    const v = DEUT.np("3S1", r, { tensor: S.lam }), s = DEUT.np("1S0", r);
+    rs.push(r); a.push(v[0]); b.push(v[1]); c.push(v[2]); d.push(s[0]);
+  }
+  ctx.strokeStyle = "rgba(154,166,189,0.6)"; ctx.setLineDash([3, 3]); ctx.beginPath(); ctx.moveTo(X(RPI), PT); ctx.lineTo(X(RPI), h - PB); ctx.stroke(); ctx.setLineDash([]);
+  if (S.model === "toy") { line(ctx, X, Y, [0, S.R, S.R, rmax], [-S.V0, -S.V0, 0, 0], COL.pub, 2); }
+  line(ctx, X, Y, rs, d, COL.s0, 1.2, [4, 3]);
+  line(ctx, X, Y, rs, c, COL.w, 1.2);
+  line(ctx, X, Y, rs, b, "#c792ea", 2);
+  line(ctx, X, Y, rs, a, COL.u, 2);
+  const B = S.model === "av18" ? (S.sol ? S.sol.B : null) : (S.toy.bound ? S.toy.B : null);
+  if (B != null) { ctx.strokeStyle = "#f4f6fb"; ctx.setLineDash([2, 2]); ctx.beginPath(); ctx.moveTo(PL, Y(-B)); ctx.lineTo(w - PR, Y(-B)); ctx.stroke(); ctx.setLineDash([]); }
+  ctx.restore(); frame(ctx, w, h, PL, PR, PT, PB);
+  document.getElementById("legV").innerHTML = `<span><i style="border-color:${COL.u}"></i>³S₁</span><span><i style="border-color:#c792ea"></i>³S₁–³D₁ (tensor)</span><span><i style="border-color:${COL.w}"></i>³D₁ (no centrifugal)</span><span><i class="dash" style="border-color:${COL.s0}"></i>¹S₀</span>` +
+    (S.model === "toy" ? `<span><i style="border-color:${COL.pub}"></i>toy well</span>` : "") + `<span><i class="dash" style="border-color:#f4f6fb"></i>−B</span>`;
+  const v0 = DEUT.np("3S1", 0, { tensor: S.lam });
+  document.getElementById("potNote").innerHTML = `Argonne v18, np, as projected by av18pw (strong + electromagnetic)${S.lam !== 1 ? `, strong tensor term ×${S.lam.toFixed(3)}` : ""}. The ³S₁ core reaches ${v0[0].toFixed(0)} MeV at r = 0 (off scale). The S–D coupling is the tensor force${S.lamc ? `; scaled below ×${S.lamc.toFixed(3)} it can no longer bind the deuteron` : ""}. Dashed line: ħ/m<sub>π</sub>c.`;
+}
+
+// ---- phase shifts
+const PHN = { "1S0": "¹S₀", "3S1": "³S₁", eps1: "ε₁", "3D1": "³D₁" };
+function drawPh() {
+  const { x: ctx, w, h } = setupCanvas(document.getElementById("pph"));
+  const PL = 36, PR = 8, PT = 8, PB = 20, key = S.ph;
+  const xs = PH.T, ys = PH[key], pw = PW.phases[key];
+  const vals = ys.concat(pw);
+  let y0 = Math.min(...vals), y1 = Math.max(...vals);
+  const span = y1 - y0, st = span > 100 ? 30 : span > 40 ? 10 : span > 15 ? 5 : span > 6 ? 2 : 1;
+  y0 = Math.floor(y0 / st) * st; y1 = Math.ceil(y1 / st) * st;
+  const X = (T) => PL + T / 350 * (w - PL - PR), Y = (v) => PT + (y1 - v) / (y1 - y0) * (h - PT - PB);
+  const yt = []; for (let v = y0; v <= y1 + 1e-9; v += st) yt.push(v);
+  ticks(ctx, w, h, PL, PR, PT, PB, X, Y, [0, 50, 100, 150, 200, 250, 300, 350], yt, "T_lab, MeV");
+  ctx.save(); ctx.beginPath(); ctx.rect(PL, PT, w - PL - PR, h - PT - PB); ctx.clip();
+  line(ctx, X, Y, PW.phases.T, pw, COL.pwa, 1.4, [5, 3]);
+  line(ctx, X, Y, xs, ys, COL.u, 2);
+  if (S.lam === 1) dots(ctx, X, Y, W.phases.T, W.phases[key], COL.pub, 2.6);
+  ctx.restore(); frame(ctx, w, h, PL, PR, PT, PB);
+  document.getElementById("capPh").innerHTML = `${PHN[key]}, degrees`;
+  document.getElementById("legPh").innerHTML = `<span><i style="border-color:${COL.u}"></i>Argonne v18, this page${S.lam !== 1 ? ` (tensor ×${S.lam.toFixed(3)})` : ""}</span>` +
+    (S.lam === 1 ? `<span><i class="dot" style="background:${COL.pub}"></i>Argonne v18, published table</span>` : "") + `<span><i class="dash" style="border-color:${COL.pwa}"></i>Nijmegen PWA93 (NN-OnLine)</span>`;
+  // largest gap to PWA93 over the drawn integer energies (1 to 350 MeV), this page's curve
+  let gmax = 0, Tg = 0;
+  xs.forEach((T, i) => { if (T >= 1 && Number.isInteger(T)) { const g = Math.abs(ys[i] - pw[T - 1]); if (g > gmax) { gmax = g; Tg = T; } } });
+  document.getElementById("phNote").innerHTML = `Nuclear-bar phases (the convention of the NN-OnLine tables), nonrelativistic kinematics as in the paper; ³S₁–³D₁ and ¹S₀ with the full np electromagnetic interaction, matched to free waves at 20 fm. ${S.lam === 1 ? `At the eleven published energies this page reproduces the paper's table to its printed 0.01°. ` : ""}Largest gap to PWA93 here: ${gmax.toFixed(2)}° at ${Tg} MeV. ` +
+    (key === "3S1" ? `³S₁ starts at 180° at threshold because the deuteron is bound (Levinson's theorem)${S.sol ? "" : "; without a bound state it starts at 0°"}.` : key === "eps1" ? `In the words of Wiringa et al., ε₁ is “both the most difficult to determine in single-energy analyses” and “one of the most important because of its relation to the strength of the tensor interaction”.` : "");
+}
+
+// ---- properties table
+const fx = (v, d) => (v == null || !isFinite(v) ? "–" : v.toFixed(d));
+// "C. van der Leun and C. Alderliesten, Nucl. Phys. A380, 261 (1982)." -> "van der Leun 1982"
+function firstAuthor(b) {
+  const a = b.split(/,| and /)[0].trim().split(/\s+/).filter((t) => !/\.$/.test(t)).join(" ");
+  return `${a} ${(b.match(/(\d{4})\)/) || [])[1] || ""}`;
+}
+function drawProps() {
+  const s = S.sol, T = S.toy, av = S.model === "av18";
+  const pub = W.deut, P = WF.props, E = WF.expect, PWd = PW.deut;
+  const cite = (k) => `<small>${firstAuthor(W.bib[W.deut_notes[pub[k].ref]])}*</small>`;
+  const here = av ? (s ? s : null) : null;
+  const rows = [
+    ["B (MeV)", av ? fx(here && here.B, 6) : (T.bound ? fx(T.B, 4) : "unbound"), `${pub.Ed.av18}<small>deut.wf ${P.ebind}</small>`, PWd.E.replace("-", ""), `${B_AME.toFixed(6)}<small>AME2020, ±${(B_AME_ERR * 1e6).toFixed(1)} eV nominal</small>${B_COD.toFixed(7)}<small>CODATA ${CODY}</small>${pub.Ed.exp}${cite("Ed")}`],
+    ["P<sub>D</sub> (%)", av ? fx(here && 100 * here.PD, 3) : "0", `${pub.Pd.av18}<small>deut.wf ${(100 * P.dstate).toFixed(4)}</small>`, PWd.PD || `<span title="the NN-OnLine table leaves this cell empty: a partial-wave analysis has no wave function">–</span>`, `not observable`],
+    ["Q (fm²)", av ? fx(here && here.Q, 5) : "0", `${pub.Qd.av18}<small>+R+MEC ${pub.Qd.full}</small><small>deut.wf ${P.qm}</small>`, PWd.Q || `<span title="the NN-OnLine table leaves this cell empty: a partial-wave analysis has no wave function">–</span>`, `${D.qd.value.replace(/\((\d+)\)\((\d+)\)/, "($1)<br>($2)")}<small>Puchalski 2020</small>${pub.Qd.exp}${cite("Qd")}`],
+    ["μ (μ<sub>N</sub>)", av ? fx(here && here.mu, 5) : "–", `${pub.mud.av18}<small>+R+MEC ${pub.mud.full}</small><small>deut.wf ${P.mu}</small>`, "", `${MUD_COD.toFixed(7)}<small>CODATA ${CODY}</small>${pub.mud.exp}${cite("mud")}<small class="flag">${MUD_SIG.toFixed(0)}σ below CODATA</small>`],
+    ["r<sub>d</sub> (fm)", av ? fx(here && here.rd, 4) : (T.bound ? fx(T.rd, 3) : "–"), `${pub.rd.av18}<small>deut.wf ${P.rd}</small>`, PWd.rd || `<span title="the NN-OnLine table leaves this cell empty: a partial-wave analysis has no wave function">–</span>`, `${pub.rd.exp}${cite("rd")}`],
+    ["r<sub>ch</sub> (fm)", "–", "", "", `${(+D.codata["deuteron rms charge radius"].v * 1e15).toFixed(5)}<small>CODATA ${CODY}, ±${(+D.codata["deuteron rms charge radius"].u * 1e15).toFixed(5)}</small>`],
+    ["A<sub>S</sub> (fm<sup>−½</sup>)", av ? fx(here && here.AS15, 5) : "–", `${pub.AS.av18}<small class="flag">unit printed fm<sup>½</sup></small><small>deut.wf ${P.as}</small>`, PWd.AS, `${pub.AS.exp}${cite("AS")}`],
+    ["η", av ? fx(here && here.eta15, 5) : "0", `${pub.eta.av18}<small>deut.wf ${P.eta}</small>`, PWd.eta, `${pub.eta.exp}${cite("eta")}`],
+    ["⟨T⟩ (MeV)", av ? fx(here && here.T, 3) : "–", `${pub.T.av18}<small>deut.wf ${E.ti}</small>`, "", ""],
+    ["⟨v<sub>EM</sub>⟩ (MeV)", av ? fx(here && here.VEM, 4) : "–", `${pub.vEM.av18}<small>deut.wf ${E.vem}</small>`, "", ""],
+  ];
+  document.getElementById("props").innerHTML = `<tr><th></th><th>${av ? "AV18<br>here" : "toy<br>here"}</th><th>AV18<br>published</th><th>PWA93</th><th>measured</th></tr>` +
+    rows.map((r) => `<tr><td>${r[0]}</td><td class="m">${r[1]}</td><td class="p">${r[2]}</td><td class="w">${r[3]}</td><td>${r[4]}</td></tr>`).join("");
+  document.getElementById("capP").innerHTML = av ? (S.lam === 1 ? "Argonne v18" : `tensor ×${S.lam.toFixed(3)}`) : "square well";
+  document.getElementById("propsNote").innerHTML = `* as printed in the paper's Table XI (WSS95), with its references. P<sub>D</sub> is not an observable: it changes under unitary transformations of the force that leave every observable alone. r<sub>ch</sub> is the charge radius, which includes the nucleons' own sizes; r<sub>d</sub> is the point-nucleon radius. AV18 here: computed live from the potential (A<sub>S</sub> and η read off at r = 15 fm, where the published table ends; the magnetic-moment tensor term, which falls only as 1/r³, keeps η drifting: ${ETA80 ? `${ETA80.toFixed(6)} at 80 fm` : "…"}). μ and Q in impulse approximation: μ = μ<sub>p</sub> + μ<sub>n</sub> − (3/2)(μ<sub>p</sub> + μ<sub>n</sub> − ½)P<sub>D</sub>, Q = (√2/10)∫r²uw dr − (1/20)∫r²w² dr; the published “+R+MEC” values add relativistic and meson-exchange currents, which this page does not compute. r<sub>d</sub> = ½⟨r²⟩<sup>1/2</sup>, point nucleons. PWA93: the Nijmegen partial-wave analysis's own deuteron, as listed by NN-OnLine; the table leaves P<sub>D</sub>, Q and r<sub>d</sub> empty for PWA93 (an analysis of phase shifts has no wave function), so they are shown as “–”. Flagged: the paper's Table XI gives the unit of A<sub>S</sub> as fm<sup>1/2</sup>; with ∫(u² + w²) dr = 1 it is fm<sup>−1/2</sup>, a misprint. Flagged: the paper's μ<sub>d</sub> = ${pub.mud.exp} (Lindgren 1965, as printed) lies ${MUD_SIG.toFixed(0)} of its quoted errors below CODATA ${CODY}, ${D.codata["deuteron mag. mom. to nuclear magneton ratio"].v}(${D.codata["deuteron mag. mom. to nuclear magneton ratio"].u.replace(/^0\.0*/, "")}); the reason is not established here. Binding: AME2020's uncertainty is the three mass uncertainties in quadrature, correlations neglected (nominal); the CODATA ${CODY} masses are correlated (m<sub>n</sub> is fixed largely through the deuteron binding) and no uncertainty is derived from them. The fitted binding (${pub.Ed.exp} MeV, van der Leun and Alderliesten 1982) is ${((parseFloat(pub.Ed.exp) - B_AME) * 1e6).toFixed(0)} eV above the AME2020 value; the code itself gives ${B0 ? B0.toFixed(7) : "…"} MeV, which rounds to Wiringa's deut.wf value ${P.ebind}, one unit below the paper's ${pub.Ed.av18}.`;
+}
+
+// ---- scattering lengths
+function drawLow() {
+  if (!document.getElementById("dlow").open) return;
+  if (!LOW) {
+    document.getElementById("low").innerHTML = "<tr><td>computing…</td></tr>";
+    setTimeout(() => {
+      LOW = { s: DEUT.effRange("1S0", {}), t: DEUT.effRange("3S1", {}), sn: DEUT.effRange("1S0", { em: false }), tn: DEUT.effRange("3S1", { em: false }) };
+      drawLow();
+    }, 20);
+    return;
+  }
+  const L = W.low, ref = (k) => firstAuthor(W.bib[W.low_notes[L[k].ref]]);
+  const row = (lab, k, v, vn) => `<tr><td>${lab}</td><td class="m">${v.toFixed(3)}<small>w/o EM ${vn.toFixed(3)}</small></td><td class="p">${L[k].av18}<small>w/o EM ${L[k].noem}${k === "1rnp" ? ` <span class="flag">(computed 2.7038)</span>` : ""}</small></td><td>${L[k].exp} ± ${L[k].err}<small>${ref(k)}</small></td></tr>`;
+  document.getElementById("low").innerHTML = `<tr><th>fm</th><th>AV18 here</th><th>AV18 published</th><th>experiment, as printed</th></tr>` +
+    row("¹S₀ a", "1anp", LOW.s.a, LOW.sn.a) + row("¹S₀ r", "1rnp", LOW.s.r, LOW.sn.r) + row("³S₁ a", "3anp", LOW.t.a, LOW.tn.a) + row("³S₁ r", "3rnp", LOW.t.r, LOW.tn.r);
+  const K0 = S0K || DEUT.bound({ rmax: 70 }).kappa;   // the published force's deuteron
+  document.getElementById("lowNote").innerHTML = `k cot δ = −1/a + r k²/2 + …, fitted (cubic in k²) to eight momenta from 0.005 to 0.04 fm⁻¹, ³S₁ from the bar phase. An independent calculation (tests/check_deuteron.jl; zero-energy solution for ¹S₀) agrees to 3×10⁻⁵ fm. The ¹S₀ a is large and negative: the singlet np pair is almost, but not quite, bound. The deuteron pole fixes the ³S₁ pair: at k = iκ the expansion gives 1/a ≈ κ − rκ²/2, so a ≈ ${(1 / (K0 - LOW.t.r * K0 * K0 / 2)).toFixed(3)} fm from κ = ${K0.toFixed(5)} fm⁻¹ and r = ${LOW.t.r.toFixed(3)} fm, against the ${LOW.t.a.toFixed(3)} fm computed from the phases (the shape terms make up the rest). Flagged: the paper prints r(¹S₀, w/o EM) = 2.703 fm, where both calculations here give 2.7038. Neither column is fitted to these numbers; the model's “w/o EM” values only show how much the electromagnetic terms move them.`;
+}
+
+// ---- left panel numbers, stamp
+function drawInfo() {
+  if (S.model === "av18") {
+    const s = S.sol;
+    document.getElementById("lamo").textContent = `× ${S.lam.toFixed(3)}`;
+    document.getElementById("infoAV").innerHTML = s ? [
+      ["B", `<span class="hi">${s.B.toFixed(4)} MeV</span>`],
+      ["κ", `${s.kappa.toFixed(4)} fm⁻¹, 1/κ = ${(1 / s.kappa).toFixed(2)} fm`],
+      ["P<sub>D</sub>", `${(100 * s.PD).toFixed(2)} %`],
+      ["Q", `${s.Q.toFixed(4)} fm² <small>(impulse approx.)</small>`],
+      ["r<sub>d</sub>", `${s.rd.toFixed(3)} fm <small>(½ rms separation)</small>`],
+      ["beyond ħ/m<sub>π</sub>c", `${(100 * tailFrac(RPI)).toFixed(0)} % of the time`],
+    ].map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join("") + (s.capped ? `<dt></dt><dd class="hi">box capped at ${DEUT.RCAP} fm (&lt; 16/κ): Q and η approximate</dd>` : "") : `<dt>B</dt><dd class="hi">no bound state with B &gt; 10⁻⁸ MeV</dd>`;
+    const wn = [];
+    if (S.lam !== 1) wn.push(`The strong tensor term is scaled by ${S.lam.toFixed(3)}: a modified force, not Argonne v18.`);
+    if (S.lamc) wn.push(`Below × ${S.lamc.toFixed(3)} the deuteron is not bound (no state with B &gt; 10⁻⁸ MeV).`);
+    const el = document.getElementById("warnAV"); el.hidden = !wn.length; el.innerHTML = wn.join(" ");
+    document.getElementById("stamp").innerHTML = s ? `<b>²H, M<sub>J</sub> = ${S.M > 0 ? "+1" : S.M < 0 ? "−1" : "0"}</b><small>B = <span class="hi">${s.B.toFixed(4)} MeV</span> · P<sub>D</sub> = ${(100 * s.PD).toFixed(2)} % · Q = ${s.Q.toFixed(3)} fm² · 1/κ = ${(1 / s.kappa).toFixed(2)} fm${S.lam !== 1 ? ` · tensor ×${S.lam.toFixed(3)}` : ""}</small>` : `<b>no deuteron</b><small>tensor ×${S.lam.toFixed(3)}: no bound state with B &gt; 10⁻⁸ MeV</small>`;
+  } else {
+    const T = S.toy;
+    document.getElementById("v0o").textContent = `${S.V0.toFixed(1)} MeV`;
+    document.getElementById("rwo").textContent = `${S.R.toFixed(2)} fm`;
+    document.getElementById("infoToy").innerHTML = (T.bound ? [
+      ["B", `<span class="hi">${T.B.toFixed(4)} MeV</span>`],
+      ["1/κ", `${(1 / T.kappa).toFixed(2)} fm`],
+      ["outside R", `${(100 * T.Pout).toFixed(1)} % of the time`],
+      ["r<sub>d</sub>", `${T.rd.toFixed(3)} fm`],
+    ] : [["B", `<span class="hi">no bound state</span>`]]).concat([["a", `${T.a.toFixed(2)} fm <small>(scattering length)</small>`]]).map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join("");
+    document.getElementById("stamp").innerHTML = T.bound ? `<b>a square well</b><small>V<sub>0</sub> = ${S.V0.toFixed(1)} MeV, R = ${S.R.toFixed(2)} fm · B = <span class="hi">${T.B.toFixed(3)} MeV</span> · ${(100 * T.Pout).toFixed(0)} % outside the well</small>` : `<b>a square well</b><small>V<sub>0</sub> = ${S.V0.toFixed(1)} MeV, R = ${S.R.toFixed(2)} fm · not bound</small>`;
+  }
+}
+function drawStatic() {
+  document.getElementById("simp").innerHTML = `
+    <span><b>Nonrelativistic.</b> One Schrödinger equation with ħ²/2M<sub>r</sub> and the constants of the code (consts in av18pot.f, which differ from the paper's Table I in the last digits). “${W.kinematics.replace("kappa^2/2M_r", "κ²/2M<sub>r</sub>")}” (WSS95, Sec. III.)</span>
+    <span><b>Impulse approximation</b> for μ and Q: point nucleons with their free magnetic moments, no meson-exchange currents, no relativistic corrections. The paper's “+R+MEC” column is quoted, not computed. P<sub>D</sub> is model dependent and not measurable; Q and μ are.</span>
+    <span><b>Electromagnetic part.</b> The full np electromagnetic interaction of av18pw (the neutron's charge distribution and the magnetic moments) is kept in the bound state and in ¹S₀, ³S₁–³D₁ scattering, as in the paper's tables; its 1/r³ magnetic tensor term means the phases are matched to free waves at 20 fm, which reproduces the published table to its printed digits.</span>
+    <span><b>Tensor slider.</b> It multiplies the strong T = 0 tensor function v<sub>t</sub> = v<sub>5</sub> − 3v<sub>6</sub> of the operator form; nothing else is refitted, so away from × 1 the force no longer fits the scattering data.</span>
+    <span><b>The 3D cloud</b> is the density of the relative coordinate: where the neutron is found, seen from the proton (drawn as a point at the centre). Each nucleon's own density about the centre of mass is the same shape at half the size. Axially symmetric about the spin axis; ρ<sub>M</sub> = [u² + w² + (3M² − 2)(√2uw − w²/2)P<sub>2</sub>(cos θ)]/4πr², checked against an explicit sum over spin states. Volume: logarithmic transfer function over ${DEC} decades, lit contour shells at 3/4 and at 1 % of the peak density (at 3/4 the shape separates into two lobes for M<sub>J</sub> = ±1 and a ring for 0); colours and lighting are presentation. The np pairs beside the cloud are drawn with smaller nucleons than the real ones (0.84 fm charge radius) and at a fixed 1.6 fm separation.</span>
+    <span><b>Toy well.</b> S wave only, μ = M<sub>r</sub>, closed-form solution; it has no tensor force, so it cannot produce a D state, a quadrupole moment or the observed η.</span>`;
+  document.getElementById("srcs").innerHTML = `
+    <span><b>Potential</b>: ${W.authors.join(", ")}, “${W.title}”, ${W.ref}. Fortran av18pot.f (R. B. Wiringa, Argonne, phy.anl.gov/theory/research/av18), saved in data/deuteron/ and ported to assets/deuteron.js; the deuteron table deut.wf from the same page. Published values: the paper's Tables VIII to XI, from the arXiv source.</span>
+    <span><b>Phase-shift analysis</b>: Nijmegen PWA93, ${PW.ref} Values from NN-OnLine (nn-online.org), np, nuclear bar, 1 to 350 MeV in 1 MeV steps, and its table of PWA93 deuteron properties.</span>
+    <span><b>Measured</b>: binding from the AME2020 mass excesses of n, ¹H, ²H (Wang et al., Chin. Phys. C 45, 030003 (2021)) and from the CODATA ${CODY} masses of p, n, d (NIST listing, the 2022 adjustment, which supersedes 2018); μ<sub>d</sub> and the charge radius from CODATA ${CODY}; Q<sub>d</sub> from ${D.qd.ref}; older values as printed in the paper's Tables X and XI with the references it gives: ${Object.values(W.deut_notes).concat(Object.values(W.low_notes)).filter((k, i, a) => a.indexOf(k) === i).sort().map((k) => W.bib[k]).join(" ")}</span>`;
+  document.getElementById("phch").innerHTML = Object.keys(PHN).map((k) => `<button data-k="${k}">${PHN[k]}</button>`).join("");
+}
+
+// ================================================================ state changes
+function refresh(fade) {
+  if (S.model === "av18") solveAV(); else solveToy();
+  const ok = S.model === "av18" ? !!S.sol : S.toy.bound;
+  if (ok) {
+    buildField(fade); sampleCloud();
+    const k = S.model === "av18" ? S.sol.kappa : S.toy.kappa;
+    ringK.visible = true; ringK.scale.setScalar(1 / k);
+    fitTo = Math.max(16, Math.min(150, 3.6 * Math.max(1 / k, 2) + 7.5));
+  } else { ringK.visible = false; vol.mesh.visible = false; cloud.visible = false; }
+  wellGlass.visible = S.model === "toy" && quality === "high";
+  wellGlass.scale.setScalar(S.R);
+  applyVis(ok);
+  drawInfo(); drawWF(); drawPot(); drawProps(); buttons(); setHash();
+}
+let phJob = null;
+function refreshPhases() {
+  clearTimeout(phJob);
+  phJob = setTimeout(() => { phaseCurves(); drawPh(); }, 30);
+}
+function setModel(m) {
+  if (!["av18", "toy"].includes(m)) return;
+  S.model = m;
+  document.getElementById("gAV").hidden = m !== "av18"; document.getElementById("gToy").hidden = m !== "toy";
+  refresh(true);
+}
+function setM(M) { if (![1, 0, -1].includes(M)) return; S.M = M; if (S.model === "av18" && S.sol) { buildField(true); sampleCloud(); } drawInfo(); buttons(); setHash(); }
+function setLam(l) {
+  l = Math.round(Math.max(0.6, Math.min(1.2, l)) * 1000) / 1000; if (!isFinite(l)) return;
+  S.lam = l; document.getElementById("lam").value = l;
+  refresh(false); refreshPhases();
+}
+function setToy(V0, R) {
+  if (isFinite(V0)) S.V0 = Math.max(10, Math.min(120, V0));
+  if (isFinite(R)) S.R = Math.max(1, Math.min(3, R));
+  document.getElementById("v0").value = S.V0; document.getElementById("rw").value = S.R;
+  refresh(false);
+}
+function buttons() {
+  for (const b of document.querySelectorAll("#model button")) b.setAttribute("aria-pressed", b.dataset.v === S.model ? "true" : "false");
+  for (const b of document.querySelectorAll("#mj button")) b.setAttribute("aria-pressed", +b.dataset.v === S.M ? "true" : "false");
+  for (const b of document.querySelectorAll("#phch button")) b.setAttribute("aria-pressed", b.dataset.k === S.ph ? "true" : "false");
+}
+// #av18, #av18/M0, #av18@0.9/M-1, #toy@40, #toy@40,2.5
+function setHash() {
+  let h;
+  if (S.model === "av18") h = `#av18${S.lam !== 1 ? `@${S.lam}` : ""}${S.M !== 1 ? `/M${S.M}` : ""}`;
+  else h = `#toy@${+S.V0.toFixed(2)}${Math.abs(S.R - 2) > 1e-9 ? `,${+S.R.toFixed(2)}` : ""}`;
+  if (location.hash !== h) history.replaceState(null, "", h);
+}
+function parseHash() {
+  let s;
+  try { s = decodeURIComponent(location.hash.slice(1)); } catch (e) { return null; }
+  let m = s.match(/^av18(?:@([0-9]*\.?[0-9]+))?(?:\/M(-?[01]))?$/i);
+  if (m) {
+    const out = { model: "av18" };
+    if (m[1] != null) { const l = +m[1]; if (!(isFinite(l) && l >= 0.6 && l <= 1.2)) return null; out.lam = l; }
+    if (m[2] != null) out.M = +m[2];
+    return out;
+  }
+  m = s.match(/^toy(?:@([0-9]*\.?[0-9]+)(?:,([0-9]*\.?[0-9]+))?)?$/i);
+  if (m) {
+    const out = { model: "toy" };
+    if (m[1] != null) { const v = +m[1]; if (!(isFinite(v) && v >= 10 && v <= 120)) return null; out.V0 = v; }
+    if (m[2] != null) { const r = +m[2]; if (!(isFinite(r) && r >= 1 && r <= 3)) return null; out.R = r; }
+    return out;
+  }
+  return null;
+}
+function applyHash(hh) {
+  if (!hh) return;
+  if (hh.model === "av18") {
+    S.M = hh.M != null ? hh.M : 1;
+    const l = hh.lam != null ? hh.lam : 1;
+    document.getElementById("gAV").hidden = false; document.getElementById("gToy").hidden = true;
+    S.model = "av18";
+    if (l !== S.lam || !S.sol) setLam(l); else refresh(true);
+  } else {
+    if (hh.R != null) S.R = hh.R;
+    S.V0 = hh.V0 != null ? hh.V0 : DEUT.toyDepth(B_AME, S.R);
+    document.getElementById("v0").value = S.V0; document.getElementById("rw").value = S.R;
+    setModel("toy");
+  }
+}
+
+// ================================================================ UI wiring
+document.getElementById("model").addEventListener("click", (e) => { const b = e.target.closest("button"); if (b) setModel(b.dataset.v); });
+document.getElementById("mj").addEventListener("click", (e) => { const b = e.target.closest("button"); if (b) setM(+b.dataset.v); });
+document.getElementById("phch").addEventListener("click", (e) => { const b = e.target.closest("button"); if (b) { S.ph = b.dataset.k; buttons(); if (PH) drawPh(); } });
+document.getElementById("dlow").addEventListener("toggle", drawLow);
+let pend = null;
+const later = (fn) => { if (pend) return; pend = requestAnimationFrame(() => { pend = null; fn(); }); };
+document.getElementById("lam").addEventListener("input", () => later(() => setLam(+document.getElementById("lam").value)));
+document.getElementById("lam1").addEventListener("click", () => setLam(1));
+document.getElementById("v0").addEventListener("input", () => later(() => setToy(+document.getElementById("v0").value, NaN)));
+document.getElementById("rw").addEventListener("input", () => later(() => setToy(NaN, +document.getElementById("rw").value)));
+document.getElementById("fitB").addEventListener("click", () => setToy(DEUT.toyDepth(B_AME, S.R), NaN));
+addEventListener("hashchange", () => applyHash(parseHash()));
+addEventListener("resize", () => {
+  camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight); composer.setSize(innerWidth, innerHeight);
+  drawWF(); drawPot(); if (PH) drawPh();
+});
+function applyVis(ok) {
+  if (ok === undefined) ok = S.model === "av18" ? !!S.sol : S.toy && S.toy.bound;
+  const hi = quality === "high";
+  cloud.visible = !hi && ok; vol.mesh.visible = hi && ok;
+  wellGlass.visible = hi && S.model === "toy";
+  vol.u.uCut.value = cloudMat.uniforms.uCut.value = cut.on ? 1 : 0;
+  wellGlass.material.clippingPlanes = cut.on ? cut.planes : [];
+  for (const b of document.querySelectorAll("#cutmode button")) b.setAttribute("aria-pressed", (b.dataset.v === "1") === !!cut.on ? "true" : "false");
+  document.getElementById("vnote").innerHTML = (hi
+    ? `The density of the n–p separation as a glowing volume, logarithmic over ${DEC} decades; the bright shell is 3/4 of the peak density, the faint one 1 %.`
+    : "One dot per draw from the density of the n–p separation.") +
+    " Amber ring: 1/κ. Dashed ring: the range of one-pion exchange, ħ/m<sub>π</sub>c." + (S.model === "toy" ? " Glass sphere: the well." : " Beside it, the tensor force on two pairs with both spins up.");
+}
+document.getElementById("cutmode").addEventListener("click", (e) => { const b = e.target.closest("button"); if (!b) return; cut.on = b.dataset.v === "1"; applyVis(); });
+function applyQuality() {
+  const g = quality === "high" ? GROUND_PRE_ACES : GROUND;
+  scene.background.copy(g); scene.fog.color.copy(g); renderer.setClearColor(g);
+  applyVis();
+  for (const b of document.querySelectorAll("#qmode button")) b.setAttribute("aria-pressed", b.dataset.v === quality ? "true" : "false");
+}
+document.getElementById("qmode").addEventListener("click", (e) => { const b = e.target.closest("button"); if (!b) return; quality = b.dataset.v; applyQuality(); });
+
+// ================================================================ start
+drawStatic();
+document.getElementById("lam").value = 1;
+S.V0 = DEUT.toyDepth(B_AME, S.R);
+document.getElementById("v0").value = S.V0; document.getElementById("rw").value = S.R;
+{
+  const hh = parseHash();
+  if (hh) applyHash(hh); else setModel("av18");
+  if (!PH) refreshPhases();
+  mix = 1; from.set(pos); cloudGeo.attributes.aFrom.needsUpdate = true;
+  camera.position.set(0.55, 0.32, 0.78).setLength(fitTo || 22);
+  controls.target.set(2.3, 0, 0);
+  applyQuality();
+  // the critical tensor strength, once, after the first frame
+  setTimeout(() => {
+    S.lamc = DEUT.lambdaC();
+    const s80 = DEUT.bound({ rmax: 80 }), i = Math.round(80 / s80.h) - 1, k = s80.kappa, z = k * i * s80.h;
+    B0 = s80.B; S0K = s80.kappa; if (LOW) drawLow(); ETA80 = (s80.w[i] / (Math.exp(-z) * (1 + 3 / z + 3 / (z * z)))) / (s80.u[i] / Math.exp(-z));
+    drawInfo(); drawPot(); drawProps();
+  }, 400);
+}
+
+let last = performance.now();
+function animate(now) {
+  requestAnimationFrame(animate);
+  const dt = Math.min(0.1, Math.max(0, (now - last) / 1000)); last = now;
+  if (mix < 1) mix = reduce ? 1 : Math.min(1, mix + dt / 0.6);
+  cloudMat.uniforms.uMix.value = 1 - Math.pow(1 - mix, 3);
+  vol.setMix(1 - Math.pow(1 - mix, 3));
+  if (quality === "high") gov.tick(dt);
+  const dist = camera.position.distanceTo(controls.target);
+  if (fitTo && Math.abs(dist - fitTo) > 0.05) {
+    const k = reduce ? 1 : 1 - Math.exp(-dt / 0.35);
+    camera.position.sub(controls.target).multiplyScalar((dist + (fitTo - dist) * k) / dist).add(controls.target);
+  } else fitTo = 0;
+  controls.update();
+  const dnow = camera.position.distanceTo(controls.target);
+  scene.fog.near = dnow * 1.4; scene.fog.far = dnow * 4;
+  cut.update(camera, controls.target);
+  stage3.update(camera);
+  camera.getWorldDirection(vol.u.uFwd.value);
+  ringK.quaternion.copy(camera.quaternion); ringPi.quaternion.copy(camera.quaternion);
+  cloudMat.uniforms.uPix.value = renderer.domElement.height / (2 * Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2));
+  if (quality === "high") composer.render(); else renderer.render(scene, camera);
+  drawLabels();
+}
+requestAnimationFrame(animate);
+</script>
+<script src="assets/glass.js"></script>
+</body>
+</html>

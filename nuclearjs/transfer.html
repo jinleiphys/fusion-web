@@ -1,0 +1,882 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>One-nucleon transfer · nuclearjs</title>
+<link rel="stylesheet" href="assets/glass.css">
+<style>
+body{margin:0}
+:root{
+  color-scheme:dark;
+  --ground:#0b0d12; --line:#262c3a;
+  --ink:#e6e8ee; --muted:#8a92a6; --accent:#f2c14e;
+  --d:#d9a3ff; --p:#ff9656; --n:#8cc8ff; --dw:#f2c14e; --ad:#7fd1b9;
+  --sans:"Avenir Next","Futura","Helvetica Neue","PingFang SC","Noto Sans SC",system-ui,sans-serif;
+  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+}
+html,body{height:100%}
+body{background:var(--ground);color:var(--ink);font-family:var(--sans);overflow:hidden}
+#stage{position:fixed;inset:0}
+#stage canvas{display:block;touch-action:none}
+.panel{position:fixed;border-radius:18px;padding:16px 18px;display:flex;flex-direction:column;gap:12px;overflow:auto;box-sizing:border-box;z-index:2}
+.panel>*{flex-shrink:0}
+#ctl{left:16px;top:calc(16px + env(safe-area-inset-top,0px));width:min(330px,calc(100% - 32px));max-height:calc(100% - 32px)}
+#side{right:16px;top:calc(16px + env(safe-area-inset-top,0px));width:392px;max-height:calc(100% - 32px);gap:8px}
+h1{margin:0;font-size:22px;font-weight:600;letter-spacing:.01em}
+.sub{margin:2px 0 0;color:var(--muted);font-size:13px;line-height:1.45}
+.sub b{color:var(--ink);font-weight:500}
+sup,sub{line-height:0}
+.grp{display:flex;flex-direction:column;gap:6px}
+.lab{font-size:11px;text-transform:uppercase;letter-spacing:.12em;color:var(--muted)}
+.seg{display:flex;border:1px solid var(--line);border-radius:4px;overflow:hidden}
+.seg button{flex:1;background:none;border:0;color:var(--muted);font:500 12px var(--mono);padding:6px 3px;cursor:pointer;min-width:0}
+.seg button+button{border-left:1px solid var(--line)}
+.seg button[aria-pressed="true"]{background:#1f2533;color:var(--ink)}
+button:focus-visible,input:focus-visible,summary:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.chips{display:flex;flex-wrap:wrap;gap:5px}
+.chips button{background:#161a24;border:1px solid var(--line);border-radius:4px;color:var(--ink);font:12px var(--mono);padding:5px 7px;cursor:pointer}
+.chips button:hover{border-color:var(--muted)}
+.chips button[aria-pressed="true"]{border-color:var(--accent);color:var(--accent)}
+.chips button small{color:var(--muted);font-size:10px}
+.row{display:flex;gap:8px;align-items:center;font:12px var(--mono);color:var(--muted)}
+.row input[type=range]{flex:1;accent-color:var(--accent);min-width:0}
+.row output{min-width:64px;text-align:right;color:var(--ink);font-variant-numeric:tabular-nums}
+.row span{min-width:22px}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:3px 10px;font:12px var(--mono);font-variant-numeric:tabular-nums}
+.kv dt{color:var(--muted)}.kv dd{margin:0}
+.kv .hi{color:var(--accent)}
+details summary{cursor:pointer;font-size:11px;text-transform:uppercase;letter-spacing:.12em;color:var(--muted);list-style:none}
+details summary::before{content:"▸ "}
+details[open] summary::before{content:"▾ "}
+details .grp{margin-top:8px}
+.home{font:12px var(--mono);color:var(--muted);text-decoration:none}.home:hover{color:var(--ink)}
+.src{font-size:11px;color:var(--muted);line-height:1.45;margin:0}
+.src b{color:var(--ink);font-weight:500}
+.math{font:12px var(--mono);color:var(--ink);line-height:1.7;margin:0}
+.plot{width:100%;height:190px;display:block}
+.plot.short{height:150px}
+.plot.tall{height:214px}
+.cap{display:flex;flex-wrap:wrap;gap:2px 8px;justify-content:space-between;align-items:baseline;font:11px var(--mono);color:var(--muted)}
+.cap b{font:600 13px var(--sans);color:var(--ink)}
+.leg{display:flex;flex-wrap:wrap;gap:3px 11px;font:10.5px var(--mono);color:var(--muted);line-height:1.4}
+.leg i{display:inline-block;width:14px;height:0;border-top:2px solid;vertical-align:middle;margin-right:4px}
+.leg i.d{border-top-style:dashed}
+.leg i.p{width:6px;height:6px;border:0;border-radius:50%;vertical-align:middle}
+.leg i.o{width:5px;height:5px;border:1.5px solid;border-radius:50%;vertical-align:middle}
+table.pub{border-collapse:collapse;font:11px var(--mono);font-variant-numeric:tabular-nums;width:100%}
+table.pub td,table.pub th{padding:2px 3px;text-align:right;border-bottom:1px solid #1c2130}
+table.pub th{color:var(--muted);font-weight:400}
+table.pub td:first-child,table.pub th:first-child{text-align:left}
+table.pub tr.on td{color:var(--accent)}
+table.pub td.dw{color:var(--dw)} table.pub td.ad{color:var(--ad)}
+table.pub small{color:var(--muted);font-size:10px}
+.axlab{position:fixed;font:500 11px var(--mono);pointer-events:none;transform:translate(-50%,-50%);white-space:nowrap;text-shadow:0 1px 3px #000,0 0 6px #000;color:#d6deea;line-height:1.3;text-align:center}
+.axlab small{display:block;color:var(--muted);font-size:10px}
+.axlab.hot{color:var(--accent)}
+.axlab.dim{color:#8f9ab0}
+#stamp{position:fixed;left:50%;bottom:calc(22px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);text-align:center;pointer-events:none;width:min(620px,44vw)}
+#stamp b{display:block;font:600 clamp(22px,2.8vw,34px)/1.08 var(--sans);letter-spacing:-.01em}
+#stamp small{display:block;font:500 12px var(--mono);color:var(--muted);margin-top:6px;line-height:1.5}
+#stamp .hi{color:var(--accent)}
+.hint{position:fixed;left:50%;transform:translateX(-50%);top:calc(14px + env(safe-area-inset-top,0px));font:11px var(--mono);color:var(--muted)}
+@media (max-width:900px){
+  #ctl{max-height:42vh}
+  #side{left:16px;right:16px;width:auto;top:auto;bottom:calc(12px + env(safe-area-inset-bottom,0px));max-height:36vh}
+  #stamp,.hint,.axlab{display:none}
+}
+@media (max-width:560px){.panel{padding:10px 12px;gap:9px}h1{font-size:18px}.plot{height:150px}}
+</style>
+<script data-goatcounter="https://jinleiphys.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
+</head>
+<body>
+<div id="stage"></div>
+
+<aside id="ctl" class="panel glass glass-deep" data-glass data-glass-bevel="22" data-glass-scale="42">
+  <div>
+    <a class="home" href="index.html">← nuclearjs</a> &nbsp; <a class="home" href="knockout.html">knockout</a> &nbsp; <a class="home" href="breakup.html">breakup</a> &nbsp; <a class="home" href="scatter.html#d208Pb@22">d + ²⁰⁸Pb elastic</a>
+    <h1>One-nucleon transfer</h1>
+    <p class="sub">A deuteron grazes <b>²⁰⁸Pb</b> and leaves its neutron behind: <b>²⁰⁸Pb(d,p)²⁰⁹Pb</b>. The proton flies on; the neutron stays, in one orbital of ²⁰⁹Pb. Which orbital is told by the proton's angular distribution (the angular momentum <b>l</b> the neutron brings), and how much of the level is that one orbital is the <b>spectroscopic factor</b> S, the measured cross section divided by a reaction calculation made with S = 1.</p>
+  </div>
+  <div class="grp">
+    <div class="lab">Level of ²⁰⁹Pb</div>
+    <div class="chips" id="levels"></div>
+  </div>
+  <div class="grp">
+    <div class="lab">Deuteron in the entrance channel</div>
+    <div class="seg" id="ent">
+      <button data-v="dwba" title="distorted waves with the Han-Shi-Shen deuteron optical potential">DWBA, d potential</button>
+      <button data-v="adwa" title="adiabatic: the n and p potentials at half the deuteron energy (Johnson-Soper)">adiabatic</button>
+    </div>
+    <div class="lab">Proton potential</div>
+    <div class="seg" id="exitp">
+      <button data-v="kd02" title="Koning-Delaroche 2003">KD02</button>
+      <button data-v="ch89" title="Varner et al. 1991 (CH89)">CH89</button>
+    </div>
+    <div class="lab">Neutron well, radius / diffuseness (fm)</div>
+    <div class="seg" id="geom"></div>
+  </div>
+  <div class="grp">
+    <div class="lab">Normalisation window (c.m.)</div>
+    <div class="row"><span>to</span><input id="hi" type="range" min="45" max="170" step="5" aria-label="upper edge of the normalisation window"><output id="hiout"></output></div>
+    <p class="src" id="winNote"></p>
+  </div>
+  <div class="grp">
+    <div class="lab">Momentum matching, live</div>
+    <div class="row"><span>θ</span><input id="th" type="range" min="0" max="180" step="0.5" aria-label="proton c.m. angle"><output id="thout"></output></div>
+    <div class="row"><span>R</span><input id="R" type="range" min="5" max="12" step="0.05" aria-label="matching radius"><output id="Rout"></output></div>
+    <dl class="kv" id="kin"></dl>
+  </div>
+  <div class="grp">
+    <div class="lab">Rendering</div>
+    <div class="seg" id="qmode">
+      <button data-v="high" title="ray-marched volume, bloom">cinematic</button>
+      <button data-v="low" title="coarser volume, no bloom">fast</button>
+    </div>
+  </div>
+  <details>
+    <summary>What is computed where</summary>
+    <div class="grp" id="what"></div>
+  </details>
+  <details>
+    <summary>Why S depends on the model</summary>
+    <div class="grp" id="model"></div>
+  </details>
+  <details>
+    <summary>What the picture shows</summary>
+    <div class="grp" id="render"></div>
+  </details>
+  <details>
+    <summary>Sources</summary>
+    <div class="grp" id="srcs"></div>
+  </details>
+</aside>
+
+<aside id="side" class="panel glass glass-deep" data-glass data-glass-bevel="22" data-glass-scale="42">
+  <div class="cap"><b id="adTitle">Angular distribution</b><span id="adUnit">dσ/dΩ c.m., mb/sr</span></div>
+  <canvas id="pad" class="plot tall" aria-label="Proton angular distribution, measured and FRESCO"></canvas>
+  <div class="leg" id="adLeg"></div>
+  <p class="src" id="adNote"></p>
+  <div class="cap"><b>Spectroscopic factors</b><span id="sUnit"></span></div>
+  <canvas id="ps" class="plot" aria-label="Spectroscopic factors: this page's fits against published analyses"></canvas>
+  <div class="leg" id="sLeg"></div>
+  <table class="pub" id="sTab"></table>
+  <p class="src" id="sNote"></p>
+  <div class="cap"><b>S against the neutron well</b><span>KD02 protons, same window</span></div>
+  <table class="pub" id="gTab"></table>
+  <p class="src" id="gNote"></p>
+  <div class="cap"><b>Momentum matching</b><span id="qUnit">qR against the c.m. angle</span></div>
+  <canvas id="pq" class="plot short" aria-label="Transferred momentum times radius against angle"></canvas>
+  <div class="leg" id="qLeg"></div>
+  <p class="src" id="qNote"></p>
+  <div class="cap"><b>The bound neutron</b><span id="uUnit"></span></div>
+  <canvas id="pu" class="plot short" aria-label="Radial wave function of the neutron in 209Pb"></canvas>
+  <div class="leg" id="uLeg"></div>
+  <dl class="kv" id="uKv"></dl>
+  <p class="src" id="uNote"></p>
+  <details>
+    <summary>Deuteron elastic at 22 MeV</summary>
+    <div class="grp">
+      <canvas id="pel" class="plot short" aria-label="Deuteron elastic scattering, ratio to Rutherford"></canvas>
+      <div class="leg" id="elLeg"></div>
+      <p class="src" id="elNote"></p>
+    </div>
+  </details>
+  <details>
+    <summary>Published C²S, ENSDF compilation</summary>
+    <div class="grp">
+      <table class="pub" id="ensTab"></table>
+      <p class="src" id="ensNote"></p>
+    </div>
+  </details>
+</aside>
+
+<div id="labels"></div>
+<div id="stamp"></div>
+<div class="hint">drag to orbit · scroll to zoom · space pauses</div>
+
+<script src="assets/three-bundle.js"></script>
+<script src="assets/three-post.js"></script>
+<script src="assets/vol.js"></script>
+<script src="assets/shells-data.js"></script>
+<script src="assets/ws.js"></script>
+<script src="assets/halo.js"></script>
+<script src="assets/breakup.js"></script>
+<script src="assets/transfer.js"></script>
+<script src="assets/transfer-data.js"></script>
+<script>
+"use strict";
+const T = window.TRANSFER, D = window.TRANSFER_DATA, BK = window.BREAKUP;
+const L10 = Math.log10, clamp = (v, a, b) => Math.min(b, Math.max(a, v));
+const fmt = (x, d = 2) => (x == null || !isFinite(x) ? "n/a" : x.toFixed(d));
+const sup = (A) => `<sup>${A}</sup>`;
+const LV = D.levels;
+const lvHtml = (lv) => lv.lab.replace(/^(\d)([a-z])(\d+\/2)$/, "$1$2<sub>$3</sub>");
+const lvTxt = (lv) => lv.lab;
+const RUNKEY = (e, x, gk) => `${e}_${x}${gk == null ? S.geom : gk}`;
+const GEOMS = Object.entries(D.geoms);              // [["", [1.27, 0.67]], ["_g125", [1.25, 0.65]], ...]
+const geomOf = (gk) => D.geoms[gk == null ? S.geom : gk];
+const RUNS = [["dwba", "kd02"], ["adwa", "kd02"], ["dwba", "ch89"], ["adwa", "ch89"]];
+const COL = { dwba: "#f2c14e", adwa: "#7fd1b9", data: "#f4f6fb", ens: "#8a92a6", d: "#d9a3ff", p: "#ff9656", n: "#8cc8ff" };
+const LO = 35;                                   // first measured angle of every (d,p) set (c.m. 35.2 to 35.3 degrees)
+
+// ---------------------------------------------------------------- state
+const S = { lv: 0, ent: "dwba", exit: "kd02", geom: "", hi: 50, th: null, R: 7.5, play: true, t: 0 };
+
+// ---------------------------------------------------------------- masses, kinematics (live, AME2020)
+const M = (Z, A) => BK.nucMass(window.AME, Z, A);
+const MS = { n: M(0, 1), p: M(1, 1), d: M(1, 2), A: M(82, 208), B: M(82, 209) };
+MS.Q = MS.d + MS.A - MS.p - MS.B; MS.Sn = MS.A + MS.n - MS.B; MS.Bd = MS.n + MS.p - MS.d;
+const ED = D.Ed;
+function kinAt(lv, th) { return T.kin(MS.d, MS.A, MS.p, MS.B + lv.Ex / 1000, ED, th); }
+function qOf(lv) { const k = kinAt(lv, 0); return (th) => T.q(k.ki, k.kf, MS.A, MS.B + lv.Ex / 1000, th); }
+const R_WS = D.boundGeom.r0 * Math.cbrt(208);           // default well (r0 = 1.27 fm): the default matching radius
+const rWS = () => geomOf()[0] * Math.cbrt(208);          // the current well's radius
+const OMP_HSS_PAGE = "044615";                       // article number, not in the CrossRef record; as cited in assets/omp.js
+
+// ---------------------------------------------------------------- fits (live)
+function curve(run, lv) { return D.curves[run][lv.lab]; }
+function fit(run, lv) { const d = D.data[lv.lab]; return d ? T.fitS(d, curve(run, lv), LO, S.hi) : null; }
+const peakAngle = (c) => T.forwardPeak(c);       // largest local maximum between 5 and 90 degrees
+
+// ---------------------------------------------------------------- bound state (live, assets/halo.js)
+let BS = null;
+function solveBound() {
+  const lv = LV[S.lv], [r0, a] = geomOf();
+  const sol = HALO.solve({ Zc: 82, Nc: 126, q: "n", l: lv.l, j2: lv.j2, nr: lv.nr, S: MS.Sn - lv.Ex / 1000, r0, a, Vls: D.boundGeom.Vls, mq: MS.n, Mc: MS.A });
+  const pr = HALO.profile(sol, 1);
+  BS = { sol, r: pr.r, u: pr.u, lv };
+}
+function uAt(r) {
+  const R = BS.r, U = BS.u;
+  if (r <= 0) return 0;
+  if (r >= R[R.length - 1]) return 0;
+  let lo = 0, hi = R.length - 1;
+  while (hi - lo > 1) { const m = (lo + hi) >> 1; if (R[m] <= r) lo = m; else hi = m; }
+  const t = (r - R[lo]) / (R[hi] - R[lo]);
+  return U[lo] * (1 - t) + U[hi] * t;
+}
+
+// ================================================================ scene
+const stageEl = document.getElementById("stage");
+const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance", preserveDrawingBuffer: true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.setSize(innerWidth, innerHeight);
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.05;
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+stageEl.appendChild(renderer.domElement);
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(36, innerWidth / innerHeight, 0.5, 3000);
+const composer = new EffectComposer(renderer);
+composer.addPass(new RenderPass(scene, camera));
+const bloom = new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), 0.38, 0.5, 0.84);
+composer.addPass(bloom);
+composer.addPass(new OutputPass());
+composer.addPass(new SMAAPass(innerWidth * renderer.getPixelRatio(), innerHeight * renderer.getPixelRatio()));
+scene.environment = VOL.studioEnv(renderer);
+VOL.lightRig(scene);
+scene.fog = new THREE.Fog("#0b0d12", 170, 460);
+// the ground colour drawn untouched on the direct path; on the bloom path the linear colour ACES maps back to it
+const GROUND = new THREE.Color("#0b0d12");
+const GROUND_PRE_ACES = new THREE.Color().setRGB(0.0115476, 0.0131218, 0.0174740, THREE.LinearSRGBColorSpace);
+scene.background = GROUND.clone();
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true; controls.dampingFactor = 0.08;
+controls.minDistance = 25; controls.maxDistance = 420;
+controls.maxPolarAngle = Math.PI * 0.49;
+const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+const stage3 = new VOL.Stage(scene);
+const grid = new THREE.GridHelper(400, 200, "#2a3245", "#1d2333");
+grid.material.opacity = 0.5;
+stage3.fadeGrid(grid);
+scene.add(grid);
+const vol = new VOL.Volume({ steps: 150 }), volFast = new VOL.Volume({ cheap: true });
+const gov = new VOL.Governor(vol);
+scene.add(vol.mesh, volFast.mesh);
+const FLOOR = -15;
+const P3 = (x, y, h = 0) => new THREE.Vector3(x, h, y);          // reaction plane (x beam, y deflection) -> scene
+
+// ---------- the field: 208Pb matter density (Fermi shape, dim) and the neutron orbital, |psi|^2 with m = j about the vertical
+const RPB = 1.12 * Math.cbrt(208) - 0.86 / Math.cbrt(208), APB = 0.52;
+let FIELD = null;
+function buildField() {
+  const lv = LV[S.lv];
+  const ang = (x) => WS.angular(lv.l, lv.j2, lv.j2, x);
+  const F = VOL.field({ rmax: 21, NR: 200, NU: 96, tau: 3.2,
+    iso: [{ w: [1, 0, 0], level: 0.5, alpha: 0.2, rim: 1 }],
+    channels: [
+      { f: (r) => 1 / (1 + Math.exp((r - RPB) / APB)), group: 0, color: new THREE.Color("#c9b9a6"), weight: 0.06, emission: 0.05 },
+      { f: (r, u) => { const v = uAt(r) / Math.max(r, 1e-3); return v * v * ang(u); }, group: 1, tf: { type: "pow", g: 0.8, floor: 0.03 },
+        color: new THREE.Color("#3f8cff").multiplyScalar(1.5), weight: 1, emission: 1.2 },
+    ] });
+  vol.setField(F, false); volFast.setField(F, false);
+  stage3.layout(FLOOR, 21);
+  stage3.setShadow(F, 4);
+  vol.u.uFloorY.value = volFast.u.uFloorY.value = FLOOR;
+  grid.position.y = FLOOR + 0.01;
+  FIELD = F;
+}
+
+// ---------- particles and trails
+const sphGeo = new THREE.SphereGeometry(1, 40, 20);
+function ball(col, r) {
+  const c = new THREE.Color(col);
+  const m = new THREE.Mesh(sphGeo, new THREE.MeshStandardMaterial({ color: c, emissive: c, emissiveIntensity: 0.6, roughness: 0.3, metalness: 0, transparent: true }));
+  m.scale.setScalar(r); m.renderOrder = 12; scene.add(m); return m;
+}
+function softTex() {
+  const cv = document.createElement("canvas"); cv.width = cv.height = 128;
+  const x = cv.getContext("2d"), g = x.createRadialGradient(64, 64, 0, 64, 64, 64);
+  g.addColorStop(0, "rgba(255,255,255,0.9)"); g.addColorStop(0.35, "rgba(255,255,255,0.35)"); g.addColorStop(0.7, "rgba(255,255,255,0.08)"); g.addColorStop(1, "rgba(255,255,255,0)");
+  x.fillStyle = g; x.fillRect(0, 0, 128, 128);
+  const t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace; return t;
+}
+const SOFT = softTex();
+function halo(col, s) {
+  const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: SOFT, color: new THREE.Color(col), transparent: true, opacity: 0.55, blending: THREE.AdditiveBlending, depthWrite: false }));
+  sp.scale.setScalar(s); sp.renderOrder = 14; scene.add(sp); return sp;
+}
+const nBall = ball(COL.n, 0.85), pBall = ball(COL.p, 0.85);
+const dGlow = halo(COL.d, 7), nGlow = halo(COL.n, 3.2), pGlow = halo(COL.p, 3.2);
+function makeTrail(col, op) {
+  const m = new THREE.Mesh(new THREE.BufferGeometry(), new THREE.MeshStandardMaterial({ color: new THREE.Color(col), emissive: new THREE.Color(col), emissiveIntensity: 0.4, roughness: 0.5, transparent: true, opacity: op, depthWrite: false }));
+  m.renderOrder = 11; scene.add(m); return m;
+}
+const trails = { d: makeTrail(COL.d, 0.5), p: makeTrail(COL.p, 0.55), n: makeTrail(COL.n, 0.55) };
+function setTrail(m, pts, rad) {
+  m.geometry.dispose();
+  if (pts.length < 2) { m.geometry = new THREE.BufferGeometry(); m.userData = {}; return; }
+  const curve = new THREE.CatmullRomCurve3(pts), seg = Math.min(500, pts.length * 2);
+  m.geometry = new THREE.TubeGeometry(curve, seg, rad || 0.14, 6, false);
+  const L = [0]; for (let i = 1; i < pts.length; i++) L.push(L[i - 1] + pts[i].distanceTo(pts[i - 1]));
+  m.userData = { seg, L, tot: L[L.length - 1] };
+  m.geometry.setDrawRange(0, 0);
+}
+function revealTrail(m, f) {
+  const u = m.userData; if (!u.L) return;
+  const n = u.L.length, fi = clamp(f, 0, 1) * (n - 1), i = Math.floor(fi), t = fi - i;
+  const s = i >= n - 1 ? u.tot : u.L[i] + (u.L[i + 1] - u.L[i]) * t;
+  m.geometry.setDrawRange(0, Math.floor(s / u.tot * u.seg) * 6 * 6);
+}
+// the proton's direction: a faint cone of the c.m. angle about the beam axis (the cross section has no azimuth)
+const coneMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(COL.p), transparent: true, opacity: 0.025, side: THREE.DoubleSide, depthWrite: false, blending: THREE.AdditiveBlending });
+const cone = new THREE.Mesh(new THREE.BufferGeometry(), coneMat); cone.renderOrder = 9; scene.add(cone);
+const ringMat = new THREE.LineBasicMaterial({ color: new THREE.Color(COL.p), transparent: true, opacity: 0.4 });
+const coneRing = new THREE.LineLoop(new THREE.BufferGeometry(), ringMat); scene.add(coneRing);
+function buildCone(th) {
+  const L = 20, t = th * Math.PI / 180, n = 96, pos = [], idx = [], rp = [];
+  const r = L * Math.sin(t), x = L * Math.cos(t);
+  pos.push(0, 0, 0);
+  for (let i = 0; i <= n; i++) { const a = i / n * 2 * Math.PI; pos.push(x, r * Math.sin(a), r * Math.cos(a)); if (i < n) rp.push(x, r * Math.sin(a), r * Math.cos(a)); }
+  for (let i = 1; i <= n; i++) idx.push(0, i, i + 1);
+  const g = new THREE.BufferGeometry(); g.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3)); g.setIndex(idx);
+  cone.geometry.dispose(); cone.geometry = g;
+  const g2 = new THREE.BufferGeometry(); g2.setAttribute("position", new THREE.Float32BufferAttribute(rp, 3));
+  coneRing.geometry.dispose(); coneRing.geometry = g2;
+}
+
+// ---------- the momentum triangle on the floor: k_d, (m_A/m_B) k_p and q = k_d - (m_A/m_B) k_p, with the circle of all
+// (m_A/m_B) k_p directions and the circle of the q that matches l (radius x_l / R about the tip of k_d)
+const MOM = new THREE.Group(); scene.add(MOM);
+const MO = new THREE.Vector3(12, FLOOR + 0.25, -52), MSC = 10;     // MSC: scene units per fm^-1 (stated on the page)    // origin, scene units per fm^-1
+function arrow(col) { const a = new THREE.ArrowHelper(new THREE.Vector3(1, 0, 0), new THREE.Vector3(), 1, new THREE.Color(col), 1.6, 0.9); MOM.add(a); return a; }
+const arD = arrow(COL.d), arP = arrow(COL.p), arQ = arrow(COL.n);
+function circle(col, op) { const l = new THREE.LineLoop(new THREE.BufferGeometry(), new THREE.LineBasicMaterial({ color: new THREE.Color(col), transparent: true, opacity: op })); MOM.add(l); return l; }
+const cKp = circle(COL.p, 0.35), cQ = circle(COL.n, 0.55);
+function setCircle(l, c, r) {
+  const p = []; for (let i = 0; i < 128; i++) { const a = i / 128 * 2 * Math.PI; p.push(c.x + r * Math.cos(a), c.y, c.z + r * Math.sin(a)); }
+  l.geometry.dispose(); l.geometry = new THREE.BufferGeometry(); l.geometry.setAttribute("position", new THREE.Float32BufferAttribute(p, 3));
+}
+function setArrow(a, from, to) {
+  const d = to.clone().sub(from), L = d.length();
+  a.position.copy(from); a.setDirection(d.normalize()); a.setLength(Math.max(L, 0.01), Math.min(1.6, 0.4 * L), Math.min(0.9, 0.25 * L));
+}
+let MOMS = null;
+function buildMomentum() {
+  const lv = LV[S.lv], k = kinAt(lv, S.th), a = MS.A / (MS.B + lv.Ex / 1000);
+  const t = S.th * Math.PI / 180;
+  const kd = MO.clone().add(new THREE.Vector3(k.ki * MSC, 0, 0));
+  const kp = MO.clone().add(new THREE.Vector3(a * k.kf * MSC * Math.cos(t), 0, a * k.kf * MSC * Math.sin(t)));
+  setArrow(arD, MO, kd); setArrow(arP, MO, kp); setArrow(arQ, kp, kd);
+  setCircle(cKp, MO, a * k.kf * MSC);
+  const xl = T.jlPeak(lv.l) / S.R;
+  cQ.visible = xl > 0;
+  if (xl > 0) setCircle(cQ, kd, xl * MSC);
+  MOMS = { kd, kp, mid: kp.clone().add(kd).multiplyScalar(0.5), q: kp.distanceTo(kd) / MSC, k, a };
+}
+
+// ---------- the level ladder of 209Pb (ENSDF energies), bar length = S of the current fit
+const LAD = new THREE.Group(); scene.add(LAD);
+const LX0 = -24, LZ0 = -34, LSC = 6;                  // position, scene units per MeV
+const barMats = LV.map(() => new THREE.MeshStandardMaterial({ color: "#9aa6bd", emissive: "#3a4255", emissiveIntensity: 0.6, roughness: 0.35, metalness: 0.2 }));
+const bars = LV.map((lv, i) => { const m = new THREE.Mesh(new THREE.BoxGeometry(1, 0.32, 0.6), barMats[i]); m.position.set(LX0, FLOOR + 1.5 + lv.Ex / 1000 * LSC, LZ0); LAD.add(m); return m; });
+const snLine = new THREE.Mesh(new THREE.BoxGeometry(16, 0.08, 0.08), new THREE.MeshBasicMaterial({ color: "#5d6b80" }));
+snLine.position.set(LX0, FLOOR + 1.5 + MS.Sn * LSC, LZ0); LAD.add(snLine);
+const post = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.12, MS.Sn * LSC + 1.5, 12), new THREE.MeshStandardMaterial({ color: "#2a3142", roughness: 0.6 }));
+post.position.set(LX0 - 8.6, FLOOR + (MS.Sn * LSC + 1.5) / 2, LZ0); LAD.add(post);
+function drawLadder() {
+  LV.forEach((lv, i) => {
+    const f = fit(RUNKEY(S.ent, S.exit), lv), s = f ? f.S : 1;
+    bars[i].scale.x = Math.max(0.4, 12 * s);
+    bars[i].position.x = LX0 - 8 + 6 * s;
+    const on = i === S.lv;
+    barMats[i].color.set(on ? "#f2c14e" : f ? "#9aa6bd" : "#5d6678");
+    barMats[i].emissive.set(on ? "#a8781a" : "#2a3142");
+    barMats[i].emissiveIntensity = on ? 1.1 : 0.5;
+  });
+}
+
+// ================================================================ the story: precomputed paths for the current level
+const VS = 24;                                       // 1 s of animation moves the deuteron 24 fm
+const RMIN = 11.5;                                   // closest approach of the drawn Coulomb orbit, fm (a drawing choice)
+let ST = null;
+function buildStory() {
+  const lv = LV[S.lv], k = kinAt(lv, S.th);
+  const Ecm = k.Ecmi, rmin = RMIN;
+  const orb = BK.orbit({ Z1: 1, Z2: 82, Ecm, rmin, rmax: 70, n: 700 });
+  const tS = orb.t.map((v) => v / VS);
+  const iTr = orb.iMin, tTr = tS[iTr], p0 = orb.pts[iTr];
+  // proton: from the transfer point at the c.m. angle, straight (its Coulomb bending is not drawn), speed ratio from
+  // the live lab energies
+  const vd = Math.sqrt(2 * ED / MS.d), vp = Math.sqrt(2 * k.T3 / MS.p);
+  const th = S.th * Math.PI / 180, dir = [Math.cos(th), Math.sin(th)];
+  // neutron: spirals from the transfer point to the radius where the orbital's radial density peaks, keeping the
+  // sense of the deuteron's orbital motion, then circles there
+  let rpk = 0, best = 0; for (let r = 0.2; r < 20; r += 0.05) { const v = uAt(r) ** 2; if (v > best) { best = v; rpk = r; } }
+  const ph0 = Math.atan2(p0[1], p0[0]), r0 = Math.hypot(p0[0], p0[1]);
+  const q1 = orb.pts[iTr + 1], sense = Math.sign(Math.atan2(q1[1], q1[0]) - ph0) || -1;
+  const omega0 = vd * VS / r0 * 0.6;                  // presentation: the neutron keeps 60 % of the deuteron's angular speed
+  const T = tTr + 7.5;
+  const dPts = orb.pts.slice(0, iTr + 1).map((q) => P3(q[0], q[1]));
+  const pPts = [], nPts = [];
+  for (let i = 0; i <= 80; i++) { const s = i / 80 * (T - tTr) * vp / vd * VS; pPts.push(P3(p0[0] + dir[0] * s, p0[1] + dir[1] * s)); }
+  const nAt = (t) => {
+    const u = clamp(t / 1.6, 0, 1), sm = u * u * (3 - 2 * u);
+    const r = r0 + (rpk - r0) * sm, ph = ph0 + sense * omega0 * t;
+    return [r * Math.cos(ph), r * Math.sin(ph)];
+  };
+  for (let i = 0; i <= 160; i++) { const q = nAt(i / 160 * 3.2); nPts.push(P3(q[0], q[1])); }
+  setTrail(trails.d, dPts, 0.16); setTrail(trails.p, pPts, 0.14); setTrail(trails.n, nPts, 0.12);
+  const dAt = (t) => {
+    if (t <= tS[0]) return orb.pts[0];
+    let lo = 0, hi = iTr;
+    if (t >= tS[iTr]) return orb.pts[iTr];
+    while (hi - lo > 1) { const m = (lo + hi) >> 1; if (tS[m] <= t) lo = m; else hi = m; }
+    const u = (t - tS[lo]) / (tS[hi] - tS[lo]), a = orb.pts[lo], b = orb.pts[hi];
+    return [a[0] + (b[0] - a[0]) * u, a[1] + (b[1] - a[1]) * u];
+  };
+  ST = { T, tTr, tS, iTr, dAt, nAt, p0, dir, vpS: vp / vd * VS, rpk, orb };
+}
+function update(t) {
+  if (!ST) return;
+  const pre = t <= ST.tTr;
+  if (pre) {
+    const q = ST.dAt(t), v = P3(q[0], q[1]);
+    // the bound deuteron: n and p side by side, the pair glowing as one
+    const off = new THREE.Vector3(0, 0.95, 0);
+    nBall.position.copy(v).add(off); pBall.position.copy(v).sub(off);
+    dGlow.position.copy(v); dGlow.material.opacity = 0.5;
+    revealTrail(trails.d, (ST.tS.findIndex((s) => s > t) - 1) / ST.iTr);
+    revealTrail(trails.p, 0); revealTrail(trails.n, 0);
+  } else {
+    const dt = t - ST.tTr;
+    const s = dt * ST.vpS, pp = P3(ST.p0[0] + ST.dir[0] * s, ST.p0[1] + ST.dir[1] * s);
+    pBall.position.copy(pp);
+    const q = ST.nAt(dt); nBall.position.copy(P3(q[0], q[1]));
+    dGlow.material.opacity = Math.max(0, 0.5 - dt * 0.8);
+    revealTrail(trails.d, 1);
+    revealTrail(trails.p, dt / (ST.T - ST.tTr));
+    revealTrail(trails.n, Math.min(1, dt / 3.2));
+  }
+  const fadeN = pre ? 1 : clamp(1 - (t - ST.tTr - 3.6) / 2.5, 0.15, 1);
+  nBall.material.opacity = fadeN; nGlow.material.opacity = 0.55 * fadeN;
+  nGlow.position.copy(nBall.position); pGlow.position.copy(pBall.position);
+  pBall.visible = pGlow.visible = pBall.position.length() < 120;
+}
+
+// ================================================================ labels
+const labels = document.getElementById("labels"), LAB = {};
+function lab(key, cls) {
+  if (!LAB[key]) { const el = document.createElement("div"); el.className = "axlab"; labels.appendChild(el); LAB[key] = el; }
+  LAB[key].className = "axlab " + (cls || "");
+  return LAB[key];
+}
+const tmp = new THREE.Vector3();
+function place(el, v, html, color) {
+  tmp.copy(v).project(camera);
+  const vis = html !== "" && tmp.z < 1 && Math.abs(tmp.x) < 0.97 && Math.abs(tmp.y) < 0.97;
+  el.hidden = !vis;
+  if (!vis) return;
+  if (el._h !== html) { el.innerHTML = html; el._h = html; }
+  if (color) el.style.color = color;
+  el.style.left = (tmp.x * 0.5 + 0.5) * innerWidth + "px"; el.style.top = (-tmp.y * 0.5 + 0.5) * innerHeight + "px";
+}
+function drawLabels() {
+  if (!ST) return;
+  const lv = LV[S.lv], pre = S.t <= ST.tTr;
+  place(lab("A"), new THREE.Vector3(0, RPB + 4.5, 0), pre ? `${sup(208)}Pb` : `${sup(209)}Pb · ${lvHtml(lv)}`, pre ? "#c9b9a6" : COL.n);
+  place(lab("d"), nBall.position.clone().add(new THREE.Vector3(0, 2.6, 0)), pre ? "d" : "n", pre ? COL.d : COL.n);
+  place(lab("p"), pBall.position.clone().add(new THREE.Vector3(0, 2.4, 0)), pre || !pBall.visible ? "" : `p · θ = ${S.th.toFixed(1)}°`, COL.p);
+  // labels to the right of the ladder, pushed apart where levels are close (1.42/1.57, 2.49/2.54 MeV)
+  let yPrev = -1e9;
+  LV.map((l, i) => [l, i]).sort((a, b) => a[0].Ex - b[0].Ex).forEach(([l, i]) => {
+    const y = Math.max(FLOOR + 1.5 + l.Ex / 1000 * LSC, yPrev + 2.2); yPrev = y;
+    place(lab("lv" + i, i === S.lv ? "hot" : "dim"), new THREE.Vector3(LX0 + 9, y, LZ0), `${lvHtml(l)} · l = ${l.l} · ${l.Ex ? (l.Ex / 1000).toFixed(3) : "0"} MeV`);
+  });
+  place(lab("sn", "dim"), new THREE.Vector3(LX0 + 7.5, FLOOR + 1.5 + MS.Sn * LSC, LZ0), `S<sub>n</sub> = ${MS.Sn.toFixed(3)} MeV<small>neutron unbound above</small>`);
+  place(lab("lad", "dim"), new THREE.Vector3(LX0 - 2, FLOOR - 0.5, LZ0 + 3), `${sup(209)}Pb levels (ENSDF)<small>bar length: S of the current fit</small>`);
+  if (MOMS) {
+    place(lab("kd"), MOMS.kd.clone().add(new THREE.Vector3(1.5, 0, -1.4)), "k<sub>d</sub>", COL.d);
+    place(lab("kp"), MOMS.kp.clone().add(new THREE.Vector3(0, 0, 1.8)), "(m<sub>A</sub>/m<sub>B</sub>) k<sub>p</sub>", COL.p);
+    place(lab("q"), MOMS.mid.clone().add(new THREE.Vector3(1.6, 0, 0)), `q = ${MOMS.q.toFixed(3)} fm⁻¹`, COL.n);
+    place(lab("mom", "dim"), MO.clone().add(new THREE.Vector3(6, 0, -5.5)), `momentum triangle<small>blue ring: |q| = x<sub>l</sub>/R, the matched l</small>`);
+  }
+}
+
+// ================================================================ panels
+function setupCanvas(cv) {
+  const d = Math.min(devicePixelRatio, 2), w = cv.clientWidth, h = cv.clientHeight;
+  cv.width = w * d; cv.height = h * d;
+  const x = cv.getContext("2d"); x.setTransform(d, 0, 0, d, 0, 0);
+  x.font = "10px ui-monospace,Menlo,monospace";
+  return { x, w, h };
+}
+const PL = 40, PR = 8, PT = 8, PB = 20;
+const SUP = "⁰¹²³⁴⁵⁶⁷⁸⁹";
+const supE = (e) => "10" + String(e).replace("-", "⁻").replace(/\d/g, (q) => SUP[q]);
+function frameX(ctx, w, h, X, ticks, unit) {
+  ctx.strokeStyle = "#1c2230"; ctx.fillStyle = "#8a92a6"; ctx.lineWidth = 1; ctx.textAlign = "center";
+  for (const v of ticks) { ctx.beginPath(); ctx.moveTo(X(v), PT); ctx.lineTo(X(v), h - PB); ctx.stroke(); ctx.fillText(v, X(v), h - 7); }
+  ctx.textAlign = "right"; if (unit) ctx.fillText(unit, w - PR, h - PB - 4);
+}
+
+// ---------- angular distribution
+function drawAD() {
+  const lv = LV[S.lv], { x: ctx, w, h } = setupCanvas(document.getElementById("pad"));
+  const data = D.data[lv.lab], sel = RUNKEY(S.ent, S.exit);
+  const scale = (run) => { const f = fit(run, lv); return f ? f.S : 1; };
+  let ymax = -9, ymin = 9;
+  for (const [e, x] of RUNS) { const c = curve(RUNKEY(e, x), lv), s = scale(RUNKEY(e, x)); for (let i = 0; i <= 180; i++) { const v = L10(c[i] * s); ymax = Math.max(ymax, v); ymin = Math.min(ymin, v); } }
+  if (data) for (const [, v] of data) { ymax = Math.max(ymax, L10(v)); ymin = Math.min(ymin, L10(v)); }
+  const y1 = Math.ceil(ymax + 0.05), y0 = Math.max(y1 - 4, Math.floor(ymin - 0.05));
+  const X = (t) => PL + t / 180 * (w - PL - PR), Y = (v) => PT + (y1 - v) / (y1 - y0) * (h - PT - PB);
+  for (let e = y0; e <= y1; e++) { ctx.strokeStyle = "#1c2230"; ctx.beginPath(); ctx.moveTo(PL, Y(e)); ctx.lineTo(w - PR, Y(e)); ctx.stroke(); ctx.fillStyle = "#8a92a6"; ctx.textAlign = "right"; ctx.fillText(supE(e), PL - 4, Y(e) + 3); }
+  frameX(ctx, w, h, X, [0, 30, 60, 90, 120, 150, 180], "θ c.m. (deg)");
+  if (data) { ctx.fillStyle = "#f2c14e14"; ctx.fillRect(X(LO), PT, X(S.hi) - X(LO), h - PT - PB); }
+  ctx.save(); ctx.beginPath(); ctx.rect(PL, PT, w - PL - PR, h - PT - PB); ctx.clip();
+  for (const [e, x] of RUNS) {
+    const run = RUNKEY(e, x), c = curve(run, lv), s = scale(run), on = run === sel;
+    ctx.strokeStyle = COL[e]; ctx.globalAlpha = on ? 1 : 0.38; ctx.lineWidth = on ? 2 : 1.1; ctx.setLineDash(x === "ch89" ? [4, 3] : []);
+    ctx.beginPath(); for (let i = 0; i <= 180; i++) { const yy = Y(L10(c[i] * s)); i ? ctx.lineTo(X(i), yy) : ctx.moveTo(X(i), yy); } ctx.stroke();
+  }
+  ctx.globalAlpha = 1; ctx.setLineDash([]);
+  if (data) {
+    ctx.strokeStyle = COL.data; ctx.fillStyle = COL.data; ctx.lineWidth = 1;
+    for (const [t, v, e] of data) {
+      ctx.beginPath(); ctx.moveTo(X(t), Y(L10(v + e))); ctx.lineTo(X(t), Y(L10(Math.max(v - e, v * 0.01)))); ctx.stroke();
+      ctx.beginPath(); ctx.arc(X(t), Y(L10(v)), 2.3, 0, 2 * Math.PI); ctx.fill();
+    }
+  }
+  ctx.restore();
+  ctx.strokeStyle = "#ffffff55"; ctx.beginPath(); ctx.moveTo(X(S.th), PT); ctx.lineTo(X(S.th), h - PB); ctx.stroke();
+  document.getElementById("adTitle").innerHTML = `${sup(208)}Pb(d,p)${sup(209)}Pb, ${lvHtml(lv)}`;
+  document.getElementById("adLeg").innerHTML = (data ? `<span><i class="p" style="background:${COL.data}"></i>Hirota et al. 1998 (EXFOR ${lv.exfor})</span>` : "") +
+    `<span><i style="border-color:${COL.dwba}"></i>DWBA</span><span><i style="border-color:${COL.adwa}"></i>adiabatic</span><span><i class="d" style="border-color:#aab"></i>CH89 protons</span><span>FRESCO, run for this page</span>`;
+  const f = fit(sel, lv);
+  document.getElementById("adNote").innerHTML = data
+    ? `Each curve is FRESCO's cross section with S = 1, multiplied by its own S fitted over the shaded window (${LO}° to ${S.hi}°). Current setup: S = <b>${fmt(f.S, 3)}</b> ± ${fmt(f.dS, 3)} from the EXFOR uncertainties alone (the entry says "No information on source of uncertainties"; no normalisation uncertainty is given), χ²/point ${fmt(f.chi2, 1)} over ${f.n} points${f.n > 1 ? `; scaled by √(χ²/ν), ν = n − 1, ± ${fmt(f.dS * Math.sqrt(f.chi2 * f.n / (f.n - 1)), 3)}` : ""}.${f.n > 1 && f.chi2 * f.n / (f.n - 1) > 2 ? " <b>The curve's shape does not follow the data in this window</b> (χ²/ν above 2), so S depends on which points are in it." : ""}${winMin(lv) ? ` <b>The window contains a minimum of the measured distribution</b> (at ${winMin(lv).toFixed(1)}°), where S is set mostly by where the calculation puts its own minimum.` : ""} Forward peak of the calculation: ${peakAngle(curve(sel, lv))}°${peakAngle(curve(sel, lv)) < LO ? ", forward of the first measured angle" : ""}.`
+    : `No angular distribution for this level in the 22 MeV measurement (EXFOR E1705 covers five levels), so the curves are shown with S = 1. ENSDF gives C²S for it from other analyses (table below).`;
+}
+
+function winMin(lv) {                                 // an interior local minimum of the data inside the window, or null
+  const d = (D.data[lv.lab] || []).filter((q) => q[0] >= LO - 1e-9 && q[0] <= S.hi + 1e-9);
+  for (let i = 1; i < d.length - 1; i++) if (d[i][1] < d[i - 1][1] && d[i][1] < d[i + 1][1]) return d[i][0];
+  return null;
+}
+function remWin(c) { const b = D.curves.dwba_kd02[LV[0].lab]; let s = 0; for (let i = 35; i <= 50; i++) s += c[i] / b[i] - 1; return s / 16; }
+function sevenRatio(k, lab, lo, hi) {                // largest ratio either way, seven-channel run k against the one-level run
+  const one = D.curves.dwba_kd02[lab]; let m = 1;
+  for (let i = lo; i <= hi; i++) { const r = D.seven[k][lab][i] / one[i]; m = Math.max(m, r, 1 / r); }
+  return m;
+}
+const sevenPct = (k, lab, lo, hi) => 100 * (sevenRatio(k, lab, lo, hi) - 1);
+function convInner() { return Math.max(...Object.entries(D.conv).filter(([k]) => !k.includes("cutl-6")).map(([, v]) => v)); }
+function convOuter() { return Math.max(...Object.entries(D.conv).filter(([k]) => k.includes("cutl-6")).map(([, v]) => v)); }
+function relSpread() {                               // S(level)/S(g.s.) adiabatic against DWBA (KD02), largest change
+  const m = LV.filter((l) => D.data[l.lab]), g = (run, l) => fit(run, l).S;
+  return Math.max(...m.slice(1).map((l) => Math.abs((g("adwa_kd02", l) / g("adwa_kd02", m[0])) / (g("dwba_kd02", l) / g("dwba_kd02", m[0])) - 1)));
+}
+// ---------- spectroscopic factors: this page's four setups against the ENSDF compilation
+function ensVals(i) {
+  const t = D.ensdf.table, out = [];
+  for (const r of t.rows) { const s = r.vals[i]; const v = parseFloat(s); if (isFinite(v)) out.push({ v, ref: r.ref, flag: /\|:/.test(s) }); }
+  return out;
+}
+function drawS() {
+  const { x: ctx, w, h } = setupCanvas(document.getElementById("ps"));
+  const s0 = 0, s1 = 1.6, n = LV.length, rowH = (h - PT - PB) / n;
+  const X = (s) => 64 + (s - s0) / (s1 - s0) * (w - 64 - PR), Y = (i) => PT + (i + 0.5) * rowH;
+  frameX(ctx, w, h, X, [0, 0.4, 0.8, 1.2, 1.6], "S");
+  LV.forEach((lv, i) => {
+    if (i === S.lv) { ctx.fillStyle = "#f2c14e12"; ctx.fillRect(4, Y(i) - rowH / 2, w - 8, rowH); }
+    ctx.fillStyle = i === S.lv ? "#f2c14e" : "#c4cad6"; ctx.textAlign = "left"; ctx.fillText(lv.lab, 6, Y(i) + 3);
+    for (const e of ensVals(i)) { ctx.strokeStyle = e.flag ? "#5d6678" : COL.ens; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(X(e.v), Y(i) - 5); ctx.lineTo(X(e.v), Y(i) + 5); ctx.stroke(); }
+    RUNS.forEach(([e, x], k) => {
+      const f = fit(RUNKEY(e, x), lv); if (!f) return;
+      const yy = Y(i) + (k - 1.5) * 2.4, on = e === S.ent && x === S.exit;
+      ctx.beginPath(); ctx.arc(X(f.S), yy, on ? 3.6 : 2.6, 0, 2 * Math.PI);
+      if (x === "kd02") { ctx.fillStyle = COL[e]; ctx.fill(); } else { ctx.strokeStyle = COL[e]; ctx.lineWidth = 1.3; ctx.stroke(); }
+      if (on) { ctx.strokeStyle = "#ffffff"; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(X(f.S), yy, 5.2, 0, 2 * Math.PI); ctx.stroke(); }
+    });
+  });
+  document.getElementById("sUnit").textContent = `window ${LO}° to ${S.hi}°`;
+  document.getElementById("sLeg").innerHTML = `<span><i style="border-color:${COL.ens};width:2px;height:10px;border-top:0;border-left:1.5px solid ${COL.ens}"></i>ENSDF compilation, nine analyses</span><span><i class="p" style="background:${COL.dwba}"></i>DWBA</span><span><i class="p" style="background:${COL.adwa}"></i>adiabatic</span><span><i class="o" style="border-color:#c4cad6"></i>CH89 protons</span>`;
+  // table: this page's S, four setups
+  let t = `<tr><th>level</th><th>DWBA</th><th>adiab.</th><th>DWBA<small> CH89</small></th><th>adiab.<small> CH89</small></th><th>ENSDF<small> range</small></th></tr>`;
+  LV.forEach((lv, i) => {
+    const e = ensVals(i).filter((q) => !q.flag).map((q) => q.v);
+    const cells = RUNS.map(([a, b]) => { const f = fit(RUNKEY(a, b), lv); return `<td class="${a === "dwba" ? "dw" : "ad"}">${f ? f.S.toFixed(2) : "·"}</td>`; }).join("");
+    t += `<tr class="${i === S.lv ? "on" : ""}"><td>${lvHtml(lv)}</td>${cells}<td>${e.length ? `${Math.min(...e).toFixed(2)} to ${Math.max(...e).toFixed(2)}` : ""}</td></tr>`;
+  });
+  document.getElementById("sTab").innerHTML = t;
+  // S against the neutron well, both deuteron channels, KD02 protons
+  let gt = `<tr><th>level</th>${["dwba", "adwa"].map((e) => GEOMS.map(([k, [r0]]) => `<th>${e === "dwba" ? "DW" : "ad"}<small> ${r0.toFixed(2)}</small></th>`).join("")).join("")}</tr>`;
+  const withD = LV.filter((l) => D.data[l.lab]);
+  withD.forEach((lv) => {
+    gt += `<tr class="${lv === LV[S.lv] ? "on" : ""}"><td>${lvHtml(lv)}</td>${["dwba", "adwa"].map((e) => GEOMS.map(([k]) => `<td class="${e === "dwba" ? "dw" : "ad"}">${fit(RUNKEY(e, "kd02", k), lv).S.toFixed(2)}</td>`).join("")).join("")}</tr>`;
+  });
+  document.getElementById("gTab").innerHTML = gt;
+  const gr = (e) => withD.map((l) => fit(RUNKEY(e, "kd02", "_g120"), l).S / fit(RUNKEY(e, "kd02", ""), l).S);
+  const inRange = withD.filter((l) => { const e = ensVals(LV.indexOf(l)).filter((q) => !q.flag).map((q) => q.v), v = fit(RUNKEY("dwba", "kd02", "_g120"), l).S; return v >= Math.min(...e) && v <= Math.max(...e); }).map((l) => lvHtml(l));
+  document.getElementById("gNote").innerHTML = `Only the neutron well changes (columns: r<sub>0</sub> in fm; a = 0.67 fm at 1.27, 0.65 fm otherwise; V<sub>ls</sub> = ${D.boundGeom.Vls} MeV in the l·s form throughout); the deuteron and proton potentials are fixed. Going from r<sub>0</sub> = 1.27 to 1.20 fm multiplies S by ${Math.min(...gr("dwba")).toFixed(2)} to ${Math.max(...gr("dwba")).toFixed(2)} (DWBA) and ${Math.min(...gr("adwa")).toFixed(2)} to ${Math.max(...gr("adwa")).toFixed(2)} (adiabatic), more than either optical-potential change above. With r<sub>0</sub> = 1.20 fm and the deuteron potential, ${inRange.length ? inRange.join(", ") + (inRange.length === 1 ? " falls" : " fall") : "no level falls"} inside the range of the ENSDF compilation. Use the neutron-well buttons to see each choice in the panels above.`;
+  const g = (run, lab) => fit(run, LV.find((l) => l.lab === lab)).S;
+  const r = (lab) => g("adwa_kd02", lab) / g("dwba_kd02", lab);
+  const withData = LV.filter((l) => D.data[l.lab]);
+  const rr = withData.map((l) => r(l.lab)), rc = withData.map((l) => g("dwba_ch89", l.lab) / g("dwba_kd02", l.lab));
+  document.getElementById("sNote").innerHTML = `Fitted here, live, over the shaded window (dots in the order DWBA KD02, adiabatic KD02, DWBA CH89, adiabatic CH89). Changing only the deuteron channel from the deuteron potential to the adiabatic one multiplies S by ${Math.min(...rr).toFixed(2)} to ${Math.max(...rr).toFixed(2)} across the five measured levels; changing only the proton potential, by ${Math.min(...rc).toFixed(2)} to ${Math.max(...rc).toFixed(2)}. These spreads are the model dependence at fixed vertex and bound-state well; they are not an uncertainty of S. Relative to the ground state, the S of the other four measured levels moves by at most ${(100 * relSpread()).toFixed(0)} % between the two deuteron channels. ENSDF ticks: C²S from nine analyses at beam energies of 8 to 20.1 MeV (the dataset's comments; its footnote to 1967Mu16 says 20.3), mostly zero-range local DWBA with neutron wells of r<sub>0</sub> = 1.20 to 1.25 fm (the compilers' note; 1987Ro20 reanalyses 1974Ko20 with deuteron breakup), so they are not on this page's footing either; the well is the largest single difference (table below). The grey tick for 2g<sub>7/2</sub> is an unresolved 2492 + 2537 keV doublet.`;
+}
+
+// ---------- momentum matching
+function drawQ() {
+  const lv = LV[S.lv], { x: ctx, w, h } = setupCanvas(document.getElementById("pq")), qf = qOf(lv);
+  const y0 = 0, y1 = 14;
+  const X = (t) => PL + t / 180 * (w - PL - PR), Y = (v) => PT + (y1 - v) / (y1 - y0) * (h - PT - PB);
+  for (let v = 0; v <= y1; v += 2) { ctx.strokeStyle = "#1c2230"; ctx.beginPath(); ctx.moveTo(PL, Y(v)); ctx.lineTo(w - PR, Y(v)); ctx.stroke(); ctx.fillStyle = "#8a92a6"; ctx.textAlign = "right"; ctx.fillText(v, PL - 4, Y(v) + 3); }
+  frameX(ctx, w, h, X, [0, 30, 60, 90, 120, 150, 180], "θ c.m. (deg)");
+  // the x_l of every l in the ladder
+  const ls = [...new Set(LV.map((l) => l.l))].sort((a, b) => a - b);
+  ls.forEach((l, n) => {
+    const xl = T.jlPeak(l), on = l === lv.l;
+    ctx.strokeStyle = on ? "#8cc8ff" : "#3a4458"; ctx.setLineDash(on ? [] : [3, 3]); ctx.lineWidth = on ? 1.4 : 1;
+    ctx.beginPath(); ctx.moveTo(PL, Y(xl)); ctx.lineTo(w - PR, Y(xl)); ctx.stroke();
+    ctx.fillStyle = on ? "#8cc8ff" : "#5d6678"; ctx.textAlign = "left"; ctx.fillText(`l=${l}`, w - PR - 26 - (n % 2) * 30, Y(xl) - 2);
+  });
+  ctx.setLineDash([]);
+  ctx.strokeStyle = COL.d; ctx.lineWidth = 2; ctx.beginPath();
+  for (let t = 0; t <= 180; t += 1) { const v = qf(t) * S.R; t ? ctx.lineTo(X(t), Y(v)) : ctx.moveTo(X(t), Y(v)); } ctx.stroke();
+  const b = T.butler(lv.l, S.R, qf), pk = peakAngle(curve(RUNKEY(S.ent, S.exit), lv));
+  if (b) { ctx.strokeStyle = "#8cc8ff"; ctx.setLineDash([2, 2]); ctx.beginPath(); ctx.moveTo(X(b.theta), PT); ctx.lineTo(X(b.theta), h - PB); ctx.stroke(); }
+  ctx.strokeStyle = COL[S.ent]; ctx.setLineDash([5, 3]); ctx.beginPath(); ctx.moveTo(X(pk), PT); ctx.lineTo(X(pk), h - PB); ctx.stroke(); ctx.setLineDash([]);
+  ctx.strokeStyle = "#ffffff55"; ctx.beginPath(); ctx.moveTo(X(S.th), PT); ctx.lineTo(X(S.th), h - PB); ctx.stroke();
+  ctx.fillStyle = "#8a92a6"; ctx.textAlign = "left"; ctx.fillText("q R", PL + 4, PT + 10);
+  document.getElementById("qLeg").innerHTML = `<span><i style="border-color:${COL.d}"></i>q(θ) R</span><span><i style="border-color:#8cc8ff"></i>x<sub>l</sub>: first peak of j<sub>l</sub>(x)²</span><span><i class="d" style="border-color:#8cc8ff"></i>plane-wave estimate</span><span><i class="d" style="border-color:${COL[S.ent]}"></i>FRESCO forward peak</span>`;
+  const q0 = qf(0), run = RUNKEY(S.ent, S.exit);
+  // across the ladder (current setup, current R): where the plane-wave estimate and FRESCO's forward peak sit
+  const all = LV.map((l) => ({ l: l.l, b: T.butler(l.l, S.R, qOf(l)), pk: peakAngle(curve(run, l)) }));
+  const low = all.filter((x) => x.l <= 2), high = all.filter((x) => x.l >= 6 && x.b && !x.b.at0);
+  const lowB = Math.max(...low.map((x) => (x.b ? x.b.theta : 0))), lowP = low.map((x) => x.pk);
+  const hiD = high.map((x) => x.b.theta - x.pk);
+  const d = b && !b.at0 ? pk - b.theta : null;
+  document.getElementById("qNote").innerHTML = `The neutron must arrive with momentum q = |k<sub>d</sub> − (m<sub>A</sub>/m<sub>B</sub>) k<sub>p</sub>|; at the nuclear surface, radius R, that carries orbital angular momentum about qR (in ħ). Forward, q is smallest: ${q0.toFixed(3)} fm⁻¹, qR = ${(q0 * S.R).toFixed(2)} at R = ${S.R.toFixed(2)} fm, so low l is reached near 0° and high l needs larger angles. In the simplest plane-wave picture, transfer at the surface radius R (after Butler 1951), the cross section goes with j<sub>l</sub>(qR)², so its first peak sits where qR = x<sub>l</sub>: ${b ? (b.at0 ? "at 0° for this l (qR already exceeds x<sub>l</sub> there)" : `${b.theta.toFixed(1)}° for l = ${lv.l}`) : `nowhere below 180° for l = ${lv.l} at this R`}; FRESCO, with the Coulomb and nuclear distortion of both waves, puts the forward peak at ${pk}°${d != null ? ` (${Math.abs(d).toFixed(0)}° ${d > 0 ? "further back" : "further forward"})` : ""}. Over the seven levels the estimate misses: for l = 0 and 2 the estimate is at most ${lowB.toFixed(0)}° while FRESCO peaks at ${Math.min(...lowP)}° to ${Math.max(...lowP)}°, the Coulomb repulsion of ${sup(208)}Pb (a rough barrier of ${BK.barrier(1, 2, 82, 208).V.toFixed(1)} MeV, 1.44 Z<sub>1</sub>Z<sub>2</sub>/R at R = 1.5(A<sub>1</sub><sup>1/3</sup> + A<sub>2</sub><sup>1/3</sup>) fm, against ${kinAt(lv, 0).Ecmi.toFixed(1)} MeV in the c.m.) keeping the protons off 0°, which plane waves cannot do${hiD.length ? `; for l = 6 and 7 FRESCO peaks ${Math.min(...hiD).toFixed(0)}° to ${Math.max(...hiD).toFixed(0)}° forward of the estimate at this R` : ""}. R is a free choice here, set by default to the radius r<sub>0</sub>A<sup>1/3</sup> = ${R_WS.toFixed(2)} fm of the default neutron well.`;
+}
+
+// ---------- the bound neutron
+function drawU() {
+  const lv = LV[S.lv], { x: ctx, w, h } = setupCanvas(document.getElementById("pu")), sol = BS.sol;
+  const r1 = 22;
+  let umax = 0; for (let i = 0; i < BS.r.length; i++) if (BS.r[i] < r1) umax = Math.max(umax, Math.abs(BS.u[i]));
+  const X = (r) => PL + r / r1 * (w - PL - PR), Y = (v) => PT + (1.08 - v / umax) / 2.16 * (h - PT - PB);
+  for (const v of [-umax, 0, umax]) { ctx.strokeStyle = v ? "#1c2230" : "#2a3142"; ctx.beginPath(); ctx.moveTo(PL, Y(v)); ctx.lineTo(w - PR, Y(v)); ctx.stroke(); }
+  frameX(ctx, w, h, X, [0, 5, 10, 15, 20], "r (fm)");
+  // surface: the Woods-Saxon radius, and the nuclear matter half-density radius used in the picture
+  ctx.fillStyle = "#c9b9a610"; ctx.fillRect(PL, PT, X(rWS()) - PL, h - PT - PB);
+  ctx.strokeStyle = "#5d6678"; ctx.setLineDash([3, 3]); ctx.beginPath(); ctx.moveTo(X(rWS()), PT); ctx.lineTo(X(rWS()), h - PB); ctx.stroke(); ctx.setLineDash([]);
+  // the exact tail b W(2 kappa r) outside the range of the potential
+  ctx.strokeStyle = "#ffb070"; ctx.setLineDash([4, 3]); ctx.lineWidth = 1.3; ctx.beginPath();
+  let first = true;
+  for (let r = rWS() + 1; r <= r1; r += 0.1) { const W = HALO.whittaker(0, lv.l, 2 * sol.kappa * r), v = sol.anc * W.m * Math.exp(W.e); if (Math.abs(v) > 1.2 * umax) { first = true; continue; } first ? ctx.moveTo(X(r), Y(v)) : ctx.lineTo(X(r), Y(v)); first = false; }
+  ctx.stroke(); ctx.setLineDash([]);
+  ctx.strokeStyle = COL.n; ctx.lineWidth = 2; ctx.beginPath();
+  first = true;
+  for (let i = 0; i < BS.r.length; i++) { const r = BS.r[i]; if (r > r1) break; first ? ctx.moveTo(X(r), Y(BS.u[i])) : ctx.lineTo(X(r), Y(BS.u[i])); first = false; }
+  ctx.stroke();
+  ctx.fillStyle = "#8a92a6"; ctx.textAlign = "left"; ctx.fillText("u(r)", PL + 4, PT + 10);
+  document.getElementById("uUnit").textContent = `${lv.lab}, bound by ${(MS.Sn - lv.Ex / 1000).toFixed(3)} MeV`;
+  document.getElementById("uLeg").innerHTML = `<span><i style="border-color:${COL.n}"></i>u(r), Woods-Saxon, depth fitted (live)</span><span><i class="d" style="border-color:#ffb070"></i>b W(2κr), exact tail</span><span><i class="d" style="border-color:#5d6678"></i>R = r<sub>0</sub>A<sup>1/3</sup></span>`;
+  const fr = D.bound[RUNKEY(S.ent, S.exit)][S.lv];
+  document.getElementById("uKv").innerHTML = `
+    <dt>depth</dt><dd>${sol.D.toFixed(3)} MeV <span style="color:var(--muted)">(FRESCO ${(45 * fr.factor).toFixed(2)})</span></dd>
+    <dt>rms radius</dt><dd>${sol.rms.toFixed(3)} fm <span style="color:var(--muted)">(FRESCO ${fr.rms.toFixed(3)})</span></dd>
+    <dt>ANC b</dt><dd>${sol.anc.toFixed(4)} fm⁻¹ᐟ² <span style="color:var(--muted)">(FRESCO ${fr.anc.toFixed(4)})</span></dd>
+    <dt>1/κ</dt><dd>${(1 / sol.kappa).toFixed(2)} fm</dd>
+    <dt>outside R</dt><dd>${(100 * sol.pOut).toFixed(1)} % of the probability</dd>`;
+  document.getElementById("uNote").innerHTML = `One neutron outside the ${sup(208)}Pb core, n + ${sup(208)}Pb in a Woods-Saxon well (r<sub>0</sub> = ${geomOf()[0]} fm, a = ${geomOf()[1]} fm, spin-orbit V<sub>ls</sub>r<sub>0</sub>²(1/r)(df/dr) l·s with V<sub>ls</sub> = ${D.boundGeom.Vls} MeV as on the halo page, FRESCO's type-3 strength ${(D.boundGeom.Vls * geomOf()[0] ** 2 / 4).toFixed(2)} MeV), its depth adjusted until the ${lv.lab} level (${lv.nr} radial node${lv.nr === 1 ? "" : "s"}) sits at −(S<sub>n</sub> − E<sub>x</sub>); S<sub>n</sub> from AME2020 masses, E<sub>x</sub> from ENSDF. FRESCO fits the same well in its own run; it takes the neutron mass as m(${sup(209)}Pb) − m(${sup(208)}Pb), ${(100 - (MS.B - MS.A) / MS.n * 100).toFixed(2)} % below m<sub>n</sub>, which deepens its well by about ${((45 * fr.factor) - sol.D).toFixed(2)} MeV; with FRESCO's mass the page reproduces its printed depth, rms and ANC (tests/check_transfer.js). The (d,p) cross section samples mostly the part of u(r) near and beyond the surface, which is why the radius and diffuseness of this well move S.`;
+}
+
+// ---------- deuteron elastic
+function drawEl() {
+  const { x: ctx, w, h } = setupCanvas(document.getElementById("pel")), y0 = -2, y1 = 0.3;
+  const X = (t) => PL + t / 180 * (w - PL - PR), Y = (v) => PT + (y1 - v) / (y1 - y0) * (h - PT - PB);
+  for (let e = -2; e <= 0; e++) { ctx.strokeStyle = "#1c2230"; ctx.beginPath(); ctx.moveTo(PL, Y(e)); ctx.lineTo(w - PR, Y(e)); ctx.stroke(); ctx.fillStyle = "#8a92a6"; ctx.textAlign = "right"; ctx.fillText(supE(e), PL - 4, Y(e) + 3); }
+  frameX(ctx, w, h, X, [0, 30, 60, 90, 120, 150, 180], "θ c.m. (deg)");
+  ctx.save(); ctx.beginPath(); ctx.rect(PL, PT, w - PL - PR, h - PT - PB); ctx.clip();
+  for (const e of ["dwba", "adwa"]) {
+    const c = D.elastic[e]; ctx.strokeStyle = COL[e]; ctx.lineWidth = e === S.ent ? 2 : 1.1; ctx.globalAlpha = e === S.ent ? 1 : 0.5;
+    ctx.beginPath(); for (let i = 1; i <= 180; i++) { const yy = Y(L10(c[i])); i > 1 ? ctx.lineTo(X(i), yy) : ctx.moveTo(X(i), yy); } ctx.stroke();
+  }
+  ctx.globalAlpha = 1; ctx.fillStyle = COL.data;
+  for (const [t, v] of D.elasticData) { ctx.beginPath(); ctx.arc(X(t), Y(L10(v)), 2.2, 0, 2 * Math.PI); ctx.fill(); }
+  ctx.restore();
+  ctx.fillStyle = "#8a92a6"; ctx.textAlign = "left"; ctx.fillText("σ/σ_Ruth", PL + 4, PT + 10);
+  const rms = (e) => { let s = 0; for (const [t, v] of D.elasticData) s += Math.log(T.interp(D.elastic[e], t) / v) ** 2; return Math.sqrt(s / D.elasticData.length); };
+  document.getElementById("elLeg").innerHTML = `<span><i class="p" style="background:${COL.data}"></i>Hirota et al. 1998 (EXFOR E1705002)</span><span><i style="border-color:${COL.dwba}"></i>Han-Shi-Shen</span><span><i style="border-color:${COL.adwa}"></i>Johnson-Soper, KD02 at 11 MeV</span>`;
+  document.getElementById("elNote").innerHTML = `The same FRESCO runs, elastic channel. Over the ${D.elasticData.length} measured angles, rms of ln(σ/σ<sub>exp</sub>): Han-Shi-Shen ${rms("dwba").toFixed(2)}, Johnson-Soper ${rms("adwa").toFixed(2)}. The adiabatic potential is built for the (d,p) amplitude, in which only n-p separations inside the range of the n-p force count; it is not a fit to elastic scattering, so this mismatch is not a test of it. scatter.html#d208Pb@22 draws the same Han-Shi-Shen potential against the same data.`;
+}
+
+// ---------- ENSDF table as printed
+function drawEns() {
+  const t = D.ensdf.table;
+  let s = `<tr><th>analysis</th>${t.orb.map((o) => `<th>${o}</th>`).join("")}</tr>`;
+  for (const r of t.rows) s += `<tr><td>${r.ref}${r.mark ? `<small>${r.mark}</small>` : ""}</td>${r.vals.map((v) => `<td>${v || ""}</td>`).join("")}</tr>`;
+  document.getElementById("ensTab").innerHTML = s;
+  const g = D.ensdf.levels.find((q) => q.E === "2537"), ko = t.rows.find((r) => r.ref === "1974Ko20");
+  document.getElementById("ensNote").innerHTML = `C²S as printed in the ${sup(208)}Pb(d,p) dataset of ENSDF (J. Chen and F. G. Kondev, Nucl. Data Sheets 126, 373 (2015)), rows labelled by ENSDF keynumbers (the references themselves are listed in that evaluation and were not opened here). Notes as printed: ${t.notes.map((n) => n.replace(/\{-t\}/g, "<sub>t</sub>")).join("; ")}. For the analyses that give several sets the compilers chose the zero-range local DWBA with neutron radius 1.20 to 1.25 fm, diffuseness 0.60 to 0.65, spin-orbit coupling 25 to 32, and a deuteron well of about 100 MeV depth and about 1.15 fm radius, a choice that, in their words, "puts all the C²S values on roughly the same footing". 1974Ko20 itself: neutron radius 1.23 fm, diffuseness 0.65 fm, "spin-orbit coupling strength=25" (no convention stated; this page's well has V<sub>ls</sub>r<sub>0</sub>² = ${(D.boundGeom.Vls * 1.27 ** 2).toFixed(1)} MeV fm² in the l·s form, FRESCO strength ${(D.boundGeom.Vls * 1.27 ** 2 / 4).toFixed(2)} MeV). Beam energies: the 1967Mu16 comment presents its 20.1 MeV data, its footnote says 20.3 MeV; the # footnote ties "24.8-MeV data" to 1969Je01, whose comment gives 8 to 18.7 MeV (the 24.8 MeV run is 1967Mu16's): <b>likely a misprint</b>, shown as printed. The level record of the 2537 keV level carries S = ${g ? g.S : "?"} from 1974Ko20, while the table row of 1974Ko20 prints ${ko ? ko.vals[6] : "?"}: <b>inconsistent within the dataset</b>, shown as printed.`;
+}
+
+// ---------- kinematics box, stamp
+function drawKin() {
+  const lv = LV[S.lv], k = kinAt(lv, S.th), qf = qOf(lv);
+  document.getElementById("thout").textContent = S.th.toFixed(1) + "°";
+  document.getElementById("Rout").textContent = S.R.toFixed(2) + " fm";
+  document.getElementById("kin").innerHTML = `
+    <dt>Q</dt><dd>${(k.Q).toFixed(4)} MeV <span style="color:var(--muted)">(S<sub>n</sub> − B<sub>d</sub> − E<sub>x</sub>)</span></dd>
+    <dt>E<sub>p</sub> lab</dt><dd class="hi">${k.T3.toFixed(3)} MeV at ${k.th3.toFixed(2)}° lab</dd>
+    <dt>k<sub>d</sub>, k<sub>p</sub></dt><dd>${k.ki.toFixed(4)}, ${k.kf.toFixed(4)} fm⁻¹ (c.m.)</dd>
+    <dt>q</dt><dd>${qf(S.th).toFixed(4)} fm⁻¹, qR = ${(qf(S.th) * S.R).toFixed(2)}</dd>
+    <dt>E<sub>c.m.</sub></dt><dd>${k.Ecmi.toFixed(3)} → ${k.Ecmf.toFixed(3)} MeV</dd>`;
+}
+function drawStamp() {
+  const lv = LV[S.lv], f = fit(RUNKEY(S.ent, S.exit), lv);
+  document.getElementById("stamp").innerHTML = `<b>${sup(208)}Pb(d,p)${sup(209)}Pb · ${lvHtml(lv)}</b><small>E<sub>d</sub> = ${ED} MeV · E<sub>x</sub> = ${(lv.Ex / 1000).toFixed(3)} MeV · l = ${lv.l} · ${f ? `<span class="hi">S = ${f.S.toFixed(2)}</span> (${S.ent === "dwba" ? "DWBA" : "adiabatic"}, ${S.exit.toUpperCase()} protons)` : "no 22 MeV data for this level"}</small>`;
+}
+function drawWin() {
+  document.getElementById("hiout").textContent = S.hi + "°";
+  document.getElementById("winNote").innerHTML = `S is fitted to the data from the first measured angle, ${LO}°, up to here. The default, ${LO}° to 50°, is the forward lobe nearest the first peak: the peak itself lies inside the data for 1i<sub>11/2</sub> and 1j<sub>15/2</sub> and forward of ${LO}° for the others (lower panel).`;
+}
+function drawStatic() {
+  const C = D.cite, cs = (k, page) => { const c = C[k]; return `${c.authors.join(", ")}, ${c.journal} ${c.volume}${c.page || page ? ", " + (c.page ? c.page.split("-")[0] : page) : ""} (${c.year})`; };
+  const g = D.grid;
+  document.getElementById("what").innerHTML = `
+    <p class="sub"><b>Live, in the browser:</b> the reaction Q value and the exact relativistic two-body kinematics from AME2020 masses; the transferred momentum q(θ) and its plane-wave first-peak estimate; the neutron's bound state (assets/halo.js, the same solver as the halo page); and the spectroscopic factors, each a weighted least-squares scale of a FRESCO curve to the data in the chosen window.</p>
+    <p class="sub"><b>Offline, FRESCO</b> (FRES 3.5 from I-Thompson/fresco, commit ${(D.fresco.match(/commit (\w{7})/) || ["", "?"])[1]}; scripts/run_transfer_fresco.py, one run per setup and level, decks in data/transfer/fresco/): one-step finite-range DWBA in the post form, the n-p binding potential as the interaction, no remnant term (on the ground state, at 35° to 50°, the real remnant raises σ by ${(100 * remWin(D.remnantGs.real)).toFixed(2)} % on average and the complex one by ${(100 * remWin(D.remnantGs.complex)).toFixed(2)} %); deuteron s wave only (no D state), n-p Gaussian of range ${D.npRange} fm with its depth fitted to B<sub>d</sub>. Numerics: step ${g.hcm} fm, matching at ${g.rmatch} fm, J up to ${g.jtmax}, nonlocal kernel range ${g.rnl} fm in steps of ${g.hnl} fm, lower radial cutoff ${(-g.cutl * g.hcm).toFixed(2)} L fm. Halving the radial and kernel steps, raising the Gauss points from 24 to 36, widening the kernel, raising J or the matching radius, or moving the cutoff inward changes σ at 35° to 50° by at most ${(100 * convInner()).toFixed(1)} % (data/transfer/fresco/conv/); moving the cutoff outward to 0.3 L fm changes it by ${(100 * convOuter()).toFixed(1)} %, because that cuts into the surface where the transfer happens. <b>One run per level</b>: in a single run with all seven exit channels (data/transfer/fresco/sevench/) the ground-state curve depends on the interpolation step of the nonlocal kernels. At the production step, 0.25 fm, it agrees with its one-level run within ${sevenPct("0.25", LV[0].lab, 0, 180).toFixed(1)} % at all angles; at 0.125 fm it is off by up to ${sevenPct("0.125", LV[0].lab, 35, 50).toFixed(1)} % at 35° to 50°, ${sevenPct("0.125", LV[0].lab, 0, 90).toFixed(0)} % at 0° to 90°, a factor ${sevenRatio("0.125", LV[0].lab, 35, 170).toFixed(1)} over 35° to 170° and ${sevenRatio("0.125", LV[0].lab, 180, 180).toFixed(1)} at 180°; at 0.05 fm by up to ${sevenPct("0.05", LV[0].lab, 35, 50).toFixed(0)} % at 35° to 50° and a factor ${sevenRatio("0.05", LV[0].lab, 180, 180).toFixed(0)} at 180°. The other six levels stay within ${Math.max(...["0.25", "0.125", "0.05"].flatMap((k) => LV.slice(1).map((l) => sevenPct(k, l.lab, 35, 50)))).toFixed(1)} % at 35° to 50° in all three. Run alone, the ground state is stable (the convergence runs above).</p>
+    <p class="sub"><b>Two deuteron channels.</b> DWBA: the Han-Shi-Shen global deuteron potential at 22 MeV. Adiabatic: U<sub>n</sub> + U<sub>p</sub>, both KD02 at E<sub>d</sub>/2 = 11 MeV, the zero-range adiabatic potential of Johnson and Soper (1970), with the deuteron spin-orbit (V<sub>so</sub><sup>n</sup> + V<sub>so</sub><sup>p</sup>)/2 L·S (each nucleon carries half the deuteron's orbital angular momentum), entered as (V<sub>so</sub><sup>n</sup> + V<sub>so</sub><sup>p</sup>)/4 in FRESCO's 2 L·S form; it is used with the finite-range vertex, and no Johnson-Tandy finite-range correction is made. Protons: KD02 or CH89 on ${sup(209)}Pb at each level's own energy.</p>`;
+  document.getElementById("model").innerHTML = `
+    <p class="sub">S is defined only together with the calculation it divides. The largest single ingredient here is the neutron's bound-state well: its radius and diffuseness set how much of the neutron sits outside the surface, where the reaction happens, and the cross section follows that tail. With the page's default well (r<sub>0</sub> = 1.27 fm, a = 0.67 fm) S comes out below every compiled analysis; with the r<sub>0</sub> = 1.20 to 1.25 fm, a = 0.65 fm wells those analyses used, it moves into or toward their range (table "S against the neutron well"). Next come the deuteron channel (the adiabatic potential, which builds in the breakup of the deuteron, gives the larger cross section and so the smaller S for every level) and, least, the proton potential.</p>
+    <p class="sub">Not included, and not quantified here: nonlocality of the potentials (no Perey factors), the deuteron D state, coupled channels (inelastic excitation of ${sup(208)}Pb, the particle-vibration states of ${sup(209)}Pb), and compound-nucleus protons. Each can move S further, so the absolute values on this page are not a measurement of the occupancy of the orbital.</p>`;
+  document.getElementById("render").innerHTML = `
+    <p class="sub">The glassy shell is the half-density surface of ${sup(208)}Pb (Fermi shape, radius 1.12A<sup>1/3</sup> − 0.86A<sup>−1/3</sup> fm). The blue cloud is |ψ|² of the chosen orbital from the live bound state, drawn with the largest projection m = j on the normal of the reaction plane, so that it lies in the plane where the deuteron moved (a drawing choice: the cross section sums over m).</p>
+    <p class="sub">The deuteron follows the Coulomb orbit about a fixed target that grazes the surface (closest approach ${RMIN} fm, no nuclear force). There the neutron is left behind and spirals into its orbital; the proton leaves in a straight line at the chosen c.m. angle (its own Coulomb bending is not drawn), at the speed ratio of the live kinematics; the faint cone is that angle around the beam. On the floor behind the nucleus, the momentum triangle (${MSC} units per fm⁻¹): as θ turns, the tip of (m<sub>A</sub>/m<sub>B</sub>)k<sub>p</sub> runs around the orange circle; where it crosses the blue circle, |q| R = x<sub>l</sub> and the plane-wave estimate peaks. Left: the ${sup(209)}Pb levels (ENSDF energies, ${LSC} units per MeV, up to S<sub>n</sub>), bar length S of the current fit (1 for the two levels without data).</p>`;
+  document.getElementById("srcs").innerHTML = `
+    <p class="src"><b>Data</b>: ${cs("hirota98")}; EXFOR E1705 (subentries 002, 007 to 011), read through the IAEA exfor_master mirror with the exfor-data skill's fixed-width parser, c.m. angles and cross sections.</p>
+    <p class="src"><b>Levels and published C²S</b>: ENSDF, ${cs("chen15")}: adopted levels (E<sub>x</sub>, J<sup>π</sup>) and the ${sup(208)}Pb(d,p) dataset (l transfers, the C²S table).</p>
+    <p class="src"><b>FRESCO</b>: ${cs("thompson88")}. <b>Potentials</b>: ${cs("koning03")}; ${cs("varner91")}; ${cs("han06", OMP_HSS_PAGE)}; adiabatic: ${cs("johnson70")}. <b>Plane-wave stripping</b>: ${cs("butler51")}.</p>
+    <p class="src"><b>Masses</b>: AME2020, Wang et al., Chin. Phys. C 45, 030003 (2021) (assets/shells-data.js). Citations from CrossRef records saved in data/transfer/citations.json.</p>`;
+}
+
+// ================================================================ updates and wiring
+function setLevel(i) {
+  S.lv = clamp(i | 0, 0, LV.length - 1);
+  const lv = LV[S.lv], c = curve(RUNKEY(S.ent, S.exit), lv);
+  S.th = peakAngle(c);
+  document.getElementById("th").value = S.th;
+  solveBound(); buildField(); rebuildAll();
+}
+function rebuildAll() {
+  for (const b of document.querySelectorAll("#levels button")) b.setAttribute("aria-pressed", +b.dataset.i === S.lv ? "true" : "false");
+  for (const b of document.querySelectorAll("#ent button")) b.setAttribute("aria-pressed", b.dataset.v === S.ent ? "true" : "false");
+  for (const b of document.querySelectorAll("#exitp button")) b.setAttribute("aria-pressed", b.dataset.v === S.exit ? "true" : "false");
+  for (const b of document.querySelectorAll("#geom button")) b.setAttribute("aria-pressed", b.dataset.v === S.geom ? "true" : "false");
+  buildStory(); buildCone(S.th); buildMomentum(); drawLadder();
+  drawAD(); drawS(); drawQ(); drawU(); drawEl(); drawKin(); drawStamp(); drawWin(); setHash();
+  S.t = Math.min(S.t, ST.T); update(S.t);
+}
+function setHash() {
+  const h = `#208Pb@${ED}/${S.lv}${S.ent === "adwa" ? "~adwa" : ""}${S.exit === "ch89" ? "~ch89" : ""}${S.geom ? "~" + S.geom.slice(1) : ""}`;
+  if (location.hash !== h) history.replaceState(null, "", h);
+}
+function parseHash() {
+  let s;
+  try { s = decodeURIComponent(location.hash.slice(1)); } catch (e) { return null; }
+  const m = s.match(/^208Pb(?:@22)?\/([0-6])((?:~adwa|~ch89|~g12[035])*)$/);
+  if (!m) return null;
+  const gm = m[2].match(/~(g12[035])/);
+  return { lv: +m[1], ent: /~adwa/.test(m[2]) ? "adwa" : "dwba", exit: /~ch89/.test(m[2]) ? "ch89" : "kd02", geom: gm ? "_" + gm[1] : "" };
+}
+document.getElementById("levels").innerHTML = LV.map((lv, i) => `<button data-i="${i}" title="E_x = ${(lv.Ex / 1000).toFixed(3)} MeV, J = ${lv.Jpi}${D.data[lv.lab] ? "" : ", no 22 MeV data"}">${lvHtml(lv)} <small>${lv.Ex ? (lv.Ex / 1000).toFixed(2) : "0"}</small></button>`).join("");
+document.getElementById("levels").addEventListener("click", (e) => { const b = e.target.closest("button"); if (b) { S.t = 0; setLevel(+b.dataset.i); } });
+document.getElementById("ent").addEventListener("click", (e) => { const b = e.target.closest("button"); if (!b) return; S.ent = b.dataset.v; rebuildAll(); });
+document.getElementById("exitp").addEventListener("click", (e) => { const b = e.target.closest("button"); if (!b) return; S.exit = b.dataset.v; rebuildAll(); });
+document.getElementById("geom").innerHTML = GEOMS.map(([k, [r0, a]]) => `<button data-v="${k}" title="r0 = ${r0} fm, a = ${a} fm">${r0.toFixed(2)}/${a.toFixed(2)}</button>`).join("");
+document.getElementById("geom").addEventListener("click", (e) => { const b = e.target.closest("button"); if (!b) return; S.geom = b.dataset.v; solveBound(); buildField(); rebuildAll(); });
+let pend = null;
+const later = (fn) => { if (pend) return; pend = requestAnimationFrame(() => { pend = null; fn(); }); };
+document.getElementById("hi").addEventListener("input", (e) => later(() => { S.hi = +e.target.value; drawLadder(); drawAD(); drawS(); drawStamp(); drawWin(); }));
+document.getElementById("th").addEventListener("input", (e) => later(() => { S.th = +e.target.value; buildStory(); buildCone(S.th); buildMomentum(); drawAD(); drawQ(); drawKin(); update(S.t); }));
+document.getElementById("R").addEventListener("input", (e) => later(() => { S.R = +e.target.value; buildMomentum(); drawQ(); drawKin(); }));
+addEventListener("hashchange", () => { const h = parseHash(); if (!h) return; const g = h.geom !== S.geom; S.ent = h.ent; S.exit = h.exit; S.geom = h.geom; if (h.lv !== S.lv || g) setLevel(h.lv); else rebuildAll(); });
+addEventListener("keydown", (e) => { if (e.code === "Space" && e.target === document.body) { e.preventDefault(); S.play = !S.play; } });
+addEventListener("resize", () => {
+  camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight); composer.setSize(innerWidth, innerHeight);
+  drawAD(); drawS(); drawQ(); drawU(); drawEl();
+});
+let quality = innerWidth < 700 ? "low" : "high";
+function applyQuality() {
+  const hi = quality === "high", g = hi ? GROUND_PRE_ACES : GROUND;
+  scene.background.copy(g); scene.fog.color.copy(g); renderer.setClearColor(g);
+  vol.mesh.visible = hi; volFast.mesh.visible = !hi;
+  for (const b of document.querySelectorAll("#qmode button")) b.setAttribute("aria-pressed", b.dataset.v === quality ? "true" : "false");
+}
+document.getElementById("qmode").addEventListener("click", (e) => { const b = e.target.closest("button"); if (!b) return; quality = b.dataset.v; applyQuality(); });
+
+// ---------------------------------------------------------------- start
+document.getElementById("hi").value = S.hi;
+document.getElementById("R").value = S.R = +R_WS.toFixed(2);
+drawStatic(); drawEns(); applyQuality();
+{
+  const h = parseHash();
+  if (h) { S.ent = h.ent; S.exit = h.exit; S.geom = h.geom; setLevel(h.lv); } else setLevel(0);
+  const narrow = innerWidth < 900;
+  camera.position.set(narrow ? 10 : 2, narrow ? 120 : 58, narrow ? 130 : 74);
+  controls.target.set(narrow ? 0 : -1, -4, narrow ? 4 : -4);
+  if (reduce) S.play = false;
+}
+
+let last = performance.now();
+function animate(now) {
+  requestAnimationFrame(animate);
+  const dt = Math.min(0.1, Math.max(0, (now - last) / 1000)); last = now;
+  if (S.play && ST) { S.t += dt; if (S.t > ST.T + 1.0) S.t = 0; update(Math.min(S.t, ST.T)); }
+  if (quality === "high") gov.tick(dt);
+  controls.update();
+  stage3.update(camera);
+  camera.getWorldDirection(vol.u.uFwd.value); volFast.u.uFwd.value.copy(vol.u.uFwd.value);
+  if (quality === "high") composer.render(); else renderer.render(scene, camera);
+  drawLabels();
+}
+requestAnimationFrame(animate);
+</script>
+<script src="assets/glass.js"></script>
+</body>
+</html>

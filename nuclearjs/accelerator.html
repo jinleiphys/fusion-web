@@ -1,0 +1,2588 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Accelerators · nuclearjs</title>
+<link rel="stylesheet" href="assets/glass.css">
+<style>
+body{margin:0}
+:root{
+  color-scheme:dark;
+  --ground:#0b0d12; --line:#262c3a;
+  --ink:#e6e8ee; --muted:#8a92a6; --accent:#f2c14e;
+  --neu:#a8cdf2; --pro:#ff9656; --bad:#ff6b6b;
+  --sans:"Avenir Next","Futura","Helvetica Neue","PingFang SC","Noto Sans SC",system-ui,sans-serif;
+  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+}
+html,body{height:100%}
+body{background:var(--ground);color:var(--ink);font-family:var(--sans);overflow:hidden}
+#stage{position:fixed;inset:0}
+#stage canvas{display:block;touch-action:none}
+.panel{position:fixed;border-radius:18px;padding:16px 18px;display:flex;flex-direction:column;gap:12px;overflow:auto;box-sizing:border-box}
+.panel>*{flex-shrink:0;min-width:0}
+.tab>*{min-width:0}
+#ctl{left:16px;top:calc(16px + env(safe-area-inset-top,0px));width:min(310px,calc(100% - 32px));max-height:calc(100% - 56px)}
+#side{right:16px;top:calc(16px + env(safe-area-inset-top,0px));width:392px;max-height:calc(100% - 32px);gap:10px}
+h1{margin:0;font-size:22px;font-weight:600;letter-spacing:.01em}
+h1 sup{font-size:.6em}
+.sub{margin:2px 0 0;color:var(--muted);font-size:13px;line-height:1.45}
+.sub sup,.src sup,.kv sup{font-size:.7em}
+.sub b{color:var(--ink);font-weight:600}
+.grp{display:flex;flex-direction:column;gap:6px}
+.lab{font-size:11px;text-transform:uppercase;letter-spacing:.12em;color:var(--muted)}
+.seg{display:flex;border:1px solid var(--line);border-radius:4px;overflow:hidden}
+.seg button{flex:1;background:none;border:0;color:var(--muted);font:500 12px var(--mono);padding:6px 4px;cursor:pointer}
+.seg button+button{border-left:1px solid var(--line)}
+.seg button[aria-pressed="true"]{background:#1f2533;color:var(--ink)}
+button:focus-visible,input:focus-visible,summary:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+input[type=text]{background:#0f121a;border:1px solid var(--line);border-radius:4px;color:var(--ink);font:13px var(--mono);padding:6px 8px;width:100%;box-sizing:border-box}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chips button{background:#161a24;border:1px solid var(--line);border-radius:4px;color:var(--ink);font:12px var(--mono);padding:5px 8px;cursor:pointer}
+.chips button:hover{border-color:var(--muted)}
+.chips button[aria-pressed="true"]{border-color:var(--accent);color:var(--accent)}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:3px 10px;font:12px var(--mono);font-variant-numeric:tabular-nums}
+.kv dt{color:var(--muted)}.kv dd{margin:0}
+.kv .big{font:600 15px var(--mono);color:var(--accent)}
+.row{display:flex;gap:8px;align-items:center;font:12px var(--mono);color:var(--muted)}
+.row input[type=range]{flex:1;accent-color:var(--accent);min-width:0}
+.row output{min-width:78px;text-align:right;color:var(--ink);font-variant-numeric:tabular-nums}
+.row>span:first-child{min-width:34px}
+.row input[type=text]{width:84px;flex:none;text-align:right;padding:4px 6px}
+details summary{cursor:pointer;font-size:11px;text-transform:uppercase;letter-spacing:.12em;color:var(--muted);list-style:none}
+details summary::before{content:"▸ ";}
+details[open] summary::before{content:"▾ ";}
+details .grp{margin-top:8px}
+.home{font:12px var(--mono);color:var(--muted);text-decoration:none}.home:hover{color:var(--ink)}
+.src{font-size:11px;color:var(--muted);line-height:1.45}
+.src a{color:var(--muted)}
+.warn{font-size:12px;color:var(--accent);line-height:1.4}
+.plot{width:100%;height:180px;display:block}
+.plot.tall{height:230px}
+#facArea{margin:0 0 10px;padding:8px 10px;border:1px solid var(--line, rgba(255,255,255,.12));border-radius:10px;font-size:12px;line-height:1.45;color:var(--muted)}
+#facArea b{color:var(--ink, #e8ecf2)}
+.cap{display:flex;flex-wrap:wrap;gap:2px 8px;justify-content:space-between;align-items:baseline;font:11px var(--mono);color:var(--muted)}
+.cap b{font:600 13px var(--sans);color:var(--ink)}
+.leg{display:flex;flex-wrap:wrap;gap:4px 12px;font:11px var(--mono);color:var(--muted)}
+.leg i{display:inline-block;width:14px;height:0;border-top:2px solid;vertical-align:middle;margin-right:4px}
+.leg i.d{border-top-style:dashed}
+.leg i.sq{width:9px;height:9px;border:0;vertical-align:-1px}
+.math{font:12px var(--mono);color:var(--ink);line-height:1.65}
+.tw{overflow-x:auto;max-width:100%}
+table.fac{width:100%;border-collapse:collapse;font:11.5px var(--mono);font-variant-numeric:tabular-nums}
+table.fac th{color:var(--muted);font-weight:500;text-align:right;padding:2px 4px;border-bottom:1px solid var(--line)}
+table.fac td{text-align:right;padding:3px 4px;border-bottom:1px solid #191e2a;vertical-align:top}
+table.fac th:first-child,table.fac td:first-child{text-align:left}
+table.fac td.ok{color:#8fd694}table.fac td.no{color:var(--bad)}
+table.fac tr.hd td{color:var(--accent);font-weight:600;padding-top:8px;text-align:left}
+table.fac sup{font-size:.7em}
+.tag{font:11px var(--mono);padding:1px 6px;border-radius:3px;border:1px solid var(--line)}
+.tag.ok{color:#8fd694;border-color:#3d6b42}.tag.no{color:var(--bad);border-color:#6b3d3d}
+.tab[hidden],.tab[data-tab="end"]>[hidden]{display:none}
+.tab{display:flex;flex-direction:column;gap:10px}
+.kv.end dt,.kv.end dd{cursor:pointer;padding:2px 0}
+.kv.end dt.on,.kv.end dd.on{color:var(--accent)}
+.kv.end i{font-style:normal;color:var(--muted)}
+.panel{z-index:2}
+#labels{position:fixed;inset:0;pointer-events:none;z-index:1}
+.axlab{position:absolute;font:500 11px var(--mono);color:var(--ink);pointer-events:auto;cursor:pointer;transform:translate(-50%,-140%);white-space:nowrap;
+  background:#0b0d12b0;border:1px solid #2c3445;border-radius:4px;padding:2px 6px}
+.axlab.on{border-color:var(--accent);color:var(--accent)}
+.axlab small{color:var(--muted)}
+#stamp{position:fixed;left:50%;bottom:calc(26px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);text-align:center;pointer-events:none}
+#stamp b{display:block;font:600 clamp(30px,4.6vw,54px)/1 var(--sans);letter-spacing:-.01em}
+#stamp b sup{font-size:.55em}
+#stamp small{display:block;font:500 12px var(--mono);color:var(--muted);margin-top:6px}
+.hint{position:fixed;left:16px;bottom:calc(14px + env(safe-area-inset-bottom,0px));font:11px var(--mono);color:var(--muted)}
+/* Keep the hardware readable while the controls stay available. */
+.panel{scrollbar-width:thin;scrollbar-color:#394354 transparent}
+.grp+.grp{padding-top:10px;border-top:1px solid #ffffff0a}
+.chips button,.seg button,.axlab{transition:background .18s,border-color .18s,color .18s}
+.chips button:hover,.seg button:hover{background:#252c3a}
+.axlab{border-radius:7px;padding:5px 9px;background:#101722de;box-shadow:0 3px 12px #0005;font-size:10px}
+.axlab::after{content:"";position:absolute;left:50%;top:100%;height:9px;border-left:1px solid #596578}
+.axlab.on{background:#292418e8;box-shadow:0 0 16px #f2c14e16}
+#sceneTools{position:fixed;top:18px;left:50%;transform:translateX(-50%);z-index:4;display:flex;gap:4px;padding:4px;border:1px solid #ffffff20;border-radius:30px;background:#101621db;backdrop-filter:blur(12px)}
+#sceneTools button{border:0;border-radius:24px;background:none;color:#a9b4c6;font:11px var(--mono);padding:8px 12px;cursor:pointer}
+#sceneTools button:hover,#sceneTools button[aria-pressed="true"]{color:#f2c14e;background:#f2c14e12}
+body.scene-only .panel,body.scene-only .hint{visibility:hidden;pointer-events:none}
+body.scene-only #stamp{opacity:.65}
+#hoverNote{position:fixed;z-index:3;pointer-events:none;padding:8px 11px;background:#101621ed;border:1px solid #f2c14e55;border-radius:8px;font:11px var(--mono);color:#f2c14e;max-width:240px;box-shadow:0 8px 24px #0005}
+@media (prefers-reduced-motion:reduce){.chips button,.seg button,.axlab{transition:none}}
+@media (max-width:900px){
+  #sceneTools{top:calc(42vh + 24px);left:auto;right:16px;transform:none}
+
+  #ctl{max-height:42vh}
+  #side{left:16px;right:16px;width:auto;top:auto;bottom:calc(12px + env(safe-area-inset-bottom,0px));max-height:44vh}
+  #stamp,.hint,.axlab{display:none}
+}
+@media (max-width:560px){.panel{padding:10px 12px;gap:9px}h1{font-size:18px}table.fac{font-size:10.5px}table.fac th,table.fac td{padding:2px 3px}}
+</style>
+<script data-goatcounter="https://jinleiphys.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
+</head>
+<body>
+
+<div id="stage"></div>
+
+<aside id="ctl" class="panel glass glass-deep" data-glass data-glass-bevel="22" data-glass-scale="42">
+  <div>
+    <a class="home" href="index.html">← nuclearjs</a> &nbsp; <a class="home" href="telescope.html">ΔE–E telescope</a> &nbsp; <a class="home" href="scatter.html">scattering</a>
+    <h1>Accelerators</h1>
+    <p class="sub">How a heavy-ion beam is made, using FRIB at Michigan State as the worked example: a superconducting linac folded twice, a charge stripper, a production target and the ARIS fragment separator. Pick an ion, a charge state and an energy; every panel is computed from them. Click a part of the complex to open its physics.</p>
+  </div>
+  <div class="grp">
+    <label class="lab" for="find">Ion</label>
+    <input id="find" type="text" placeholder="238U, 124Xe, 48Ca, 12C, 1H" autocomplete="off" spellcheck="false">
+    <div class="chips" id="chips">
+      <button data-n="1H">p</button><button data-n="12C">12C</button><button data-n="48Ca">48Ca</button>
+      <button data-n="78Kr">78Kr</button><button data-n="124Xe">124Xe</button><button data-n="238U">238U</button>
+    </div>
+    <div class="row"><span>Q</span><input id="q" type="range" min="1" max="92" step="1"><output id="qout"></output></div>
+    <div class="row"><span>E/A</span><input id="e" type="range" min="-3" max="3.6" step="0.001"><input id="etxt" type="text" aria-label="energy per nucleon in MeV"><span>MeV</span></div>
+    <div class="chips" id="stops"></div>
+  </div>
+  <div class="grp">
+    <div class="lab">This beam</div>
+    <dl class="kv" id="kin"></dl>
+    <p class="warn" id="warn" hidden></p>
+  </div>
+  <div class="grp">
+    <div class="lab">Facility</div>
+    <div class="seg" id="fmode"></div>
+  </div>
+  <div class="grp">
+    <div class="lab">Physics</div>
+    <div class="chips" id="tabs">
+      <button data-t="lin">SC linac</button><button data-t="strip">charge stripping</button><button data-t="foc">focusing</button>
+      <button data-t="sep">ARIS separator</button><button data-t="rig">rigidity</button><button data-t="cyc">cyclotron</button><button data-t="fac">facilities</button><button data-t="end">end stations</button>
+    </div>
+  </div>
+  <div class="grp">
+    <div class="lab">View</div>
+    <div class="seg" id="vmode">
+      <button data-v="over" aria-pressed="true">overview</button>
+      <button data-v="walk" aria-pressed="false">walk the tunnel</button>
+    </div>
+    <div class="lab">Rendering</div>
+    <div class="seg" id="qmode">
+      <button data-v="high" title="bloom">cinematic</button>
+      <button data-v="low">fast</button>
+    </div>
+    <details><summary>Scene scale &amp; rendering notes</summary><p class="sub" id="facNote">Schematic, after FRIB. The order of the sections is FRIB's, and so are the front end (47 m long; drawn as 47 m from the ion sources to the linac entrance along the linac axis, so the beam's path through it, with the 10 m drop, is about 53 m), the total length of the folded superconducting linac (472 m), the 80 m transport and 70° bend to the target, the ion sources about 10 m above the tunnel, and the cryomodule count of each segment (15, 24, 7). Not to scale: how the 472 m divide between the segments and the two 180° folds, the fold radius, ARIS, and the positions and sizes of the experimental areas (their arrangement follows the published layout, see the end-stations panel). Only FRIB's own facilities are drawn; the HRS hall holds a planned instrument whose beam line is in construction, drawn schematically. Bunches move at a display speed. Buildings are drawn open at the top from outside; the tunnel ceiling appears when the camera goes inside. The cryomodule green and black cable bundles follow published <a href="https://www.cnrs.fr/fr/presse/un-nouveau-laboratoire-franco-americain-dedie-la-physique-du-noyau-atomique" target="_blank" rel="noopener">FRIB tunnel photographs (CNRS, photo credit FRIB)</a>, with silver services and a neutral concrete interior. Paint shades are visual approximations under the scene lighting. Equipment, racks, cables and people are generic in shape; magnet colours remain schematic (cryomodule vessels, couplers, dipoles, quadrupoles, shielding), not FRIB's drawings, and the walls between segments are illustrative; the people are 1.7 m tall, for scale. Walking speed is 3 m/s. With the focusing panel open, the tube along the linac is the beam envelope of its periodic channel, magnified about 400 times; FRIB's real focusing changes from segment to segment.</p></details>
+  </div>
+</aside>
+
+<aside id="side" class="panel glass glass-deep" data-glass data-glass-bevel="22" data-glass-scale="42">
+  <div id="facArea" hidden></div>
+
+  <!-- ===== SC linac ===== -->
+  <section class="tab" data-tab="lin">
+    <div class="cap"><b>The superconducting linac</b><span>FRIB</span></div>
+    <div class="tw"><table class="fac" id="cavTab"></table></div>
+    <div class="src" id="cavSrc"></div>
+    <div class="cap"><b>Voltage a cavity gives this ion</b><span>V<sub>eff</sub>·T(β)/T(β<sub>opt</sub>) vs β</span></div>
+    <canvas id="cvTtf" class="plot tall"></canvas>
+    <div class="leg"><span><i style="border-color:#a8cdf2"></i>80.5 MHz QWR</span><span><i style="border-color:#f2c14e"></i>322 MHz HWR</span><span><i class="d" style="border-color:#fff"></i>this beam</span></div>
+    <dl class="kv" id="linKv"></dl>
+    <p class="sub">A cavity has a fixed gap spacing, matched to one velocity β<sub>opt</sub>: an ion that is too slow or too fast arrives at the second gap with the field already turned. So the linac is a relay of four cavity families, each used where T(β) is high. The energy gained per nucleon is (Q/A) times the voltage: a uranium ion carrying 33 charges gains 2.4 times less than one carrying 78, which is why the beam is stripped at 17 MeV/u.</p>
+    <div class="cap"><b>Drift-tube cell length</b><span>βλ/2 vs E/A</span></div>
+    <div class="chips" id="fchips"><button data-f="80.5">80.5 MHz</button><button data-f="322">322 MHz</button></div>
+    <div class="row"><span>f<sub>RF</sub></span><input id="linF" type="range" min="1" max="2.9" step="0.001"><output id="linFout"></output></div>
+    <canvas id="cvLin" class="plot"></canvas>
+    <div class="leg"><span><i style="border-color:var(--accent)"></i>this ion</span><span><i class="d" style="border-color:var(--pro)"></i>proton</span><span><i style="border-color:#59627a"></i>5 cm</span></div>
+    <p class="sub">The ion leaves the source at 12 keV/u. Uranium then moves at β = 0.005, and half an RF period at 80.5 MHz is a flight of under 1 cm: no room for drift tubes with focusing magnets. FRIB's first accelerator is therefore a radio-frequency quadrupole, which bunches, focuses and accelerates with shaped electrode vanes and has no drift tubes, from 12 keV/u to 0.5 MeV/u. Once the ions are faster, the frequency can be raised fourfold, to 322 MHz, for the half-wave resonators.</p>
+    <details>
+      <summary>How it is computed</summary>
+      <div class="grp">
+        <p class="math">two gaps, β<sub>opt</sub>λ/2 apart, opposite fields: T(β) = |sin(πβ<sub>opt</sub>/(2β))|<br>gain at crest per nucleon: ΔW/A = (Q/A) V<sub>eff</sub> T(β)/T(β<sub>opt</sub>)<br>cell length L = βλ/2, λ = c/f</p>
+        <p class="sub">Thin gaps; the finite-gap factor sin(πg/βλ)/(πg/βλ) is left out, and the real FRIB cavities differ in detail from an ideal two-gap structure. The gain is shown at the crest: the linac runs at a negative synchronous phase φ<sub>s</sub> for longitudinal focusing, which multiplies it by cos φ<sub>s</sub> (FRIB's phase is not quoted here). V<sub>eff</sub> is the effective voltage at β<sub>opt</sub> from FRIB's resonator table.</p>
+      </div>
+    </details>
+  </section>
+
+  <!-- ===== stripping ===== -->
+  <section class="tab" data-tab="strip" hidden>
+    <div class="cap"><b>Charge stripping</b><span id="stripTitle"></span></div>
+    <canvas id="cvCsd" class="plot"></canvas>
+    <div class="leg"><span><i class="sq" style="background:var(--accent)"></i>accepted window</span><span><i class="sq" style="background:#4f7fae"></i>lost</span></div>
+    <div class="row"><span>window</span><input id="wq" type="range" min="0" max="10" step="1" value="4"><output id="wqout"></output></div>
+    <dl class="kv" id="stripKv"></dl>
+    <div class="cap"><b>Mean charge after a stripper</b><span>Q vs E/A</span></div>
+    <canvas id="cvQe" class="plot"></canvas>
+    <div class="leg"><span><i style="border-color:var(--accent)"></i>Baron, equilibrium (carbon)</span><span id="qeLeg"></span></div>
+    <p class="sub">Passing through matter, an ion loses the electrons slower than itself and keeps the faster ones, so the charge after a stripper grows with velocity. FRIB strips uranium at 17 MeV/u in a flowing liquid-lithium film (a solid foil would not survive the beam power) and then accelerates five charge states, 76+ to 80+, at once: a single state would throw away most of the beam. They travel together because the cavities and solenoids act on Q/A within a narrow band, here ±Δq/q in rigidity.</p>
+    <details>
+      <summary>How it is computed, and the sources</summary>
+      <div class="grp">
+        <p class="math">Q̄/Z = 1 − exp(−83.275 β/Z<sup>0.447</sup>)<br>Q<sub>ave</sub> = Q̄ (1 − exp(−12.905 + 0.2124 Z − 0.00122 Z²))<br>d = √(Q̄ (0.07535 + 0.19 Y − 0.2654 Y²)), Y = Q̄/Z<br>P(q) ∝ exp(−(q − Q<sub>ave</sub>)²/(2d²))</p>
+        <p class="sub">Baron's empirical fit to equilibrium charge states behind carbon foils (Baron et al., Nucl. Instrum. Methods A 328, 177 (1993)), as printed in Z. He et al., arXiv:1611.04637, Eq. (30). For uranium at 17 MeV/u it gives a mean of <span class="chk" data-k="baron17"></span>; FRIB's design value is an average of 78+ with about 85% in 76+ to 80+ [17]. The fit is used where its Gaussian makes sense: width d at least half a charge unit and Q<sub>ave</sub> + 3d ≤ Z. Near full stripping the width polynomial falls to zero (at Y = 0.99995) and the distribution is set by the last one or two K electrons, which the fit does not describe; there the panel shows the mean only, and the curve of Q<sub>ave</sub> against energy is dashed. For light ions (protons, α) at these energies this is the whole range. The fit describes an equilibrium foil; FRIB's lithium film is thinner than equilibrium for ions heavier than argon [21], and measured at 20 MeV/u it gives 73.7 against 76.9 for 1 mg/cm² of carbon [20].</p>
+      </div>
+    </details>
+  </section>
+
+  <!-- ===== focusing ===== -->
+  <section class="tab" data-tab="foc" hidden>
+    <div class="cap"><b>Transverse focusing</b><span id="fodoState"></span></div>
+    <div class="seg" id="focType"><button data-v="sol" aria-pressed="true">solenoid channel</button><button data-v="fodo" aria-pressed="false">quadrupole FODO</button></div>
+    <div id="solRows">
+      <div class="row"><span>B</span><input id="sB" type="range" min="0.2" max="8" step="0.05"><output id="sBout"></output></div>
+      <div class="row"><span>ℓ<sub>s</sub></span><input id="sl" type="range" min="0.1" max="1" step="0.01"><output id="slout"></output></div>
+      <div class="row"><span>L<sub>c</sub></span><input id="sL" type="range" min="0.6" max="8" step="0.05"><output id="sLout"></output></div>
+    </div>
+    <div id="fodoRows" hidden>
+      <div class="row"><span>f</span><input id="fF" type="range" min="1" max="25" step="0.01"><output id="fFout"></output></div>
+      <div class="row"><span>L<sub>c</sub></span><input id="fL" type="range" min="4" max="40" step="0.1"><output id="fLout"></output></div>
+      <div class="row"><span>ℓ<sub>q</sub></span><input id="fQ" type="range" min="0" max="1.2" step="0.01"><output id="fQout"></output></div>
+    </div>
+    <dl class="kv" id="fodoKv"></dl>
+    <canvas id="cvBeta" class="plot"></canvas>
+    <div class="leg" id="betaLeg"></div>
+    <div class="cap"><b>Betatron oscillations</b><span id="trkCap"></span></div>
+    <canvas id="cvTrk" class="plot"></canvas>
+    <p class="sub" id="focText"></p>
+    <details>
+      <summary>How it is computed</summary>
+      <div class="grp">
+        <p class="math">solenoid (Larmor frame, both planes): k = (B/(2Bρ))², thin 1/f = B²ℓ<sub>s</sub>/(4(Bρ)²)<br>quadrupole: 1/f = G ℓ<sub>q</sub>/(Bρ), focusing in one plane, defocusing in the other<br>cells: drift · solenoid · drift; or ½F · drift · D · drift · ½F<br>thick: [cos √k ℓ, sin √k ℓ/√k; −√k sin √k ℓ, cos √k ℓ] (cosh, sinh in D)<br>cos μ = ½ Tr M, β = M<sub>12</sub>/sin μ, α = (M<sub>11</sub> − M<sub>22</sub>)/(2 sin μ)<br>thin, analytic: FODO sin(μ/2) = L<sub>c</sub>/(4f); solenoids cos μ = 1 − L<sub>c</sub>/(2f)</p>
+        <p class="sub">Matrices multiplied numerically, (β, α, γ) propagated through the cell; the analytic thin-lens values are printed beside the numerical ones as a check. The rays start on one invariant, ε = 10 mm mrad, at equally spaced phases. The solenoid rotates the beam as it focuses; the rays are drawn in the frame that rotates with it. FRIB's solenoids reach 8 T, and those of the half-wave cryomodules are 0.5 m long [17]; the cell length here is a free teaching parameter, not FRIB's lattice. The solenoid must fit in its cell, so ℓ<sub>s</sub> is held at or below 0.95 L<sub>c</sub> (the slider moves back when L<sub>c</sub> shrinks); the focal length and the matrix use the same ℓ<sub>s</sub>, so the field inside the magnet is the B set. Stability is read from the cell's own matrix, |Tr M| &lt; 2; the thin-lens ratios are printed only beside it. Space charge, dispersion and chromaticity are left out.</p>
+        <p class="sub">Checked against independent matrices and the analytic thin-lens results: <span class="chk" data-k="fodo"></span>; the page's stability flag flips at <span class="chk" data-k="boundary"></span>.</p>
+      </div>
+    </details>
+  </section>
+
+  <!-- ===== separator ===== -->
+  <section class="tab" data-tab="sep" hidden>
+    <div class="cap"><b>ARIS: Bρ–ΔE–Bρ</b><span id="sepTitle"></span></div>
+    <div class="row"><span>want</span><input id="sepWant" type="text" style="width:96px" spellcheck="false" autocomplete="off"><span class="chips" id="sepChips" style="flex:1;justify-content:flex-end"></span></div>
+    <div class="row"><span>Δp/p</span><input id="sepAcc" type="range" min="0.05" max="3" step="0.05" value="0.5"><output id="sepAccout"></output></div>
+    <div class="row"><span>d/R</span><input id="sepD" type="range" min="0" max="0.8" step="0.01" value="0.4"><output id="sepDout"></output></div>
+    <div class="seg" id="sepMat"><button data-v="Be" aria-pressed="false">Be wedge</button><button data-v="Al" aria-pressed="true">Al wedge</button></div>
+    <canvas id="cvSep" class="plot tall"></canvas>
+    <div class="leg"><span><i class="sq" style="background:#2a3142"></i>made</span><span><i class="sq" style="background:#4f7fae"></i>passes Bρ<sub>1</sub></span><span><i class="sq" style="background:var(--accent)"></i>passes Bρ<sub>1</sub>, ΔE, Bρ<sub>2</sub></span><span><i class="sq" style="background:#fff"></i>wanted</span></div>
+    <dl class="kv" id="sepKv"></dl>
+    <p class="sub">ARIS, FRIB's fragment separator, takes up to 8 T m within ±5% in momentum and ±40 mrad in angle<sup>[19]</sup>, in three stages: a pre-separator that removes the unreacted beam, then two stages with wedge degraders. Here one Bρ–ΔE–Bρ stage is modelled. The primary beam is the ion chosen on the left, at its energy. Its fragments fly on at nearly the beam velocity, so the first dipole stage selects Bρ ∝ (A/Z)βγ: a whole diagonal of nuclei with the same A/Z survives. A degrader then takes energy ∝ Z²/v² from each, so the second stage, set for the wanted nucleus, rejects neighbours with a different Z.</p>
+    <details>
+      <summary>How it is computed, and what is left out</summary>
+      <div class="grp">
+        <p class="math">fragment: γ<sub>f</sub> = γ<sub>beam</sub>, Q = Z ⇒ Bρ<sub>1</sub><br>degrader: dE/dx (Bethe, Bloch term, effective charge) integrated through t = (d/R)·R(wanted)<br>keep |Bρ/Bρ<sub>ref</sub> − 1| &lt; Δp/p at both stages</p>
+        <p class="math">−dE/dx = K z² (Z<sub>t</sub>/A<sub>t</sub>) β<sup>−2</sup> [½ ln(2m<sub>e</sub>c²β²γ²W<sub>max</sub>/I²) − β² − y² Σ<sub>n</sub> 1/(n(n² + y²))]<br>K = 0.307075 MeV cm²/mol, y = zα/β, z = Z[1 − exp(−0.95 v/(v<sub>0</sub>Z<sup>2/3</sup>))]<br>I = 63.7 eV (Be), 166 eV (Al)</p>
+        <p class="sub">Checked against NIST PSTAR and ASTAR in Be and Al and against measured Ar, Kr and Xe stopping (IAEA stopping database): <span class="chk" data-k="stopping"></span>. The shortfall for heavy ions is the missing Lindhard–Sørensen and Barkas terms, so for Xe-like fragments the wedge loss is a few per cent low and Bρ<sub>2</sub> 1 to 3% high. Because every fragment is shifted alike, it hardly moves the selection relative to the wanted ion, but it does move the absolute setting. Recomputing stage 2 with a full stopping-power calculation that includes those terms and shell corrections: <span class="chk" data-k="sepCatima"></span>. So the panel shows which neighbours a stage tuned on the wanted ion lets through; the Bρ<sub>2</sub> it prints is good to a few per cent, coarser than the acceptance, and a real separator is set on the measured beam.</p>
+        <p class="sub"><b>Left out, on purpose:</b> production cross sections (the chart says which nuclides pass, not how many arrive), the momentum spread of the fragments (comparable to the acceptance in reality, so real purity is worse), energy loss in the production target, angular acceptance, charge states other than bare, energy-loss straggling, and the wedge shape (a flat slab at the dispersive focus; the wedge angle restores achromatism without changing the mean selection). Nuclides with T<sub>1/2</sub> &lt; 100 ns are dropped as they decay before the focal plane.</p>
+      </div>
+    </details>
+  </section>
+
+  <!-- ===== rigidity ===== -->
+  <section class="tab" data-tab="rig">
+    <div class="cap"><b>Magnetic rigidity</b><span>Bρ (T m) vs E/A (MeV)</span></div>
+    <canvas id="cvRig" class="plot tall"></canvas>
+    <div class="leg"><span><i style="border-color:var(--accent)"></i>this ion, charge Q</span><span><i class="d" style="border-color:var(--neu)"></i>same ion bare</span><span><i style="border-color:#59627a"></i>machine limits</span></div>
+    <p class="sub">A dipole of field B bends a particle of momentum p and charge q on a circle of radius ρ = p/(qB). A ring or a separator is built for a maximum Bρ; an ion fits if its rigidity is below it. Stripping more electrons (larger Q) lowers Bρ in proportion, which is why rings take ions after a stripper and why the bare-ion curve lies lowest.</p>
+    <details>
+      <summary>How it is computed</summary>
+      <div class="grp">
+        <p class="math">M<sub>atom</sub> = Z M(<sup>1</sup>H) + N m<sub>n</sub> − A (B/A)<br>M<sub>ion</sub> = M<sub>atom</sub> − Q m<sub>e</sub> (+ B<sub>e</sub>, neglected)<br>T = A·(E/A), γ = 1 + T/M<sub>ion</sub>c², βγ = √(T(T + 2M c²))/(M c²)<br>p c = βγ M c², Bρ [T m] = p c [MeV] / (299.792458 Q)<br>Eρ = p v/q [MV]</p>
+        <p class="sub">B/A from NUBASE2020 (Kondev et al., Chin. Phys. C 45, 030001 (2021)), which uses the atomic-mass convention B = Z M(<sup>1</sup>H) + N m<sub>n</sub> − M<sub>atom</sub>. CODATA 2018 constants. The removed electrons' binding B<sub>e</sub> is neglected: 0.76 MeV for bare uranium, 3×10<sup>−6</sup> of the mass. E/A is kinetic energy per nucleon (mass number A); per atomic mass unit would differ by M/(Au) − 1, 2.1×10<sup>−4</sup> for the <sup>238</sup>U atom (1.4×10<sup>−4</sup> for the U<sup>33+</sup> ion).</p>
+        <p class="sub">Checked against an independent 30-digit calculation that takes atomic masses from the AME2020 mass table instead of NUBASE: largest relative difference in Bρ <span class="chk" data-k="brhoRel"></span>.</p>
+        <p class="sub">Against quoted machine pairs, Bρ in T m computed here vs quoted: <span class="chk" data-k="pairs"></span>.</p>
+      </div>
+    </details>
+  </section>
+
+  <!-- ===== cyclotron ===== -->
+  <section class="tab" data-tab="cyc" hidden>
+    <div class="cap"><b>Cyclotron</b><span id="cycName"></span></div>
+    <div class="chips" id="cycChips"></div>
+    <p class="sub">Published machine specifications</p><dl class="kv" id="cycSpecs"></dl><p class="sub">Ideal isochronous model for the selected ion</p><dl class="kv" id="cycKv"></dl>
+    <div class="row"><span>model B<sub>0</sub></span><input id="cycB" type="range" min="0.5" max="4" step="0.01" value="1.5"><output id="cycBout"></output></div>
+    <canvas id="cvCyc" class="plot"></canvas>
+    <div class="leg"><span><i style="border-color:var(--accent)"></i>isochronous B(r)/B<sub>0</sub> = γ(r)</span><span><i class="d" style="border-color:var(--neu)"></i>uniform field</span></div>
+    <p class="sub">In a uniform field the revolution frequency qB/(2πγm) falls as the ion speeds up, so it drifts out of step with the fixed RF. An isochronous cyclotron raises the average field with radius exactly as γ(r) grows; sectors (hills and valleys) restore the vertical focusing that a rising field takes away.</p>
+    <details>
+      <summary>How it is computed</summary>
+      <div class="grp">
+        <p class="math">f<sub>rev</sub> = Q e B / (2π γ M), f<sub>RF</sub> = h f<sub>rev</sub>; isochronous B = B<sub>0</sub>γ ⇒ f<sub>rev</sub> = Q e B<sub>0</sub>/(2π M) on every orbit<br>v = ω r ⇒ β(r) = r/r<sub>∞</sub>, r<sub>∞</sub> = c/ω<sub>0</sub> = Mc/(Q e B<sub>0</sub>)<br>B(r) = B<sub>0</sub> γ(r) = B<sub>0</sub>/√(1 − r²/r<sub>∞</sub>²)<br>bending limit E/A = K<sub>B</sub> (Q/A)², K<sub>B</sub> = e²(Bρ)<sub>ext</sub>²/(2u) = 48.24 (Bρ)² MeV (non-relativistic)<br>focusing limit E/A = K<sub>F</sub> (Q/A)<br>relativistic: Bρ = (A/Q) √(T<sub>n</sub>(T<sub>n</sub> + 2Mc²/A))/c = Bρ<sub>nr</sub> √(1 + T<sub>n</sub>/(2Mc²/A))</p>
+        <p class="sub">K<sub>B</sub> is the bending limit, defined through the kinetic energy E/A = K<sub>B</sub>(Q/A)² [6]. Read literally as a rigidity it only holds non-relativistically: at fixed K<sub>B</sub> the rigidity actually needed grows by √(1 + T<sub>n</sub>/(2Mc²/A)), 9% at 345 MeV/u. Light ions are held lower by the vertical focusing, E/A ≤ K<sub>F</sub>(Q/A) in its conventional form; K<sub>F</sub> is taken from the review [6] where it is tabulated (compact superconducting cyclotrons), and where it is not, only the bending limit is shown and the panel says so. Both are design estimates: AGOR's limits give 220 MeV for protons, it delivered 190 MeV [6].</p>
+        <p class="sub">Example: RIBF's SRC, K = 2600 MeV, gives <span class="chk" data-k="kSRC"></span> for very heavy ions [7].</p>
+      </div>
+    </details>
+    <div class="src" id="cycSrc"></div>
+  </section>
+
+  <!-- ===== end stations ===== -->
+  <section class="tab" data-tab="end" hidden>
+    <div id="stationInfo" hidden></div>
+    <div class="cap"><b>FRIB's experimental areas</b><span>click one in the scene</span></div>
+    <p class="sub">After ARIS the rare-isotope beam goes three ways: fast beams at near production energy to the south vaults and the HRS hall; beams stopped in gas in N4 for precision work; and stopped beams reaccelerated in ReA. The arrangement follows the published layout; positions and room sizes in the scene are schematic, the instruments generic shapes at roughly their size.</p>
+    <dl class="kv end" id="endList">
+      <dt data-k="S1">S1</dt><dd data-k="S1">FRIB Decay Station initiator (FDSi): implantation detector surrounded by germanium detectors, for β decay of fast-beam fragments. <i>[a]</i></dd>
+      <dt data-k="S2">S2</dt><dd data-k="S2">Sweeper magnet and the MoNA-LISA neutron array (walls of plastic-scintillator bars): unbound states seen through their neutrons. <i>[a]</i></dd>
+      <dt data-k="S3">S3</dt><dd data-k="S3">S800 spectrograph: superconducting, high resolution, bends vertically. The spectrograph takes up to 4 Tm with a momentum acceptance of about ±3 % and 20 msr; its analysis line up to about 4.9 Tm, within ±0.5 % (dispersion-matched mode) or ±2 % (focused mode). GRETINA ran here in FRIB's first S800 experiment (2022). <i>[b, d, h]</i></dd>
+      <dt data-k="N4">N4</dt><dd data-k="N4">Gas stopping: fast fragments slowed and stopped in helium gas (linear gas cell, cyclotron stopper, cryogenic gas stopper) and extracted at about 60 keV. <i>[b]</i></dd>
+      <dt data-k="stop">stopped beams</dt><dd data-k="stop">LEBIT: Penning-trap mass measurements in a 9.4 T magnet. BECOLA: collinear laser spectroscopy. <i>[b]</i></dd>
+      <dt data-k="ReA3">ReA3</dt><dd data-k="ReA3">Reaccelerated beams at astrophysical energies: SECAR (a recoil separator about 40 m long) on its own beam line, with the JENSA gas-jet target at its entrance as its main target; the AT-TPC active target. <i>[b, c, j, k]</i></dd>
+      <dt data-k="ReA6">ReA6</dt><dd data-k="ReA6">SOLARIS solenoidal spectrometer (up to 4 T) on its own beam line. GRETA, the γ-ray tracking array, is to serve experiments at ReA and at the S800, where it uses a modified GRETINA frame; the scene shows the fall 2025 configuration, with its frame in this vault. <i>[c, e, i, j]</i></dd>
+      <dt data-k="HRS">HRS</dt><dd data-k="HRS">High Rigidity Spectrometer (Bρ up to 8 Tm), in two segments: the high-transmission beam line (HRS-HTBL) from ARIS to the reaction target, and the spectrometer section (HRS-SPS). In February 2025 DOE approved CD-2/3 and the start of execution for HRS-HTBL; the instrument as a whole is still under development, so the magnets in the scene are a planned layout, drawn schematically. <i>[f, g]</i></dd>
+    </dl>
+    <div class="src">[a] FRIB, second call for proposals (2022) and FDSi pages. [b] A. Gade and B. M. Sherrill, Phys. Scr. 91, 053003 (2016), Fig. 2 and Secs. 2.3, 2.8, 2.9. [c] FRIB instrument pages (JENSA, SECAR, SOLARIS, GIRAFFE). [d] P. Fallon, GRETINA/GRETA status (2024). [e] FRIB Laboratory Update, Fall 2025. [f] FRIB HRS fact sheet, March 2025. [g] FRIB, High Rigidity Spectrometer instrument page (as archived 12 June 2026), Status. [h] FRIB, S800 Spectrograph Service Level Description, FRIB-S30206-RC-007221-R003 (19 December 2023), Sec. 4. [i] FRIB, GRETA instrument page (as archived 21 May 2025). [j] FRIB, ReA Experiments Service Level Description, FRIB-S30206-RC-008645-R001 (31 July 2023), Sec. 3. [k] K. Schmidt et al., Status of the JENSA gas-jet target for experiments with rare isotope beams, Nucl. Instrum. Methods A (2018), arXiv:1804.06842.</div>
+  </section>
+
+  <!-- ===== facilities ===== -->
+  <section class="tab" data-tab="fac" hidden>
+    <div class="cap"><b>Can this machine take this ion?</b><span id="facIon"></span></div>
+    <p class="sub">FRIB first, then other facilities for comparison. Rings and transport arcs use the charge state Q you set; separators see ions after the production target, taken bare (Q = Z). "max E/A" is the energy at which this ion and charge state fill the quoted Bρ. Only rigidity is checked; whether an injector can deliver the charge state, and at what intensity, is not.</p>
+    <div class="tw"><table class="fac" id="facTab"></table></div>
+    <div class="src" id="facRefs"></div>
+  </section>
+
+</aside>
+
+<div id="sceneTools" role="group" aria-label="Scene display">
+  <button id="sceneOnly" aria-pressed="false" title="Hide panels (H)">◫ hide panels</button>
+  <button id="sceneLabels" aria-pressed="true" title="Toggle section labels">labels</button>
+</div>
+<div id="hoverNote" hidden></div>
+<div id="labels"></div>
+<div id="stamp"></div>
+<div class="hint">WASD move · Q/E turn · Shift faster · drag to orbit · scroll to zoom <span id="sceneLegend">· <span style="color:#8fbc94">■</span> cryomodule <span style="color:#934b43">■</span> dipole <span style="color:#476984">■</span> quadrupole</span></div>
+
+<script src="assets/three-bundle.js"></script>
+<script src="assets/three-post.js"></script>
+<script src="assets/nubase.js"></script>
+<script>window.FACILITY_MODULES = {};</script>
+<script src="assets/fac-gsi.js"></script>
+<script src="assets/fac-riken.js"></script>
+<script src="assets/fac-rcnp.js"></script>
+<script src="assets/fac-cern.js"></script>
+<script src="assets/accel.js"></script>
+<script src="assets/accel-data.js"></script>
+<script>
+"use strict";
+// ---------- data
+const NUC = window.NUC;                    // [Z, N, sym, log10 T1/2, mode, B/A, est, J^pi, year]
+const FAC = window.ACCEL_FAC, FR = FAC.frib;
+const ROW = new Map(), SYM = {}, ELEM = {};
+for (const r of NUC) { ROW.set(r[0] + "," + r[1], r); SYM[r[2].toLowerCase()] = r[0]; ELEM[r[0]] = r[2]; }
+const sup = (A) => `<sup>${A}</sup>`;
+const nucName = (Z, N) => `${sup(Z + N)}${ELEM[Z]}`;
+const ref = (n) => `<sup>[${n}]</sup>`;
+
+// NUBASE leaves B/A empty for 1H (it is zero by the atomic-mass convention), so the proton has a mass too
+const hasMass = (Z, N) => !!ROW.get(Z + "," + N) && (ROW.get(Z + "," + N)[5] != null || (Z === 1 && N === 0));
+function parseNucleus(s) {
+  s = s.trim().toLowerCase().replace(/^#/, "").replace(/[-\s]/g, "");
+  if (s === "p") return { Z: 1, N: 0 };
+  if (s === "d") return { Z: 1, N: 1 };
+  if (s === "a" || s === "alpha") return { Z: 2, N: 2 };
+  const m = s.match(/^(\d+)([a-z]+)$/) || s.match(/^([a-z]+)(\d+)$/);
+  if (!m) return null;
+  let A, el;
+  if (/^\d/.test(m[1])) { A = +m[1]; el = m[2]; } else { el = m[1]; A = +m[2]; }
+  const Z = SYM[el];
+  if (Z == null || A < Z) return null;
+  if (A === Z && Z !== 1) return null;
+  return { Z, N: A - Z };
+}
+
+// ---------- state
+const TABS = ["lin", "strip", "foc", "sep", "rig", "cyc", "fac", "end"];
+const S = { Z: 92, N: 146, Q: 33, Tn: 17, tab: "lin", cyc: 0, fRF: 80.5e6, wq: 4,
+  foc: { type: "sol", B: 8, ls: 0.5, Ls: 2.5, f: 6, Lc: 16, lq: 0 },
+  sep: { want: null, acc: 0.005, dR: 0.4, mat: "Al" } };
+let ION = null, K = null;
+
+function fmt(x, d) {
+  if (!isFinite(x)) return "n/a";
+  const a = Math.abs(x);
+  if (d != null) return x.toFixed(d);
+  if (a >= 1000) return x.toFixed(0);
+  if (a >= 100) return x.toFixed(1);
+  if (a >= 10) return x.toFixed(2);
+  if (a >= 1) return x.toFixed(3);
+  if (a >= 0.01) return x.toFixed(4);
+  return x.toExponential(2);
+}
+const fmtE = (t) => (t >= 1 ? fmt(t) + " MeV" : t >= 1e-3 ? fmt(t * 1e3) + " keV" : fmt(t * 1e6) + " eV");
+const fmtLen = (m) => (m >= 1 ? fmt(m) + " m" : m >= 0.01 ? fmt(m * 100) + " cm" : fmt(m * 1000) + " mm");
+const fmtHz = (f) => (f >= 1e6 ? fmt(f / 1e6) + " MHz" : fmt(f / 1e3) + " kHz");
+
+// ---------- scene
+const stage = document.getElementById("stage");
+const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.setSize(innerWidth, innerHeight);
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.05;
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+stage.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(38, innerWidth / innerHeight, 0.5, 3000);
+const composer = new EffectComposer(renderer);
+composer.addPass(new RenderPass(scene, camera));
+// ambient occlusion: what grounds the hardware on the floor and darkens the seams, as in a real tunnel
+const gtao = new GTAOPass(scene, camera, innerWidth, innerHeight);
+gtao.updateGtaoMaterial({ radius: 1.6, distanceExponent: 1.4, thickness: 1.2, scale: 1.0, samples: 16 });
+gtao.blendIntensity = 0.9;
+composer.addPass(gtao);
+const bloom = new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), 0.35, 0.4, 0.92);
+composer.addPass(bloom);
+composer.addPass(new OutputPass());
+const smaa = new SMAAPass(innerWidth * renderer.getPixelRatio(), innerHeight * renderer.getPixelRatio());
+composer.addPass(smaa);
+const pmrem = new THREE.PMREMGenerator(renderer);
+scene.environment = pmrem.fromScene(new RoomEnvironment(renderer), 0.04).texture;
+scene.fog = new THREE.Fog("#0b0d12", 260, 900);
+// The ground colour #0b0d12 is drawn untouched on the direct path, but OutputPass runs it through
+// ACES, whose toe crushes it to black. On the bloom path the background and fog therefore take the
+// linear colour that ACES (exposure 1.05) maps back to exactly #0b0d12: found by Newton on the r160
+// shader formula, residual 1e-11, sRGB out (11, 13, 18).
+const GROUND = new THREE.Color("#0b0d12");
+const GROUND_PRE_ACES = new THREE.Color().setRGB(0.0115476, 0.0131218, 0.0174740, THREE.LinearSRGBColorSpace);
+scene.background = GROUND.clone();
+
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+controls.dampingFactor = 0.08;
+controls.minDistance = 6;
+controls.maxDistance = 1000;
+controls.maxPolarAngle = Math.PI * 0.49;
+const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+controls.autoRotate = !reduce;
+controls.autoRotateSpeed = 0.15;
+// any user drag or wheel stops the auto-rotation and any camera flight still in progress
+controls.addEventListener("start", () => { controls.autoRotate = false; camGoal = null; });
+
+// ---------- light: a dim sky, one shadow-casting key light, and the tunnel's own strip lights
+scene.add(new THREE.HemisphereLight("#e1e8e4", "#777268", 0.65));
+const sun = new THREE.DirectionalLight("#fff8ef", 1.8);
+sun.castShadow = true;
+sun.shadow.mapSize.set(4096, 4096);
+sun.shadow.bias = -0.0004;
+sun.shadow.normalBias = 0.05;
+scene.add(sun, sun.target);
+const rim = new THREE.DirectionalLight("#dbe5e2", 0.4);
+rim.position.set(140, 60, -260);
+scene.add(rim);
+
+
+// ---------- FRIB geometry (metres). To scale: FE 47 m along the linac axis (its curved path is ~53 m), SRF linac 472 m in total, 80 m transport, 70 deg
+// bend, sources ~10 m up. Schematic: the split of the 472 m by cryomodule count, the fold radius, ARIS.
+const V3 = (x, y, z) => new THREE.Vector3(x, y, z);
+const RF = 14;                                                   // fold radius, schematic
+const NCM = [15, 24, 7];                                         // cryomodules in LS1, LS2, LS3 (incl. bunchers)
+const straight = FR.linacL - 2 * Math.PI * RF;
+const LSL = NCM.map((n) => straight * n / 46);
+const arc = (c, r, a0, a1, n, y) => { const p = []; for (let i = 0; i <= n; i++) { const a = a0 + (a1 - a0) * i / n; p.push(V3(c.x + r * Math.cos(a), y || 0, c.z + r * Math.sin(a))); } return p; };
+const bez = (a, b, c, d, n) => new THREE.CubicBezierCurve3(a, b, c, d).getPoints(n);
+// LS1 along +x at z = 0; FS1 turns to -x at z = -2RF; LS2; FS2 turns back to +x at z = -4RF; LS3
+const X1 = LSL[0], X2 = X1 - LSL[1], X3 = X2 + LSL[2];
+const P = {};
+P.fe = [...bez(V3(-FR.feL, FR.srcHeight, 14), V3(-FR.feL + 18, FR.srcHeight, 14), V3(-FR.feL + 14, 0, 0), V3(-15, 0, 0), 30), V3(0, 0, 0)];
+P.ls1 = [V3(0, 0, 0), V3(X1, 0, 0)];
+P.fs1 = arc(V3(X1, 0, -RF), RF, Math.PI / 2, -Math.PI / 2, 40);
+P.ls2 = [V3(X1, 0, -2 * RF), V3(X2, 0, -2 * RF)];
+P.fs2 = arc(V3(X2, 0, -3 * RF), RF, Math.PI / 2, 3 * Math.PI / 2, 40);
+P.ls3 = [V3(X2, 0, -4 * RF), V3(X3, 0, -4 * RF)];
+P.tr = [V3(X3, 0, -4 * RF), V3(X3 + FR.transportL, 0, -4 * RF)];
+{ // 70 degree bend toward -z, radius 25 m (schematic), then a short line to the target
+  const R = 25, c = V3(X3 + FR.transportL, 0, -4 * RF - R), a0 = Math.PI / 2, a1 = a0 - FR.bdsBend * Math.PI / 180;
+  P.bds = arc(c, R, a0, a1, 30);
+  const e = P.bds[P.bds.length - 1], t = e.clone().sub(P.bds[P.bds.length - 2]).normalize();
+  P.bds.push(e.clone().addScaledVector(t, 18));
+}
+const TGT = P.bds[P.bds.length - 1].clone();
+{ // ARIS: pre-separator rising (it bends vertically), then the two-stage C, then the experimental area
+  const d = P.bds[P.bds.length - 1].clone().sub(P.bds[P.bds.length - 2]).normalize();
+  const side = V3(-d.z, 0, d.x);
+  const a = TGT, b = a.clone().addScaledVector(d, 30).add(V3(0, 9, 0)), c = b.clone().addScaledVector(d, 25);
+  P.aris = [a, ...bez(a, a.clone().addScaledVector(d, 15), b.clone().addScaledVector(d, -12), b, 20).slice(1),
+    ...bez(b, b.clone().addScaledVector(d, 10), c.clone().addScaledVector(side, 30).addScaledVector(d, 20).add(V3(0, -9, 0)), c.clone().addScaledVector(side, 45).add(V3(0, -9, 0)), 40).slice(1)];
+}
+const HALL = P.aris[P.aris.length - 1].clone();
+
+class Path {
+  constructor(pts) {
+    this.p = pts; this.c = [0];
+    for (let i = 1; i < pts.length; i++) this.c.push(this.c[i - 1] + pts[i].distanceTo(pts[i - 1]));
+    this.L = this.c[this.c.length - 1];
+  }
+  at(s, out) {
+    s = Math.max(0, Math.min(this.L, s));
+    let lo = 0, hi = this.c.length - 1;
+    while (hi - lo > 1) { const m = (lo + hi) >> 1; if (this.c[m] < s) lo = m; else hi = m; }
+    const t = (s - this.c[lo]) / Math.max(1e-9, this.c[hi] - this.c[lo]);
+    return (out || new THREE.Vector3()).lerpVectors(this.p[lo], this.p[hi], t);
+  }
+}
+const join = (...a) => { const o = []; for (const x of a) for (const p of x) if (!o.length || o[o.length - 1].distanceTo(p) > 1e-6) o.push(p); return o; };
+const pDriver = new Path(join(P.fe, P.ls1, P.fs1, P.ls2, P.fs2, P.ls3, P.tr, P.bds));
+const sStrip = new Path(join(P.fe, P.ls1)).L + 3;            // stripper at the start of FS1
+const pAris = new Path(P.aris);
+
+// deterministic noise, so every screenshot is the same scene
+let SEED = 20261003;
+const rnd = () => ((SEED = (SEED * 1664525 + 1013904223) >>> 0) / 4294967296);
+
+// ---------- procedural textures (no image files)
+function canvasTex(w, h, draw, repeat) {
+  const c = document.createElement("canvas"); c.width = w; c.height = h;
+  draw(c.getContext("2d"), w, h);
+  const t = new THREE.CanvasTexture(c);
+  t.wrapS = t.wrapT = THREE.RepeatWrapping;
+  if (repeat) t.repeat.set(repeat[0], repeat[1]);
+  t.anisotropy = 8;
+  return t;
+}
+// cast concrete: mottled grey, form-panel joints, a few stains
+const concreteMap = canvasTex(512, 512, (x, w, h) => {
+  x.fillStyle = "#aaa9a4"; x.fillRect(0, 0, w, h);
+  for (let i = 0; i < 9000; i++) { const v = 118 + rnd() * 40 | 0; x.fillStyle = `rgba(${v},${v},${v + 2},0.18)`; const s = 1 + rnd() * 3; x.fillRect(rnd() * w, rnd() * h, s, s); }
+  for (let i = 0; i < 26; i++) { x.fillStyle = `rgba(60,58,55,${0.008 + rnd() * 0.015})`; x.beginPath(); x.arc(rnd() * w, rnd() * h, 2 + rnd() * 16, 0, 7); x.fill(); }
+  x.strokeStyle = "rgba(40,40,42,0.35)"; x.lineWidth = 2;
+  for (let k = 0; k <= 2; k++) { x.beginPath(); x.moveTo(0, k * h / 2); x.lineTo(w, k * h / 2); x.stroke(); x.beginPath(); x.moveTo(k * w / 2, 0); x.lineTo(k * w / 2, h); x.stroke(); }
+  x.fillStyle = "rgba(30,30,32,0.5)";
+  for (const [a, b] of [[0.25, 0.25], [0.75, 0.25], [0.25, 0.75], [0.75, 0.75]]) { x.beginPath(); x.arc(a * w, b * h, 3, 0, 7); x.fill(); }   // form-tie holes
+}, [1, 1]);
+// sealed floor: lighter, smoother, with saw-cut joints
+const floorMap = canvasTex(512, 512, (x, w, h) => {
+  x.fillStyle = "#b8b4ac"; x.fillRect(0, 0, w, h);
+  for (let i = 0; i < 7000; i++) { const v = 130 + rnd() * 35 | 0; x.fillStyle = `rgba(${v},${v},${v},0.12)`; x.fillRect(rnd() * w, rnd() * h, 2, 2); }
+  for (let i = 0; i < 20; i++) {
+    const cx = rnd() * w, cy = rnd() * h, r = 15 + rnd() * 70;
+    const grad = x.createRadialGradient(cx, cy, 0, cx, cy, r);
+    grad.addColorStop(0, "rgba(60,57,51,0.055)"); grad.addColorStop(1, "rgba(60,57,51,0)");
+    x.fillStyle = grad; x.fillRect(cx - r, cy - r, 2 * r, 2 * r);
+  }
+  x.strokeStyle = "rgba(55,55,55,0.55)"; x.lineWidth = 1.5;
+  x.strokeRect(0.75, 0.75, w - 1.5, h - 1.5);
+}, [1, 1]);
+concreteMap.colorSpace = floorMap.colorSpace = THREE.SRGBColorSpace;
+// brushed stainless: fine streaks along one direction, used as bump and as a colour modulation
+const brushed = canvasTex(256, 256, (x, w, h) => {
+  x.fillStyle = "#808080"; x.fillRect(0, 0, w, h);
+  for (let i = 0; i < 900; i++) { const v = 100 + rnd() * 70 | 0; x.strokeStyle = `rgba(${v},${v},${v},0.35)`; x.lineWidth = 0.6; const y = rnd() * h; x.beginPath(); x.moveTo(0, y); x.lineTo(w, y + (rnd() - 0.5) * 2); x.stroke(); }
+}, [4, 1]);
+// painted steel: a slight orange-peel
+const paint = canvasTex(128, 128, (x, w, h) => {
+  x.fillStyle = "#7f7f7f"; x.fillRect(0, 0, w, h);
+  for (let i = 0; i < 1600; i++) { const v = 112 + rnd() * 32 | 0; x.fillStyle = `rgba(${v},${v},${v},0.5)`; x.beginPath(); x.arc(rnd() * w, rnd() * h, 0.6 + rnd() * 1.4, 0, 7); x.fill(); }
+}, [2, 2]);
+// magnet textures: pixel data, red = bump, green = roughness, from their own seeded noise so that the
+// rest of the scene's random sequence is untouched
+function dataTex(w, h, fill, repeat) {
+  return canvasTex(w, h, (x) => { const im = x.createImageData(w, h); fill(im.data, w, h); x.putImageData(im, 0, 0); }, repeat);
+}
+let MSEED = 7151;
+const mrnd = () => ((MSEED = (MSEED * 1664525 + 1013904223) >>> 0) / 4294967296);
+function vnoise(w, h, cell) {                     // tileable value noise in [0, 1)
+  const gw = Math.ceil(w / cell), gh = Math.ceil(h / cell), g = new Float32Array(gw * gh).map(mrnd), o = new Float32Array(w * h);
+  for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) {
+    const fx = i / cell, fy = j / cell, x0 = Math.floor(fx), y0 = Math.floor(fy), tx = fx - x0, ty = fy - y0;
+    const sx = tx * tx * (3 - 2 * tx), sy = ty * ty * (3 - 2 * ty);
+    const G = (a, b) => g[(b % gh) * gw + (a % gw)];
+    o[j * w + i] = (G(x0, y0) * (1 - sx) + G(x0 + 1, y0) * sx) * (1 - sy) + (G(x0, y0 + 1) * (1 - sx) + G(x0 + 1, y0 + 1) * sx) * sy;
+  }
+  return o;
+}
+// laminated yoke: orange-peel paint (red) and blotchy gloss (green). The lamination joints themselves are drawn
+// in the shader (lamJoints below), 64 per tile of 0.25 m along the beam (about 4 mm), and faded out where a
+// pixel spans more than a fraction of a lamination, so they never shimmer in moire. The last eighth of each tile
+// (in v) carries no joints: the solid end plates and lugs map their texture into it, and so share the material
+const LAM = { rep: [4, 4], band: 1 / 8 };
+const lamTex = dataTex(128, 128, (d, w, h) => {
+  const peel = vnoise(w, h, 3), blot = vnoise(w, h, 24), fine = vnoise(w, h, 9);
+  for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) {
+    const k = j * w + i;
+    d[4 * k] = 150 + 22 * (peel[k] - 0.5);
+    d[4 * k + 1] = 150 + 44 * (blot[k] - 0.5) + 20 * (fine[k] - 0.5);
+    d[4 * k + 2] = 128; d[4 * k + 3] = 255;
+  }
+}, LAM.rep);
+// wound coil: v runs across the conductor bundle (one turn every 16 px, tile 0.2 m: 12.5 mm conductors), u
+// along the winding; the roughness streaks run along the conductor, which is what makes copper look drawn rather than cast
+const coilTex = dataTex(256, 256, (d, w, h) => {
+  const st = vnoise(w, h, 4), big = vnoise(w, h, 48);
+  for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) {
+    const k = j * w + i, ph = j % 16, gap = ph === 0 ? 1 : ph === 1 || ph === 15 ? 0.45 : 0;
+    const streak = st[(j * w + ((i * 7) % w))] * 0.6 + st[k] * 0.4;
+    d[4 * k] = 165 - 120 * gap + 18 * (st[k] - 0.5);
+    d[4 * k + 1] = 120 + 90 * (streak - 0.5) + 50 * (big[k] - 0.5) + 60 * gap;
+    d[4 * k + 2] = 128; d[4 * k + 3] = 255;
+  }
+}, [4, 5]);
+// a rating plate: aluminium, a dark header bar and lines of engraved characters (deliberately unreadable)
+const plateTex = canvasTex(256, 128, (x, w, h) => {
+  x.fillStyle = "#c4c8cc"; x.fillRect(0, 0, w, h);
+  for (let i = 0; i < 300; i++) { const v = 170 + mrnd() * 50 | 0; x.fillStyle = `rgba(${v},${v},${v + 4},0.35)`; x.fillRect(0, mrnd() * h, w, 1); }
+  x.fillStyle = "#2a3a55"; x.fillRect(10, 10, w - 20, 26);
+  x.fillStyle = "#e8ecf0"; for (let c = 0; c < 9; c++) x.fillRect(18 + c * 15, 17, 10, 12);
+  x.fillStyle = "#3a3d42";
+  for (let r = 0; r < 5; r++) { let cx = 14; const n = 6 + (mrnd() * 10 | 0); for (let c = 0; c < n; c++) { const cw = 5 + (mrnd() * 4 | 0); x.fillRect(cx, 46 + r * 15, cw, 8); cx += cw + 3 + (mrnd() < 0.2 ? 8 : 0); if (cx > w - 20) break; } }
+  x.strokeStyle = "#7d8288"; x.lineWidth = 3; x.strokeRect(2, 2, w - 4, h - 4);
+  x.fillStyle = "#6d7278"; for (const [a, b] of [[7, 7], [w - 7, 7], [7, h - 7], [w - 7, h - 7]]) { x.beginPath(); x.arc(a, b, 3, 0, 7); x.fill(); }
+});
+plateTex.colorSpace = THREE.SRGBColorSpace;
+// the joints between laminations: a slightly darker, glossier line every 1/64 of a tile, faded with the pixel footprint
+function lamJoints(sh) {
+  sh.fragmentShader = sh.fragmentShader.replace("#include <roughnessmap_fragment>", `#include <roughnessmap_fragment>
+  {
+    float lt = vRoughnessMapUv.y * 64.0, lw = fwidth(lt);
+    float lj = (1.0 - smoothstep(0.0, 0.16 + lw, min(fract(lt), 1.0 - fract(lt)))) * (1.0 - smoothstep(0.12, 0.4, lw));
+    lj *= step(fract(vRoughnessMapUv.y), 1.0 - ${LAM.band.toFixed(4)});
+    roughnessFactor = clamp(roughnessFactor - 0.18 * lj, 0.05, 1.0);
+    diffuseColor.rgb *= 1.0 - 0.22 * lj;
+  }`);
+}
+// painted, laminated magnet iron in a given colour (one material per colour, shared)
+const PAINTS = new Map();
+function magPaint(color, solid) {
+  const key = color + (solid ? "s" : "");
+  if (!PAINTS.has(key)) PAINTS.set(key, new THREE.MeshPhysicalMaterial({ color, metalness: 0.05, roughness: 0.68, roughnessMap: solid ? null : lamTex,
+    bumpMap: solid ? paint : lamTex, bumpScale: solid ? 0.0015 : 0.0012, clearcoat: 0.28, clearcoatRoughness: 0.38, envMapIntensity: 0.72 }));
+  if (!solid) PAINTS.get(key).onBeforeCompile = lamJoints;
+  return PAINTS.get(key);
+}
+
+const gaugeTex = canvasTex(128, 128, (x, w, h) => {
+  x.fillStyle = "#edece3"; x.fillRect(0, 0, w, h);
+  x.translate(w / 2, h / 2); x.strokeStyle = "#263139"; x.lineWidth = 2;
+  for (let i = 0; i <= 24; i++) {
+    const a = (0.75 + i / 24 * 1.5) * Math.PI, r = i % 4 ? 46 : 41;
+    x.beginPath(); x.moveTo(Math.cos(a) * r, Math.sin(a) * r); x.lineTo(Math.cos(a) * 51, Math.sin(a) * 51); x.stroke();
+  }
+  x.fillStyle = "#435259"; x.font = "bold 11px sans-serif"; x.textAlign = "center"; x.fillText("VAC", 0, 29);
+  x.strokeStyle = "#963c31"; x.lineWidth = 3; x.beginPath(); x.moveTo(5, 5); x.lineTo(-30, -25); x.stroke();
+  x.fillStyle = "#263139"; x.beginPath(); x.arc(0, 0, 5, 0, Math.PI * 2); x.fill();
+});
+gaugeTex.colorSpace = THREE.SRGBColorSpace;
+// ---------- materials: FRIB cryomodule green from published tunnel photographs.
+// Magnet colours remain schematic; photographs do not establish a facility-wide paint schedule.
+const M = {
+  concrete: new THREE.MeshStandardMaterial({ color: "#e4e1d9", map: concreteMap, roughness: 0.94, metalness: 0, envMapIntensity: 0.25 }),
+  floor: new THREE.MeshStandardMaterial({ color: "#babcb9", map: floorMap, roughness: 0.6, metalness: 0, envMapIntensity: 0.5 }),
+  ceiling: new THREE.MeshStandardMaterial({ color: "#bcbfba", roughness: 0.87, metalness: 0, envMapIntensity: 0.4 }),
+  earth: new THREE.MeshStandardMaterial({ color: "#121316", roughness: 1, metalness: 0 }),
+  steel: new THREE.MeshStandardMaterial({ color: "#c3c8cf", metalness: 0.85, roughness: 0.34, bumpMap: brushed, bumpScale: 0.004, envMapIntensity: 1.1 }),
+  pipe: new THREE.MeshStandardMaterial({ color: "#c1c4bf", metalness: 0.88, roughness: 0.3, bumpMap: brushed, bumpScale: 0.002, envMapIntensity: 0.85 }),
+  steelDark: new THREE.MeshStandardMaterial({ color: "#4f555d", metalness: 0.7, roughness: 0.5, envMapIntensity: 0.6 }),
+  vessel: new THREE.MeshPhysicalMaterial({ color: "#8fbc94", metalness: 0.04, roughness: 0.5, bumpMap: paint, bumpScale: 0.001, clearcoat: 0.25, clearcoatRoughness: 0.4, envMapIntensity: 0.65 }),     // QWR family
+  vesselH: new THREE.MeshPhysicalMaterial({ color: "#8fbc94", metalness: 0.04, roughness: 0.5, bumpMap: paint, bumpScale: 0.001, clearcoat: 0.25, clearcoatRoughness: 0.4, envMapIntensity: 0.65 }),    // HWR family
+  vesselFrame: new THREE.MeshStandardMaterial({ color: "#6b976f", metalness: 0.06, roughness: 0.6, bumpMap: paint, bumpScale: 0.001 }),
+  gauge: new THREE.MeshStandardMaterial({ map: gaugeTex, roughness: 0.48, metalness: 0 }),
+  ceramic: new THREE.MeshStandardMaterial({ color: "#e4dfce", roughness: 0.28, metalness: 0, envMapIntensity: 0.7 }),
+  copper: new THREE.MeshStandardMaterial({ color: "#c27a4a", metalness: 1, roughness: 0.32 }),
+  dipole: magPaint("#934b43"),
+  quad: magPaint("#476984"),
+  coil: new THREE.MeshPhysicalMaterial({ color: "#c0703f", metalness: 0.85, roughness: 0.55, roughnessMap: coilTex, bumpMap: coilTex, bumpScale: 0.0025,
+    clearcoat: 0.6, clearcoatRoughness: 0.25, envMapIntensity: 1.0 }),     // copper conductor under epoxy and glass tape
+  plate: new THREE.MeshStandardMaterial({ map: plateTex, metalness: 0.5, roughness: 0.42, envMapIntensity: 0.8 }),
+  yellow: new THREE.MeshStandardMaterial({ color: "#e0b030", metalness: 0.2, roughness: 0.55 }),
+  black: new THREE.MeshStandardMaterial({ color: "#1d1f22", metalness: 0.1, roughness: 0.7 }),
+  cable: new THREE.MeshStandardMaterial({ color: "#2b2d31", metalness: 0, roughness: 0.85 }),
+  lamp: new THREE.MeshBasicMaterial({ color: new THREE.Color(2.2, 2.1, 1.9), toneMapped: false }),
+  glow: new THREE.MeshBasicMaterial({ color: new THREE.Color(2.4, 1.6, 0.7), toneMapped: false }),
+  shield: new THREE.MeshStandardMaterial({ color: "#d5d3cc", map: concreteMap, roughness: 0.95, envMapIntensity: 0.25 }),
+  glass: new THREE.MeshPhysicalMaterial({ color: "#a9c2e8", metalness: 0, roughness: 0.1, transparent: true, opacity: 0.12, depthWrite: false, side: THREE.DoubleSide }),
+};
+const shadowy = (o) => { o.traverse((m) => { if (m.isMesh) { m.castShadow = true; m.receiveShadow = true; } }); return o; };
+function box(w, h, d, mat, x, y, z) { const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat); m.position.set(x || 0, y || 0, z || 0); return m; }
+function rbox(w, h, d, r, mat, x, y, z) { const m = new THREE.Mesh(new RoundedBoxGeometry(w, h, d, 3, r), mat); m.position.set(x || 0, y || 0, z || 0); return m; }
+function cyl(r, len, mat, seg) { const m = new THREE.Mesh(new THREE.CylinderGeometry(r, r, len, seg || 20), mat); return m; }
+// a part built along local +z (the beam direction), placed on a path
+function orientTo(obj, a, d) { obj.position.copy(a); obj.quaternion.setFromUnitVectors(V3(0, 0, 1), d); return obj; }
+
+// beam height above the floor; the floor sits FLOOR below the beam line
+const FLOOR = -1.45;
+const complex = new THREE.Group(); scene.add(complex);
+const pickables = [], SECTIONS = [];
+let SECTION_ROOT = complex, CUR_BUILD = "frib";         // which facility a new section belongs to
+function section(name, tab, pts, pad) {
+  const g = new THREE.Group();
+  const bb = new THREE.Box3().setFromPoints(pts);
+  bb.expandByScalar(pad || 8);
+  const c = bb.getCenter(new THREE.Vector3()), sz = bb.getSize(new THREE.Vector3());
+  g.userData = { name, tab, center: c, radius: Math.max(sz.x, sz.z) / 2 + 6 };
+  const pick = new THREE.Mesh(new THREE.BoxGeometry(sz.x, Math.max(sz.y, 14), sz.z), new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false }));
+  pick.position.copy(c); pick.userData = g.userData;
+  g.userData.fac = CUR_BUILD;
+  g.add(pick); pickables.push(pick); SECTION_ROOT.add(g); SECTIONS.push(g);
+  return g;
+}
+// beam pipe: polished tube with a flange every few metres
+function pipe(pts, g, r, mat) {
+  r = r || 0.075; mat = mat || M.pipe;
+  const fl = new THREE.CylinderGeometry(r * 2.1, r * 2.1, 0.05, 16); fl.rotateX(Math.PI / 2);
+  if (CUR_BUILD === "gsi" || CUR_BUILD === "cern") {
+    // These facilities' magnets and bunches use Path's segmented centreline. Do not spline it independently.
+    const path = new Path(pts);
+    (g.userData.pipePaths ||= []).push(path);
+    for (let i = 1; i < pts.length; i++) {
+      const a = pts[i - 1], b = pts[i], d = b.clone().sub(a), len = d.length(); if (len < 1e-8) continue;
+      const tube = cyl(r, len, mat, 12);
+      orientTo(tube, a.clone().add(b).multiplyScalar(0.5), d.normalize()); tube.rotateX(Math.PI / 2);
+      tube.castShadow = !mat.transparent; g.add(tube);
+    }
+    for (let s = 2.5; s < path.L - 1; s += 5) {
+      const p = path.at(s), d = path.at(Math.min(path.L, s + 0.01)).sub(p).normalize();
+      g.add(orientTo(new THREE.Mesh(fl, mat === M.pipe ? M.steel : mat), p, d));
+    }
+  } else {
+    const curve = new THREE.CatmullRomCurve3(pts, false, "centripetal"), L = curve.getLength();
+    const t = new THREE.Mesh(new THREE.TubeGeometry(curve, Math.max(24, Math.ceil(L)), r, 12, false), mat);
+    t.castShadow = true; g.add(t);
+    for (let s = 2.5; s < L - 1; s += 5) g.add(orientTo(new THREE.Mesh(fl, M.steel), curve.getPointAt(s / L), curve.getTangentAt(s / L)));
+  }
+}
+function placeAlong(obj, path, s, g) {
+  const D = obj.userData.dipole;
+  if (D && D.o.bend === undefined && s - D.L / 2 >= 0 && s + D.L / 2 <= path.L) {
+    // a dipole on a curved stretch is bent onto it: radius from the sagitta over its length, centred on the arc
+    const a = path.at(s - D.L / 2), b = path.at(s + D.L / 2), m = path.at(s), chord = b.clone().sub(a), c = chord.length();
+    const sag = m.clone().sub(a.clone().add(b).multiplyScalar(0.5)), h = sag.length();
+    const R = h > 1e-5 ? (c * c / 4 + h * h) / (2 * h) : Infinity;
+    if (D.L / R > 0.017) {
+      obj.position.copy(m); obj.lookAt(m.clone().add(chord));
+      const cd = sag.negate().normalize().applyQuaternion(obj.quaternion.clone().invert());   // towards the centre, magnet frame
+      const o = Object.assign({}, D.o);
+      if (Math.abs(cd.y) < 0.3) o.bend = (cd.x < 0 ? 1 : -1) * D.L / R;
+      else { o.bend = D.L / R; o.stand = false; obj.rotateZ(Math.atan2(-cd.y, -cd.x)); }        // a vertical bend: rolled, no stand
+      const nb = dipole(D.L, o);
+      obj.clear(); for (const ch of [...nb.children]) obj.add(ch);
+      obj.userData.dipole = nb.userData.dipole;
+      g.add(obj); return obj;
+    }
+  }
+  obj.position.copy(path.at(s)); obj.lookAt(path.at(s + 0.3)); g.add(obj); return obj;
+}
+
+// ---------- parts
+// a cryomodule: rectangular vacuum vessel on four legs, end flanges and bellows, coupler towers and
+// the cryogenic bayonet box on top; local +z is the beam
+function cryomodule(L, kind) {
+  const g = new THREE.Group(), W = kind === "q" ? 1.9 : 2.2, H = kind === "q" ? 2.1 : 2.5, yc = H / 2 - 0.85;
+  const vm = kind === "q" ? M.vessel : M.vesselH;
+  g.add(rbox(W, H, L, 0.12, vm, 0, yc, 0));
+  for (let z = -L / 2 + 0.4; z <= L / 2 - 0.4; z += Math.max(0.9, L / 7)) g.add(rbox(W + 0.06, H + 0.06, 0.08, 0.03, M.vesselFrame, 0, yc, z));   // stiffening ribs
+  for (const s of [-1, 1]) {                                              // end plates, flange, bellows
+    g.add(box(W * 0.86, H * 0.86, 0.06, M.vesselFrame, 0, yc, s * (L / 2 + 0.03)));
+    const f = cyl(0.22, 0.12, M.steel, 24); f.rotation.x = Math.PI / 2; f.position.set(0, 0, s * (L / 2 + 0.12)); g.add(f);
+    for (let k = 0; k < 4; k++) { const b = new THREE.Mesh(new THREE.TorusGeometry(0.12, 0.025, 8, 20), M.steel); b.position.set(0, 0, s * (L / 2 + 0.22 + k * 0.05)); g.add(b); }
+  }
+  const nc = kind === "q" ? (L > 3 ? 8 : 4) : 8, ncShow = Math.min(nc, 8);
+  for (let i = 0; i < ncShow; i++) {                                     // fundamental power couplers
+    const z = -L / 2 + L * (i + 0.5) / ncShow;
+    const t = cyl(0.11, 0.55, M.steel, 14); t.position.set(W * 0.22, H - 0.85 + 0.27, z); g.add(t);
+    const c = cyl(0.13, 0.08, M.ceramic, 14); c.position.set(W * 0.22, H - 0.85 + 0.56, z); g.add(c);
+  }
+  for (let i = 0; i < ncShow; i++) {
+    const z = -L / 2 + L * (i + 0.5) / ncShow;
+    g.add(box(0.09, 0.12, 0.09, M.steel, W * 0.5 + 0.02, yc + 0.45, z + 0.13));
+    g.add(new THREE.Mesh(gHose([[W * 0.22, H - 0.2, z], [W * 0.36, H - 0.12, z + 0.08], [W * 0.48, H - 0.45, z + 0.12], [W * 0.5 + 0.04, yc + 0.45, z + 0.13]], 0.023, 12), M.cable));
+  }
+  g.add(rbox(0.9, 0.7, 0.9, 0.05, M.steel, -W * 0.18, H - 0.85 + 0.35, -L / 2 + 0.7));   // bayonet / valve box
+  const vp = cyl(0.16, 0.5, M.steel, 16); vp.position.set(-W * 0.3, H - 0.85 + 0.25, L / 2 - 0.6); g.add(vp);   // vacuum port
+  for (const sx of [-1, 1]) for (const sz of [-1, 1]) g.add(box(0.18, 0.62, 0.18, M.steelDark, sx * W * 0.38, FLOOR + 0.31, sz * L * 0.35));   // legs
+  // Generic access doors, nameplates and lifting eyes, visible at aisle distance.
+  for (const sx of [-1, 1]) {
+    for (let i = 0; i < 3; i++) {
+      const z = (i - 1) * L * 0.26, ph = H * 0.55, pw = Math.min(1.4, L * 0.19);
+      g.add(box(0.035, ph + 0.06, pw + 0.06, M.vesselFrame, sx * (W / 2 + 0.014), yc, z));
+      g.add(box(0.045, ph, pw, vm, sx * (W / 2 + 0.032), yc, z));
+      g.add(box(0.065, 0.16, 0.035, M.steel, sx * (W / 2 + 0.07), yc, z + pw * 0.3));
+      for (const yy of [-1, 1]) for (const zz of [-1, 1]) {
+        const bolt = cyl(0.022, 0.018, M.steel, 6); bolt.rotation.z = Math.PI / 2;
+        bolt.position.set(sx * (W / 2 + 0.063), yc + yy * (ph / 2 - 0.07), z + zz * (pw / 2 - 0.07)); g.add(bolt);
+      }
+    }
+    for (const z of [-L * 0.32, L * 0.32]) {
+      const xx = sx * (W / 2 + 0.13), cy = yc + 0.1;
+      g.add(box(0.18, 0.42, 0.3, M.steel, sx * (W / 2 + 0.08), cy + 0.45, z));
+      for (let k = 0; k < 4; k++) {
+        const loop = new THREE.Mesh(new THREE.TorusGeometry(0.26 + k * 0.017, 0.022, 5, 28), M.cable);
+        loop.rotation.y = Math.PI / 2; loop.position.set(xx + sx * k * 0.037, cy, z); loop.scale.y = 1.32; g.add(loop);
+      }
+      for (const dz of [-0.09, 0.09]) {
+        const hose = new THREE.Mesh(gHose([[xx, cy + 0.44, z + dz], [xx + sx * 0.12, cy + 0.2, z + dz], [xx + sx * 0.09, cy - 0.55, z + dz], [xx, FLOOR + 0.18, z + 0.22], [sx * 0.4, FLOOR + 0.12, z + 0.4]], 0.018, 16), M.cable); g.add(hose);
+      }
+      g.add(box(0.035, 0.09, 0.13, M.yellow, xx + sx * 0.15, cy + 0.17, z));
+    }
+    const plate = new THREE.Mesh(new THREE.PlaneGeometry(0.36, 0.18), M.plate);
+    plate.rotation.y = sx * Math.PI / 2; plate.position.set(sx * (W / 2 + 0.06), yc + H * 0.34, -L * 0.25); g.add(plate);
+    for (const sz of [-1, 1]) {
+      g.add(box(0.38, 0.055, 0.38, M.steel, sx * W * 0.38, FLOOR + 0.028, sz * L * 0.35));
+      const eye = new THREE.Mesh(new THREE.TorusGeometry(0.09, 0.025, 8, 16), M.steelDark);
+      eye.position.set(sx * W * 0.36, H - 0.79, sz * L * 0.35); g.add(eye);
+    }
+  }
+  return shadowy(g);
+}
+// ---------- magnets. Each type and size is built once, as one merged geometry per material that every copy
+// shares (the section merge then bakes the copies in place). Local frame: +z along the beam, +y up, the beam
+// through the origin. A bend turns the beam towards local -x; a bent magnet is centred on its arc.
+const MAGCACHE = new Map();
+function magGroup(key, build) {
+  let ent = MAGCACHE.get(key);
+  if (!ent) {
+    const parts = new Map();
+    const add = (mat, geo) => {
+      if (geo.index) geo = geo.toNonIndexed();
+      for (const n of Object.keys(geo.attributes)) if (n !== "position" && n !== "normal" && n !== "uv") geo.deleteAttribute(n);
+      if (!parts.has(mat)) parts.set(mat, []);
+      parts.get(mat).push(geo);
+    };
+    const post = build(add);
+    ent = [];
+    for (const [mat, list] of parts) { const g = clean(BufferGeometryUtils.mergeGeometries(list)); for (const x of list) x.dispose(); if (post) post(g); g.computeBoundingSphere(); ent.push([mat, g]); }
+    MAGCACHE.set(key, ent);
+  }
+  const grp = new THREE.Group();
+  for (const [mat, g] of ent) { const m = new THREE.Mesh(g, mat); m.castShadow = m.receiveShadow = true; grp.add(m); }
+  return grp;
+}
+// drop zero-area triangles and repair zero normals: either one makes the lit (and bump-mapped) shading NaN,
+// and a single NaN pixel spreads into a black square through the bloom chain
+function clean(g) {
+  const P = g.attributes.position.array, N = g.attributes.normal.array, U = g.attributes.uv.array, keep = [];
+  for (let t = 0; t < P.length / 9; t++) {
+    const o = 9 * t, ax = P[o + 3] - P[o], ay = P[o + 4] - P[o + 1], az = P[o + 5] - P[o + 2], bx = P[o + 6] - P[o], by = P[o + 7] - P[o + 1], bz = P[o + 8] - P[o + 2];
+    const cx = ay * bz - az * by, cy = az * bx - ax * bz, cz = ax * by - ay * bx, a2 = cx * cx + cy * cy + cz * cz;
+    if (a2 < 1e-14) continue;
+    for (let k = 0; k < 3; k++) { const n = o + 3 * k; if (N[n] * N[n] + N[n + 1] * N[n + 1] + N[n + 2] * N[n + 2] < 1e-8) { const l = Math.sqrt(a2); N[n] = cx / l; N[n + 1] = cy / l; N[n + 2] = cz / l; } }
+    keep.push(t);
+  }
+  if (keep.length === P.length / 9) return g;
+  const p = new Float32Array(9 * keep.length), n = new Float32Array(9 * keep.length), u = new Float32Array(6 * keep.length);
+  keep.forEach((t, i) => { p.set(P.subarray(9 * t, 9 * t + 9), 9 * i); n.set(N.subarray(9 * t, 9 * t + 9), 9 * i); u.set(U.subarray(6 * t, 6 * t + 6), 6 * i); });
+  const h = new THREE.BufferGeometry();
+  h.setAttribute("position", new THREE.BufferAttribute(p, 3)); h.setAttribute("normal", new THREE.BufferAttribute(n, 3)); h.setAttribute("uv", new THREE.BufferAttribute(u, 2));
+  g.dispose(); return h;
+}
+const gBox = (w, h, d, x, y, z, sz) => new THREE.BoxGeometry(w, h, d, 1, 1, sz || 1).translate(x || 0, y || 0, z || 0);
+function gCyl(r, len, seg, axis, x, y, z, hs) {
+  const g = new THREE.CylinderGeometry(r, r, len, seg || 12, hs || 1);
+  if (axis === "z") g.rotateX(Math.PI / 2); else if (axis === "x") g.rotateZ(Math.PI / 2);
+  return g.translate(x || 0, y || 0, z || 0);
+}
+const V2 = (x, y) => new THREE.Vector2(x, y);
+function polyShape(pts, holes) {
+  const s = new THREE.Shape(pts.map(([x, y]) => V2(x, y)));
+  for (const h of holes || []) s.holes.push(new THREE.Path(h.map(([x, y]) => V2(x, y))));
+  return s;
+}
+// a profile in the xy plane extruded along z from z0 to z1, with a small bevel that catches the light on the edges
+function gExtrude(shape, z0, z1, steps, bevel) {
+  const b = bevel || 0;
+  const g = new THREE.ExtrudeGeometry(shape, { depth: z1 - z0 - 2 * b, steps: steps || 1, bevelEnabled: b > 0, bevelThickness: b, bevelSize: b, bevelOffset: -b, bevelSegments: 1, curveSegments: 6 });
+  return g.translate(0, 0, z0 + b);
+}
+// end plates, straps and lugs are solid steel: map them into the joint-free band of the lamination texture
+// (v follows the height, u the width plus a little depth, so plate faces get two-dimensional paint texture)
+function solidUV(g, y0, y1) {
+  const p = g.attributes.position, uv = g.attributes.uv;
+  for (let i = 0; i < p.count; i++) uv.setXY(i, p.getX(i) + 0.37 * p.getZ(i), (1 - LAM.band * 0.95 + LAM.band * 0.9 * (p.getY(i) - y0) / (y1 - y0)) / LAM.rep[1]);
+  return g;
+}
+// fillet every corner of a closed polygon (quadratic corners, seg points each)
+function roundPoly(pts, r, seg) {
+  const out = [], n = pts.length;
+  for (let i = 0; i < n; i++) {
+    const p = pts[i], a = pts[(i + n - 1) % n], b = pts[(i + 1) % n];
+    const la = Math.hypot(a[0] - p[0], a[1] - p[1]), lb = Math.hypot(b[0] - p[0], b[1] - p[1]), rr = Math.min(r, la * 0.45, lb * 0.45);
+    const A = [p[0] + (a[0] - p[0]) * rr / la, p[1] + (a[1] - p[1]) * rr / la], B = [p[0] + (b[0] - p[0]) * rr / lb, p[1] + (b[1] - p[1]) * rr / lb];
+    for (let k = 0; k <= seg; k++) { const t = k / seg; out.push([(1 - t) * (1 - t) * A[0] + 2 * t * (1 - t) * p[0] + t * t * B[0], (1 - t) * (1 - t) * A[1] + 2 * t * (1 - t) * p[1] + t * t * B[1]]); }
+  }
+  return out;
+}
+// the inner edge of a racetrack coil: rounded rectangle of half sizes hx, hz in the (x, z) plane, outward
+// normals, arc length; starts mid-way along the +x straight so the seam sits on a straight
+function racetrack(hx, hz, rc, nc, maxSeg) {
+  const P = [], cx = hx - rc, cz = hz - rc;
+  const line = (x0, z0, x1, z1, nx, nz) => { const L = Math.hypot(x1 - x0, z1 - z0), k = Math.max(1, Math.ceil(L / maxSeg)); for (let i = 0; i < k; i++) P.push([x0 + (x1 - x0) * i / k, z0 + (z1 - z0) * i / k, nx, nz]); };
+  const corner = (ox, oz, a0) => { for (let i = 0; i < nc; i++) { const a = a0 + (Math.PI / 2) * i / nc; P.push([ox + rc * Math.cos(a), oz + rc * Math.sin(a), Math.cos(a), Math.sin(a)]); } };
+  line(hx, 0, hx, cz, 1, 0); corner(cx, cz, 0);
+  line(cx, hz, -cx, hz, 0, 1); corner(-cx, cz, Math.PI / 2);
+  line(-hx, cz, -hx, -cz, -1, 0); corner(-cx, -cz, Math.PI);
+  line(-cx, -hz, cx, -hz, 0, -1); corner(cx, -cz, 1.5 * Math.PI);
+  line(hx, -cz, hx, 0, 1, 0);
+  let s = 0; P[0].push(0);
+  for (let i = 1; i < P.length; i++) { s += Math.hypot(P[i][0] - P[i - 1][0], P[i][1] - P[i - 1][1]); P[i].push(s); }
+  P.push([P[0][0], P[0][1], P[0][2], P[0][3], s + Math.hypot(P[0][0] - P[P.length - 1][0], P[0][1] - P[P.length - 1][1])]);
+  return P;
+}
+// a closed coil: cross-section sec = [[a, b], ...] (a outward from the inner edge, b up) swept round a racetrack;
+// u runs along the winding and v across the bundle, so the coil texture draws the turns
+function gCoil(path, sec) {
+  const S = sec.concat([sec[0]]), v = [0];
+  for (let j = 1; j < S.length; j++) v.push(v[j - 1] + Math.hypot(S[j][0] - S[j - 1][0], S[j][1] - S[j - 1][1]));
+  const pos = [], uv = [], idx = [], ns = S.length;
+  for (const [x, z, nx, nz, s] of path) for (let j = 0; j < ns; j++) { const [a, b] = S[j]; pos.push(x + nx * a, b, z + nz * a); uv.push(s, v[j]); }
+  for (let i = 0; i < path.length - 1; i++) for (let j = 0; j < ns - 1; j++) { const a = i * ns + j, b = a + ns; idx.push(a, b, a + 1, b, b + 1, a + 1); }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute("uv", new THREE.Float32BufferAttribute(uv, 2));
+  // orient the triangles outwards (signed volume), whatever the winding of the section
+  let vol = 0; const p = pos;
+  for (let t = 0; t < idx.length; t += 3) { const [i, j, k] = [3 * idx[t], 3 * idx[t + 1], 3 * idx[t + 2]];
+    vol += p[i] * (p[j + 1] * p[k + 2] - p[j + 2] * p[k + 1]) - p[i + 1] * (p[j] * p[k + 2] - p[j + 2] * p[k]) + p[i + 2] * (p[j] * p[k + 1] - p[j + 1] * p[k]); }
+  if (vol < 0) for (let t = 0; t < idx.length; t += 3) { const q = idx[t + 1]; idx[t + 1] = idx[t + 2]; idx[t + 2] = q; }
+  g.setIndex(idx); g.computeVertexNormals();
+  return g;
+}
+// a hose or cable through a few points
+const gHose = (pts, r, n) => new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts.map(([x, y, z]) => V3(x, y, z)), false, "centripetal"), n || 10, r, 5, false);
+// a lifting lug: plate with a rounded top and an eye, standing on y0, its face along z (thickness along x)
+function gLug(y0, z, s) {
+  const w = 0.13 * s, hgt = 0.11 * s, r = w / 2, sh = new THREE.Shape();
+  sh.moveTo(-w / 2, 0); sh.lineTo(w / 2, 0); sh.lineTo(w / 2, hgt - r); sh.absarc(0, hgt - r, r, 0, Math.PI, false); sh.lineTo(-w / 2, 0);
+  const eye = new THREE.Path(); eye.absarc(0, hgt - r, r * 0.45, 0, Math.PI * 2, true); sh.holes.push(eye);
+  const g = new THREE.ExtrudeGeometry(sh, { depth: 0.03 * s, bevelEnabled: false, curveSegments: 6 });
+  return g.translate(0, 0, -0.015 * s).rotateY(Math.PI / 2).translate(0, y0, z);
+}
+// bend a straight magnet onto its arc: z (arc length at the beam) becomes the angle, the beam turns to -x
+function bendGeo(g, ang, L) {
+  const s = Math.sign(ang), R = L / Math.abs(ang), p = g.attributes.position, n = g.attributes.normal;
+  for (let i = 0; i < p.count; i++) {
+    const x = s * p.getX(i), z = p.getZ(i), f = z / R, c = Math.cos(f), sn = Math.sin(f), r = R + x;
+    p.setX(i, s * (-R + r * c)); p.setZ(i, r * sn);
+    const nx = s * n.getX(i), nz = n.getZ(i);
+    n.setX(i, s * (nx * c - nz * sn)); n.setZ(i, nx * sn + nz * c);
+  }
+  p.needsUpdate = n.needsUpdate = true;
+}
+// stand: floor plate, two pedestals and a saddle plate under the yoke, levelling bolts
+function addStand(add, w, len, yb, fy, segs) {
+  const hgt = yb - fy;
+  if (hgt < 0.12) return;
+  add(M.steelDark, gBox(w * 0.78, 0.04, len * 0.86, 0, fy + 0.02, 0, segs));
+  add(M.steelDark, gBox(w * 0.66, 0.05, len * 0.8, 0, yb - 0.025, 0, segs));
+  const ph = hgt - 0.09;
+  for (const s of len > 0.7 ? [-1, 1] : [0]) {
+    add(M.steelDark, gBox(w * 0.46, ph, Math.min(0.2, len * 0.3), 0, fy + 0.04 + ph / 2, s * len * 0.27));
+    for (const sx of [-1, 1]) add(M.steelDark, gBox(0.02, ph * 0.8, Math.min(0.32, len * 0.4), sx * w * 0.2, fy + 0.04 + ph * 0.45, s * len * 0.27));   // gussets
+  }
+  for (const sx of [-1, 1]) for (const sz of [-1, 1]) add(M.steel, gCyl(0.03, 0.06, 6, "y", sx * w * 0.34, fy + 0.07, sz * len * 0.38));
+}
+// terminals, jumper, hoses and cables at the downstream end (z = zEnd), leads rising at x = xt above yTop
+function addServices(add, o) {
+  const { xt, zt, yLead, yTop, fy, side } = o;
+  const top = yTop + 0.16;
+  add(M.steelDark, gBox(0.04, 0.12, 0.26, xt, yTop + 0.06, zt - 0.1));                       // terminal bracket
+  add(M.cable, gBox(0.3, 0.035, 0.12, xt, top - 0.02, zt));                                     // insulating terminal board
+  for (const dx of [-0.08, 0.08]) {
+    add(M.copper, gBox(0.045, top - yLead, 0.018, xt + dx, (top + yLead) / 2, zt));            // bus bar from the coil
+    add(M.copper, gBox(0.07, 0.05, 0.07, xt + dx, top + 0.025, zt));                            // cable lug block
+    add(M.steel, gCyl(0.012, 0.03, 6, "y", xt + dx, top + 0.065, zt));
+    // power cable: up off the lug, over the side and down to the floor
+    add(M.cable, gHose([[xt + dx, top + 0.05, zt], [xt + dx + side * 0.05, top + 0.22, zt + 0.06], [o.xSide + side * 0.06, top + 0.05, zt + 0.12 + dx], [o.xSide + side * 0.1, (top + fy) / 2, zt + 0.2 + dx], [o.xSide + side * 0.12, fy + 0.03, zt + 0.5 + dx]], 0.024, 12));
+  }
+}
+
+// a dipole: H-type (or C-type) laminated yoke with chamfered poles, end plates, two racetrack coils whose ends
+// stand proud of both faces, the vacuum chamber in the gap, terminals, cooling hoses, lugs, plate, stand.
+// o = { bend (rad, beam turns to local -x), w, h | yt, yb (yoke extent about the beam), gap (half gap),
+//       type: "H" | "C", mat, floor (y of the floor), stand: false }
+function dipole(L, o) {
+  o = o || {};
+  const bend = o.bend || 0, w = o.w || 1.7, H = o.h || 1.4, yt = o.yt ?? H / 2, yb = o.yb ?? -H / 2, gh = o.gap || 0.1;
+  const mat = o.mat || M.dipole, fy = o.floor ?? FLOOR, stand = o.stand !== false, C = o.type === "C";
+  const key = ["D", L, bend, w, yt, yb, gh, mat.uuid, stand ? fy : "-", C ? "C" : "H"].map((v) => typeof v === "number" ? v.toFixed(4) : v).join("|");
+  const g = magGroup(key, (add) => {
+    const zs = bend ? Math.max(2, Math.ceil(Math.abs(bend) / 0.035)) : 1, seg = bend ? L / zs : 99;
+    const hu = yt - gh, hl = gh - yb, win = 0.56 * Math.min(hu, hl), yHi = gh + win, yLo = -gh - win;
+    const tl = 0.13 * w, pw = 0.36 * w, xi = w / 2 - tl, ch = Math.min(0.035, win * 0.2);
+    const ep = 0.035, cw = Math.max(0.05, (C ? 0.8 : 1) * (xi - pw / 2) - 0.03), x1 = C ? pw / 2 : w / 2;
+    const cr = 0.025;
+    // the yoke is split at the median plane (two halves, a few millimetres apart, as built and bolted)
+    const half = (sg) => {
+      const Y = (y) => sg * y, yo = sg > 0 ? yt : -yb, yw = sg > 0 ? yHi : -yLo, k = 0.004;
+      const pts = [[-w / 2, k], [-xi, k], [-xi, yw], [-pw / 2, yw], [-pw / 2, gh + ch], [-pw / 2 + ch, gh]];
+      if (C) pts.push([x1 - ch, gh], [x1, gh + ch], [x1, yo]);
+      else pts.push([pw / 2 - ch, gh], [pw / 2, gh + ch], [pw / 2, yw], [xi, yw], [xi, k], [w / 2, k], [w / 2, yo - cr], [w / 2 - cr, yo]);
+      pts.push([-w / 2 + cr, yo], [-w / 2, yo - cr]);
+      return polyShape(pts.map(([x, y]) => [x, Y(y)]));
+    };
+    for (const sg of [1, -1]) {
+      const shape = half(sg), y0 = sg > 0 ? 0 : yb, y1 = sg > 0 ? yt : 0;
+      add(mat, gExtrude(shape, -L / 2 + ep, L / 2 - ep, zs, 0.004));
+      for (const s of [-1, 1]) add(mat, solidUV(gExtrude(shape, s > 0 ? L / 2 - ep : -L / 2, s > 0 ? L / 2 : -L / 2 + ep, 1, 0.006), y0, y1));   // end plates
+      // tie straps welded along the outside of the lamination stack
+      for (const sx of C ? [-1] : [-1, 1]) add(mat, solidUV(gBox(0.014, 0.06, L - 2 * ep - 0.06, sx * (w / 2 + 0.006), sg * (sg > 0 ? yt : -yb) * 0.55, 0, zs), y0, y1));
+    }
+    // coils: racetracks round each pole, ends standing proud of the end plates by their own width
+    const path = racetrack(pw / 2 + 0.012, L / 2 + 0.02, Math.min(0.06, pw / 2), 6, seg);
+    const r = 0.014;
+    const up = roundPoly([[0, gh + 0.02], [cw, gh + 0.02], [cw, yHi - 0.012], [0, yHi - 0.012]], r, 1);
+    const lo = roundPoly([[0, yLo + 0.012], [cw, yLo + 0.012], [cw, -gh - 0.02], [0, -gh - 0.02]], r, 1);
+    add(M.coil, gCoil(path, up)); add(M.coil, gCoil(path, lo));
+    const zEnd = L / 2 + 0.02 + cw;                                                             // outer face of the coil ends
+    // coil-end clamps: steel brackets bolted to the end plates, over the top of each coil end and down its face
+    for (const sz of [-1, 1]) for (const sy of [1, -1]) for (const xc of [-pw * 0.28, pw * 0.28]) {
+      const yo = sy > 0 ? yHi - 0.002 : yLo + 0.002, yi = sy > 0 ? gh + 0.05 : -gh - 0.05;
+      add(M.steelDark, gBox(0.07, 0.022, cw + 0.06, xc, yo + sy * 0.011, sz * (L / 2 + (cw + 0.06) / 2)));
+      add(M.steelDark, gBox(0.07, Math.abs(yo - yi) + 0.022, 0.02, xc, (yo + yi) / 2 + sy * 0.011, sz * (zEnd + 0.01)));
+    }
+    // vacuum chamber through the gap, flanged where it leaves the coils
+    const zc = zEnd + 0.08, chH = 2 * gh - 0.03, chW = Math.min(pw * 0.8, 0.6);
+    add(M.steel, gBox(chW, chH, 2 * zc, 0, 0, 0, bend ? zs + 2 : 1));
+    for (const s of [-1, 1]) add(M.steel, gBox(chW + 0.07, chH + 0.07, 0.03, 0, 0, s * (zc - 0.015)));
+    // series jumper between the coils on the -x side, then the terminals of the upper coil
+    const xj = -(pw / 2 + 0.012 + cw * 0.5);
+    add(M.copper, gBox(0.07, (yHi + gh) / 2 - (yLo - gh) / 2, 0.02, xj, 0, zEnd + 0.012));
+    for (const y of [(yHi + gh) / 2, (yLo - gh) / 2]) add(M.copper, gBox(0.07, 0.07, 0.03, xj, y, zEnd + 0.004));
+    const xt = pw / 2 + 0.012 + cw * 0.55;
+    addServices(add, { xt, zt: L / 2 + 0.02 + cw * 0.5, yLead: yHi - 0.03, yTop: yt, fy, side: 1, xSide: x1 });
+    // cooling water: a header along the top, two hoses from each coil end
+    const xm = -w * 0.28, ym = yt + 0.07;
+    add(M.pipe, gCyl(0.028, L * 0.9, 10, "z", xm, ym, 0.05 * L, zs));                          // cooling-water header
+    for (const z of [-0.35 * L, 0.35 * L]) add(M.steelDark, gBox(0.05, 0.05, 0.05, xm, yt + 0.025, z));
+    for (const [k, dz] of [[0, -0.04], [1, 0.04]]) {
+      const xh = -(pw / 2 + 0.012 + cw * (0.3 + 0.4 * k));
+      add(M.steel, gCyl(0.02, 0.05, 6, "y", xh, yHi - 0.01 + 0.025, L / 2 + 0.02 + cw * 0.5 + dz));
+      add(M.cable, gHose([[xh, yHi + 0.03, L / 2 + 0.02 + cw * 0.5 + dz], [xh, yt + 0.12, L / 2 + 0.05 + cw * 0.6 + dz], [xm, ym + 0.1, L / 2 - 0.05 + dz], [xm, ym, 0.45 * L + dz]], 0.018));
+      const xl = -(pw / 2 + 0.012 + cw + 0.035 + 0.05 * k);
+      add(M.cable, gHose([[xl + 0.03, (yLo - gh) / 2, zEnd - 0.06], [xl, (yLo - gh) / 2 + 0.1, zEnd + 0.08 + 0.04 * k], [xl - 0.02, yt * 0.6, zEnd + 0.1 + 0.04 * k], [xm - 0.06 * k, ym + 0.05, L / 2 + 0.1], [xm, ym, 0.45 * L - 0.1 * k]], 0.018));
+    }
+    // lifting lugs, rating plate
+    for (const z of L > 1.2 ? [-0.32 * L, 0.32 * L] : [0]) add(mat, solidUV(gLug(yt, z, Math.min(1.6, Math.max(0.8, w / 1.7))), yt, yt + 0.2));
+    const pl = new THREE.PlaneGeometry(0.24, 0.12);
+    if (!C) add(M.plate, pl.rotateY(Math.PI / 2).translate(w / 2 + 0.004, yb * 0.35, L / 2 - 0.3));
+    else add(M.plate, pl.rotateY(-Math.PI / 2).translate(-w / 2 - 0.004, yb * 0.35, L / 2 - 0.3));
+    if (stand) addStand(add, w, L, yb, fy, zs);
+    return bend ? (geo) => bendGeo(geo, bend, L) : null;
+  });
+  g.userData.dipole = { L, o };
+  return shadowy(g);
+}
+
+// a quadrupole (n = 4) or sextupole (n = 6): octagonal (or twelve-sided) laminated yoke with n hyperbolic
+// poles round the bore, a racetrack coil on every pole, end plates, terminals and hoses, stand.
+// o = { n, r0 (bore radius), R (half the size across flats), mat, floor, stand: false }
+function quad(len, o) {
+  o = o || {};
+  const L = len || 0.45, n = o.n || 4, r0 = o.r0 || 0.095, Ro = o.R || 0.44, mat = o.mat || M.quad, fy = o.floor ?? FLOOR, stand = o.stand !== false;
+  const key = ["Q", L, n, r0, Ro, mat.uuid, stand ? fy : "-"].map((v) => typeof v === "number" ? v.toFixed(4) : v).join("|");
+  const g = magGroup(key, (add) => {
+    const m = n === 4 ? 8 : 12, Rv = Ro / Math.cos(Math.PI / m), ri = Ro - 0.24 * Ro;
+    const kap = n === 4 ? 1 : 1.6, pt = 0.85 * r0, pn = 0.7 * r0, sT = Math.sqrt(r0 * r0 + kap * pt * pt);
+    const outer = []; for (let k = 0; k < m; k++) { const a = Math.PI / m + 2 * Math.PI * k / m; outer.push([Rv * Math.cos(a), Rv * Math.sin(a)]); }
+    const hole = [], dA = Math.asin(pn / ri);
+    for (let k = 0; k < n; k++) {
+      const f = Math.PI / n + 2 * Math.PI * k / n, cs = Math.cos(f), sn = Math.sin(f);
+      const P = (s, t) => [s * cs - t * sn, s * sn + t * cs];
+      hole.push(P(Math.sqrt(ri * ri - pn * pn), -pn), P(sT + 0.02 * Ro / 0.44 + 0.01, -pn), P(sT + 0.012, -pt), P(sT, -pt));
+      for (let i = 1; i < 6; i++) { const t = -pt + 2 * pt * i / 6; hole.push(P(Math.sqrt(r0 * r0 + kap * t * t), t)); }
+      hole.push(P(sT, pt), P(sT + 0.012, pt), P(sT + 0.02 * Ro / 0.44 + 0.01, pn), P(Math.sqrt(ri * ri - pn * pn), pn));
+      const a0 = f + dA, a1 = f + 2 * Math.PI / n - dA;
+      for (let i = 1; i < 4; i++) { const a = a0 + (a1 - a0) * i / 4; hole.push([ri * Math.cos(a), ri * Math.sin(a)]); }
+    }
+    const shape = polyShape(outer, [hole]), ep = 0.03;
+    add(mat, gExtrude(shape, -L / 2 + ep, L / 2 - ep, 1, 0.004));
+    for (const s of [-1, 1]) add(mat, solidUV(gExtrude(shape, s > 0 ? L / 2 - ep : -L / 2, s > 0 ? L / 2 : -L / 2 + ep, 1, 0), -Ro, Ro));
+    // coils: trapezoidal section filling the window between neighbouring poles
+    const b0 = sT + 0.07 * Ro / 0.44 + 0.012, b1 = ri - 0.012, tn = Math.tan(Math.PI / n), cap = 0.17 * Ro;
+    const aw = (b) => Math.max(0.02, Math.min(cap, (b * tn - pn) * 0.75 - 0.008));
+    const bc = Math.min(b1, ((cap + 0.008) / 0.75 + pn) / tn);
+    const sec = roundPoly(bc < b1 - 0.01 ? [[0, b0], [aw(b0), b0], [cap, bc], [cap, b1], [0, b1]] : [[0, b0], [aw(b0), b0], [aw(b1), b1], [0, b1]], 0.01, 1);
+    const coil = gCoil(racetrack(pn + 0.008, L / 2 + 0.015, Math.min(pn, 0.035), 4, 99), sec);
+    for (let k = 0; k < n; k++) {
+      const f = Math.PI / n + 2 * Math.PI * k / n, es = V3(Math.cos(f), Math.sin(f), 0), xa = V3(Math.sin(f), -Math.cos(f), 0);
+      add(M.coil, coil.clone().applyMatrix4(new THREE.Matrix4().makeBasis(xa, es, V3(0, 0, 1))));
+      // series jumpers across the windows (not across the top one, where the leads come out)
+      const fb = f + Math.PI / n;
+      if (Math.abs(Math.sin(fb) - 1) > 1e-6) {
+        const rb = (b0 + b1) / 2, jl = 2 * (rb * tn - pn) * 0.9;
+        add(M.copper, gBox(jl, 0.05, 0.016, 0, 0, 0).rotateZ(fb + Math.PI / 2).translate(rb * Math.cos(fb), rb * Math.sin(fb), L / 2 + 0.015 + aw(rb) * 0.6));
+      }
+    }
+    coil.dispose();
+    // leads from the two upper coils, terminals on top; cooling hoses to a small header
+    const rl = (b0 + b1) / 2;
+    const xt = Ro * 0.35;
+    addServices(add, { xt, zt: L / 2 + 0.06, yLead: rl * Math.sin(Math.PI / 2 - Math.PI / n), yTop: Ro, fy, side: 1, xSide: Ro });
+    const xm = -Ro * 0.4, ym = Ro + 0.06;
+    add(M.pipe, gCyl(0.022, Math.max(0.2, L * 0.7), 8, "z", xm, ym, 0.1 * L));
+    add(M.steelDark, gBox(0.04, 0.04, 0.04, xm, Ro + 0.02, 0));
+    for (const [k, dz] of [[0, -0.03], [1, 0.03]]) {
+      const fk = Math.PI / 2 + Math.PI / n, xh = Math.cos(fk) * rl - 0.03 * k, yh = Math.sin(fk) * rl;
+      add(M.cable, gHose([[xh, yh, L / 2 + 0.02 + aw(rl) * 0.5 + dz], [xh - 0.02, yh + 0.1, L / 2 + 0.1 + dz], [xm - 0.04 * k, Ro + 0.15, L / 2 + 0.06], [xm, ym, 0.3 * L + dz]], 0.015, 8));
+    }
+    add(mat, solidUV(gLug(Ro, 0, Math.min(1.2, Math.max(0.7, Ro / 0.44))), Ro, Ro + 0.15));
+    add(M.plate, new THREE.PlaneGeometry(0.2, 0.1).rotateY(Math.PI / 2).translate(Ro + 0.004, -Ro * 0.25, 0));
+    if (stand) addStand(add, Ro * 1.5, Math.max(L, 0.3), -Ro, fy, 1);
+    return null;
+  });
+  return shadowy(g);
+}
+// a diagnostic box between modules: six-way cross with a gate valve
+function diag() {
+  const g = new THREE.Group();
+  g.add(rbox(0.32, 0.32, 0.32, 0.03, M.steel, 0, 0, 0));
+  const up = cyl(0.07, 0.6, M.steel, 12); up.position.y = 0.3; g.add(up);
+  g.add(box(0.36, 0.14, 0.12, M.steelDark, 0, 0.62, 0));
+  for (const sx of [-1, 1]) {
+    const port = cyl(0.09, 0.16, M.steel, 16); port.rotation.z = Math.PI / 2; port.position.set(sx * 0.2, 0, 0); g.add(port);
+    const body = cyl(0.12, 0.08, M.steel, 20); body.rotation.z = Math.PI / 2; body.position.set(sx * 0.3, 0.23, 0); g.add(body);
+    const dial = new THREE.Mesh(new THREE.CircleGeometry(0.105, 24), M.gauge);
+    dial.rotation.y = sx * Math.PI / 2; dial.position.set(sx * 0.343, 0.23, 0); g.add(dial);
+  }
+  const stem = cyl(0.018, 0.16, M.steel, 8); stem.position.set(0, 0.77, 0); g.add(stem);
+  const wheel = new THREE.Mesh(new THREE.TorusGeometry(0.095, 0.016, 6, 16), M.vesselFrame); wheel.rotation.x = Math.PI / 2; wheel.position.set(0, 0.86, 0); g.add(wheel);
+  return shadowy(g);
+}
+// tunnel walls along a polyline, open at the top so the hardware stays visible (an architectural cutaway)
+function wall(a, b, h, t, g) {
+  const L = a.distanceTo(b), m = new THREE.Mesh(new THREE.BoxGeometry(t, h, L), M.concrete);
+  const c = a.clone().add(b).multiplyScalar(0.5); c.y = FLOOR + h / 2;
+  orientTo(m, c, b.clone().sub(a).normalize());
+  m.material = M.concrete.clone(); m.material.map = concreteMap.clone(); m.material.map.repeat.set(Math.max(1, L / 6), Math.max(1, h / 6)); m.material.map.needsUpdate = true;
+  m.castShadow = true; m.receiveShadow = true; g.add(m);
+  const cap = new THREE.Mesh(new THREE.BoxGeometry(t + 0.04, 0.12, L), M.steelDark); orientTo(cap, c.clone().setY(FLOOR + h + 0.06), b.clone().sub(a).normalize()); g.add(cap);
+  return m;
+}
+function slab(x0, z0, x1, z1, y, mat, g, rep) {
+  const m = new THREE.Mesh(new THREE.BoxGeometry(x1 - x0, 0.4, z1 - z0), mat.clone());
+  if (mat.map) { m.material.map = mat.map.clone(); m.material.map.repeat.set((x1 - x0) / (rep || 8), (z1 - z0) / (rep || 8)); m.material.map.needsUpdate = true; }
+  m.position.set((x0 + x1) / 2, y - 0.2, (z0 + z1) / 2); m.receiveShadow = true; g.add(m); return m;
+}
+// a run of lamps on top of a wall: bright strips, the light you would see in the tunnel
+function lamps(a, b, g, every) {
+  const d = b.clone().sub(a), L = d.length(); d.normalize();
+  const geo = new THREE.BoxGeometry(0.16, 0.05, 1.2);
+  for (let s = 3; s < L - 2; s += every || 9) { const m = new THREE.Mesh(geo, M.lamp); orientTo(m, a.clone().addScaledVector(d, s).setY(FLOOR + 4.15), d); g.add(m); }
+}
+// cryogenic transfer line and a cable tray beside a straight segment, with a drop to every module
+function services(a, b, side, n, g) {
+  const d = b.clone().sub(a).normalize(), L = a.distanceTo(b);
+  const off = side.clone().multiplyScalar(2.35);
+  const cl = cyl(0.11, L, M.steel, 14); cl.castShadow = true;
+  orientTo(cl, a.clone().add(b).multiplyScalar(0.5).add(off).setY(2.05), d); cl.rotateX(Math.PI / 2); g.add(cl);
+  const tray = box(0.5, 0.08, L, M.steelDark); orientTo(tray, a.clone().add(b).multiplyScalar(0.5).add(side.clone().multiplyScalar(3.05)).setY(2.55), d); g.add(tray);
+  [[-0.15, M.cable], [-0.05, M.cable], [0.05, M.orange], [0.15, M.cable]].forEach(([o, m]) => {      // cable bundle in the tray
+    const c = cyl(0.035, L, m, 8); orientTo(c, a.clone().add(b).multiplyScalar(0.5).add(side.clone().multiplyScalar(3.05 + o)).setY(2.63), d); c.rotateX(Math.PI / 2); g.add(c);
+  });
+  // Perforated ladder tray, with brackets and insulated transfer-line collars.
+  for (let s = 1; s < L; s += 1.2) {
+    const rung = box(0.48, 0.035, 0.06, M.steel);
+    orientTo(rung, a.clone().addScaledVector(d, s).addScaledVector(side, 3.05).setY(2.58), d); g.add(rung);
+  }
+  for (let i = 0; i < n; i++) {
+    const p = a.clone().addScaledVector(d, L * (i + 0.5) / n).add(off);
+    const bracket = box(0.07, 0.58, 0.08, M.steelDark);
+    bracket.position.copy(p).addScaledVector(side, 0.7).setY(2.24); g.add(bracket);
+    const collar = cyl(0.145, 0.08, M.steel, 14);
+    orientTo(collar, p.clone().setY(2.05), d); collar.rotateX(Math.PI / 2); g.add(collar);
+    const drop = cyl(0.05, 0.6, M.steel, 10); drop.position.copy(p).setY(1.75); g.add(drop);
+  }
+}
+
+// ---------- the linac building: one floor slab under the folded linac, low concrete walls around it
+const gBld = new THREE.Group(); complex.add(gBld);
+const BLD = {};
+{
+  const xs = [], zs = [];
+  for (const k of ["ls1", "fs1", "ls2", "fs2", "ls3", "tr"]) for (const p of P[k]) { xs.push(p.x); zs.push(p.z); }
+  const x0 = Math.min(...xs) - 18, x1 = Math.max(...xs) + 10, z0 = Math.min(...zs) - 6, z1 = Math.max(...zs) + 6;
+  slab(x0, z0, x1, z1, FLOOR, M.floor, gBld, 6);
+  const H = 4.2, T = 0.7;
+  const c = [V3(x0, 0, z0), V3(x1, 0, z0), V3(x1, 0, z1), V3(x0, 0, z1)];
+  for (let i = 0; i < 4; i++) { wall(c[i], c[(i + 1) % 4], H, T, gBld); }
+  // shield walls between the parallel segments, leaving the fold ends open
+  const zMid1 = (P.ls1[0].z + P.ls2[0].z) / 2, zMid2 = (P.ls2[0].z + P.ls3[0].z) / 2;
+  const xa = Math.min(P.ls2[1].x, P.ls1[0].x) + 6, xb = Math.max(P.ls1[1].x, P.ls3[1].x) - 6;
+  wall(V3(xa, 0, zMid1), V3(xb, 0, zMid1), 3.0, 0.5, gBld);
+  wall(V3(xa, 0, zMid2), V3(xb, 0, zMid2), 3.0, 0.5, gBld);
+  lamps(V3(x0, 0, z1 - T / 2), V3(x1, 0, z1 - T / 2), gBld, 8);
+  lamps(V3(x0, 0, z0 + T / 2), V3(x1, 0, z0 + T / 2), gBld, 8);
+  BLD.x0 = x0; BLD.x1 = x1; BLD.z0 = z0; BLD.z1 = z1; BLD.H = H;
+  // yellow safety line on the floor along the inner walls
+  for (const z of [z1 - 1.6, z0 + 1.6]) { const s = box(x1 - x0 - 4, 0.012, 0.1, M.yellow, (x0 + x1) / 2, FLOOR + 0.006, z); s.receiveShadow = true; gBld.add(s); }
+  // ground around the building
+  const gr = new THREE.Mesh(new THREE.PlaneGeometry(3000, 3000), M.earth); gr.rotation.x = -Math.PI / 2; gr.position.y = FLOOR - 0.41; gr.receiveShadow = true; scene.add(gr);
+  // the key light follows the linac footprint
+  const cx = (x0 + x1) / 2, cz = (z0 + z1) / 2, span = Math.max(x1 - x0, z1 - z0) * 0.62;
+  sun.position.set(cx - 90, 160, cz + 120); sun.target.position.set(cx, 0, cz);
+  Object.assign(sun.shadow.camera, { left: -span, right: span, top: span, bottom: -span, near: 20, far: 520 });
+  sun.shadow.camera.updateProjectionMatrix();
+}
+
+// ---------- the tunnel as people see it: a ceiling with light strips (shown only when the camera is
+// inside), electronics racks, cable bundles, hazard bands, and staff for scale. All generic.
+const hazardTex = canvasTex(128, 32, (x, w, h) => {
+  x.fillStyle = "#e0b030"; x.fillRect(0, 0, w, h); x.fillStyle = "#1a1a1a";
+  for (let i = -2; i < 10; i++) { x.beginPath(); x.moveTo(i * 16, h); x.lineTo(i * 16 + 8, h); x.lineTo(i * 16 + 8 + h, 0); x.lineTo(i * 16 + h, 0); x.fill(); }
+}, [8, 1]);
+M.hazard = new THREE.MeshStandardMaterial({ map: hazardTex, roughness: 0.7, metalness: 0.1, envMapIntensity: 0.3 });
+const rackFaceTex = canvasTex(256, 512, (x, w, h) => {
+  x.fillStyle = "#252c35"; x.fillRect(0, 0, w, h);
+  for (let i = 0; i < 8; i++) {
+    const y = 25 + i * 57;
+    x.fillStyle = i === 1 ? "#162b36" : "#343e49"; x.fillRect(18, y, 220, 49);
+    x.fillStyle = "#0e141b"; x.fillRect(25, y + 4, 206, 3);
+    for (let j = 0; j < 17; j++) x.fillRect(76 + j * 8, y + 23, 3, 15);
+    x.fillStyle = "#a3adb5"; x.fillRect(29, y + 13, 25, 4);
+    x.fillStyle = "#78b8b9"; if (i === 1) x.fillRect(73, y + 12, 79, 24);
+    x.fillStyle = "#a1a9b2"; x.fillRect(23, y + 34, 5, 8); x.fillRect(225, y + 34, 5, 8);
+  }
+  x.strokeStyle = "#525d68"; x.lineWidth = 4; x.strokeRect(7, 6, w - 14, h - 12);
+});
+rackFaceTex.colorSpace = THREE.SRGBColorSpace;
+M.rackFace = new THREE.MeshStandardMaterial({ map: rackFaceTex, metalness: 0.35, roughness: 0.6 });
+M.rack = new THREE.MeshStandardMaterial({ color: "#2a2e34", metalness: 0.5, roughness: 0.55, envMapIntensity: 0.5 });
+M.ledG = new THREE.MeshBasicMaterial({ color: new THREE.Color(0.3, 2.2, 0.6), toneMapped: false });
+M.ledA = new THREE.MeshBasicMaterial({ color: new THREE.Color(2.4, 1.4, 0.2), toneMapped: false });
+M.vest = new THREE.MeshStandardMaterial({ color: "#c9d832", roughness: 0.75, emissive: "#1e2600", emissiveIntensity: 0.2 });
+M.cloth = new THREE.MeshStandardMaterial({ color: "#2e3a52", roughness: 0.9 });
+M.skin = new THREE.MeshStandardMaterial({ color: "#c99a7a", roughness: 0.7 });
+M.hat = new THREE.MeshStandardMaterial({ color: "#f2f2f2", roughness: 0.35 });
+M.utility = new THREE.MeshStandardMaterial({ color: "#98574d", metalness: 0.05, roughness: 0.62 });
+M.orange = new THREE.MeshStandardMaterial({ color: "#d4682a", roughness: 0.6 });
+const gCeil = new THREE.Group(); complex.add(gCeil);
+const gFit = new THREE.Group(); complex.add(gFit);
+function person(rot) {
+  const g = new THREE.Group(), y0 = FLOOR;
+  for (const sx of [-0.11, 0.11]) { const l = new THREE.Mesh(new THREE.CapsuleGeometry(0.075, 0.72, 4, 8), M.cloth); l.position.set(sx, y0 + 0.45, 0); g.add(l); }
+  const t = new THREE.Mesh(new THREE.CapsuleGeometry(0.19, 0.5, 4, 10), M.vest); t.position.set(0, y0 + 1.2, 0); t.scale.set(1, 1, 0.7); g.add(t);
+  for (const sx of [-0.27, 0.27]) { const a = new THREE.Mesh(new THREE.CapsuleGeometry(0.06, 0.55, 4, 8), M.cloth); a.position.set(sx, y0 + 1.15, 0); a.rotation.z = sx * 0.3; g.add(a); }
+  const h = new THREE.Mesh(new THREE.SphereGeometry(0.11, 16, 12), M.skin); h.position.set(0, y0 + 1.62, 0); g.add(h);
+  const hat = new THREE.Mesh(new THREE.SphereGeometry(0.135, 16, 8, 0, Math.PI * 2, 0, Math.PI / 2), M.hat); hat.position.set(0, y0 + 1.66, 0); g.add(hat);
+  g.rotation.y = rot || 0;
+  return shadowy(g);
+}
+{
+  const { x0, x1, z0, z1, H } = BLD;
+  // ceiling slab and its light strips, above every aisle
+  const ceil = box(x1 - x0, 0.5, z1 - z0, M.concrete, (x0 + x1) / 2, FLOOR + H + 0.25, (z0 + z1) / 2);
+  ceil.material = M.ceiling.clone(); ceil.material.side = THREE.DoubleSide; ceil.castShadow = false; ceil.receiveShadow = true; gCeil.add(ceil);
+  for (let z = z0 + 3; z < z1 - 2; z += 4.5) for (let x = x0 + 4; x < x1 - 3; x += 7) {
+    gCeil.add(box(1.55, 0.07, 0.3, M.steel, x, FLOOR + H - 0.005, z));
+    const l = box(1.4, 0.05, 0.18, M.lamp, x, FLOOR + H - 0.03, z); l.castShadow = false; gCeil.add(l);
+  }
+  // Silver conduits and small red utility lines beneath the ceiling, with repeated hangers.
+  for (const z of [z0 + 2, z1 - 2, P.ls1[0].z - 3.2, P.ls2[0].z - 3.2, P.ls3[0].z - 3.2]) {
+    for (const [offset, radius, mat] of [[0, 0.13, M.steel], [0.38, 0.045, M.utility]]) {
+      const conduit = cyl(radius, x1 - x0 - 2, mat, 12); conduit.rotation.z = Math.PI / 2;
+      conduit.position.set((x0 + x1) / 2, FLOOR + H - 0.32, z + offset); gCeil.add(conduit);
+    }
+    for (let x = x0 + 4; x < x1 - 3; x += 7) {
+      gCeil.add(box(0.045, 0.04, 0.8, M.steelDark, x, FLOOR + H - 0.49, z + 0.15));
+      for (const zz of [z - 0.2, z + 0.5]) gCeil.add(box(0.02, 0.48, 0.02, M.steelDark, x, FLOOR + H - 0.24, zz));
+    }
+  }
+  // electronics racks along the two long outer walls, LEDs on the front
+  for (const [zw, f] of [[z1 - 0.95, -1], [z0 + 0.95, 1]]) for (let x = x0 + 12; x < x1 - 8; x += 16) {
+    for (let k = 0; k < 3; k++) {
+      const xr = x + k * 0.85;
+      gFit.add(rbox(0.8, 2.0, 0.6, 0.025, M.rack, xr, FLOOR + 1.0, zw));
+      const face = new THREE.Mesh(new THREE.PlaneGeometry(0.74, 1.88), M.rackFace);
+      face.position.set(xr, FLOOR + 1.0, zw + f * 0.305); if (f < 0) face.rotation.y = Math.PI; gFit.add(face);
+      gFit.add(box(0.82, 0.08, 0.64, M.steelDark, xr, FLOOR + 0.04, zw));
+      for (let j = 0; j < 6; j++) gFit.add(box(0.04, 0.025, 0.01, j % 3 ? M.ledG : M.ledA, xr - 0.25 + 0.1 * j, FLOOR + 1.6 - 0.18 * (j % 2), zw + f * 0.31));
+    }
+  }
+  // hazard bands on the floor at both fold ends
+  for (const xe of [P.ls1[1].x + RF + 2.5, P.ls2[1].x - RF - 2.5]) {
+    const hb = box(0.6, 0.014, z1 - z0 - 3, M.hazard, xe, FLOOR + 0.007, (z0 + z1) / 2);
+    hb.material = M.hazard.clone(); hb.material.map = hazardTex.clone(); hb.material.map.repeat.set((z1 - z0) / 2, 1); hb.material.map.rotation = Math.PI / 2; hb.material.map.needsUpdate = true; gFit.add(hb);
+  }
+  // staff: a few people in the aisles, for scale
+  // off the walking line (z = -4.3): near the shield walls, or beside the modules on the far side
+  const spots = [[14, -8.6, 1.2], [46, -9.4, -1.6], [97, -8.2, 0.4], [70, 3.6, 2.6], [150, -21.0, 3.0], [60, -20.4, -0.6], [210, -21.2, 2.2], [30, -49.0, 1.8], [80, -48.6, -2.0]];
+  for (const [x, z, r] of spots) { if (x > x0 + 2 && x < x1 - 2) { const pp = person(r); pp.position.set(x, 0, z); gFit.add(pp); } }
+}
+// ---------- front end: two ion sources on a mezzanine, the beam line down to the RFQ
+const gFE = section("front end: ion sources, RFQ", "lin", P.fe, 6);
+{
+  const p0 = P.fe[0];
+  const plat = new THREE.Group();
+  plat.add(box(18, 0.35, 24, M.steelDark, p0.x - 2, p0.y - 2.6, p0.z));
+  for (const sx of [-8, 6]) for (const sz of [-10, 10]) { const c = box(0.35, p0.y - FLOOR - 2.6, 0.35, M.steelDark, p0.x + sx, (FLOOR + p0.y - 2.6) / 2, p0.z + sz); plat.add(c); }
+  for (const z of [-11.8, 11.8]) plat.add(box(18, 0.05, 0.05, M.yellow, p0.x - 2, p0.y - 1.4, p0.z + z));   // handrail
+  for (const dz of [-6, 6]) {                                            // ECR source: high-voltage cage + solenoid stack
+    const src = new THREE.Group();
+    src.add(rbox(3.2, 3.6, 3.2, 0.1, M.vessel, 0, -0.7, 0));
+    const sol = cyl(0.9, 2.2, M.copper, 28); sol.rotation.z = Math.PI / 2; sol.position.set(2.4, 0, 0); src.add(sol);
+    for (let k = 0; k < 4; k++) { const r = cyl(1.0, 0.12, M.steelDark, 28); r.rotation.z = Math.PI / 2; r.position.set(1.5 + k * 0.6, 0, 0); src.add(r); }
+    src.position.set(p0.x - 4, p0.y, p0.z + dz); plat.add(src);
+  }
+  gFE.add(shadowy(plat));
+  pipe(P.fe, gFE, 0.09);
+  const rfq = new THREE.Group();                                           // 5 m four-vane RFQ [17]
+  const tank = cyl(0.75, 5, M.copper, 4); tank.rotation.x = Math.PI / 2; tank.rotation.z = Math.PI / 4; rfq.add(tank);
+  for (let k = 0; k < 5; k++) { const r = box(1.55, 1.55, 0.08, M.steelDark, 0, 0, -2.2 + k * 1.1); r.rotation.z = Math.PI / 4; rfq.add(r); }
+  rfq.add(box(1.0, 1.0, 4.4, M.steelDark, 0, FLOOR + 0.5, 0));
+  orientTo(rfq, V3(-11, 0, 0), V3(1, 0, 0)); gFE.add(shadowy(rfq));
+}
+// ---------- the three linac segments: cryomodules with warm diagnostics between them
+function linacSegment(pts, n, g, kind, side) {
+  const a = pts[0], b = pts[1], L = a.distanceTo(b), d = b.clone().sub(a).normalize(), slot = L / n;
+  pipe(pts, g, 0.06);
+  for (let i = 0; i < n; i++) {
+    const k = typeof kind === "function" ? kind(i) : kind;
+    const cm = cryomodule(slot * 0.82, k);
+    orientTo(cm, a.clone().addScaledVector(d, slot * (i + 0.5)), d); g.add(cm);
+    if (i < n - 1) g.add(orientTo(diag(), a.clone().addScaledVector(d, slot * (i + 1)), d));
+  }
+  services(a, b, side, n, g);
+}
+const gLS1 = section("LS1: QWR β = 0.041, 0.085", "lin", P.ls1, 10);
+linacSegment(P.ls1, NCM[0], gLS1, "q", V3(0, 0, 1));
+const gFS1 = section("FS1 + charge stripper", "strip", P.fs1, 8);
+function arcMagnets(pts, g, nd) {
+  pipe(pts, g, 0.075);
+  const path = new Path(pts);
+  for (let i = 0; i < nd; i++) placeAlong(dipole(Math.min(3.2, path.L / nd * 0.5)), path, path.L * (i + 0.5) / nd, g);
+  for (let i = 0; i <= nd; i++) placeAlong(quad(), path, Math.min(path.L - 0.5, path.L * i / nd + 0.5), g);
+}
+arcMagnets(P.fs1, gFS1, 4);
+{ // liquid-lithium film stripper: a shielded chamber with its pump cart, at the start of FS1
+  const st = new THREE.Group();
+  st.add(rbox(1.6, 1.8, 1.4, 0.08, M.steel, 0, 0.2, 0));
+  const win = cyl(0.22, 0.04, M.glow, 20); win.rotation.x = Math.PI / 2; win.position.set(0, 0.1, 0.72); st.add(win);   // the hot film seen through a view port
+  st.add(rbox(1.2, 1.0, 1.0, 0.06, M.steelDark, 1.6, FLOOR + 0.5, 0));
+  placeAlong(shadowy(st), pDriver, sStrip, gFS1);
+}
+const gLS2 = section("LS2: HWR β = 0.29, 0.53", "foc", P.ls2, 10);
+linacSegment(P.ls2, NCM[1], gLS2, "h", V3(0, 0, 1));
+const gLS3 = section("FS2, LS3, transport to target", "rig", join(P.fs2, P.ls3, P.tr), 8);
+arcMagnets(P.fs2, gLS3, 4);
+linacSegment(P.ls3, NCM[2], gLS3, "h", V3(0, 0, 1));
+pipe(P.tr, gLS3, 0.075);
+for (let i = 1; i < 6; i++) placeAlong(quad(), new Path(P.tr), FR.transportL * i / 6, gLS3);
+
+// ---------- target hall and ARIS: shielding blocks around the target, large separator magnets
+const gAris = section("target + ARIS separator", "sep", join(P.bds, P.aris), 10);
+{
+  arcMagnets(P.bds, gAris, 4);
+  const sh = new THREE.Group();                                            // stacked shielding blocks
+  for (let ix = -2; ix <= 2; ix++) for (let iy = 0; iy < 3; iy++) for (let iz = -1; iz <= 1; iz++) {
+    if (Math.abs(ix) < 2 && iz === 0 && iy < 2) continue;                   // the target vault
+    sh.add(box(1.95, 1.95, 1.95, M.shield, ix * 2, FLOOR + 1 + iy * 2, iz * 2));
+  }
+  sh.position.copy(TGT); sh.position.y = 0; gAris.add(shadowy(sh));
+  const tg = cyl(0.6, 0.15, M.glow, 32); tg.rotation.z = Math.PI / 2; tg.position.copy(TGT); gAris.add(tg);   // the rotating graphite wheel, hot
+  pipe(P.aris, gAris, 0.12);
+  for (let i = 0; i < 6; i++) placeAlong(dipole(4, { gap: 0.14 }), pAris, pAris.L * (i + 0.6) / 6.6, gAris);
+  for (let i = 0; i < 10; i++) placeAlong(quad(0.7, { r0: 0.13, R: 0.5 }), pAris, pAris.L * (i + 0.3) / 10, gAris);
+  for (const u of [0.42, 0.78]) {                                          // wedge degrader chambers
+    const w = new THREE.Group(); w.add(rbox(1.4, 1.4, 1.0, 0.06, M.steel, 0, 0, 0));
+    const wd = new THREE.Mesh(new THREE.CylinderGeometry(0.0, 0.35, 0.5, 3), M.copper); wd.position.y = 0.95; w.add(wd);
+    placeAlong(shadowy(w), pAris, pAris.L * u, gAris);
+  }
+  const xs = P.aris.map((p) => p.x), zs = P.aris.map((p) => p.z);
+  slab(Math.min(...xs, TGT.x) - 12, Math.min(...zs, TGT.z) - 12, Math.max(...xs, TGT.x) + 12, Math.max(...zs, TGT.z) + 12, FLOOR, M.floor, gAris, 6);
+}
+// ---------- FRIB's experimental areas, after the ARIS focal plane. Topology after Gade & Sherrill,
+// Phys. Scr. 91, 053003 (2016) Fig. 2 (south vaults S1 to S3 for fast beams, N4 gas stopping, the
+// stopped-beam area, the ReA3 hall) with FRIB's later changes: FDSi in S1, Sweeper + MoNA-LISA in
+// S2, S800 in S3, GRETA's frame in the ReA6 vault (FRIB lab update, Fall 2025), HRS in its own high
+// bay (planned; CD-2/3 and start of execution for its beam line, HRS-HTBL, February 2025). Positions and room sizes are schematic.
+const EA = (() => {
+  // the complex extends away from the linac building: e points from the linac centre past the ARIS focal plane
+  const n = P.aris.length, lc = new THREE.Vector3(); let k = 0;
+  for (const key of ["ls1", "ls2", "ls3"]) for (const q of P[key]) { lc.add(q); k++; }
+  lc.multiplyScalar(1 / k);
+  const e = P.aris[n - 1].clone().sub(lc).setY(0).normalize();
+  const f = V3(-e.z, 0, e.x);                               // across the distribution line
+  const o = P.aris[n - 1].clone().setY(0);
+  const at = (s, t, y) => o.clone().addScaledVector(e, s).addScaledVector(f, t).setY(y || 0);
+  return { e, f, o, at };
+})();
+P.dist = [EA.at(0, 0), EA.at(148, 0)];                        // fast-beam distribution line
+// stopped and reaccelerated beams: N4 gas stopper -> stopped-beam area -> ReA linac -> ReA3 hall -> ReA6
+P.rea = [EA.at(15, 24), EA.at(40, 24), EA.at(52, 24), EA.at(74, 24), EA.at(140, 24)];
+const pRea = new Path(P.rea);
+
+function room(g, s0, s1, t0, t1, H) {                        // a vault: floor and four walls, open on top
+  const c = [EA.at(s0, t0), EA.at(s1, t0), EA.at(s1, t1), EA.at(s0, t1)];
+  const fl = new THREE.Mesh(new THREE.BoxGeometry(Math.abs(t1 - t0), 0.4, Math.abs(s1 - s0)), M.floor.clone());
+  fl.material.map = floorMap.clone(); fl.material.map.repeat.set(Math.abs(t1 - t0) / 6, Math.abs(s1 - s0) / 6); fl.material.map.needsUpdate = true;
+  fl.position.copy(EA.at((s0 + s1) / 2, (t0 + t1) / 2, FLOOR - 0.19)); fl.quaternion.setFromUnitVectors(V3(0, 0, 1), EA.e);
+  fl.receiveShadow = true; g.add(fl);
+  for (let i = 0; i < 4; i++) wall(c[i], c[(i + 1) % 4], H || 4.5, 0.8, g);
+}
+function placeLocal(obj, s, t, rotY, g, y) {                 // local +z along the distribution line
+  obj.position.copy(EA.at(s, t, y || 0));
+  obj.quaternion.setFromUnitVectors(V3(0, 0, 1), EA.e);
+  if (rotY) obj.rotateY(rotY);
+  g.add(obj); return obj;
+}
+// ---- instruments (generic shapes at roughly the right size, not drawings)
+function clover() {                                           // HPGe clover: crystal can, cryostat, LN2 dewar
+  const g = new THREE.Group();
+  g.add(rbox(0.12, 0.12, 0.2, 0.02, M.steel, 0, 0, 0.1));
+  const c = cyl(0.05, 0.35, M.steelDark, 14); c.rotation.x = Math.PI / 2; c.position.z = 0.36; g.add(c);
+  const d = cyl(0.13, 0.32, M.steel, 18); d.position.set(0, 0.12, 0.62); g.add(d);
+  return g;
+}
+function fdsi() {                                             // decay station: implantation chamber ringed by clovers
+  const g = new THREE.Group();
+  const ch = cyl(0.22, 0.6, M.steel, 24); ch.rotation.x = Math.PI / 2; g.add(ch);
+  for (let i = 0; i < 11; i++) {
+    const a = (i / 11) * Math.PI * 2, el = (i % 2 ? 0.45 : -0.35);
+    const cl = clover();
+    const dir = V3(Math.cos(a) * Math.cos(el), Math.sin(el), Math.sin(a) * Math.cos(el));
+    cl.position.copy(dir.multiplyScalar(0.28)); cl.lookAt(0, 0, 0); cl.rotateY(Math.PI); g.add(cl);
+  }
+  g.add(rbox(1.8, 0.2, 1.8, 0.05, M.steelDark, 0, FLOOR + 0.9, 0));
+  for (const sx of [-0.8, 0.8]) for (const sz of [-0.8, 0.8]) g.add(box(0.1, 0.9, 0.1, M.steelDark, sx, FLOOR + 0.45, sz));
+  for (let k = 0; k < 3; k++) g.add(box(0.8, 1.9, 0.6, M.rack, -2.5 + k * 0.85, FLOOR + 0.95, -2.2));
+  return shadowy(g);
+}
+function sweeperMona() {                                      // Sweeper dipole and the MoNA-LISA wall of scintillator bars
+  const g = new THREE.Group();
+  const sw = dipole(2.2); sw.scale.set(1.6, 1.6, 1); g.add(sw);
+  const bars = new THREE.Group();
+  for (let col = 0; col < 2; col++) for (let row = 0; row < 16; row++) {
+    const b = box(2.0, 0.1, 0.1, M.black, 0, -0.75 + row * 0.1, col * 0.12);
+    bars.add(b);
+    for (const sx of [-1.05, 1.05]) { const pm = cyl(0.045, 0.14, M.steel, 10); pm.rotation.z = Math.PI / 2; pm.position.set(sx, -0.75 + row * 0.1, col * 0.12); bars.add(pm); }
+  }
+  bars.add(box(2.4, 0.15, 0.5, M.steelDark, 0, FLOOR + 0.07, 0.06)); for (const sx of [-1.1, 1.1]) bars.add(box(0.1, 1.6, 0.1, M.steelDark, sx, -0.1, 0.06));
+  bars.position.set(1.2, 0, 7); bars.rotation.y = -0.3; g.add(bars);
+  const b2 = bars.clone(); b2.position.set(1.9, 0, 9.5); g.add(b2);
+  return shadowy(g);
+}
+function s800() {                                             // S800: quadrupole doublet, two dipoles bending the beam up, focal plane
+  const g = new THREE.Group();
+  const tc = cyl(0.5, 0.8, M.steel, 24); tc.rotation.x = Math.PI / 2; g.add(tc);           // target chamber
+  const turn = cyl(5.5, 0.25, M.steelDark, 48); turn.position.y = FLOOR + 0.12; g.add(turn);  // rotating platform
+  const q = quad(1.2); q.scale.setScalar(1.6); q.position.z = 2.2; g.add(q);
+  const q2 = quad(1.2); q2.scale.setScalar(1.6); q2.position.z = 3.8; g.add(q2);
+  const d1 = dipole(3.2, { stand: false }); d1.scale.set(2.2, 2.2, 1); d1.position.set(0, 0.9, 6.0); d1.rotation.x = -0.45; d1.rotation.z = Math.PI / 2; g.add(d1);
+  const d2 = dipole(3.2, { stand: false }); d2.scale.set(2.2, 2.2, 1); d2.position.set(0, 4.6, 8.4); d2.rotation.x = -1.15; d2.rotation.z = Math.PI / 2; g.add(d2);
+  g.add(rbox(1.6, 1.4, 2.2, 0.06, M.steel, 0, 7.8, 9.2));                                // focal-plane detector box
+  for (const [x, z, h] of [[-1.8, 6, 3.4], [1.8, 6, 3.4], [-1.8, 8.6, 7.2], [1.8, 8.6, 7.2]]) g.add(box(0.3, h, 0.3, M.yellow, x, FLOOR + h / 2, z));
+  return shadowy(g);
+}
+function gasStopper() {                                       // linear gas cell and the cyclotron gas stopper
+  const g = new THREE.Group();
+  const cell = cyl(0.55, 4.0, M.steel, 24); cell.rotation.x = Math.PI / 2; g.add(cell);
+  for (let k = 0; k < 5; k++) { const r = cyl(0.7, 0.08, M.steelDark, 24); r.rotation.x = Math.PI / 2; r.position.z = -1.8 + k * 0.9; g.add(r); }
+  const cyc = new THREE.Group();
+  for (const y of [-0.55, 0.55]) { const p = cyl(1.6, 0.7, magPaint("#9e2b25", true), 40); p.position.y = y; cyc.add(p); }
+  const coil = new THREE.Mesh(new THREE.TorusGeometry(1.45, 0.16, 12, 40), M.coil); coil.rotation.x = Math.PI / 2; cyc.add(coil);
+  cyc.position.set(3.5, 0.2, 2.5); g.add(cyc);
+  g.add(rbox(3, 0.25, 6, 0.05, M.steelDark, 0, FLOOR + 0.6, 0));
+  return shadowy(g);
+}
+function lebit() {                                            // LEBIT: beam preparation and the 9.4 T Penning-trap magnet
+  const g = new THREE.Group();
+  const mag = cyl(0.65, 1.9, M.vessel, 32); mag.rotation.x = Math.PI / 2; mag.position.z = 2.2; g.add(mag);
+  const top = cyl(0.25, 0.6, M.steel, 20); top.position.set(0, 0.85, 2.2); g.add(top);
+  g.add(rbox(1.2, 0.5, 3.2, 0.05, M.steel, 0, 0, -0.8));                                  // cooler-buncher
+  g.add(rbox(2.6, 0.2, 6.5, 0.05, M.steelDark, 0, FLOOR + 0.7, 0.6));
+  return shadowy(g);
+}
+function becola() {                                           // BECOLA: collinear laser line on an optical table
+  const g = new THREE.Group();
+  const bl = cyl(0.08, 7, M.pipe, 12); bl.rotation.x = Math.PI / 2; g.add(bl);
+  g.add(rbox(1.5, 0.15, 3.0, 0.03, M.steelDark, -2.2, -0.35, 0));
+  g.add(box(1.4, 0.8, 2.8, M.steelDark, -2.2, FLOOR + 0.55, 0));
+  for (let k = 0; k < 4; k++) g.add(rbox(0.3, 0.25, 0.55, 0.03, M.vessel, -2.5 + (k % 2) * 0.6, -0.15, -1 + k * 0.6));
+  const beam = box(0.012, 0.012, 7, M.ledG, 0, 0, 0); g.add(beam);                         // the laser along the beam axis
+  return shadowy(g);
+}
+function secar() {                                            // SECAR, about 40 m of dipoles, quadrupoles and velocity filters
+  const g = new THREE.Group();
+  const kinds = ["q", "q", "d", "q", "d", "q", "w", "q", "d", "q", "w", "q", "d", "q", "q"];
+  kinds.forEach((k, i) => {
+    const z = i * 40 / kinds.length;
+    if (k === "d") { const d = dipole(1.8); d.position.z = z; g.add(d); }
+    else if (k === "q") { const q = quad(0.6); q.position.z = z; g.add(q); }
+    else { const w = rbox(1.2, 1.5, 2.2, 0.08, M.steel, 0, 0, z); g.add(w); g.add(box(0.06, 1.1, 2.0, M.copper, 0.45, 0, z)); g.add(box(0.06, 1.1, 2.0, M.copper, -0.45, 0, z)); }
+  });
+  const p = cyl(0.06, 40, M.pipe, 10); p.rotation.x = Math.PI / 2; p.position.z = 20; g.add(p);
+  return shadowy(g);
+}
+function solenoidBore(r, L) {                                 // a large-bore superconducting solenoid (AT-TPC, SOLARIS)
+  const g = new THREE.Group();
+  const outer = cyl(r, L, M.vessel, 48); outer.rotation.x = Math.PI / 2; g.add(outer);
+  const bore = cyl(r * 0.55, L + 0.02, M.black, 40); bore.rotation.x = Math.PI / 2; g.add(bore);
+  for (const s of [-1, 1]) { const ring = new THREE.Mesh(new THREE.TorusGeometry(r * 0.78, r * 0.1, 10, 40), M.steelDark); ring.position.z = s * L / 2; g.add(ring); }
+  g.add(box(r * 1.6, r * 0.5, L * 0.7, M.steelDark, 0, -r - r * 0.25, 0));
+  return shadowy(g);
+}
+function greta() {                                            // GRETA: two hemispheres of tracking germanium modules on a frame
+  const g = new THREE.Group();
+  for (const s of [-1, 1]) {
+    const h = new THREE.Mesh(new THREE.IcosahedronGeometry(0.75, 1), M.steelDark);
+    h.scale.set(1, 1, 0.5); h.position.z = s * 0.42; g.add(h);
+    const ed = new THREE.LineSegments(new THREE.EdgesGeometry(h.geometry), new THREE.LineBasicMaterial({ color: "#c27a4a" })); ed.scale.copy(h.scale); ed.position.copy(h.position); g.add(ed);
+  }
+  for (const s of [-1, 1]) g.add(box(0.15, 2.4, 0.15, M.yellow, s * 1.1, FLOOR + 1.2, 0));
+  g.add(box(2.4, 0.15, 0.15, M.yellow, 0, 0.95, 0));
+  return shadowy(g);
+}
+function jensa() {                                            // JENSA gas-jet target: chamber and its compressor stack
+  const g = new THREE.Group();
+  g.add(rbox(1.2, 1.2, 1.2, 0.1, M.steel, 0, 0, 0));
+  for (let k = 0; k < 3; k++) g.add(rbox(0.9, 1.1, 0.7, 0.05, M.vessel, 2 + k * 1.0, FLOOR + 0.55, 0));
+  return shadowy(g);
+}
+function hrsHall() {                                          // HRS: the high-transmission line and the spectrometer magnets
+  const g = new THREE.Group();
+  for (let k = 0; k < 6; k++) { const q = quad(0.8); q.scale.setScalar(1.3); q.position.z = k * 6; g.add(q); }
+  const d1 = dipole(4); d1.scale.set(2.4, 2.4, 1); d1.position.set(0, 0, 40); d1.rotation.y = 0.25; g.add(d1);
+  const d2 = dipole(4); d2.scale.set(2.4, 2.4, 1); d2.position.set(2.2, 0, 47); d2.rotation.y = 0.55; g.add(d2);
+  return shadowy(g);
+}
+
+// ---- the areas
+const gDist = section("fast-beam distribution", "end", P.dist, 6);
+pipe(P.dist, gDist, 0.09);
+for (let s = 8; s < 150; s += 14) placeLocal(quad(0.6), s, 0, 0, gDist);
+{ // a floor under the whole experimental complex, at the level of the linac building
+  const c = [EA.at(-6, -36), EA.at(204, -36), EA.at(204, 40), EA.at(-6, 40)];
+  const xs = c.map((p) => p.x), zs = c.map((p) => p.z);
+  slab(Math.min(...xs), Math.min(...zs), Math.max(...xs), Math.max(...zs), FLOOR - 0.02, M.floor, gDist, 6);
+}
+function branch(s, t, g) {                                    // a dipole on the line and a branch into a vault
+  placeLocal(dipole(1.6), s, 0, 0, g);
+  const a = EA.at(s, 0), b = EA.at(s, t);
+  pipe([a, b], g, 0.08);
+}
+const END = [];                                               // for the end-stations panel
+function area(name, key, s0, s1, t0, t1, H) {
+  const g = section(name, "end", [EA.at(s0, t0), EA.at(s1, t1)], 2);
+  g.userData.key = key; room(g, s0, s1, t0, t1, H); END.push(g); return g;
+}
+const gS1 = area("S1: FDSi", "S1", 8, 24, -10, -28); branch(16, -19, gS1); placeLocal(fdsi(), 16, -19, 0, gS1);
+const gS2 = area("S2: Sweeper + MoNA-LISA", "S2", 28, 46, -10, -30); branch(34, -15, gS2); placeLocal(sweeperMona(), 34, -16, Math.PI / 2, gS2);
+const gS3 = area("S3: S800 spectrograph", "S3", 50, 72, -10, -32); branch(58, -15, gS3); placeLocal(s800(), 58, -16, Math.PI / 2, gS3);
+const gN4 = area("N4: gas stopping", "N4", 8, 26, 10, 30); branch(15, 17, gN4); placeLocal(gasStopper(), 15, 20, Math.PI / 2, gN4);
+const gStop = area("stopped-beam area: LEBIT, BECOLA", "stop", 30, 48, 10, 30);
+placeLocal(lebit(), 35, 26, 0, gStop); placeLocal(becola(), 43, 24, 0, gStop);
+const gReA3 = area("ReA3 hall: SECAR, AT-TPC, JENSA", "ReA3", 52, 120, 10, 36, 5);
+linacSegment([EA.at(52, 24), EA.at(74, 24)], 4, gReA3, "q", EA.f.clone());
+// SECAR on its own line, branched off the ReA3 line; JENSA, its main target, at its entrance [k]
+placeLocal(dipole(1.4), 75.5, 24, 0, gReA3);
+pipe([EA.at(75.5, 24), EA.at(76.6, 28.5), EA.at(78, 31)], gReA3, 0.06);
+placeLocal(jensa(), 78, 31, 0, gReA3); placeLocal(secar(), 79.5, 31, 0, gReA3);
+placeLocal(solenoidBore(1.1, 2.4), 90, 16, 0, gReA3);
+pipe(P.rea.slice(0, 2), gN4, 0.06); pipe(P.rea.slice(1, 3), gStop, 0.06); pipe([EA.at(74, 24), EA.at(140, 24)], gReA3, 0.06);
+const gReA6 = area("ReA6 vault: SOLARIS, GRETA", "ReA6", 122, 142, 10, 36, 5);
+placeLocal(solenoidBore(1.5, 3.2), 128, 24, 0, gReA6); placeLocal(greta(), 137, 24, 0, gReA6);
+const gHRS = area("HRS high bay (planned)", "HRS", 146, 204, -12, 12, 7);
+placeLocal(hrsHall(), 150, 0, 0, gHRS);
+
+// ---------- merge the static hardware: one draw call per material and section instead of thousands
+// (each mesh is baked into world coordinates; pick boxes, lines and shader materials stay separate)
+function mergeStatic(root) {
+  root.updateMatrixWorld(true);
+  const groups = new Map(), drop = [];
+  root.traverse((m) => {
+    if (!m.isMesh || m.material.isShaderMaterial || m.material.opacity === 0) return;
+    const g = m.geometry.index ? m.geometry.toNonIndexed() : m.geometry.clone();
+    g.applyMatrix4(m.matrixWorld);
+    if (!groups.has(m.material)) groups.set(m.material, []);
+    groups.get(m.material).push(g); drop.push(m);
+  });
+  for (const m of drop) m.parent.remove(m);
+  for (const [mat, list] of groups) {
+    let n = 0; for (const g of list) n += g.attributes.position.count;
+    const pos = new Float32Array(3 * n), nor = new Float32Array(3 * n), uv = new Float32Array(2 * n);
+    let o = 0;
+    for (const g of list) {
+      pos.set(g.attributes.position.array, 3 * o); nor.set(g.attributes.normal.array, 3 * o);
+      if (g.attributes.uv) uv.set(g.attributes.uv.array, 2 * o);
+      o += g.attributes.position.count; g.dispose();
+    }
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute("position", new THREE.BufferAttribute(pos, 3));
+    geo.setAttribute("normal", new THREE.BufferAttribute(nor, 3));
+    geo.setAttribute("uv", new THREE.BufferAttribute(uv, 2));
+    const mesh = new THREE.Mesh(geo, mat);
+    mesh.castShadow = !mat.transparent && mat !== M.lamp && mat !== M.glow; mesh.receiveShadow = true;
+    // baked in world space: the parent must not move it again
+    const inv = new THREE.Matrix4().copy(root.matrixWorld).invert(); mesh.applyMatrix4(inv);
+    root.add(mesh);
+  }
+}
+for (const g of complex.children) mergeStatic(g);
+
+// ---------- other facilities: modules in assets/fac-*.js register FACILITY_MODULES.key = { label, build(A) }.
+// build(A) adds sections with A.section(...) (they attach to that facility's root) and returns
+// { view: { target: [x, y, z], pos: [x, y, z] }, beams: [{ pts: [Vector3...], n, speed, color: [r, g, b], size }], note: html }
+// the key light's shadow area: each facility sets its own, FRIB's is the linac building
+function shadowArea(cx, cz, span) {
+  sun.position.set(cx - 90, 160, cz + 120); sun.target.position.set(cx, 0, cz);
+  Object.assign(sun.shadow.camera, { left: -span, right: span, top: span, bottom: -span, near: 20, far: 520 });
+  sun.shadow.camera.updateProjectionMatrix();
+}
+const FRIB_SUN = { p: sun.position.clone(), t: sun.target.position.clone(), s: sun.shadow.camera.right };
+let pendingSun = null;
+const A3D = { THREE, V3, M, FLOOR, magPaint, shadowArea: (cx, cz, span) => { pendingSun = [cx, cz, span]; }, box, rbox, cyl, orientTo, placeAlong, pipe, cryomodule, dipole, quad, diag, wall, slab,
+  lamps, person, shadowy, canvasTex, rnd, gHose, cyclotrons: FAC.cyclotrons, isolde: FAC.isolde, Path, join, bez, arc, floorMap, concreteMap,
+  section: (name, tab, pts, pad) => section(name, tab, pts, pad) };
+window.A3D = A3D;
+const FACS = { frib: { label: "FRIB", root: complex } };
+let CUR_FAC = "frib";
+function buildFacility(key) {
+  const mod = (window.FACILITY_MODULES || {})[key];
+  if (!mod) return null;
+  const root = new THREE.Group(); scene.add(root);
+  SECTION_ROOT = root; CUR_BUILD = key;
+  const out = mod.build(A3D) || {};
+  SECTION_ROOT = complex; CUR_BUILD = "frib";
+  for (const g of root.children) mergeStatic(g);
+  const beams = (out.beams || []).map((b) => ({ path: new Path(b.pts), n: b.n || 20, speed: b.speed || 0.08, color: b.color || [0.66, 0.8, 0.95], size: b.size || 0.8 }));
+  FACS[key] = { label: mod.label, root, beams, view: out.view, note: out.note || "", fog: out.fog || [260, 900], sun: pendingSun }; pendingSun = null;
+  for (const g of SECTIONS) if (g.userData.fac === key && !LAB.some((L) => L.g === g)) addLabel(g);
+  return FACS[key];
+}
+
+// ---------- beam bunches: glowing sprites
+const NB = 190;
+const bunchPos = new Float32Array(NB * 3), bunchCol = new Float32Array(NB * 3), bunchSize = new Float32Array(NB);
+const bunchGeo = new THREE.BufferGeometry();
+bunchGeo.setAttribute("position", new THREE.BufferAttribute(bunchPos, 3));
+bunchGeo.setAttribute("color", new THREE.BufferAttribute(bunchCol, 3));
+bunchGeo.setAttribute("aSize", new THREE.BufferAttribute(bunchSize, 1));
+const bunchMat = new THREE.ShaderMaterial({
+  uniforms: { uPix: { value: 600 }, uGain: { value: 1 } },
+  vertexShader: `
+    attribute vec3 color; attribute float aSize; uniform float uPix;
+    varying vec3 vC;
+    void main(){ vC = color; vec4 mv = modelViewMatrix * vec4(position, 1.0); gl_Position = projectionMatrix * mv;
+      gl_PointSize = clamp(aSize * uPix / -mv.z, 1.5, 24.0); }`,
+  fragmentShader: `
+    uniform float uGain; varying vec3 vC;
+    void main(){ vec2 d = gl_PointCoord - 0.5; float r2 = dot(d, d); if (r2 > 0.25) discard;
+      float a = exp(-r2 * 18.0); gl_FragColor = vec4(vC * a * uGain, a);
+      #include <tonemapping_fragment>
+      #include <colorspace_fragment>
+    }`,
+  transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
+});
+const bunches = new THREE.Points(bunchGeo, bunchMat); bunches.frustumCulled = false; scene.add(bunches);
+const BR = [];
+const pDist = new Path(P.dist);
+for (let i = 0; i < NB; i++) BR.push({ r: i < 120 ? "D" : i < 150 ? "A" : i < 170 ? "E" : "R", ph: Math.random() });
+
+// ---------- beam envelope along LS1, LS2, LS3
+const ENV_SEG = [P.ls1, P.ls2, P.ls3];
+const ENV_NT = 18, ENV_DS = 0.5;
+const envN = ENV_SEG.map((p) => Math.ceil(p[0].distanceTo(p[1]) / ENV_DS) + 1);
+const envTot = envN.reduce((a, b) => a + b, 0);
+const envGeo = new THREE.BufferGeometry();
+const envPos = new Float32Array(envTot * ENV_NT * 3), envS = new Float32Array(envTot * ENV_NT);
+{
+  const idx = []; let base = 0;
+  for (const n of envN) {
+    for (let i = 0; i < n - 1; i++) for (let j = 0; j < ENV_NT; j++) {
+      const a = (base + i) * ENV_NT + j, b = (base + i) * ENV_NT + (j + 1) % ENV_NT, c = (base + i + 1) * ENV_NT + j, d = (base + i + 1) * ENV_NT + (j + 1) % ENV_NT;
+      idx.push(a, c, b, b, c, d);
+    }
+    base += n;
+  }
+  envGeo.setIndex(idx);
+  envGeo.setAttribute("position", new THREE.BufferAttribute(envPos, 3));
+  envGeo.setAttribute("aS", new THREE.BufferAttribute(envS, 1));
+}
+const envMat = new THREE.ShaderMaterial({
+  uniforms: { uT: { value: 0 }, uCol: { value: new THREE.Color("#f2c14e") }, uLen: { value: 10 } },
+  vertexShader: `
+    attribute float aS; varying float vS; varying vec3 vN; varying vec3 vV;
+    void main(){ vS = aS; vec4 mv = modelViewMatrix * vec4(position, 1.0); vN = normalize(normalMatrix * normal); vV = normalize(-mv.xyz); gl_Position = projectionMatrix * mv; }`,
+  fragmentShader: `
+    uniform float uT, uLen; uniform vec3 uCol; varying float vS; varying vec3 vN; varying vec3 vV;
+    void main(){
+      float f = pow(1.0 - abs(dot(normalize(vN), normalize(vV))), 2.2);
+      float flow = 0.55 + 0.45 * sin(6.2831853 * (vS / uLen - uT));
+      float a = (0.10 + 0.55 * f) * flow;
+      gl_FragColor = vec4(uCol * a * 1.6, a);
+      #include <tonemapping_fragment>
+      #include <colorspace_fragment>
+    }`,
+  transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide,
+});
+const envelope = new THREE.Mesh(envGeo, envMat); envelope.frustumCulled = false; complex.add(envelope);
+const ENV_EXAG = 1.25;   // displayed semi-axis = ENV_EXAG * sqrt(beta [m]) metres: sqrt(eps beta) magnified about 400 times, eps = 10 mm mrad
+function buildEnvelope(F) {
+  const X = F.planes.x, Y = F.planes.y, Lc = F.Lc;
+  const stable = X.stable && Y.stable;
+  const lam = (P) => (P.stable ? 1 : Math.abs(P.tr) / 2 + Math.sqrt(Math.max(0, P.tr * P.tr / 4 - 1)));
+  const grow = Math.max(lam(X), lam(Y));
+  const bAt = (Pl, u) => {
+    if (!Pl.stable) return Math.min(Lc, 10);
+    const s = u * Pl.s[Pl.s.length - 1];
+    let lo = 0, hi = Pl.s.length - 1;
+    while (hi - lo > 1) { const m = (lo + hi) >> 1; if (Pl.s[m] < s) lo = m; else hi = m; }
+    const t = (s - Pl.s[lo]) / Math.max(1e-12, Pl.s[hi] - Pl.s[lo]);
+    return Pl.beta[lo] + t * (Pl.beta[hi] - Pl.beta[lo]);
+  };
+  const p = new THREE.Vector3(), q = new THREE.Vector3(), up = V3(0, 1, 0);
+  let k = 0, s0 = 0;
+  ENV_SEG.forEach((seg, si) => {
+    const a = seg[0], b = seg[1], L = a.distanceTo(b), d = b.clone().sub(a).normalize(), side = V3(-d.z, 0, d.x), n = envN[si];
+    for (let i = 0; i < n; i++) {
+      const s = Math.min(L, i * ENV_DS), u = (s % Lc) / Lc;
+      p.copy(a).addScaledVector(d, s);
+      let ax = ENV_EXAG * Math.sqrt(bAt(X, u)), ay = ENV_EXAG * Math.sqrt(bAt(Y, u));
+      if (!stable) { const gfac = Math.min(16, Math.pow(grow, Math.min(40, s / Lc))); ax = Math.min(9, ax * Math.sqrt(gfac)); ay = Math.min(9, ay * Math.sqrt(gfac)); }
+      for (let j = 0; j < ENV_NT; j++) {
+        const th = 2 * Math.PI * j / ENV_NT, kk = (k * ENV_NT + j);
+        q.copy(p).addScaledVector(side, ax * Math.cos(th)).addScaledVector(up, ay * Math.sin(th));
+        envPos[3 * kk] = q.x; envPos[3 * kk + 1] = q.y; envPos[3 * kk + 2] = q.z;
+        envS[kk] = s0 + s;
+      }
+      k++;
+    }
+    s0 += L;
+  });
+  envGeo.attributes.position.needsUpdate = true; envGeo.attributes.aS.needsUpdate = true;
+  envGeo.computeVertexNormals();
+  envMat.uniforms.uCol.value.set(stable ? "#f2c14e" : "#ff6b6b");
+  envMat.uniforms.uLen.value = Math.max(2, Lc * 3);
+}
+
+// ---------- section labels
+const labelsDiv = document.getElementById("labels");
+const LAB = [];
+function addLabel(g) {
+  const d = document.createElement("div"); d.className = "axlab";
+  d.innerHTML = g.userData.name; labelsDiv.appendChild(d);
+  d.addEventListener("click", () => focusSection(g));
+  LAB.push({ g, d });
+}
+for (const g of SECTIONS) addLabel(g);
+
+// ---------- 2D plots
+function setupCanvas(c) {
+  const d = Math.min(devicePixelRatio, 2), w = c.clientWidth, h = c.clientHeight;
+  c.width = Math.max(1, w * d); c.height = Math.max(1, h * d);
+  const x = c.getContext("2d");
+  x.setTransform(d, 0, 0, d, 0, 0);
+  return { x, w, h };
+}
+const sci = (v) => {
+  const e = Math.round(Math.log10(v));
+  if (Math.abs(Math.log10(v) - e) > 1e-6) return String(+v.toPrecision(2));
+  return e >= -2 && e <= 3 ? String(10 ** e >= 1 ? 10 ** e : (10 ** e).toFixed(-e)) : "1e" + e;
+};
+function axes(ctx, w, h, o) {
+  const L = 42, R = 8, T = 8, B = 18;
+  const tx = (v) => (o.xlog ? Math.log10(v) : v), ty = (v) => (o.ylog ? Math.log10(v) : v);
+  const X = (v) => L + (tx(v) - tx(o.x0)) / (tx(o.x1) - tx(o.x0)) * (w - L - R);
+  const Y = (v) => T + (ty(o.y1) - ty(v)) / (ty(o.y1) - ty(o.y0)) * (h - T - B);
+  ctx.font = "10px ui-monospace,Menlo,monospace"; ctx.lineWidth = 1;
+  const yt = [], xt = [];
+  if (o.ylog) for (let e = Math.ceil(Math.log10(o.y0) - 1e-9); e <= Math.log10(o.y1) + 1e-9; e++) yt.push(10 ** e);
+  else for (let v = Math.ceil(o.y0 / o.ys - 1e-9) * o.ys; v <= o.y1 + 1e-9; v += o.ys) yt.push(v);
+  if (o.xlog) for (let e = Math.ceil(Math.log10(o.x0) - 1e-9); e <= Math.log10(o.x1) + 1e-9; e++) xt.push(10 ** e);
+  else for (let v = Math.ceil(o.x0 / o.xs - 1e-9) * o.xs; v <= o.x1 + 1e-9; v += o.xs) xt.push(v);
+  ctx.strokeStyle = "#1e2432"; ctx.fillStyle = "#8a92a6";
+  for (const v of yt) { ctx.beginPath(); ctx.moveTo(L, Y(v)); ctx.lineTo(w - R, Y(v)); ctx.stroke(); ctx.textAlign = "right"; ctx.fillText(o.ylog ? sci(v) : (o.yf ? o.yf(v) : +v.toFixed(6)), L - 4, Y(v) + 3); }
+  for (const v of xt) { ctx.beginPath(); ctx.moveTo(X(v), T); ctx.lineTo(X(v), h - B); ctx.stroke(); ctx.textAlign = "center"; ctx.fillText(o.xlog ? sci(v) : (o.xf ? o.xf(v) : +v.toFixed(6)), X(v), h - 5); }
+  ctx.save(); ctx.beginPath(); ctx.rect(L, T, w - L - R, h - T - B); ctx.clip();
+  return { X, Y, L, R, T, B, done: () => ctx.restore() };
+}
+function curve(ctx, xs, ys, X, Y, color, w, dash) {
+  ctx.beginPath(); ctx.strokeStyle = color; ctx.lineWidth = w || 1.6; ctx.setLineDash(dash || []);
+  let on = false;
+  for (let i = 0; i < xs.length; i++) {
+    const a = X(xs[i]), b = Y(ys[i]);
+    if (!isFinite(a) || !isFinite(b)) { on = false; continue; }
+    if (!on) { ctx.moveTo(a, b); on = true; } else ctx.lineTo(a, b);
+  }
+  ctx.stroke(); ctx.setLineDash([]);
+}
+const niceStep = (x) => { const e = 10 ** Math.floor(Math.log10(x)), m = x / e; return (m < 1.5 ? 1 : m < 3.5 ? 2 : m < 7.5 ? 5 : 10) * e; };
+const logspace = (a, b, n) => Array.from({ length: n }, (_, i) => a * Math.pow(b / a, i / (n - 1)));
+const vline = (ctx, ax, x, col, lab, h, dy) => {
+  ctx.strokeStyle = col; ctx.setLineDash([3, 3]); ctx.beginPath(); ctx.moveTo(ax.X(x), ax.T); ctx.lineTo(ax.X(x), h - ax.B); ctx.stroke(); ctx.setLineDash([]);
+  if (lab) { ctx.fillStyle = col; ctx.textAlign = "left"; ctx.fillText(lab, ax.X(x) + 3, ax.T + 10 + (dy || 0)); }
+};
+
+// ---------- the beam
+function loadIon(Z, N) {
+  S.Z = Z; S.N = N;
+  if (S.Q > Z) S.Q = Z;
+  document.getElementById("q").max = Z;
+  update();
+}
+function update() {
+  const r = ROW.get(S.Z + "," + S.N);
+  ION = ACCEL.makeIon(S.Z, S.N, S.Q, r[5]);
+  K = ACCEL.kin(ION, S.Tn);
+  document.getElementById("qout").textContent = `${S.Q}+${S.Q === S.Z ? " bare" : ""}`;
+  document.getElementById("q").value = S.Q;
+  document.getElementById("e").value = Math.log10(S.Tn);
+  const et = document.getElementById("etxt");
+  if (document.activeElement !== et) et.value = +S.Tn.toPrecision(4);
+  const pn = K.p / ION.A;
+  document.getElementById("kin").innerHTML = `
+    <dt>Bρ</dt><dd class="big">${fmt(K.brho, K.brho < 10 ? 4 : 3)} T m</dd>
+    <dt>ion mass</dt><dd>${fmt(ION.M / ACCEL.U, 5)} u</dd>
+    <dt>γ, β</dt><dd>${fmt(K.gamma, 5)}, ${fmt(K.beta, 5)}</dd>
+    <dt>T</dt><dd>${K.T >= 1000 ? fmt(K.T / 1000, 3) + " GeV" : fmtE(K.T)}</dd>
+    <dt>p/A</dt><dd>${fmt(pn, pn < 1 ? 4 : 2)} MeV/c</dd>
+    <dt>Q/A</dt><dd>${fmt(S.Q / ION.A, 4)}</dd>
+    <dt>Eρ</dt><dd>${fmt(K.erho, 3)} MV</dd>`;
+  const w = [];
+  if (r[6]) w.push("Mass from a NUBASE extrapolation, not a measurement.");
+  if (r[3] != null && r[3] !== 99 && r[3] < 0) w.push(`T1/2 = ${(10 ** r[3]).toExponential(1)} s: not a beam that can be accelerated from a source.`);
+  const W = document.getElementById("warn"); W.hidden = !w.length; W.textContent = w.join(" ");
+  document.getElementById("stamp").innerHTML = `<b>${nucName(S.Z, S.N)}<sup>${S.Q}+</sup></b><small>${fmt(S.Tn, S.Tn < 10 ? 3 : 1)} MeV/u · Bρ = ${fmt(K.brho, 3)} T m · β = ${fmt(K.beta, 4)}</small>`;
+  for (const b of document.querySelectorAll("#chips button")) { const p = parseNucleus(b.dataset.n); b.setAttribute("aria-pressed", p.Z === S.Z && p.N === S.N ? "true" : "false"); }
+  computeFoc();
+  drawTab();
+}
+// FRIB stops of a uranium beam: the energy and charge state at each point [17]
+const STOPS = [
+  ["source", 0.012, 33, "RFQ injection, 12 keV/u"],
+  ["LS1", 0.5, 33, "after the RFQ, 0.5 MeV/u"],
+  ["stripper", 17, 33, "at the stripper, before"],
+  ["stripped", 17, 78, "at the stripper, after (mean 78+)"],
+  ["target", 200, 78, "design energy on target"],
+];
+{
+  const box = document.getElementById("stops");
+  for (const [lab, T, Q, t] of STOPS) { const b = document.createElement("button"); b.textContent = lab; b.title = "238U: " + t; b.dataset.t = T; b.dataset.q = Q; box.appendChild(b); }
+  box.insertAdjacentHTML("afterbegin", '<span class="src" style="align-self:center">FRIB uranium:</span>');
+  box.addEventListener("click", (e) => {
+    const b = e.target.closest("button"); if (!b) return;
+    S.Z = 92; S.N = 146; S.Q = +b.dataset.q; S.Tn = +b.dataset.t;
+    document.getElementById("q").max = 92; update();
+  });
+}
+
+// ---------- tab: SC linac
+function drawLin() {
+  // cavity table
+  const fam = FR.cav.filter((c) => !c.bunch);           // accelerating families; the bunching modules are listed only
+  document.getElementById("cavTab").innerHTML = `<tr><th>segment</th><th>type</th><th>β<sub>opt</sub></th><th>f (MHz)</th><th>V<sub>eff</sub> (MV)</th><th>modules × cav.</th></tr>` +
+    FR.cav.map((c) => `<tr><td>${c.seg}</td><td>${c.type}</td><td>${c.bg}</td><td>${c.f}</td><td>${c.V == null ? "n.q." : c.V}</td><td>${c.cm}</td></tr>`).join("");
+  document.getElementById("cavSrc").innerHTML = `${FR.cavRef}. RFQ ${FR.rfq.f} MHz, ${FR.rfq.Tin * 1000} keV/u to ${FR.rfq.Tout} MeV/u [17]. References under facilities.`;
+  // effective voltage vs beta for each family
+  {
+    const { x: ctx, w, h } = setupCanvas(document.getElementById("cvTtf"));
+    const bs = logspace(0.005, 1, 300);
+    const ax = axes(ctx, w, h, { xlog: true, x0: 0.005, x1: 1, y0: 0, y1: 4.6, ys: 1 });
+    for (const c of fam) curve(ctx, bs, bs.map((b) => c.V * ACCEL.ttf2(b, c.bg) * (b > c.bg / 2 ? 1 : NaN)), ax.X, ax.Y, c.f < 100 ? "#a8cdf2" : "#f2c14e", 1.8);
+    for (const c of fam) { ctx.fillStyle = "#8a92a6"; ctx.textAlign = "center"; ctx.fillText(c.bg, ax.X(c.bg), ax.Y(c.V) - 4); }
+    const prot = ACCEL.makeIon(92, 146, 33, ION.BA);
+    const mk = [[ACCEL.kin(prot, FR.rfq.Tout).beta, "0.5 MeV/u"], [ACCEL.kin(prot, FR.strip.Tn).beta, "stripper"], [ACCEL.kin(prot, FR.design.Tn).beta, "200 MeV/u"]];
+    mk.forEach(([b, l], i) => { vline(ctx, ax, b, "#59627a", "", h); ctx.save(); ctx.translate(ax.X(b) - 3, h - ax.B - 4); ctx.rotate(-Math.PI / 2); ctx.fillStyle = "#8a92a6"; ctx.textAlign = "left"; ctx.fillText("U " + l, 0, 0); ctx.restore(); });
+    vline(ctx, ax, K.beta, "#ffffff", "", h);
+    ctx.fillStyle = "#8a92a6"; ctx.textAlign = "left"; ctx.fillText("MV", ax.L + 4, ax.T + 22);
+    ax.done();
+  }
+  // best family for this beam
+  let best = null;
+  for (const c of fam) { const v = c.V * ACCEL.ttf2(K.beta, c.bg) * (K.beta > c.bg / 2 ? 1 : 0); if (!best || v > best.v) best = { c, v }; }
+  const qa = S.Q / ION.A;
+  document.getElementById("linKv").innerHTML = `
+    <dt>β of this beam</dt><dd>${fmt(K.beta, 4)}: best family β<sub>opt</sub> = ${best.c.bg} (${best.c.f} MHz), T/T<sub>opt</sub> = ${fmt(best.v / best.c.V, 3)}</dd>
+    <dt>gain per cavity</dt><dd class="big">${fmt(qa * best.v, 4)} MeV/u at crest</dd>
+    <dt></dt><dd>(Q/A = ${fmt(qa, 4)}) × ${fmt(best.v, 3)} MV; with Q = 78 it would be ${fmt(78 / ION.A * best.v, 4)} MeV/u</dd>`;
+  // cell length
+  const f = S.fRF;
+  document.getElementById("linF").value = Math.log10(f / 1e6);
+  document.getElementById("linFout").textContent = fmtHz(f);
+  for (const b of document.querySelectorAll("#fchips button")) b.setAttribute("aria-pressed", Math.abs(+b.dataset.f * 1e6 - f) < 1e3 ? "true" : "false");
+  const prot = ACCEL.makeIon(1, 0, 1, 0);
+  const T = logspace(1e-3, 1e3, 200);
+  const { x: ctx, w, h } = setupCanvas(document.getElementById("cvLin"));
+  const ax = axes(ctx, w, h, { xlog: true, ylog: true, x0: 1e-3, x1: 1e3, y0: 1e-3, y1: 10 });
+  curve(ctx, [1e-3, 1e3], [0.05, 0.05], ax.X, ax.Y, "#59627a", 1, [3, 3]);
+  curve(ctx, T, T.map((t) => ACCEL.cellLength(prot, t, f, "wideroe")), ax.X, ax.Y, "#ff9656", 1.4, [4, 3]);
+  curve(ctx, T, T.map((t) => ACCEL.cellLength(ION, t, f, "wideroe")), ax.X, ax.Y, "#f2c14e", 2);
+  const dot = (t, col, lab) => { const y = ACCEL.cellLength(ION, t, f, "wideroe"); ctx.fillStyle = col; ctx.beginPath(); ctx.arc(ax.X(t), ax.Y(y), 3.5, 0, 7); ctx.fill(); ctx.textAlign = "left"; ctx.fillText(lab + " " + fmtLen(y), ax.X(t) + 6, ax.Y(y) + 3); };
+  dot(FR.rfq.Tin, "#a8cdf2", "12 keV/u:");
+  dot(S.Tn, "#ffffff", "this beam:");
+  ctx.fillStyle = "#8a92a6"; ctx.textAlign = "left"; ctx.fillText("βλ/2 (m)", ax.L + 4, ax.T + 10);
+  ax.done();
+}
+
+// ---------- tab: charge stripping
+function drawStrip() {
+  const Z = S.Z, cd = ACCEL.chargeDist(Z, K.beta);
+  const isU = Z === 92;
+  const c0 = isU ? 78 : Math.round(cd.qave);
+  const half = S.wq / 2, q1 = Math.max(1, Math.round(c0 - Math.floor(half))), q2 = Math.min(Z, q1 + S.wq);
+  document.getElementById("wqout").textContent = `${q1}+ to ${q2}+`;
+  document.getElementById("stripTitle").innerHTML = `${nucName(S.Z, S.N)} at ${fmt(S.Tn, 2)} MeV/u`;
+  let fr = 0; for (let q = q1; q <= q2; q++) fr += cd.f[q];
+  // distribution
+  {
+    const { x: ctx, w, h } = setupCanvas(document.getElementById("cvCsd"));
+    const lo = Math.max(0, Math.floor(cd.qave - 5 * cd.d) - 1), hi = Math.min(Z, Math.ceil(cd.qave + 5 * cd.d) + 1);
+    const ymax = Math.max(...cd.f.slice(lo, hi + 1)) * 1.15;
+    const ax = axes(ctx, w, h, { x0: lo - 0.5, x1: hi + 0.5, xs: niceStep((hi - lo) / 8) < 1 ? 1 : niceStep((hi - lo) / 8), y0: 0, y1: ymax, ys: niceStep(ymax / 4), yf: (v) => (100 * v).toFixed(0) + "%" });
+    const bw = Math.max(2, (ax.X(1) - ax.X(0)) * 0.7);
+    for (let q = lo; q <= hi; q++) { ctx.fillStyle = q >= q1 && q <= q2 ? "#f2c14e" : "#4f7fae"; ctx.fillRect(ax.X(q) - bw / 2, ax.Y(cd.f[q]), bw, ax.Y(0) - ax.Y(cd.f[q])); }
+    ax.done();
+  }
+  const kin2 = (q) => ACCEL.kin(ACCEL.makeIon(S.Z, S.N, q, ION.BA), S.Tn).brho;
+  const qm = (q1 + q2) / 2;
+  document.getElementById("stripKv").innerHTML = `
+    <dt>Q̄, Q<sub>ave</sub>, d</dt><dd>${fmt(cd.qbar, 2)}, <b style="color:var(--accent)">${fmt(cd.qave, 2)}</b>, ${fmt(cd.d, 2)}</dd>
+    <dt>in ${q1}+…${q2}+</dt><dd class="big">${cd.inDomain ? (100 * fr).toFixed(1) + "%" : "n/a"}</dd>
+    ${cd.inDomain ? "" : `<dt></dt><dd style="color:var(--accent)">Outside the fit's domain: Q̄/Z = ${fmt(cd.qbar / Z, 4)} and the fitted width d = ${fmt(cd.d, 2)}, below half a charge unit${cd.qave + 3 * cd.d > Z ? ", with the Gaussian reaching past the bare ion" : ""}. The ion is stripped to its last electrons, whose populations a Gaussian does not describe; only the mean is shown (bars: the mean split between its two neighbouring charge states).</dd>`}
+    ${isU ? `<dt>FRIB design</dt><dd>mean 78+, about 85% in 76+…80+ at ~17 MeV/u${ref(17)}</dd>` : ""}
+    <dt>Q/A gain</dt><dd>×${fmt(cd.qave / S.Q, 3)} over Q = ${S.Q} set on the left: energy per cavity grows in proportion</dd>
+    <dt>Bρ spread</dt><dd>${fmt(kin2(q2), 4)} to ${fmt(kin2(q1), 4)} T m, ±${fmt(100 * (q2 - q1) / 2 / qm, 2)}% (Δq/q)</dd>`;
+  // mean charge vs energy
+  {
+    const { x: ctx, w, h } = setupCanvas(document.getElementById("cvQe"));
+    const T = logspace(0.5, 1000, 200);
+    const io = ACCEL.makeIon(S.Z, S.N, 1, ION.BA);
+    const bs = T.map((t) => ACCEL.baron(Z, ACCEL.kin(io, t).beta)), qv = bs.map((b) => b.qave);
+    const inD = bs.map((b) => ACCEL.baronInDomain(b, Z));
+    const ax = axes(ctx, w, h, { xlog: true, x0: 0.5, x1: 1000, y0: 0, y1: Z * 1.05, ys: niceStep(Z / 4) });
+    curve(ctx, [0.5, 1000], [Z, Z], ax.X, ax.Y, "#59627a", 1, [3, 3]);
+    curve(ctx, T, qv.map((q, i) => (inD[i] ? q : NaN)), ax.X, ax.Y, "#f2c14e", 2);                         // the fit's domain
+    curve(ctx, T, qv.map((q, i) => (!inD[i] || (i > 0 && !inD[i - 1]) || (i < inD.length - 1 && !inD[i + 1]) ? q : NaN)), ax.X, ax.Y, "#f2c14e", 1, [2, 3]);   // outside it
+    ctx.fillStyle = "#fff"; ctx.beginPath(); ctx.arc(ax.X(S.Tn), ax.Y(cd.qave), 3.5, 0, 7); ctx.fill();
+    if (isU) {
+      const pt = (t, q, col, lab, dx, dy) => { ctx.fillStyle = col; ctx.fillRect(ax.X(t) - 3, ax.Y(q) - 3, 6, 6); ctx.textAlign = dx < 0 ? "right" : "left"; ctx.fillText(lab, ax.X(t) + dx, ax.Y(q) + dy); };
+      pt(FR.strip.Tn, FR.strip.qmean, "#a8cdf2", "design 78+", -6, -4);
+      pt(FR.kanemura.Tn, FR.kanemura.c, "#ff9656", "C 76.9", 6, -2);
+      pt(FR.kanemura.Tn, FR.kanemura.li, "#ff6b6b", "Li 73.7", 6, 12);
+    }
+    ax.done();
+  }
+  document.getElementById("qeLeg").innerHTML = isU ? `<i class="sq" style="background:#a8cdf2"></i>FRIB design${ref(17)} <i class="sq" style="background:#ff9656;margin-left:8px"></i><i class="sq" style="background:#ff6b6b"></i>measured, C and Li${ref(20)}` : "FRIB points shown for uranium";
+}
+
+// ---------- tab: focusing
+let FOD = null;
+function computeFoc() {
+  const F = S.foc;
+  if (F.type === "sol") {
+    FOD = ACCEL.solenoidChannel(K.brho, F.B, F.ls, F.Ls, 1200);
+    if (FOD.ls !== F.ls) { F.ls = FOD.ls; document.getElementById("sl").value = F.ls; }   // the magnet must fit in the cell
+  } else FOD = ACCEL.fodo(F.f, F.Lc, F.lq, 1200, "fodo");
+  buildEnvelope(FOD);
+}
+function drawFoc() {
+  const F = S.foc, D = FOD, X = D.planes.x, Y = D.planes.y, th = D.thin, sol = F.type === "sol";
+  for (const b of document.querySelectorAll("#focType button")) b.setAttribute("aria-pressed", b.dataset.v === F.type ? "true" : "false");
+  document.getElementById("solRows").hidden = !sol; document.getElementById("fodoRows").hidden = sol;
+  document.getElementById("sBout").textContent = F.B.toFixed(2) + " T";
+  document.getElementById("slout").textContent = F.ls.toFixed(2) + " m";
+  document.getElementById("sLout").textContent = F.Ls.toFixed(2) + " m";
+  document.getElementById("fFout").textContent = F.f.toFixed(2) + " m";
+  document.getElementById("fLout").textContent = F.Lc.toFixed(1) + " m";
+  document.getElementById("fQout").textContent = F.lq === 0 ? "thin" : F.lq.toFixed(2) + " m";
+  const stable = X.stable && Y.stable;
+  document.getElementById("fodoState").innerHTML = stable ? `<span class="tag ok">stable</span>` : `<span class="tag no">unstable</span>`;
+  const deg = (r) => (r * 180 / Math.PI).toFixed(2) + "°";
+  const Lc = D.Lc;
+  let html = "";
+  if (sol) {
+    const G = 20, cross = F.B * F.B / (4 * G);
+    html += `<dt>f (this beam)</dt><dd class="big">${fmtLen(D.fsol)}</dd><dt></dt><dd>Bρ = ${fmt(K.brho, 4)} T m, 1/f = B²ℓ<sub>s</sub>/(4(Bρ)²)</dd>
+      <dt>vs a quad</dt><dd>same 1/f from a ${F.ls.toFixed(2)} m quadrupole needs G = ${fmt(ACCEL.quadGradient(K.brho, D.fsol, F.ls), 3)} T/m (and defocuses the other plane)</dd>`;
+  } else {
+    html += `<dt>gradient</dt><dd>${F.lq > 0 ? fmt(ACCEL.quadGradient(K.brho, F.f, F.lq), 3) + " T/m for this beam (G = Bρ/(fℓ<sub>q</sub>))" : "set ℓ<sub>q</sub> &gt; 0 to see the gradient this beam needs"}</dd>`;
+  }
+  html += `<dt>Tr M</dt><dd>${X.tr.toFixed(5)}${sol ? "" : ", " + Y.tr.toFixed(5)} <span style="color:var(--muted)">(thin ${th.tr.toFixed(5)})</span></dd>
+    <dt>μ per cell</dt><dd>${X.stable ? deg(X.mu) : "none"}${!sol && Y.stable ? " / " + deg(Y.mu) : ""} <span style="color:var(--muted)">(thin ${th.stable ? deg(th.mu) : "none"})</span></dd>
+    <dt>β<sub>max</sub>, β<sub>min</sub></dt><dd>${X.stable ? X.bmax.toFixed(3) + ", " + X.bmin.toFixed(3) + " m" : "n/a"} <span style="color:var(--muted)">(thin ${th.stable ? th.bmax.toFixed(3) + ", " + th.bmin.toFixed(3) : "n/a"})</span></dd>
+    <dt>stability</dt><dd>|Tr M| ${sol ? "" : "max "}= ${Math.max(Math.abs(X.tr), Math.abs(Y.tr)).toFixed(4)} ${stable ? "&lt; 2: stable" : "≥ 2: unstable"} (this cell, ${(sol ? D.ls : F.lq) > 0 ? "thick" : "thin"} ${sol ? "solenoid" : "lenses"})</dd>
+    <dt>thin-lens comparison</dt><dd>${sol ? `L<sub>c</sub>/f = ${fmt(Lc / D.f, 3)}; thin lenses are stable for L<sub>c</sub>/f &lt; 4` : `L<sub>c</sub>/(4f) = ${th.s.toFixed(4)}; thin lenses are stable for L<sub>c</sub>/(4f) &lt; 1`}, so a thin cell would be ${th.stable ? "stable" : "unstable"}${(sol ? D.ls : F.lq) > 0 && th.stable !== stable ? `: the finite ${sol ? "solenoid" : "quadrupole"} length moves the boundary` : ""}</dd>`;
+  document.getElementById("fodoKv").innerHTML = html;
+  document.getElementById("betaLeg").innerHTML = sol ? `<span><i style="border-color:var(--accent)"></i>β (both planes)</span><span><i class="sq" style="background:var(--accent)"></i>solenoid</span>`
+    : `<span><i style="border-color:var(--accent)"></i>β<sub>x</sub></span><span><i style="border-color:var(--neu)"></i>β<sub>y</sub></span><span><i class="sq" style="background:var(--accent)"></i>F</span><span><i class="sq" style="background:var(--neu)"></i>D</span>`;
+  document.getElementById("trkCap").textContent = `x (mm) vs s (m), 12 cells${sol ? ", rotating frame" : ""}`;
+  document.getElementById("focText").innerHTML = sol
+    ? `A solenoid focuses both planes at once, with strength ∝ (B/Bρ)². A quadrupole's strength is only ∝ G/Bρ. So at low rigidity, slow heavy ions, the solenoid wins, and above Bρ ≈ B²/(4G) the quadrupole does (for 8 T against 20 T/m, at ${fmt(64 / 80, 2)} T m). FRIB's cryomodules carry superconducting solenoids, 69 in all, up to 8 T${ref(17)}; its folding arcs and the line to the target use quadrupoles. Slide the energy on the left down to the RFQ exit and watch a fixed solenoid over-focus the beam.`
+    : `A quadrupole focuses in one plane and defocuses in the other. Alternate them, F then D, and the beam is net focused in both planes: it passes the F lens far from the axis and the D lens close to it. The cell is stable only if |Tr M| &lt; 2; push the lenses too strong and the rays grow without bound. For thin lenses the edge is f = L<sub>c</sub>/4; quadrupoles of finite length move it, so the stability shown is that of the cell's own matrix and the thin-lens ratio only a comparison. This is a generic cell, not a FRIB lattice.`;
+  // beta functions over 3 cells
+  {
+    const { x: ctx, w, h } = setupCanvas(document.getElementById("cvBeta"));
+    const ncel = 3;
+    const bmax = stable ? Math.max(X.bmax, Y.bmax) : 10;
+    const ys = niceStep(bmax / 4);
+    const ax = axes(ctx, w, h, { x0: 0, x1: ncel * Lc, xs: Lc / 2, y0: 0, y1: Math.ceil(bmax * 1.12 / ys) * ys, ys, xf: (v) => (Math.abs(v / Lc - Math.round(v / Lc)) < 1e-9 ? Math.round(v / Lc) + "L" : "") });
+    const lens = sol ? [[Lc / 2, "#f2c14e"]] : [[0, "#f2c14e"], [Lc / 2, "#a8cdf2"], [Lc, "#f2c14e"]];
+    const lw = sol ? D.ls : Math.max(F.lq, 0.02);
+    for (let c = 0; c < ncel; c++) for (const [s0, col] of lens) {
+      ctx.fillStyle = col + "55"; const ww = Math.max(3, ax.X(lw) - ax.X(0));
+      ctx.fillRect(ax.X(c * Lc + s0) - ww / 2, ax.T, ww, h - ax.T - ax.B);
+    }
+    if (stable) for (const [Pl, col] of sol ? [[X, "#f2c14e"]] : [[X, "#f2c14e"], [Y, "#a8cdf2"]]) {
+      const xs = [], ys2 = [];
+      for (let c = 0; c < ncel; c++) for (let i = 0; i < Pl.s.length; i++) { xs.push(c * Lc + Pl.s[i]); ys2.push(Pl.beta[i]); }
+      curve(ctx, xs, ys2, ax.X, ax.Y, col, 2);
+    } else {
+      ctx.fillStyle = "#ff6b6b"; ctx.font = "12px ui-monospace,Menlo,monospace"; ctx.textAlign = "center";
+      ctx.fillText("|Tr M| ≥ 2: no periodic β", (ax.L + w - ax.R) / 2, h / 2);
+    }
+    ax.done();
+  }
+  // tracking
+  {
+    const { x: ctx, w, h } = setupCanvas(document.getElementById("cvTrk"));
+    const eps = 10e-6, n = 12, rays = [];
+    const b0 = X.stable ? X.beta0 : Lc, a0 = X.stable ? X.alpha0 : 0;
+    for (let k = 0; k < 8; k++) {
+      const ph = 2 * Math.PI * k / 8;
+      rays.push([Math.sqrt(eps * b0) * Math.cos(ph), -Math.sqrt(eps / b0) * (a0 * Math.cos(ph) + Math.sin(ph))]);
+    }
+    const tr = ACCEL.track(D.f, Lc, D.lq, rays, n, 1, Lc / 60, D.type);
+    const amp = Math.sqrt(eps * (X.stable ? X.bmax : Lc)) * 1e3;
+    const ylim = Math.max(0.1, Math.ceil(amp * 1.25 * 10) / 10 * (X.stable ? 1 : 4));
+    const ax = axes(ctx, w, h, { x0: 0, x1: n * Lc, xs: niceStep(n * Lc / 5), y0: -ylim, y1: ylim, ys: niceStep(ylim / 2) });
+    const cols = ["#f2c14e", "#ffb070", "#ff9656", "#ff7d8a", "#c792ea", "#a8cdf2", "#7fdbca", "#c3e88d"];
+    tr.forEach((t, k) => curve(ctx, t.S, t.X.map((v) => v * 1e3), ax.X, ax.Y, cols[k], 1.1));
+    if (X.stable) {
+      const es = [], ep = [], em = [];
+      for (let c = 0; c < n; c++) for (let i = 0; i < X.s.length; i++) { es.push(c * Lc + X.s[i]); const e = Math.sqrt(eps * X.beta[i]) * 1e3; ep.push(e); em.push(-e); }
+      curve(ctx, es, ep, ax.X, ax.Y, "#ffffff", 1, [3, 3]); curve(ctx, es, em, ax.X, ax.Y, "#ffffff", 1, [3, 3]);
+    } else { ctx.fillStyle = "#ff6b6b"; ctx.textAlign = "center"; ctx.fillText("rays leave the ±" + ylim + " mm window", (ax.L + w - ax.R) / 2, ax.T + 14); }
+    ax.done();
+  }
+}
+
+// ---------- tab: rigidity
+function drawRig() {
+  const { x: ctx, w, h } = setupCanvas(document.getElementById("cvRig"));
+  const T = logspace(1e-3, 1e4, 240);
+  const bare = ACCEL.makeIon(S.Z, S.N, S.Z, ION.BA);
+  const y1 = T.map((t) => ACCEL.kin(ION, t).brho), y2 = T.map((t) => ACCEL.kin(bare, t).brho);
+  const o = { xlog: true, ylog: true, x0: 1e-3, x1: 1e4, y0: 1e-3, y1: 1e3 };
+  const ax = axes(ctx, w, h, o);
+  // machine limits
+  const lims = FAC.machines.filter((m) => m.brho && m.plot).sort((a, b) => b.brho - a.brho);
+  ctx.font = "10px ui-monospace,Menlo,monospace"; ctx.textAlign = "left";
+  const placed = [];
+  for (const m of lims) {
+    const yy = ax.Y(m.brho);
+    ctx.strokeStyle = "#59627a"; ctx.setLineDash([3, 3]); ctx.beginPath(); ctx.moveTo(ax.L, yy); ctx.lineTo(w - ax.R, yy); ctx.stroke(); ctx.setLineDash([]);
+    let slot = 0;
+    while (placed.some((p) => p.slot === slot && Math.abs(p.y - yy) < 11)) slot++;
+    placed.push({ slot, y: yy });
+    ctx.fillStyle = "#8a92a6"; ctx.fillText(`${m.short} ${m.brho}`, ax.L + 4 + slot * 82, yy - 3);
+  }
+  curve(ctx, T, y2, ax.X, ax.Y, "#a8cdf2", 1.3, [4, 3]);
+  curve(ctx, T, y1, ax.X, ax.Y, "#f2c14e", 2);
+  ctx.fillStyle = "#ffffff"; ctx.beginPath(); ctx.arc(ax.X(S.Tn), ax.Y(K.brho), 4, 0, 7); ctx.fill();
+  ax.done();
+}
+
+// ---------- tab: cyclotron
+const CYCS = FAC.cyclotrons;
+function drawCyc() {
+  const c = CYCS[S.cyc];
+  const chips = document.getElementById("cycChips");
+  if (!chips.children.length) {
+    CYCS.forEach((m, i) => { const b = document.createElement("button"); b.dataset.i = i; b.textContent = `${m.name} K${m.K}`; chips.appendChild(b); });
+  }
+  for (const b of chips.children) b.setAttribute("aria-pressed", +b.dataset.i === S.cyc ? "true" : "false");
+  document.getElementById("cycName").textContent = c.fac;
+  const specs = [];
+  if (c.sectors) specs.push(["magnet sectors", c.sectors]);
+  if (c.rExt) specs.push(["orbit radii", `${c.rIn ? c.rIn.toFixed(2) + " → " : "extraction "}${c.rExt.toFixed(3)} m (mean)`]);
+  if (c.diameter) specs.push(["outer size", `Ø ${c.diameter} m${c.height ? ", height " + c.height + " m" : ""}`]);
+  if (c.weight) specs.push(["mass", `${c.weight.toLocaleString()} t`]);
+  if (c.rfMHz) specs.push(["RF frequency", `${c.rfMHz} MHz`]);
+  if (c.rfCavities) specs.push(["RF / flat top", `${c.rfCavities} / ${c.ftCavities}${c.id === "riken-avf" ? " (dees)" : ""}`]);
+  if (c.maxFieldT) specs.push(["sector peak B", `${c.maxFieldT} T`]);
+  if (c.averageFieldT) specs.push(["max. average B", `${c.averageFieldT} T`]);
+  if (c.gapMM) specs.push(["pole gap", `${c.gapMM} mm`]);
+  if (c.voltageKV) specs.push(["RF max. voltage", `${c.voltageKV} kV; ${c.powerKW} kW/cavity`]);
+  document.getElementById("cycSpecs").innerHTML = specs.length ? specs.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join("") : "<dt>K values</dt><dd>See the cited technical review below.</dd>";
+  const B0 = +document.getElementById("cycB").value;
+  document.getElementById("cycBout").textContent = B0.toFixed(2) + " T";
+  const Lm = ACCEL.cycLimits(c.K, c.KF, ION);           // MeV/u, non-relativistic definitions
+  const En = Lm.lim;
+  const kE = ACCEL.kin(ION, En);
+  const bnr = (ION.A / ION.Q) * Math.sqrt(2 * (ION.M / ION.A) * En) / (ACCEL.CB);   // non-relativistic p = sqrt(2 m T)
+  const fr = ACCEL.frevIso(ION, B0), rinf = ACCEL.rInf(ION, B0);
+  const rcur = K.beta * rinf;
+  document.getElementById("cycKv").innerHTML = `
+    <dt>${c.KF ? "limit" : "K<sub>B</sub> (Q/A)²"}</dt><dd class="big">${fmt(En, 1)} MeV/u</dd>
+    <dt></dt><dd>${c.KF
+      ? `the lower of the bending limit K<sub>B</sub>(Q/A)² = ${fmt(Lm.bend, 1)} and the focusing limit K<sub>F</sub>(Q/A) = ${fmt(Lm.focus, 1)} MeV/u for ${nucName(S.Z, S.N)}<sup>${S.Q}+</sup>; set by ${Lm.by}`
+      : `bending limit only for ${nucName(S.Z, S.N)}<sup>${S.Q}+</sup>: no focusing limit K<sub>F</sub> is tabulated for this machine, so the real ceiling can be lower`}. An estimate from the K values, not the machine's demonstrated energy.${c.achieved ? " " + c.achieved : ""}</dd>
+    <dt>Bρ needed</dt><dd>${fmt(kE.brho, 3)} T m, ${fmt(100 * (kE.brho / bnr - 1), 2)}% above the non-relativistic ${fmt(bnr, 3)}</dd>
+    <dt>this beam</dt><dd>${S.Tn <= En ? `<span class="tag ok">below the limit</span>` : `<span class="tag no">above the limit</span>`} ${fmt(S.Tn, 1)} MeV/u</dd>
+    <dt>f<sub>rev</sub></dt><dd>${fmtHz(fr)} on every orbit: QeB<sub>0</sub>/(2πM) with central field B<sub>0</sub> = ${B0.toFixed(2)} T</dd>
+    <dt>this beam's orbit</dt><dd>radius ${fmtLen(K.brho / (B0 * K.gamma))}, where the isochronous field is B<sub>0</sub>γ = ${(B0 * K.gamma).toFixed(4)} T (γ = ${fmt(K.gamma, 4)})</dd>`;
+  document.getElementById("cycSrc").innerHTML = c.cite + (c.specSource ? ` <a href="${c.specSource}" target="_blank" rel="noopener">Machine source</a>.` : "") + (c.id === "riken-irc" || c.id === "riken-src" ? " RF range: HIAT2015 [6], Table 3." : "") + " Model B₀ is adjustable and is not a measured machine setting. The displayed spiral compresses many turns; mechanical service details are schematic.";
+  // isochronous field profile up to the radius of the current beam (or of the K-limit energy)
+  const { x: ctx, w, h } = setupCanvas(document.getElementById("cvCyc"));
+  const rmax = Math.max(rcur, kE.beta * rinf) * 1.15;
+  const r = Array.from({ length: 200 }, (_, i) => rmax * i / 199);
+  const g = r.map((x) => (x < rinf ? 1 / Math.sqrt(1 - (x / rinf) ** 2) : NaN));
+  const gmax = Math.max(1.02, ...g.filter(isFinite));
+  const ys = gmax - 1 > 0.5 ? 0.2 : gmax - 1 > 0.1 ? 0.05 : gmax - 1 > 0.02 ? 0.01 : 0.002;
+  const xs = niceStep(rmax / 5);
+  const ax = axes(ctx, w, h, { x0: 0, x1: rmax, xs, y0: 1 - ys / 2, y1: gmax + ys / 2, ys, yf: (v) => v.toFixed(3) });
+  curve(ctx, [0, rmax], [1, 1], ax.X, ax.Y, "#a8cdf2", 1.2, [4, 3]);
+  curve(ctx, r, g, ax.X, ax.Y, "#f2c14e", 2);
+  const mark = (rr, col, lab, dy) => { if (!(rr < rinf)) return; const yy = 1 / Math.sqrt(1 - (rr / rinf) ** 2); ctx.fillStyle = col; ctx.beginPath(); ctx.arc(ax.X(rr), ax.Y(yy), 3.5, 0, 7); ctx.fill(); ctx.textAlign = "right"; ctx.fillText(lab, ax.X(rr) - 6, ax.Y(yy) + dy); };
+  const up = rcur >= kE.beta * rinf;
+  mark(rcur, "#ffffff", "this beam", up ? -6 : 12);
+  mark(kE.beta * rinf, "#f2c14e", "limit", up ? 12 : -6);
+  ctx.fillStyle = "#8a92a6"; ctx.textAlign = "left"; ctx.fillText("r (m)", ax.L + 4, h - ax.B - 4);
+  ax.done();
+}
+
+
+// ---------- tab: separator
+const SEPP = [["100Sn", "124Xe", 200], ["11Li", "18O", 200], ["34Mg", "48Ca", 200], ["132Sn", "238U", 200]];
+const candidates = () => ACCEL.sepCandidates(NUC, S.Z, S.N);
+let SEPR = null;
+function drawSep() {
+  const chips = document.getElementById("sepChips");
+  if (!chips.children.length) for (const [w, b, e] of SEPP) { const bt = document.createElement("button"); bt.dataset.w = w; bt.dataset.b = b; bt.dataset.e = e; bt.textContent = `${w}←${b}`; chips.appendChild(bt); }
+  document.getElementById("sepAccout").textContent = "±" + (100 * S.sep.acc).toFixed(2) + "%";
+  document.getElementById("sepDout").textContent = S.sep.dR.toFixed(2);
+  for (const b of document.querySelectorAll("#sepMat button")) b.setAttribute("aria-pressed", b.dataset.v === S.sep.mat ? "true" : "false");
+  const cands = candidates();
+  document.getElementById("sepTitle").innerHTML = `${nucName(S.Z, S.N)} at ${fmt(S.Tn, 1)} MeV/u`;
+  const wi = document.getElementById("sepWant");
+  if (!cands.length) {                     // a proton beam makes no lighter fragment (A >= 2)
+    SEPR = null;
+    const { x: ctx, w, h } = setupCanvas(document.getElementById("cvSep"));
+    ctx.fillStyle = "#8a92a6"; ctx.font = "12px ui-monospace,Menlo,monospace"; ctx.textAlign = "center";
+    ctx.fillText("no fragments: nothing lighter than the beam", w / 2, h / 2);
+    if (document.activeElement !== wi) wi.value = "";
+    document.getElementById("sepKv").innerHTML = `<dt></dt><dd style="color:var(--accent)">${nucName(S.Z, S.N)} has no lighter fragment with A ≥ 2, so there is nothing to separate. Choose a heavier beam on the left, or one of the settings above.</dd>`;
+    return;
+  }
+  // default: a nucleus four protons and six neutrons below the beam, if bound and long-lived
+  const dflt = () => cands.find((c) => c.Z === Math.max(1, S.Z - 4) && c.N === Math.max(0, S.N - 6)) || cands[cands.length - 1];
+  let want = S.sep.want && cands.find((c) => c.Z === S.sep.want.Z && c.N === S.sep.want.N), note = "";
+  if (!want) {
+    if (S.sep.want) note = `${nucName(S.sep.want.Z, S.sep.want.N)} is not among the fragments of this beam (it must be lighter in Z and N, have a NUBASE mass and live at least 100 ns); showing the default instead.`;
+    want = dflt();
+  }
+  S.sep.want = { Z: want.Z, N: want.N };
+  if (document.activeElement !== wi) wi.value = `${want.Z + want.N}${ELEM[want.Z]}`;
+  const warnLow = S.Tn < 30;
+  SEPR = ACCEL.separator(cands, want, K.gamma, S.sep.acc, S.sep.dR, S.sep.mat);
+  const R = SEPR, n1 = R.list.filter((r) => r.pass1).length, p2 = R.list.filter((r) => r.pass2);
+  // chart
+  const { x: ctx, w, h } = setupCanvas(document.getElementById("cvSep"));
+  const Nmax = S.N + 1, Zmax = S.Z + 1;
+  const L = 30, Bm = 18, T = 6, Rm = 6;
+  const cw = (w - L - Rm) / (Nmax + 1), ch = (h - T - Bm) / (Zmax + 1), c = Math.min(cw, ch);
+  const X = (N) => L + N * c, Y = (Z) => h - Bm - (Z + 1) * c;
+  ctx.font = "10px ui-monospace,Menlo,monospace"; ctx.fillStyle = "#8a92a6";
+  const step = Nmax > 100 ? 20 : Nmax > 40 ? 10 : 5;
+  ctx.textAlign = "center"; for (let n = 0; n <= Nmax; n += step) ctx.fillText(n, X(n) + c / 2, h - 5);
+  ctx.textAlign = "right"; for (let z = 0; z <= Zmax; z += step) ctx.fillText(z, L - 4, Y(z) + c / 2 + 3);
+  ctx.fillText("Z", L - 4, T + 8); ctx.textAlign = "left"; ctx.fillText("N", X(Nmax) - 8, h - 5);
+  const s = Math.max(1, c - (c > 3 ? 0.6 : 0));
+  for (const r of R.list) {
+    ctx.fillStyle = r.pass2 ? "#f2c14e" : r.pass1 ? "#4f7fae" : "#2a3142";
+    ctx.fillRect(X(r.N), Y(r.Z), s, s);
+  }
+  ctx.strokeStyle = "#ffffff"; ctx.lineWidth = 1.5; ctx.strokeRect(X(want.N) - 1.5, Y(want.Z) - 1.5, s + 3, s + 3);
+  ctx.strokeStyle = "#ff9656"; ctx.strokeRect(X(S.N) - 1, Y(S.Z) - 1, s + 2, s + 2);
+  ctx.fillStyle = "#ff9656"; ctx.textAlign = "right"; ctx.fillText("beam", X(S.N) - 4, Y(S.Z) + s);
+  // summary
+  const listTxt = p2.length ? p2.sort((a, b) => Math.abs(a.d2) - Math.abs(b.d2)).slice(0, 10).map((r) => `${nucName(r.Z, r.N)} ${(100 * r.d2).toFixed(2)}%`).join(", ") : "none";
+  const stopped = R.list.filter((r) => r.stopped).length;
+  document.getElementById("sepKv").innerHTML = `
+    <dt>Bρ<sub>1</sub></dt><dd>${fmt(R.brho1, 4)} T m at ${fmt(R.Tn1, 1)} MeV/u ${R.brho1 <= FR.aris.brho ? '<span class="tag ok">≤ ARIS 8 T m</span>' : '<span class="tag no">&gt; ARIS 8 T m</span>'}</dd>
+    <dt>wedge</dt><dd>${fmt(R.t, 3)} g/cm² = ${fmt(R.tmm, 2)} mm ${S.sep.mat} (range ${fmt(R.range, 3)} g/cm²)</dd>
+    <dt>Bρ<sub>2</sub></dt><dd>${R.brho2 ? fmt(R.brho2, 4) + " T m at " + fmt(R.Tn2, 1) + " MeV/u" : "the wanted ion stops"}</dd>
+    <dt>survivors</dt><dd class="big">${R.list.length} → ${n1} → ${p2.length}</dd>
+    <dt></dt><dd>made → after Bρ<sub>1</sub> → after ΔE and Bρ<sub>2</sub>${stopped ? ` (${stopped} stop in the wedge)` : ""}</dd>
+    <dt>passing</dt><dd>${listTxt}</dd>
+    ${note ? `<dt></dt><dd style="color:var(--accent)">${note}</dd>` : ""}
+    ${warnLow ? `<dt></dt><dd style="color:var(--accent)">Below about 30 MeV/u fragments are not bare and the Bethe formula drifts: this model is not meant for that regime.</dd>` : ""}`;
+}
+
+
+// ---------- tab: facilities
+function drawEnd() {
+  const info = document.getElementById("stationInfo"), custom = CUR_FAC === "cern";
+  for (const child of info.parentElement.children) if (child !== info) child.hidden = custom;
+  info.hidden = !custom;
+  if (custom) {
+    const groups = SECTIONS.filter((g) => g.userData.fac === CUR_FAC && g.userData.info);
+    const g = groups.find((g) => g.userData.name === S.area) || groups[0];
+    info.innerHTML = `<div class="cap"><b>${g.userData.name}</b><span>CERN ISOLDE</span></div>` + g.userData.info
+      + `<p class="sub">Selected ion: ${nucName(S.Z, S.N)}<sup>${S.Q}+</sup> at ${fmt(S.Tn, 3)} MeV/u. ${S.Tn > FAC.isolde.maxPostEnergyMeVu ? "Above the quoted HIE energy reach." : "Available energy and intensity depend on isotope and charge state."}</p><div class="chips"><button data-cern-beam>Published beam: ¹³²Sn³¹⁺, 5.5 MeV/u</button></div>`
+      + `<div class="chips">${groups.map((g) => `<button data-station="${g.userData.name}" aria-pressed="${g.userData.name === S.area}">${g.userData.shortName}</button>`).join("")}</div>`;
+  }
+  for (const el of document.querySelectorAll("#endList [data-k]")) el.classList.toggle("on", el.dataset.k === S.endKey);
+}
+document.getElementById("stationInfo").addEventListener("click", (e) => {
+  if (e.target.closest("[data-cern-beam]")) { S.Z = 50; S.N = 82; S.Q = 31; S.Tn = 5.5; loadIon(50, 82); return; }
+  const b = e.target.closest("[data-station]"); if (!b) return;
+  const g = SECTIONS.find((g) => g.userData.fac === CUR_FAC && g.userData.name === b.dataset.station);
+  if (g) focusSection(g, "end");
+});
+document.getElementById("endList").addEventListener("click", (e) => {
+  const el = e.target.closest("[data-k]"); if (!el) return;
+  const g = END.find((g) => g.userData.key === el.dataset.k); if (g) focusSection(g, "end");
+});
+function drawFac() {
+  document.getElementById("facIon").innerHTML = `${nucName(S.Z, S.N)}<sup>${S.Q}+</sup>, ${fmt(S.Tn, 1)} MeV/u`;
+  const bare = ACCEL.makeIon(S.Z, S.N, S.Z, ION.BA), Kb = ACCEL.kin(bare, S.Tn);
+  let html = `<tr><th>machine</th><th>Bρ<sub>max</sub></th><th>needs</th><th>max E/A</th><th></th></tr>`;
+  let fac = null;
+  for (const m of FAC.machines) {
+    if (m.fac !== fac) {
+      fac = m.fac; html += `<tr class="hd"><td colspan="5">${m.fac}</td></tr>`;
+      if (m.fac.startsWith("FRIB")) {
+        const ok = S.Tn <= FR.design.Tn;
+        html += `<tr><td>linac, design energy</td><td colspan="2">${S.Z === 92 ? "200 MeV/u for U" + ref(17) : "&gt;200 MeV/u, all stable ions" + ref(15)}</td><td>${fmt(S.Tn, 1)}</td><td class="${ok ? "ok" : S.Z === 92 ? "no" : ""}">${ok ? "yes" : S.Z === 92 ? "no" : "not stated"}</td></tr>`;
+      }
+    }
+    const sepr = m.kind === "separator", io = sepr ? bare : ION, need = sepr ? Kb.brho : K.brho;
+    const ok = need <= m.brho;
+    html += `<tr><td>${m.name}${sepr ? " (Q = Z)" : ""}</td><td>${m.brho} T m${ref(m.ref)}</td><td>${fmt(need, 3)}</td><td>${fmt(ACCEL.tnFromBrho(io, m.brho), 1)}</td><td class="${ok ? "ok" : "no"}">${ok ? "yes" : "no"}</td></tr>`;
+  }
+  html += `<tr class="hd"><td colspan="5">Other quoted parameters</td></tr>`;
+  for (const p of FAC.params) html += `<tr><td colspan="3" style="text-align:left">${p.fac}: ${p.what}</td><td colspan="2">${p.val}${ref(p.ref)}</td></tr>`;
+  document.getElementById("facTab").innerHTML = html;
+  document.getElementById("facRefs").innerHTML = FAC.refs.map((r, i) => `[${i + 1}] ${r.url ? `<a href="${r.url}" target="_blank" rel="noopener">${r.text}</a>` : r.text}`).join("<br>");
+}
+
+function setHash() {
+  const hash = `#${S.Z + S.N}${ELEM[S.Z]}q${S.Q}@${+S.Tn.toPrecision(4)}/${S.tab}${CUR_FAC !== "frib" ? "!" + CUR_FAC : ""}`;
+  if (location.hash !== hash) history.replaceState(null, "", hash);
+}
+function drawTab() {
+  setHash();
+  for (const t of document.querySelectorAll(".tab")) t.hidden = t.dataset.tab !== S.tab;
+  for (const b of document.querySelectorAll("#tabs button")) b.setAttribute("aria-pressed", b.dataset.t === S.tab ? "true" : "false");
+  ({ lin: drawLin, strip: drawStrip, foc: drawFoc, sep: drawSep, rig: drawRig, cyc: drawCyc, fac: drawFac, end: drawEnd })[S.tab]();
+  for (const L of LAB) L.d.classList.toggle("on", L.g.userData.tab === S.tab);
+  envelope.visible = S.tab === "foc" && CUR_FAC === "frib";   // the magnified envelope belongs to the focusing panel
+  // the panels are worked for FRIB; say so while another facility is shown
+  const fa = document.getElementById("facArea");
+  fa.hidden = CUR_FAC === "frib";
+  if (!fa.hidden) fa.innerHTML = `<b>${FACS[CUR_FAC].label}${S.area ? ": " + S.area : ""}</b><br>The physics below is computed for the chosen ion; tables, figures and end stations named FRIB are FRIB's. What is drawn here, and its sources, is in the Rendering note on the left.`;
+  for (const e of document.querySelectorAll(".chk")) e.textContent = FAC.checks[e.dataset.k] || "see tests/check_accel.py";
+}
+
+// ---------- camera focus on a section
+let camGoal = null;
+function focusSection(g, tab) {
+  const u = g.userData;
+  if (u.key) S.endKey = u.key;
+  if (u.cyc) { const i = CYCS.findIndex((c) => c.id === u.cyc); if (i >= 0) S.cyc = i; }
+  if (u.fac !== "frib") S.area = u.name;
+  S.tab = tab || u.tab; drawTab();
+  const off = camera.position.clone().sub(controls.target).normalize();
+  if (off.y < 0.35) { off.y = 0.55; off.normalize(); }
+  camGoal = { t: u.center.clone(), p: u.center.clone().addScaledVector(off, u.radius * 2.4 + 25) };
+  controls.autoRotate = false;
+}
+
+// ---------- UI wiring
+const find = document.getElementById("find");
+find.addEventListener("keydown", (e) => {
+  if (e.key !== "Enter") return;
+  const p = parseNucleus(find.value);
+  if (!p || !hasMass(p.Z, p.N)) { find.setCustomValidity("no mass for this nucleus in NUBASE2020"); find.reportValidity(); return; }
+  find.setCustomValidity(""); loadIon(p.Z, p.N);
+});
+find.addEventListener("input", () => find.setCustomValidity(""));
+document.getElementById("chips").addEventListener("click", (e) => { const b = e.target.closest("button"); if (!b) return; const p = parseNucleus(b.dataset.n); loadIon(p.Z, p.N); });
+document.getElementById("q").addEventListener("input", (e) => { S.Q = +e.target.value; update(); });
+document.getElementById("e").addEventListener("input", (e) => { S.Tn = +(10 ** +e.target.value).toPrecision(4); update(); });
+document.getElementById("etxt").addEventListener("change", (e) => { const v = parseFloat(e.target.value); if (v > 0 && v < 1e5) { S.Tn = v; update(); } });
+document.getElementById("tabs").addEventListener("click", (e) => {
+  const b = e.target.closest("button"); if (!b) return;
+  const g = SECTIONS.find((g) => g.userData.tab === b.dataset.t && g.userData.fac === CUR_FAC);
+  if (g) focusSection(g, b.dataset.t); else { S.tab = b.dataset.t; drawTab(); }
+});
+document.getElementById("cycChips").addEventListener("click", (e) => { const b = e.target.closest("button"); if (!b) return; S.cyc = +b.dataset.i; drawCyc(); });
+document.getElementById("cycB").addEventListener("input", drawCyc);
+document.getElementById("linF").addEventListener("input", (e) => { S.fRF = 1e6 * 10 ** +e.target.value; drawLin(); });
+document.getElementById("fchips").addEventListener("click", (e) => { const b = e.target.closest("button"); if (!b) return; S.fRF = +b.dataset.f * 1e6; drawLin(); });
+document.getElementById("wq").addEventListener("input", (e) => { S.wq = +e.target.value; drawStrip(); });
+document.getElementById("focType").addEventListener("click", (e) => { const b = e.target.closest("button"); if (!b) return; S.foc.type = b.dataset.v; computeFoc(); drawFoc(); });
+let focPending = false;
+for (const [id, k] of [["sB", "B"], ["sl", "ls"], ["sL", "Ls"], ["fF", "f"], ["fL", "Lc"], ["fQ", "lq"]]) {
+  const el = document.getElementById(id); el.value = S.foc[k];
+  el.addEventListener("input", (e) => {
+    S.foc[k] = +e.target.value;
+    if (S.foc.lq > 0.9 * S.foc.Lc / 2) S.foc.lq = +(0.9 * S.foc.Lc / 2).toFixed(2);
+    if (!focPending) { focPending = true; requestAnimationFrame(() => { focPending = false; computeFoc(); drawFoc(); }); }
+  });
+}
+document.getElementById("sepAcc").addEventListener("input", (e) => { S.sep.acc = +e.target.value / 100; drawSep(); });
+document.getElementById("sepD").addEventListener("input", (e) => { S.sep.dR = +e.target.value; drawSep(); });
+document.getElementById("sepMat").addEventListener("click", (e) => { const b = e.target.closest("button"); if (!b) return; S.sep.mat = b.dataset.v; drawSep(); });
+document.getElementById("sepWant").addEventListener("keydown", (e) => {
+  if (e.key !== "Enter") return;
+  const p = parseNucleus(e.target.value);
+  if (!p || p.Z > S.Z || p.N > S.N) { e.target.setCustomValidity("must be lighter than the beam, in Z and in N"); e.target.reportValidity(); return; }
+  if (!candidates().some((c) => c.Z === p.Z && c.N === p.N)) { e.target.setCustomValidity("not available: needs A ≥ 2, a NUBASE mass and T1/2 ≥ 100 ns"); e.target.reportValidity(); return; }
+  e.target.setCustomValidity(""); S.sep.want = p; drawSep();
+});
+document.getElementById("sepWant").addEventListener("input", (e) => e.target.setCustomValidity(""));
+document.getElementById("sepChips").addEventListener("click", (e) => {
+  const b = e.target.closest("button"); if (!b) return;
+  const bp = parseNucleus(b.dataset.b), wp = parseNucleus(b.dataset.w);
+  S.sep.want = wp; S.Tn = +b.dataset.e;
+  S.Z = bp.Z; S.N = bp.N; S.Q = bp.Z;
+  document.getElementById("q").max = bp.Z;
+  update();
+});
+
+// click in the 3D view
+const ray = new THREE.Raycaster(), mouse = new THREE.Vector2();
+let downAt = null;
+const hoverNote = document.getElementById("hoverNote");
+let pointerAt = null, hoverTick = 0;
+renderer.domElement.addEventListener("pointermove", (e) => { pointerAt = { x: e.clientX, y: e.clientY }; });
+renderer.domElement.addEventListener("pointerleave", () => { pointerAt = null; hoverNote.hidden = true; renderer.domElement.style.cursor = ""; });
+renderer.domElement.addEventListener("pointerdown", (e) => { downAt = [e.clientX, e.clientY]; hoverNote.hidden = true; });
+renderer.domElement.addEventListener("pointerup", (e) => {
+  const start = downAt; downAt = null;
+  if (!start || Math.hypot(e.clientX - start[0], e.clientY - start[1]) > 5) return;
+  mouse.set(e.clientX / innerWidth * 2 - 1, -e.clientY / innerHeight * 2 + 1);
+  ray.setFromCamera(mouse, camera);
+  const hit = ray.intersectObjects(pickables.filter((p) => p.userData.fac === CUR_FAC), false)[0];
+  if (hit) focusSection(SECTIONS.find((g) => g.userData === hit.object.userData));
+});
+
+addEventListener("resize", () => {
+  camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight);
+  composer.setSize(innerWidth, innerHeight);
+  drawTab();
+});
+addEventListener("hashchange", () => {
+  if (!readHash()) return;
+  update();
+  const mods = window.FACILITY_MODULES || {}, want = mods[S.facWanted] ? S.facWanted : "frib";
+  if (want !== CUR_FAC) setFacility(want, S.hashTab);
+});
+
+let quality = innerWidth < 700 ? "low" : "high";
+function applyQuality() {
+  const g = quality === "high" ? GROUND_PRE_ACES : GROUND;
+  scene.background.copy(g); scene.fog.color.copy(g);
+  bunchMat.uniforms.uGain.value = quality === "high" ? 1.6 : 1.1;
+  renderer.shadowMap.enabled = quality === "high";
+  scene.traverse((o) => { if (o.material && o.material.isMeshStandardMaterial) o.material.needsUpdate = true; });
+  for (const b of document.querySelectorAll("#qmode button")) b.setAttribute("aria-pressed", b.dataset.v === quality ? "true" : "false");
+}
+document.getElementById("qmode").addEventListener("click", (e) => { const b = e.target.closest("button"); if (!b) return; quality = b.dataset.v; applyQuality(); });
+applyQuality();
+
+// ---------- start
+function readHash() {
+  let h0 = location.hash;
+  try { h0 = decodeURIComponent(h0); } catch (e) { return false; }   // malformed % escape: ignore the hash
+  const bang = h0.indexOf("!");
+  S.facWanted = bang > 0 ? h0.slice(bang + 1) : "frib";
+  S.hashTab = false;
+  const m = (bang > 0 ? h0.slice(0, bang) : h0).match(/^#(\d+[A-Za-z]+?)(?:q(\d+))?(?:@([\d.eE+]+))?(?:\/(\w+))?$/);
+  if (!m) return false;
+  const p = parseNucleus(m[1]);
+  if (!p || !hasMass(p.Z, p.N)) return false;
+  S.Z = p.Z; S.N = p.N;
+  S.Q = Math.min(p.Z, Math.max(1, m[2] ? +m[2] : p.Z));
+  if (m[3] && +m[3] > 0 && isFinite(+m[3])) S.Tn = +m[3];
+  if (m[4] && TABS.includes(m[4])) { S.tab = m[4]; S.hashTab = true; }
+  document.getElementById("q").max = S.Z;
+  return true;
+}
+{
+  if (!readHash()) { const d = FAC.defaultBeam; S.Z = d.Z; S.N = d.N; S.Q = d.Q; S.Tn = d.Tn; }
+  document.getElementById("q").max = S.Z;
+  update();
+  // frame the whole complex
+  const bb = new THREE.Box3();
+  for (const k in P) for (const p of P[k]) bb.expandByPoint(p);
+  const c = bb.getCenter(new THREE.Vector3()), sz = bb.getSize(new THREE.Vector3());
+  // open on the folded linac from low and close, where the hardware reads; zoom out for the whole site
+  const lb = new THREE.Box3(); for (const k of ["ls1", "fs1", "ls2", "fs2", "ls3"]) for (const p of P[k]) lb.expandByPoint(p);
+  const lc = lb.getCenter(new THREE.Vector3()), ls = lb.getSize(new THREE.Vector3());
+  const d = Math.max(ls.x, ls.z) * (innerWidth < 900 ? 1.25 : 0.62);
+  controls.target.copy(lc).add(V3(ls.x * 0.12, 0, 0));
+  camera.position.copy(controls.target).add(V3(-0.62, 0.36, 0.7).normalize().multiplyScalar(d));
+}
+
+// ---------- walking the LS1 aisle at eye height
+let walk = null;
+const WALK = { a: V3(2, FLOOR + 1.7, -4.3), b: V3(P.ls1[1].x - 2, FLOOR + 1.7, -4.3), v: 3 };
+function setView(v) {
+  for (const b of document.querySelectorAll("#vmode button")) b.setAttribute("aria-pressed", b.dataset.v === v ? "true" : "false");
+  if (v === "walk") { walk = { s: 0 }; camGoal = null; controls.autoRotate = false; }
+  else { walk = null; const lb = new THREE.Box3(); for (const k of ["ls1", "fs1", "ls2", "fs2", "ls3"]) for (const p of P[k]) lb.expandByPoint(p);
+    const lc = lb.getCenter(new THREE.Vector3()), ls = lb.getSize(new THREE.Vector3()), t = lc.clone().add(V3(ls.x * 0.12, 0, 0));
+    camGoal = { t, p: t.clone().add(V3(-0.62, 0.36, 0.7).normalize().multiplyScalar(Math.max(ls.x, ls.z) * (innerWidth < 900 ? 1.25 : 0.62))) }; }
+}
+document.getElementById("vmode").addEventListener("click", (e) => { const b = e.target.closest("button"); if (b) setView(b.dataset.v); });
+controls.addEventListener("start", () => { if (walk) { walk = null; for (const b of document.querySelectorAll("#vmode button")) b.setAttribute("aria-pressed", b.dataset.v === "over" ? "true" : "false"); } });
+const WALKDIR = WALK.b.clone().sub(WALK.a).normalize(), WALKL = WALK.a.distanceTo(WALK.b);
+
+// Keyboard movement shares the orbit camera; translation preserves eye height and pitch.
+const navKeys = new Set(), navForward = V3(0, 0, 0), navRight = V3(0, 0, 0), navMove = V3(0, 0, 0), navUp = V3(0, 1, 0);
+const typing = (el) => el && (el.matches?.("input,textarea,select") || el.isContentEditable);
+const sceneOnlyButton = document.getElementById("sceneOnly"), sceneLabelsButton = document.getElementById("sceneLabels");
+let showLabels = true;
+function togglePanels() {
+  const hidden = document.body.classList.toggle("scene-only");
+  sceneOnlyButton.setAttribute("aria-pressed", String(hidden));
+  sceneOnlyButton.textContent = hidden ? "◫ show panels" : "◫ hide panels";
+}
+sceneOnlyButton.addEventListener("click", togglePanels);
+sceneLabelsButton.addEventListener("click", () => { showLabels = !showLabels; sceneLabelsButton.setAttribute("aria-pressed", String(showLabels)); });
+addEventListener("keydown", (e) => {
+  if (typing(e.target) || e.metaKey || e.ctrlKey || e.altKey) return;
+  const k = /^Key[WASDQEH]$/.test(e.code) ? e.code.slice(3).toLowerCase() : e.key.toLowerCase();
+  if (k === "h" && !e.repeat) { e.preventDefault(); togglePanels(); return; }
+  if (!["w", "a", "s", "d", "q", "e", "shift"].includes(k)) return;
+  e.preventDefault(); navKeys.add(k);
+  if (k !== "shift") {
+    camGoal = null; controls.autoRotate = false;
+    if (walk) {
+      walk = null;
+      for (const b of document.querySelectorAll("#vmode button")) b.setAttribute("aria-pressed", String(b.dataset.v === "over"));
+    }
+  }
+});
+addEventListener("keyup", (e) => navKeys.delete(/^Key[WASDQEH]$/.test(e.code) ? e.code.slice(3).toLowerCase() : e.key.toLowerCase()));
+addEventListener("blur", () => navKeys.clear());
+document.addEventListener("visibilitychange", () => { if (document.hidden) navKeys.clear(); });
+document.addEventListener("focusin", (e) => { if (typing(e.target)) navKeys.clear(); });
+function navigateCamera(dt) {
+  if (!navKeys.size) return;
+  camera.getWorldDirection(navForward); navForward.y = 0;
+  if (navForward.lengthSq() < 1e-6) navForward.copy(controls.target).sub(camera.position).setY(0);
+  navForward.normalize(); navRight.crossVectors(navForward, navUp).normalize();
+  navMove.set(0, 0, 0);
+  if (navKeys.has("w")) navMove.add(navForward);
+  if (navKeys.has("s")) navMove.sub(navForward);
+  if (navKeys.has("d")) navMove.add(navRight);
+  if (navKeys.has("a")) navMove.sub(navRight);
+  // Walking uses metres per second; overview movement scales gently with the viewing distance.
+  const speed = Math.max(3, Math.min(45, camera.position.distanceTo(controls.target) * 0.12)) * (navKeys.has("shift") ? 3 : 1);
+  if (navMove.lengthSq()) { navMove.normalize().multiplyScalar(speed * dt); camera.position.add(navMove); controls.target.add(navMove); }
+  const turn = (Number(navKeys.has("q")) - Number(navKeys.has("e"))) * dt * 0.85;
+  if (turn) { navMove.copy(controls.target).sub(camera.position).applyAxisAngle(navUp, turn); controls.target.copy(camera.position).add(navMove); }
+}
+
+// ---------- facility switcher
+const FRIB_NOTE = document.getElementById("facNote").innerHTML;
+function setFacility(key, keepTab) {          // keepTab: a tab named in the hash wins over the facility's default
+  if (!FACS[key] && !buildFacility(key)) key = "frib";
+  CUR_FAC = key; S.area = null;
+  for (const k in FACS) FACS[k].root.visible = k === key;
+  if (key === "frib") { sun.position.copy(FRIB_SUN.p); sun.target.position.copy(FRIB_SUN.t); const sp = FRIB_SUN.s; Object.assign(sun.shadow.camera, { left: -sp, right: sp, top: sp, bottom: -sp }); sun.shadow.camera.updateProjectionMatrix(); }
+  else if (FACS[key].sun) shadowArea(...FACS[key].sun);
+  [scene.fog.near, scene.fog.far] = key === "frib" ? [260, 900] : FACS[key].fog;
+  envelope.visible = key === "frib" && S.tab === "foc";
+  document.getElementById("facNote").innerHTML = key === "frib" ? FRIB_NOTE : FACS[key].note;
+  document.getElementById("vmode").style.display = key === "frib" ? "" : "none";
+  for (const b of document.querySelectorAll("#fmode button")) b.setAttribute("aria-pressed", b.dataset.f === key ? "true" : "false");
+  document.getElementById("sceneLegend").hidden = key !== "frib";
+  walk = null;
+  if (key === "cern" && !keepTab) S.tab = "end";
+  if (key === "frib") setView("over");
+  else if (FACS[key].view) { const v = FACS[key].view; camGoal = { t: V3(...v.target), p: V3(...v.pos) }; controls.autoRotate = false; }
+  drawTab();
+}
+{
+  const fm = document.getElementById("fmode"), mods = window.FACILITY_MODULES || {};
+  fm.innerHTML = `<button data-f="frib">FRIB</button>` + Object.keys(mods).map((k) => `<button data-f="${k}">${mods[k].label}</button>`).join("");
+  fm.addEventListener("click", (e) => { const b = e.target.closest("button"); if (b) setFacility(b.dataset.f); });
+  for (const b of fm.querySelectorAll("button")) b.setAttribute("aria-pressed", b.dataset.f === "frib" ? "true" : "false");
+  if (S.facWanted && mods[S.facWanted]) setFacility(S.facWanted, S.hashTab);
+}
+
+// ---------- loop
+const tmp = new THREE.Vector3(), tmp2 = new THREE.Vector3();
+const CA = [1.0, 0.72, 0.32], CB = [1.0, 0.9, 0.6], CF = [0.66, 0.8, 0.95];
+let last = performance.now(), tAcc = 0;
+function animate(now) {
+  requestAnimationFrame(animate);
+  // the first rAF timestamp can predate the performance.now() taken at start: never let dt go negative
+  const dt = Math.min(0.1, Math.max(0, (now - last) / 1000)); last = now;
+  tAcc += reduce ? 0 : dt;
+  if (camGoal) {
+    const k = reduce ? 1 : 1 - Math.exp(-dt / 0.45);
+    controls.target.lerp(camGoal.t, k); camera.position.lerp(camGoal.p, k);
+    // done when close, or after 3 s: the orbit limits (distance, horizon) can keep the camera from ever
+    // reaching the goal, and an unfinished flight would hold the camera against the user forever
+    camGoal.age = (camGoal.age || 0) + dt;
+    if (camera.position.distanceTo(camGoal.p) < 0.5 || camGoal.age > 3) camGoal = null;
+  }
+  if (walk) {
+    walk.s = Math.min(WALKL, walk.s + dt * WALK.v);
+    camera.position.copy(WALK.a).addScaledVector(WALKDIR, walk.s);
+    controls.target.copy(camera.position).addScaledVector(WALKDIR, 12).add(V3(0.6, -0.35, 1.2));
+    if (walk.s >= WALKL) walk = null;
+  }
+  navigateCamera(dt);
+  controls.update();
+  // the ceiling is there only when you are under it
+  gCeil.visible = CUR_FAC === "frib" && camera.position.y < FLOOR + BLD.H - 0.2 && camera.position.x > BLD.x0 && camera.position.x < BLD.x1 && camera.position.z > BLD.z0 && camera.position.z < BLD.z1;
+  // bunches (display speeds, not physical ones): amber before the stripper, brighter after, blue fragments after the target
+  const F = FACS[CUR_FAC], other = CUR_FAC !== "frib" && F && F.beams && F.beams.length;
+  let bi = 0, bk = 0;
+  for (let i = 0; i < NB; i++) {
+    if (other) {                                         // another facility: bunches spread over its beam paths
+      while (bi < F.beams.length - 1 && bk >= F.beams[bi].n) { bi++; bk = 0; }
+      const B = F.beams[bi]; bk++;
+      if (bk > B.n && bi === F.beams.length - 1) { bunchSize[i] = 0; bunchPos[3 * i + 1] = -1e4; continue; }
+      B.path.at(((BR[i].ph + tAcc * B.speed) % 1) * B.path.L, tmp);
+      bunchPos[3 * i] = tmp.x; bunchPos[3 * i + 1] = tmp.y; bunchPos[3 * i + 2] = tmp.z;
+      bunchCol[3 * i] = B.color[0]; bunchCol[3 * i + 1] = B.color[1]; bunchCol[3 * i + 2] = B.color[2];
+      bunchSize[i] = B.size; continue;
+    }
+    const b = BR[i]; let size = 0.9, col = CA;
+    if (b.r === "D") { const s = ((b.ph + tAcc * 0.04) % 1) * pDriver.L; pDriver.at(s, tmp); if (s > sStrip) { col = CB; size = 1.0; } }
+    else if (b.r === "A") { pAris.at(((b.ph + tAcc * 0.12) % 1) * pAris.L, tmp); col = CF; }
+    else if (b.r === "R") { pRea.at(((b.ph + tAcc * 0.15) % 1) * pRea.L, tmp); col = CF; size = 0.8; }
+    else { pDist.at(((b.ph + tAcc * 0.1) % 1) * pDist.L, tmp); col = CF; size = 0.8; }   // fast beams down the distribution line
+    bunchPos[3 * i] = tmp.x; bunchPos[3 * i + 1] = tmp.y; bunchPos[3 * i + 2] = tmp.z;
+    bunchCol[3 * i] = col[0]; bunchCol[3 * i + 1] = col[1]; bunchCol[3 * i + 2] = col[2];
+    bunchSize[i] = size;
+  }
+  bunchGeo.attributes.position.needsUpdate = true; bunchGeo.attributes.color.needsUpdate = true; bunchGeo.attributes.aSize.needsUpdate = true;
+  bunchMat.uniforms.uPix.value = renderer.domElement.height / (2 * Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2));
+  envMat.uniforms.uT.value = tAcc * 0.6;
+  if (quality === "high") composer.render(); else renderer.render(scene, camera);
+  // Resolve labels in screen space, prioritising the active section and nearer equipment.
+  // Cache text dimensions; update placement at 30 Hz while the camera moves.
+  if (now - hoverTick > 33) {
+    hoverTick = now;
+    const occupied = [];
+    if (!document.body.classList.contains("scene-only")) for (const id of ["ctl", "side"]) {
+      const r = document.getElementById(id).getBoundingClientRect();
+      occupied.push({ left: r.left - 8, right: r.right + 8, top: r.top - 8, bottom: r.bottom + 8 });
+    }
+    const toolsRect = document.getElementById("sceneTools").getBoundingClientRect(); occupied.push(toolsRect);
+    const candidates = [];
+    for (const L of LAB) {
+      L.d.style.display = "none";
+      if (!showLabels || innerWidth <= 900 || L.g.userData.fac !== CUR_FAC) continue;
+      tmp2.copy(L.g.userData.center); tmp2.y += 7;
+      const distance = camera.position.distanceToSquared(tmp2); tmp2.project(camera);
+      if (tmp2.z < -1 || tmp2.z > 1 || Math.abs(tmp2.x) > 1 || Math.abs(tmp2.y) > 1) continue;
+      candidates.push({ L, x: (tmp2.x * 0.5 + 0.5) * innerWidth, y: (-tmp2.y * 0.5 + 0.5) * innerHeight, distance });
+    }
+    candidates.sort((a, b) => Number(b.L.d.classList.contains("on")) - Number(a.L.d.classList.contains("on")) || a.distance - b.distance);
+    for (const { L, x, y } of candidates) {
+      L.d.style.display = "";
+      const w = L.w || (L.w = L.d.offsetWidth), h = L.h || (L.h = L.d.offsetHeight);
+      const r = { left: x - w / 2 - 5, right: x + w / 2 + 5, top: y - h * 1.4 - 5, bottom: y - h * 0.4 + 10 };
+      if (r.left < 8 || r.right > innerWidth - 8 || occupied.some((p) => r.left < p.right && r.right > p.left && r.top < p.bottom && r.bottom > p.top)) { L.d.style.display = "none"; continue; }
+      L.d.style.left = x + "px"; L.d.style.top = y + "px"; occupied.push(r);
+    }
+    if (pointerAt && !downAt && !walk && !navKeys.size) {
+      mouse.set(pointerAt.x / innerWidth * 2 - 1, -pointerAt.y / innerHeight * 2 + 1); ray.setFromCamera(mouse, camera);
+      const hit = ray.intersectObjects(pickables.filter((p) => p.userData.fac === CUR_FAC), false)[0];
+      renderer.domElement.style.cursor = hit ? "pointer" : "grab"; hoverNote.hidden = !hit;
+      if (hit) {
+        hoverNote.textContent = hit.object.userData.name;
+        hoverNote.style.left = Math.max(8, Math.min(innerWidth - 265, pointerAt.x + 16)) + "px";
+        hoverNote.style.top = Math.max(8, Math.min(innerHeight - 55, pointerAt.y + 18)) + "px";
+      }
+    } else hoverNote.hidden = true;
+  }
+}
+requestAnimationFrame(animate);
+</script>
+<script src="assets/glass.js"></script>
+</body>
+</html>

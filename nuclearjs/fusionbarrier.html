@@ -1,0 +1,929 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Fusion at the barrier · nuclearjs</title>
+<link rel="stylesheet" href="assets/glass.css">
+<style>
+body{margin:0}
+:root{
+  color-scheme:dark;
+  --ground:#0b0d12; --line:#262c3a;
+  --ink:#e6e8ee; --muted:#8a92a6; --accent:#f2c14e;
+  --model:#f2c14e; --cc:#7fd1b9; --bare:#8a92a6; --data:#f4f6fb;
+  --sans:"Avenir Next","Futura","Helvetica Neue","PingFang SC","Noto Sans SC",system-ui,sans-serif;
+  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+}
+html,body{height:100%}
+body{background:var(--ground);color:var(--ink);font-family:var(--sans);overflow:hidden}
+#stage{position:fixed;inset:0}
+#stage canvas{display:block;touch-action:none}
+.panel{position:fixed;border-radius:18px;padding:16px 18px;display:flex;flex-direction:column;gap:12px;overflow:auto;box-sizing:border-box;z-index:2}
+.panel>*{flex-shrink:0}
+#ctl{left:16px;top:calc(16px + env(safe-area-inset-top,0px));width:min(316px,calc(100% - 32px));max-height:calc(100% - 56px)}
+#side{right:16px;top:calc(16px + env(safe-area-inset-top,0px));width:392px;max-height:calc(100% - 32px);gap:9px}
+h1{margin:0;font-size:22px;font-weight:600;letter-spacing:.01em}
+.sub{margin:2px 0 0;color:var(--muted);font-size:13px;line-height:1.45}
+.sub sup,.src sup,.kv sup,.cap sup,.leg sup,table sup{font-size:.7em}
+.grp{display:flex;flex-direction:column;gap:6px}
+.grp[hidden]{display:none}
+.lab{font-size:11px;text-transform:uppercase;letter-spacing:.12em;color:var(--muted)}
+.chips{display:flex;flex-wrap:wrap;gap:5px}
+.chips button{background:none;border:1px solid var(--line);border-radius:4px;color:var(--ink);font:500 12px var(--mono);padding:5px 7px;cursor:pointer}
+.chips button:hover{border-color:var(--muted)}
+.chips button[aria-pressed="true"]{border-color:var(--accent);color:var(--accent)}
+.chips.small button{font-size:11px;padding:4px 7px;color:var(--muted)}
+.chips.small button[aria-pressed="true"]{color:var(--accent)}
+.seg{display:flex;border:1px solid var(--line);border-radius:4px;overflow:hidden}
+.seg button{flex:1;background:none;border:0;color:var(--muted);font:500 12px var(--mono);padding:6px 4px;cursor:pointer}
+.seg button+button{border-left:1px solid var(--line)}
+.seg button[aria-pressed="true"]{background:#1f2533;color:var(--ink)}
+button:focus-visible,input:focus-visible,summary:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:3px 10px;font:12px var(--mono);font-variant-numeric:tabular-nums}
+.kv dt{color:var(--muted)}.kv dd{margin:0}
+.kv .hi{color:var(--accent)}
+.row{display:flex;gap:8px;align-items:center;font:12px var(--mono);color:var(--muted)}
+.row input[type=range]{flex:1;accent-color:var(--accent);min-width:0}
+.row output{min-width:70px;text-align:right;color:var(--ink);font-variant-numeric:tabular-nums}
+.row span.k{min-width:22px}
+details summary{cursor:pointer;font-size:11px;text-transform:uppercase;letter-spacing:.12em;color:var(--muted);list-style:none}
+details summary::before{content:"▸ ";}
+details[open] summary::before{content:"▾ ";}
+details .grp{margin-top:8px}
+.home{font:12px var(--mono);color:var(--muted);text-decoration:none}.home:hover{color:var(--ink)}
+.src{font-size:11px;color:var(--muted);line-height:1.5}
+.src b{color:var(--ink);font-weight:600}
+.plot{width:100%;height:200px;display:block}
+.plot.tall{height:216px}
+.cap{display:flex;flex-wrap:wrap;gap:2px 8px;justify-content:space-between;align-items:baseline;font:11px var(--mono);color:var(--muted)}
+.cap b{font:600 13px var(--sans);color:var(--ink)}
+.leg{display:flex;flex-wrap:wrap;gap:3px 11px;font:10.5px var(--mono);color:var(--muted);line-height:1.4}
+.leg i{display:inline-block;width:14px;height:0;border-top:2px solid;vertical-align:middle;margin-right:4px}
+.leg i.dot{width:6px;height:6px;border:0;border-radius:50%;background:var(--data)}
+table.pub{width:100%;border-collapse:collapse;font:11px var(--mono);font-variant-numeric:tabular-nums}
+table.pub th{font-weight:500;color:var(--muted);text-align:right;padding:3px 3px;border-bottom:1px solid #262c3a}
+table.pub th:first-child{text-align:left}
+table.pub td{padding:3px 3px;border-bottom:1px solid #191e2a;vertical-align:top;color:var(--ink);line-height:1.35;text-align:right}
+table.pub td:first-child{text-align:left;white-space:nowrap;color:var(--muted)}
+table.pub td.m{color:var(--model)} table.pub td.c{color:var(--cc)}
+table.pub small{color:var(--muted);font-size:10px}
+.axlab{position:fixed;font:500 11px var(--mono);color:#d6deea;pointer-events:none;transform:translate(-50%,-50%);white-space:nowrap;text-shadow:0 0 6px #000,0 0 2px #000;background:rgba(8,10,15,.55);padding:1px 6px;border-radius:4px;line-height:1.35;text-align:center}
+.axlab.hot{color:var(--accent)}
+.axlab.dim{background:none;color:#8f9ab0}
+.axlab small{color:var(--muted);font-size:10px;display:block}
+#stamp{position:fixed;left:50%;bottom:calc(22px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);text-align:center;pointer-events:none;width:min(640px,46vw)}
+#stamp b{display:block;font:600 clamp(22px,2.8vw,34px)/1.08 var(--sans);letter-spacing:-.01em}
+#stamp small{display:block;font:500 12px var(--mono);color:var(--muted);margin-top:6px;line-height:1.5}
+#stamp .hi{color:var(--accent)}
+.hint{position:fixed;left:16px;bottom:calc(14px + env(safe-area-inset-bottom,0px));font:11px var(--mono);color:var(--muted)}
+@media (max-width:900px){
+  #ctl{max-height:34vh}
+  #side{left:16px;right:16px;width:auto;top:auto;bottom:calc(12px + env(safe-area-inset-bottom,0px));max-height:36vh}
+  #stamp,.hint,.axlab{display:none}
+}
+@media (max-width:560px){.panel{padding:10px 12px;gap:9px}h1{font-size:18px}}
+</style>
+<script data-goatcounter="https://jinleiphys.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
+</head>
+<body>
+
+<div id="stage"></div>
+
+<aside id="ctl" class="panel glass glass-deep" data-glass data-glass-bevel="22" data-glass-scale="42">
+  <div>
+    <a class="home" href="index.html">← nuclearjs</a> &nbsp; <a class="home" href="alpha.html">α decay</a> &nbsp; <a class="home" href="breakup.html">breakup</a>
+    <h1>Fusion at the barrier</h1>
+    <p class="sub">Two nuclei fuse when they get over, or through, the barrier made by their Coulomb repulsion and the short-range nuclear pull. Near and below its top the measured rate is far above what one barrier allows: the colliding nuclei are not rigid balls. A deformed target offers a lower barrier along its tips, a soft one couples to its vibrations; the single barrier becomes a distribution, and the second derivative of Eσ shows it.</p>
+  </div>
+  <div class="grp">
+    <div class="lab">Reaction</div>
+    <div class="seg" id="sys">
+      <button data-v="16O144Sm" title="spherical, vibrational target">¹⁶O + ¹⁴⁴Sm</button>
+      <button data-v="16O154Sm" title="deformed, rotational target">¹⁶O + ¹⁵⁴Sm</button>
+    </div>
+  </div>
+  <div class="grp" id="gvib">
+    <div class="lab">Coupled states of ¹⁴⁴Sm (one phonon each)</div>
+    <div class="chips" id="modes"></div>
+    <p class="src" id="vibnote"></p>
+  </div>
+  <div class="grp" id="grot">
+    <div class="lab">Deformation of ¹⁵⁴Sm</div>
+    <div class="row"><span class="k">β₂</span><input id="b2" type="range" min="0" max="0.4" step="0.001"><output id="b2o"></output></div>
+    <div class="row"><span class="k">β₄</span><input id="b4" type="range" min="-0.1" max="0.15" step="0.001"><output id="b4o"></output></div>
+    <div class="chips small" id="bchips"></div>
+    <p class="src" id="rotnote"></p>
+  </div>
+  <div class="grp">
+    <label class="lab" for="es">Centre-of-mass energy</label>
+    <div class="row"><input id="es" type="range" step="0.01"><output id="eout"></output></div>
+    <div class="chips small" id="echips"></div>
+  </div>
+  <div class="grp">
+    <div class="lab">At this energy</div>
+    <dl class="kv" id="info"></dl>
+  </div>
+  <div class="grp">
+    <div class="lab">Rendering</div>
+    <div class="seg" id="qmode">
+      <button data-v="high" title="shadows, ambient occlusion, bloom">cinematic</button>
+      <button data-v="low">fast</button>
+    </div>
+    <p class="src" id="vnote"></p>
+  </div>
+</aside>
+
+<aside id="side" class="panel glass glass-deep" data-glass data-glass-bevel="22" data-glass-scale="42">
+  <div class="cap"><b>Fusion excitation function</b><span id="capsig"></span></div>
+  <canvas id="psig" class="plot" aria-label="Fusion cross section against energy, measured and calculated"></canvas>
+  <div class="leg" id="legs"></div>
+  <div class="cap"><b>Barrier distribution d²(Eσ)/dE²</b><span id="capd"></span></div>
+  <canvas id="pd" class="plot tall" aria-label="Fusion barrier distribution against energy, measured and calculated"></canvas>
+  <div class="leg" id="legd"></div>
+  <p class="src" id="dnote"></p>
+  <table class="pub" id="cmp"></table>
+  <p class="src" id="cmpnote"></p>
+  <details>
+    <summary>Wong against exact tunnelling</summary>
+    <div class="grp">
+      <table class="pub" id="wong"></table>
+      <p class="src" id="wongnote"></p>
+    </div>
+  </details>
+  <details>
+    <summary>What is simplified</summary>
+    <div class="grp src" id="simp"></div>
+  </details>
+  <details>
+    <summary>Sources</summary>
+    <div class="grp src" id="srcs"></div>
+  </details>
+</aside>
+
+<div id="labels"></div>
+<div id="stamp"></div>
+<div class="hint">drag to orbit · scroll to zoom · move the energy</div>
+
+<script src="assets/three-bundle.js"></script>
+<script src="assets/three-post.js"></script>
+<script src="assets/wave-stage.js"></script>
+<script src="assets/shells-data.js"></script>
+<script src="assets/fusionbarrier-data.js"></script>
+<script src="assets/fusionbarrier.js"></script>
+<script>
+"use strict";
+const D = FB_DATA, P = D.params, L10 = Math.log10;
+const SYS = {
+  "16O144Sm": { lab: "¹⁶O + ¹⁴⁴Sm", cn: "¹⁶⁰Yb", kind: "vib", Er: [54, 72], cc: { bare: "16O144Sm_bare", "3-": "16O144Sm_3m", "3-2+": "16O144Sm_3m2p" } },
+  "16O154Sm": { lab: "¹⁶O + ¹⁵⁴Sm", cn: "¹⁷⁰Yb", kind: "rot", Er: [50, 72], cc: { bare: "16O154Sm_bare", rot: "16O154Sm_rot", rotmix: "16O154Sm_rotmix" } },
+};
+const MODE_LAB = { 3: "3⁻ 1.81 MeV, β₃ = 0.205", 2: "2⁺ 1.66 MeV, β₂ = 0.11" };
+// presets of 154Sm from the data file: [beta2, beta4, label, title, CCFULL run or null]
+const BPRE = P["16O154Sm"].presets;
+
+// ---------- state
+const S = { sys: "16O154Sm", E: 57, modes: [3, 2], b2: P["16O154Sm"].beta2, b4: P["16O154Sm"].beta4 };
+let SY = null, MODEL = null;                       // the system object and the current channel set
+
+// ================================================================ scene
+const stage = document.getElementById("stage");
+const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance", preserveDrawingBuffer: true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.setSize(innerWidth, innerHeight);
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.05;
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+stage.appendChild(renderer.domElement);
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(34, innerWidth / innerHeight, 0.1, 900);
+const SKY = WaveStage.skyGLSL(new THREE.Vector3(-0.4, 0.8, 0.45));
+scene.environment = WaveStage.environment(renderer, SKY);
+scene.fog = new THREE.Fog("#0b0d12", 170, 380);
+// the ground colour drawn untouched on the direct path; on the bloom path the linear colour ACES maps back to it
+// (the value alpha.html found by Newton on the r160 shader formula)
+const GROUND = new THREE.Color("#0b0d12");
+const GROUND_PRE_ACES = new THREE.Color().setRGB(0.0115476, 0.0131218, 0.0174740, THREE.LinearSRGBColorSpace);
+scene.background = GROUND.clone();
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true; controls.dampingFactor = 0.08;
+controls.minDistance = 25; controls.maxDistance = 260;
+controls.maxPolarAngle = Math.PI * 0.49;
+const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+const RIG = WaveStage.rig(scene, SKY, 200, 64);
+const POST = WaveStage.post(renderer, scene, camera, [0.5, 0.5, 0.8], { intensity: 0.85, radius: 5, thickness: 3 });
+const composer = POST.composer;
+
+// world: x = separation r (projectiles come in from +x), z = fraction of the incoming flux, y = potential energy
+const RMIN = 6.5, RMAX = 20, LX = 64, WZ = 40, SYV = 0.6;   // fm, units, units, units per MeV
+const BASEY = 0;
+const X = (r) => (r - 0.5 * (RMIN + RMAX)) / (RMAX - RMIN) * LX;
+const Zf = (f) => (f - 0.5) * WZ;
+let VLOW = 30;                                     // MeV drawn at the floor (the fusion pit below it)
+const Yv = (V) => BASEY + (Math.max(V, VLOW) - VLOW) * SYV;
+scene.add(WaveStage.floor(240, BASEY - 3.0, 70, 0.55));
+
+// a luminous camera-facing ribbon through 3D points (as in hburning.html)
+function makeRibbon(color, width, maxPts, glowAmt) {
+  const n = maxPts;
+  const pos = new Float32Array(n * 6), tan = new Float32Array(n * 6), side = new Float32Array(n * 2), al = new Float32Array(n * 2);
+  const g = new THREE.BufferGeometry();
+  g.setAttribute("position", new THREE.BufferAttribute(pos, 3));
+  g.setAttribute("aT", new THREE.BufferAttribute(tan, 3));
+  g.setAttribute("aS", new THREE.BufferAttribute(side, 1));
+  g.setAttribute("aA", new THREE.BufferAttribute(al, 1));
+  const idx = [];
+  for (let i = 0; i < n - 1; i++) { const a = 2 * i; idx.push(a, a + 1, a + 2, a + 2, a + 1, a + 3); }
+  g.setIndex(idx);
+  for (let i = 0; i < n; i++) { side[2 * i] = -1; side[2 * i + 1] = 1; }
+  const m = new THREE.ShaderMaterial({
+    uniforms: { uW: { value: width }, uC: { value: new THREE.Color(color) }, uG: { value: glowAmt == null ? 1 : glowAmt } },
+    vertexShader: `attribute vec3 aT; attribute float aS; attribute float aA; uniform float uW; varying float vS; varying float vA;
+      void main(){ vS = aS; vA = aA; vec4 mv = modelViewMatrix * vec4(position, 1.0);
+        vec3 t = normalize((modelViewMatrix * vec4(aT, 0.0)).xyz + vec3(1e-6));
+        vec3 sd = normalize(cross(t, normalize(-mv.xyz))); mv.xyz += sd * uW * aS; gl_Position = projectionMatrix * mv; }`,
+    fragmentShader: `uniform vec3 uC; uniform float uG; varying float vS; varying float vA;
+      void main(){ float core = exp(-vS * vS * 16.0), halo = exp(-vS * vS * 3.0);
+        vec3 col = (vec3(1.0, 0.98, 0.94) * core * 0.9 + uC * (halo * 0.7 + core * 0.6)) * uG * vA;
+        gl_FragColor = vec4(col, 1.0);
+        #include <tonemapping_fragment>
+        #include <colorspace_fragment>
+      }`,
+    transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
+  });
+  const mesh = new THREE.Mesh(g, m);
+  mesh.frustumCulled = false; mesh.renderOrder = 6; mesh.userData.noAO = true;
+  mesh.set = (pts, alphas) => {
+    const k = Math.min(pts.length, n);
+    for (let i = 0; i < n; i++) {
+      const j = Math.min(i, k - 1), p = pts[j], a = pts[Math.max(0, j - 1)], b = pts[Math.min(k - 1, j + 1)];
+      for (let s = 0; s < 2; s++) {
+        const q = 2 * i + s;
+        pos[3 * q] = p.x; pos[3 * q + 1] = p.y; pos[3 * q + 2] = p.z;
+        tan[3 * q] = b.x - a.x; tan[3 * q + 1] = b.y - a.y; tan[3 * q + 2] = b.z - a.z;
+        al[q] = i < k ? (alphas ? alphas[j] : 1) : 0;
+      }
+    }
+    g.attributes.position.needsUpdate = true; g.attributes.aT.needsUpdate = true; g.attributes.aA.needsUpdate = true;
+  };
+  return mesh;
+}
+const GLOWTEX = (() => {
+  const c = document.createElement("canvas"); c.width = c.height = 128;
+  const x = c.getContext("2d"), g = x.createRadialGradient(64, 64, 0, 64, 64, 64);
+  g.addColorStop(0, "rgba(255,255,255,1)"); g.addColorStop(0.18, "rgba(255,255,255,0.55)"); g.addColorStop(0.5, "rgba(255,255,255,0.12)"); g.addColorStop(1, "rgba(255,255,255,0)");
+  x.fillStyle = g; x.fillRect(0, 0, 128, 128);
+  return new THREE.CanvasTexture(c);
+})();
+function glow(color, size) {
+  const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: GLOWTEX, color, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending }));
+  s.scale.setScalar(size); s.renderOrder = 7; s.userData.noAO = true;
+  return s;
+}
+
+// ---------------------------------------------------------------- the landscape V(r, f)
+// a solid: the surface on top, tinted by height, warm where V > E (classically forbidden), cool where V < E; 2 MeV
+// contours and 1 fm lines engraved; the E contour lit; below VLOW the fusion pit glows. Skirts close it to the base.
+const NRS = 200, NZS = 120;
+const LANDU = { uE: { value: 60 }, uLow: { value: 30 }, uTop: { value: 62 } };
+const landMat = new THREE.MeshPhysicalMaterial({ color: "#ffffff", roughness: 0.46, metalness: 0.12, clearcoat: 0.2, clearcoatRoughness: 0.35, envMapIntensity: 0.9,
+  roughnessMap: WaveStage.noiseTexture(256, 8, 0.6, 1.0, 9) });
+landMat.onBeforeCompile = (sh) => {
+  Object.assign(sh.uniforms, LANDU);
+  sh.vertexShader = sh.vertexShader.replace("#include <common>", "#include <common>\nattribute float aV; attribute float aR; varying float vV; varying float vR; varying float vObjZ;")
+    .replace("#include <begin_vertex>", "#include <begin_vertex>\nvV = aV; vR = aR; vObjZ = position.z;");
+  sh.fragmentShader = sh.fragmentShader.replace("#include <common>", `#include <common>
+    uniform float uE, uLow, uTop; varying float vV; varying float vR; varying float vObjZ;
+    float gridline(float x, float step){ float f = abs(fract(x / step - 0.5) - 0.5) * step; return 1.0 - smoothstep(0.0, max(1.2 * fwidth(x), 1e-4), f); }`)
+    .replace("#include <color_fragment>", `#include <color_fragment>
+      float hgt = clamp((vV - uLow) / (uTop - uLow), 0.0, 1.0);
+      bool forbidden = vV > uE, pit = vV <= uLow + 0.02;
+      vec3 base = forbidden ? mix(vec3(0.20, 0.12, 0.08), vec3(0.70, 0.38, 0.17), hgt * hgt)
+                            : mix(vec3(0.11, 0.14, 0.20), vec3(0.30, 0.40, 0.56), hgt);
+      if (pit) base = vec3(0.03, 0.02, 0.02);
+      float g = pit ? 0.0 : max(gridline(vV, 2.0) * 0.55, gridline(vR, 1.0) * 0.35);
+      base *= 1.0 - 0.5 * g;
+      diffuseColor.rgb = base;`)
+    .replace("#include <roughnessmap_fragment>", `#include <roughnessmap_fragment>
+      if (vV <= uLow + 0.02) roughnessFactor = 1.0;`)
+    .replace("#include <emissivemap_fragment>", `#include <emissivemap_fragment>
+      float qe = 1.0 - smoothstep(0.0, 2.0 * fwidth(vV), abs(vV - uE));
+      totalEmissiveRadiance += vec3(1.0, 0.74, 0.30) * 2.4 * qe * step(uLow + 0.05, vV);
+      // the pit: an ember pool, brighter toward contact
+      if (vV <= uLow + 0.02) totalEmissiveRadiance += vec3(1.0, 0.30, 0.08) * (0.08 + 0.22 * smoothstep(9.5, 6.5, vR)) * (0.8 + 0.2 * sin(vR * 9.0) * sin(vObjZ * 0.9));`);
+};
+landMat.customProgramCacheKey = () => "fbland";
+const land = new THREE.Mesh(new THREE.BufferGeometry(), landMat);
+land.castShadow = true; land.receiveShadow = true;
+scene.add(land);
+// the skirts show the potential in profile: below E a dark body, above E (inside the barrier) a warm hatched band,
+// 2 MeV strata as a ruler and the E line lit across
+const SKU = { uSYV: { value: SYV }, uB0: { value: BASEY } };
+const skirtMat = new THREE.MeshStandardMaterial({ color: "#ffffff", roughness: 0.6, metalness: 0.1, envMapIntensity: 0.7, side: THREE.DoubleSide,
+  roughnessMap: WaveStage.noiseTexture(256, 10, 0.75, 1.0, 13) });
+skirtMat.onBeforeCompile = (sh) => {
+  Object.assign(sh.uniforms, LANDU, SKU);
+  sh.vertexShader = sh.vertexShader.replace("#include <common>", "#include <common>\nvarying vec3 vWp;")
+    .replace("#include <begin_vertex>", "#include <begin_vertex>\nvWp = position;");
+  sh.fragmentShader = sh.fragmentShader.replace("#include <common>", "#include <common>\nuniform float uE, uLow, uTop, uSYV, uB0; varying vec3 vWp;")
+    .replace("#include <color_fragment>", `#include <color_fragment>
+      float V = (vWp.y - uB0) / uSYV + uLow;
+      float f = abs(fract(V / 2.0 - 0.5) - 0.5) * 2.0, strata = 1.0 - smoothstep(0.0, 1.2 * fwidth(V), f);
+      float above = smoothstep(-0.05, 0.05, V - uE) * step(uB0 + 0.02, vWp.y);
+      float hx = vWp.x + vWp.y + vWp.z, hw = fwidth(hx);
+      float hatch = 1.0 - smoothstep(0.18 - hw, 0.18 + hw, abs(fract(hx / 1.1) - 0.5) * 1.1);
+      vec3 body = mix(vec3(0.07, 0.075, 0.09), mix(vec3(0.45, 0.27, 0.15), vec3(0.95, 0.66, 0.36), hatch), above);
+      diffuseColor.rgb = body * (1.0 - 0.25 * strata * step(uB0 + 0.02, vWp.y));`)
+    .replace("#include <emissivemap_fragment>", `#include <emissivemap_fragment>
+      float Vy = (vWp.y - uB0) / uSYV + uLow, dq = abs(Vy - uE), w2 = fwidth(Vy);
+      totalEmissiveRadiance += vec3(1.0, 0.72, 0.28) * 2.2 * (1.0 - smoothstep(0.0, 2.0 * w2, dq)) * step(uB0 + 0.02, vWp.y);`);
+};
+skirtMat.customProgramCacheKey = () => "fbskirt";
+const skirt = new THREE.Mesh(new THREE.BufferGeometry(), skirtMat);
+skirt.castShadow = true; skirt.receiveShadow = true;
+scene.add(skirt);
+const plinth = new THREE.Mesh(new RoundedBoxGeometry(LX + 5, 1.6, WZ + 5, 4, 0.6),
+  new THREE.MeshStandardMaterial({ color: "#20242c", metalness: 0.9, roughness: 0.42, envMapIntensity: 0.9, roughnessMap: WaveStage.turnedTexture() }));
+plinth.position.set(0, BASEY - 2.2, 0); plinth.castShadow = plinth.receiveShadow = true;
+scene.add(plinth);
+
+// the energy E: a thin glass sheet over the landscape
+const planeMat = new THREE.ShaderMaterial({
+  uniforms: {},
+  vertexShader: `varying vec2 vP; varying vec3 vW; void main(){ vP = position.xz; vec4 w = modelMatrix * vec4(position, 1.0); vW = w.xyz; gl_Position = projectionMatrix * viewMatrix * w; }`,
+  fragmentShader: `varying vec2 vP; varying vec3 vW;
+    ${SKY.glsl}
+    void main(){
+      vec3 v = normalize(cameraPosition - vW), n = vec3(0.0, sign(v.y), 0.0);
+      float F = 0.04 + 0.96 * pow(1.0 - abs(v.y), 5.0);
+      vec3 refl = studioSky(reflect(-v, n));
+      vec2 e = abs(vP) - vec2(${(LX / 2).toFixed(2)}, ${(WZ / 2).toFixed(2)});
+      float edge = 1.0 - smoothstep(0.0, 0.25, abs(max(e.x, e.y)));
+      float stripe = 0.5 + 0.5 * sin((vP.x - vP.y) * 2.2);
+      vec3 amber = vec3(0.95, 0.76, 0.31);
+      vec3 col = refl * F * 0.6 + amber * (0.07 + 0.035 * stripe) + amber * edge * 0.9;
+      float a = clamp(0.06 + F * 0.35 + 0.05 * stripe + edge * 0.8, 0.0, 1.0);
+      gl_FragColor = vec4(col, a);
+      #include <tonemapping_fragment>
+      #include <colorspace_fragment>
+    }`,
+  transparent: true, depthWrite: false, side: THREE.DoubleSide,
+});
+const plane = new THREE.Mesh(new THREE.PlaneGeometry(LX, WZ).rotateX(-Math.PI / 2), planeMat);
+plane.renderOrder = 3; plane.userData.noAO = true;
+scene.add(plane);
+
+// the barrier crest: one glowing line over the top of every lane (its height is the barrier of that lane)
+const crest = makeRibbon("#f2c14e", 0.28, NZS + 1, 1.15);
+scene.add(crest);
+
+// target glyphs at the inner end of the lanes: 154Sm turned at the orientation of its lane, or 144Sm in one of its
+// eigenchannels (a sphere breathing in the octupole and quadrupole shapes)
+const glyphs = new THREE.Group(); scene.add(glyphs);
+const nucMat = new THREE.MeshPhysicalMaterial({ color: "#c76a52", roughness: 0.28, clearcoat: 1, clearcoatRoughness: 0.1, sheen: 0.6, sheenColor: new THREE.Color("#ffb08a"),
+  emissive: "#7a2a1c", emissiveIntensity: 0.25 });
+const projMat = new THREE.MeshPhysicalMaterial({ color: "#7db2ff", roughness: 0.25, clearcoat: 1, emissive: "#3b6fd1", emissiveIntensity: 0.5 });
+function shapeGeo(b2, b4, b3, R) {           // a sphere displaced to R (1 + b2 Y20 + b3 Y30 + b4 Y40), axis along +y
+  const g = new THREE.SphereGeometry(1, 48, 32), p = g.attributes.position, v = new THREE.Vector3();
+  const y30 = (x) => Math.sqrt(7 / (16 * Math.PI)) * (5 * x * x * x - 3 * x);
+  for (let i = 0; i < p.count; i++) {
+    v.fromBufferAttribute(p, i); const x = v.y;
+    const rr = R * (1 + b2 * FB.Y20(x) + b4 * FB.Y40(x) + b3 * y30(x));
+    v.multiplyScalar(rr); p.setXYZ(i, v.x, v.y, v.z);
+  }
+  g.computeVertexNormals();
+  return g;
+}
+
+// ---------------------------------------------------------------- building a system's landscape
+// lanes: the flux fraction f in [0, 1] split by the weights of the channels. For the rotor f = cos(theta) itself (the
+// weight is uniform in cos(theta)); f = 0 is the side of 154Sm, f = 1 its tip. For the vibrator lane k has width w_k.
+let LANES = null;                                  // [{f0, f1, B, R, hw, ...}] in f order, and a sampler shift(f)
+function vAt(r, f) {                               // potential of lane f at r (MeV)
+  if (SY.kind === "rot") return FB.pot(SY.s, r, f, S.b2, S.b4)[0];
+  return FB.pot(SY.s, r, 0)[0] + laneShift(f);
+}
+function laneShift(f) {                            // vibrator: lambda_k of the lane at f, edges smoothed over 0.6 % of f
+  let v = 0;
+  for (const L of LANES) {
+    const a = THREE.MathUtils.smoothstep(f, L.f0 - 0.003, L.f0 + 0.003), b = 1 - THREE.MathUtils.smoothstep(f, L.f1 - 0.003, L.f1 + 0.003);
+    v += L.lam * (L.f0 <= 0 ? b : L.f1 >= 1 ? a : a * b);
+  }
+  return v;
+}
+function laneOf(f) { for (const L of LANES) if (f >= L.f0 && f <= L.f1) return L; return LANES[LANES.length - 1]; }
+function buildModel() {
+  const p = P[S.sys];
+  SY = { kind: SYS[S.sys].kind, s: FB.make(p), p };
+  SY.bare = FB.barrier(SY.s, 0);
+  if (SY.kind === "rot") { SY.tip = FB.barrier(SY.s, 1, S.b2, S.b4); SY.side = FB.barrier(SY.s, 0, S.b2, S.b4); }
+  if (SY.kind === "rot") {
+    MODEL = FB.orient(SY.s, S.b2, S.b4, 48);
+    // lanes for the drawing: 64 equal slices of cos(theta), each with its own barrier
+    LANES = [];
+    for (let i = 0; i < 64; i++) { const f = (i + 0.5) / 64, b = FB.barrier(SY.s, f, S.b2, S.b4); LANES.push({ f0: i / 64, f1: (i + 1) / 64, f, B: b.B, R: b.R, hw: b.hw, w: 1 / 64 }); }
+  } else {
+    const modes = p.modes.filter((m) => S.modes.includes(m.lam));
+    const e = FB.eigen(SY.s, modes);
+    SY.M = e.M;
+    MODEL = e.ch;
+    LANES = []; let f = 0;
+    for (const c of MODEL) { LANES.push({ f0: f, f1: f + c.w, f: f + c.w / 2, B: c.B, R: c.R, hw: c.hw, w: c.w, lam: c.lam }); f += c.w; }
+    LANES[LANES.length - 1].f1 = 1;
+  }
+  VLOW = SY.bare.B - 30;
+  SY.top = Math.max(...LANES.map((L) => L.B), SY.kind === "rot" ? Math.max(SY.tip.B, SY.side.B) : -1e9);
+  SY.ccKey = SY.kind === "rot" ? ((BPRE.find((q) => q[0] === S.b2 && q[1] === S.b4) || [])[4] || null)
+    : (S.modes.includes(3) && S.modes.includes(2) ? "3-2+" : S.modes.includes(3) && S.modes.length === 1 ? "3-" : S.modes.length === 0 ? "bare" : null);
+}
+function buildLandscape() {
+  const nv = (NRS + 1) * (NZS + 1);
+  const pos = new Float32Array(nv * 3), aV = new Float32Array(nv), aR = new Float32Array(nv), uv = new Float32Array(nv * 2);
+  const rAt = (i) => RMIN + (RMAX - RMIN) * i / NRS;
+  let k = 0;
+  for (let j = 0; j <= NZS; j++) {
+    const f = j / NZS;
+    for (let i = 0; i <= NRS; i++) {
+      const r = rAt(i), V = vAt(r, f);
+      pos[3 * k] = X(r); pos[3 * k + 1] = Yv(V); pos[3 * k + 2] = Zf(f);
+      aV[k] = Math.max(V, VLOW); aR[k] = r; uv[2 * k] = i / NRS * 3; uv[2 * k + 1] = f * 2; k++;
+    }
+  }
+  const idx = [];
+  for (let j = 0; j < NZS; j++) for (let i = 0; i < NRS; i++) {
+    const a = j * (NRS + 1) + i, b = a + NRS + 1;
+    idx.push(a, b, a + 1, a + 1, b, b + 1);
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute("position", new THREE.BufferAttribute(pos, 3));
+  g.setAttribute("aV", new THREE.BufferAttribute(aV, 1));
+  g.setAttribute("aR", new THREE.BufferAttribute(aR, 1));
+  g.setAttribute("uv", new THREE.BufferAttribute(uv, 2));
+  g.setIndex(idx); g.computeVertexNormals();
+  land.geometry.dispose(); land.geometry = g;
+  // skirts: the four sides from the surface edge down to the base
+  const sp = [], sidx = [], yb = BASEY - 1.4;
+  const wall = (pts) => {
+    const o = sp.length / 3;
+    for (const [x, y, z] of pts) sp.push(x, y, z, x, yb, z);
+    for (let i = 0; i < pts.length - 1; i++) { const a = o + 2 * i; sidx.push(a, a + 1, a + 2, a + 2, a + 1, a + 3); }
+  };
+  const edgeR = (f) => { const out = []; for (let i = 0; i <= NRS; i++) { const r = rAt(i); out.push([X(r), Yv(vAt(r, f)), Zf(f)]); } return out; };
+  const edgeF = (r) => { const out = []; for (let j = 0; j <= NZS; j++) { const f = j / NZS; out.push([X(r), Yv(vAt(r, f)), Zf(f)]); } return out; };
+  wall(edgeR(0)); wall(edgeR(1)); wall(edgeF(RMIN)); wall(edgeF(RMAX));
+  const sg = new THREE.BufferGeometry(); sg.setAttribute("position", new THREE.Float32BufferAttribute(sp, 3)); sg.setIndex(sidx); sg.computeVertexNormals();
+  skirt.geometry.dispose(); skirt.geometry = sg;
+  // the crest
+  const cp = [];
+  for (let j = 0; j <= NZS; j++) {
+    const f = Math.min(0.9999, Math.max(1e-4, j / NZS));
+    let b;
+    if (SY.kind === "rot") b = FB.barrier(SY.s, f, S.b2, S.b4); else { const L = laneOf(f); b = { R: SY.bare.R, B: SY.bare.B + laneShift(f) }; }
+    cp.push(new THREE.Vector3(X(b.R), Yv(b.B) + 0.12, Zf(j / NZS)));
+  }
+  crest.set(cp);
+  LANDU.uLow.value = VLOW; LANDU.uTop.value = SY.top + 2;
+  buildGlyphs();
+}
+function buildGlyphs() {
+  while (glyphs.children.length) { const c = glyphs.children[0]; glyphs.remove(c); if (c.geometry) c.geometry.dispose(); }
+  const x = X(RMIN) - 5.5, y = BASEY + 2.4, R = 1.75;
+  if (SY.kind === "rot") {
+    for (const f of [0.08, 0.3, 0.5, 0.7, 0.92]) {
+      const m = new THREE.Mesh(shapeGeo(S.b2, S.b4, 0, R), nucMat);
+      // symmetry axis at angle theta = acos(f) to the line of approach (the x axis)
+      m.position.set(x, y, Zf(f)); m.rotation.z = -(Math.PI / 2 - Math.acos(f)); m.castShadow = true;
+      m.userData.base = m.rotation.z;
+      glyphs.add(m);
+    }
+  } else {
+    for (const L of LANES) {
+      if (L.w < 0.02) continue;
+      const m = new THREE.Mesh(shapeGeo(0, 0, 0, R * 0.95), nucMat);
+      m.position.set(x, y, Zf(L.f)); m.castShadow = true; m.userData.vib = true;
+      glyphs.add(m);
+    }
+  }
+}
+
+// ---------------------------------------------------------------- projectiles
+// s-wave travellers in lanes picked uniformly in f (so in proportion to the weights). Each rides the E sheet in;
+// below its lane's barrier it is turned back at the outer turning point, or with the parabolic transmission
+// T = 1/(1 + exp(2 pi (B - E)/hbar omega)) of its lane it tunnels (drawn faint through the barrier) and fuses.
+const NP = 34;
+const PR = [];
+const projGeo = new THREE.SphereGeometry(0.62, 20, 14);
+for (let i = 0; i < NP; i++) {
+  const m = new THREE.Mesh(projGeo, projMat.clone()); m.userData.noAO = true;
+  const gl = glow("#8fc0ff", 3.2), trail = makeRibbon("#6fa8ff", 0.16, 26, 0.75);
+  scene.add(m, gl, trail);
+  PR.push({ m, gl, trail, hist: [], state: "idle", t: Math.random() * 6, f: 0, r: RMAX, dir: -1, fuse: false });
+}
+const flashes = [];
+for (let i = 0; i < 10; i++) { const s = glow("#ffb070", 1); s.visible = false; scene.add(s); flashes.push({ s, t: 0 }); }
+const TALLY = { n: 0, fused: 0 };
+function turning(f, E) {                           // outer turning point of lane f at E (null above the barrier)
+  const L = laneOf(f);
+  if (E >= L.B) return null;
+  let a = L.R, b = RMAX + 30;
+  for (let i = 0; i < 50; i++) { const m = 0.5 * (a + b); if (vAt(m, f) > E) a = m; else b = m; }
+  return 0.5 * (a + b);
+}
+function innerPoint(f, E) {                        // inner turning point (or the pit edge)
+  const L = laneOf(f);
+  let a = RMIN, b = L.R;
+  if (vAt(a, f) > E) return a;
+  for (let i = 0; i < 50; i++) { const m = 0.5 * (a + b); if (vAt(m, f) > E) b = m; else a = m; }
+  return 0.5 * (a + b);
+}
+function spawn(p) {
+  p.f = Math.random(); p.r = RMAX + 4; p.dir = -1; p.state = "in"; p.hist = [];
+  const L = laneOf(p.f), E = S.E;
+  p.rt = turning(p.f, E);
+  p.fuse = p.rt == null ? true : Math.random() < 1 / (1 + Math.exp(2 * Math.PI * (L.B - E) / L.hw));
+  p.ri = p.rt == null ? null : innerPoint(p.f, E);
+}
+function updateProj(dt) {
+  const E = S.E, y = Yv(Math.max(E, VLOW)) + 0.62;
+  for (const p of PR) {
+    if (p.state === "idle") { p.t -= dt; if (p.t <= 0) spawn(p); p.m.visible = p.gl.visible = false; p.trail.set([new THREE.Vector3()], [0]); continue; }
+    const v = 9.5;                                  // fm per second, presentation
+    let alpha = 1;
+    if (p.state === "in") {
+      p.r -= v * dt;
+      if (p.rt != null && p.r <= p.rt) { if (p.fuse) { p.state = "tunnel"; } else { p.state = "out"; p.r = p.rt; } }
+      if (p.rt == null && p.r <= RMIN + 0.3) { p.state = "fused"; }
+    } else if (p.state === "tunnel") {
+      p.r -= 2.2 * v * dt; alpha = 0.3;
+      if (p.r <= p.ri) { p.state = "pit"; }
+    } else if (p.state === "pit") {
+      p.r -= v * dt;
+      if (p.r <= RMIN + 0.3 || vAt(p.r, p.f) <= VLOW) p.state = "fused";
+    } else if (p.state === "out") {
+      p.r += v * dt;
+      if (p.r > RMAX + 5) { p.state = "idle"; p.t = 0.3 + Math.random() * 2.2; TALLY.n++; }
+    }
+    if (p.state === "fused") {
+      TALLY.n++; TALLY.fused++;
+      const fl = flashes.find((q) => q.t <= 0); if (fl) { fl.t = 1; fl.s.position.set(X(Math.max(RMIN + 0.5, p.r)), Yv(VLOW) + 1.2, Zf(p.f)); fl.s.visible = true; }
+      p.state = "idle"; p.t = 0.2 + Math.random() * 2.2;
+      p.m.visible = p.gl.visible = false; p.trail.set([new THREE.Vector3()], [0]); continue;
+    }
+    const yy = p.state === "pit" ? Math.max(Yv(vAt(p.r, p.f)) + 0.62, Yv(VLOW) + 0.62) : y;
+    const pos = new THREE.Vector3(X(p.r), yy, Zf(p.f));
+    p.m.position.copy(pos); p.gl.position.copy(pos);
+    p.m.visible = p.gl.visible = p.r < RMAX + 3.5;
+    p.m.material.opacity = alpha; p.m.material.transparent = alpha < 1;
+    p.gl.material.opacity = alpha;
+    p.hist.push(pos); if (p.hist.length > 26) p.hist.shift();
+    p.trail.set(p.hist, p.hist.map((_, i) => (i / p.hist.length) * alpha));
+  }
+  for (const fl of flashes) if (fl.t > 0) {
+    fl.t -= dt * 1.4; const k = Math.max(0, fl.t);
+    fl.s.scale.setScalar(2 + (1 - k) * 7); fl.s.material.opacity = k; if (k <= 0) fl.s.visible = false;
+  }
+}
+
+// ================================================================ labels
+const labels = document.getElementById("labels"), LAB = {};
+function lab(key, cls) {
+  if (!LAB[key]) { const el = document.createElement("div"); el.className = "axlab " + (cls || ""); labels.appendChild(el); LAB[key] = el; }
+  LAB[key].className = "axlab " + (cls || "");
+  return LAB[key];
+}
+const tmpV = new THREE.Vector3();
+function place(el, x, y, z, html) {
+  tmpV.set(x, y, z).project(camera);
+  const vis = tmpV.z < 1 && Math.abs(tmpV.x) < 1 && Math.abs(tmpV.y) < 1 && html !== "";
+  el.hidden = !vis;
+  if (vis) { el.style.left = (tmpV.x * 0.5 + 0.5) * innerWidth + "px"; el.style.top = (-tmpV.y * 0.5 + 0.5) * innerHeight + "px"; if (html != null && el._h !== html) { el.innerHTML = html; el._h = html; } }
+}
+function hideLabs(prefix, keep) { for (const k in LAB) if (k.startsWith(prefix) && !keep.has(k)) LAB[k].hidden = true; }
+function drawLabels() {
+  if (!SY) return;
+  const keep = new Set();
+  for (let r = 8; r <= 20; r += 2) { const k = "xr" + r; keep.add(k); place(lab(k, "dim"), X(r), BASEY - 1.2, Zf(1) + 3.2, r === 20 ? "r = 20 fm" : `${r}`); }
+  hideLabs("xr", keep);
+  place(lab("plane", "hot"), X(RMIN) + 4, Yv(Math.max(S.E, VLOW)) + 1.4, Zf(0) - 1.4, `E = ${S.E.toFixed(1)} MeV`);
+  const lk = new Set();
+  if (SY.kind === "rot") {
+    const lo = SY.tip, hi = SY.side;
+    lk.add("l0"); lk.add("l1");
+    place(lab("l0", "hot"), X(lo.R), Yv(lo.B) + 2.4, Zf(1) - 1.2, `tip · B = ${lo.B.toFixed(1)} MeV<small>θ = 0°, R = ${lo.R.toFixed(1)} fm</small>`);
+    place(lab("l1", "hot"), X(hi.R), Yv(hi.B) + 2.4, Zf(0) + 1.2, `side · B = ${hi.B.toFixed(1)} MeV<small>θ = 90°, R = ${hi.R.toFixed(1)} fm</small>`);
+    place(lab("g0", "dim"), X(RMIN) - 6.5, BASEY + 7.8, Zf(0.5), "¹⁵⁴Sm, turned<small>projectile comes from the right</small>"); lk.add("g0");
+  } else {
+    LANES.forEach((L, i) => {
+      if (L.w < 0.02) return;
+      const k = "l" + i; lk.add(k);
+      place(lab(k, "hot"), X(L.R), Yv(L.B) + 2.4, Zf(L.f), `B = ${L.B.toFixed(1)} MeV<small>weight ${L.w.toFixed(2)}</small>`);
+    });
+    place(lab("g0", "dim"), X(RMIN) - 6.5, BASEY + 7.8, Zf(0.5), `¹⁴⁴Sm${S.modes.length ? "<small>an eigenchannel per lane</small>" : ""}`); lk.add("g0");
+  }
+  hideLabs("l", lk); if (!lk.has("g0")) LAB.g0 && (LAB.g0.hidden = true);
+}
+
+// ================================================================ panels
+function setupCanvas(c) {
+  const d = Math.min(devicePixelRatio, 2), w = c.clientWidth, h = c.clientHeight;
+  c.width = w * d; c.height = h * d;
+  const x = c.getContext("2d"); x.setTransform(d, 0, 0, d, 0, 0);
+  return { x, w, h };
+}
+const SUP = "⁰¹²³⁴⁵⁶⁷⁸⁹";
+const sup = (n) => String(n).replace("-", "⁻").replace(/\d/g, (d) => SUP[d]);
+function sci(v, p) {
+  if (!isFinite(v) || v <= 0) return "0";
+  const e = Math.floor(L10(v)), m = v / Math.pow(10, e);
+  if (e >= -2 && e <= 3) return (+v.toPrecision(p || 3)).toString();
+  return `${m.toFixed((p || 3) - 1)} × 10${sup(e)}`;
+}
+const dE = () => P[S.sys].dElab * P[S.sys].AT / (P[S.sys].AP + P[S.sys].AT);   // c.m. step of the point difference
+const ccOf = (k) => D.ccfull[SYS[S.sys].cc[k]];
+const ccSig = (k, E) => FB.interpLog(ccOf(k).E, ccOf(k).sigma, E);
+const modelSig = (E) => FB.sigma(MODEL, E);
+const bareSig = (E) => FB.wong(E, SY.bare);
+const COL = { model: "#f2c14e", cc: "#7fd1b9", bare: "#8a92a6", ccb: "#5d6b80", data: "#f4f6fb" };
+
+function drawSig() {
+  const { x: ctx, w, h } = setupCanvas(document.getElementById("psig"));
+  const [e0, e1] = SYS[S.sys].Er, yr = [-3, 3];
+  const PL = 40, PR = 8, PT = 8, PB = 22;
+  const Xp = (E) => PL + (E - e0) / (e1 - e0) * (w - PL - PR);
+  const Yp = (s) => PT + (yr[1] - L10(s)) / (yr[1] - yr[0]) * (h - PT - PB);
+  ctx.font = "10px ui-monospace,Menlo,monospace";
+  for (let e = yr[0]; e <= yr[1]; e++) { ctx.strokeStyle = "#1c2230"; ctx.beginPath(); ctx.moveTo(PL, Yp(10 ** e)); ctx.lineTo(w - PR, Yp(10 ** e)); ctx.stroke(); ctx.fillStyle = "#8a92a6"; ctx.textAlign = "right"; ctx.fillText(`10${sup(e)}`, PL - 4, Yp(10 ** e) + 3); }
+  for (let E = Math.ceil(e0 / 2) * 2; E <= e1; E += 2) { ctx.strokeStyle = "#1c2230"; ctx.beginPath(); ctx.moveTo(Xp(E), PT); ctx.lineTo(Xp(E), h - PB); ctx.stroke(); if (E % 4 === 0) { ctx.fillStyle = "#8a92a6"; ctx.textAlign = "center"; ctx.fillText(E === 72 ? "72 MeV" : `${E}`, Xp(E), h - 7); } }
+  ctx.save(); ctx.beginPath(); ctx.rect(PL, PT, w - PL - PR, h - PT - PB); ctx.clip();
+  const curve = (f, col, lw, dash) => { ctx.strokeStyle = col; ctx.lineWidth = lw; ctx.setLineDash(dash || []); ctx.beginPath(); let first = true; for (let i = 0; i <= 240; i++) { const E = e0 + (e1 - e0) * i / 240, s = f(E); if (!(s > 0)) continue; first ? ctx.moveTo(Xp(E), Yp(s)) : ctx.lineTo(Xp(E), Yp(s)); first = false; } ctx.stroke(); ctx.setLineDash([]); };
+  curve((E) => ccSig("bare", E), COL.ccb, 1.2);
+  curve(bareSig, COL.bare, 1.3, [4, 3]);
+  if (SY.ccKey && SY.ccKey !== "bare") curve((E) => ccSig(SY.ccKey, E), COL.cc, 2);
+  curve(modelSig, COL.model, 2);
+  // data with error bars
+  ctx.strokeStyle = COL.data; ctx.fillStyle = COL.data; ctx.lineWidth = 1;
+  for (const [E, s, er] of D.leigh[S.sys].sigma) {           // symmetric half-widths (see the data file)
+    ctx.beginPath(); ctx.moveTo(Xp(E), Yp(s + er)); ctx.lineTo(Xp(E), Yp(Math.max(1e-4, s - er))); ctx.stroke();
+    ctx.beginPath(); ctx.arc(Xp(E), Yp(s), 2.4, 0, 2 * Math.PI); ctx.fill();
+  }
+  ctx.restore();
+  ctx.strokeStyle = "#ffffff55"; ctx.beginPath(); ctx.moveTo(Xp(S.E), PT); ctx.lineTo(Xp(S.E), h - PB); ctx.stroke();
+  ctx.fillStyle = COL.model; ctx.beginPath(); ctx.arc(Xp(S.E), Yp(Math.max(1e-3, modelSig(S.E))), 3.5, 0, 2 * Math.PI); ctx.fill();
+  ctx.fillStyle = "#8a92a6"; ctx.textAlign = "left"; ctx.fillText("σ (mb)", PL + 4, PT + 10);
+  document.getElementById("capsig").textContent = `${SYS[S.sys].lab}, log scale`;
+  const ccl = SY.ccKey && SY.ccKey !== "bare" ? `<span><i style="border-color:${COL.cc}"></i>CCFULL, run for this page</span>` : `<span><i style="border-color:${COL.cc};opacity:.35"></i>CCFULL: run only for the default and the mixed α-scattering set</span>`;
+  document.getElementById("legs").innerHTML = `<span><i class="dot"></i>Leigh et al. 1995</span><span><i style="border-color:${COL.model}"></i>page model</span>${ccl}<span><i style="border-color:${COL.bare};border-top-style:dashed"></i>one barrier, Wong</span><span><i style="border-color:${COL.ccb}"></i>one barrier, exact (CCFULL)</span>`;
+}
+
+function drawD() {
+  const { x: ctx, w, h } = setupCanvas(document.getElementById("pd"));
+  const [e0, e1] = SYS[S.sys].Er, de = dE();
+  const data = D.leigh[S.sys].D;
+  const mD = (E) => FB.pointD(modelSig, E, de);
+  const cD = SY.ccKey && SY.ccKey !== "bare" ? (E) => FB.pointD((x) => ccSig(SY.ccKey, x), E, de) : null;
+  let ymax = 0;
+  for (const r of data) ymax = Math.max(ymax, r[1] + Math.min(r[2], 200));
+  for (let E = e0; E <= e1; E += 0.25) { ymax = Math.max(ymax, mD(E)); if (cD) ymax = Math.max(ymax, cD(E)); }
+  ymax = Math.ceil(ymax * 1.08 / 200) * 200;
+  const yr = [-100, ymax], PL = 40, PR = 8, PT = 8, PB = 22;
+  const Xp = (E) => PL + (E - e0) / (e1 - e0) * (w - PL - PR);
+  const Yp = (v) => PT + (yr[1] - v) / (yr[1] - yr[0]) * (h - PT - PB);
+  ctx.font = "10px ui-monospace,Menlo,monospace";
+  for (let v = 0; v <= ymax; v += ymax > 1000 ? 400 : 200) { ctx.strokeStyle = v === 0 ? "#2a3142" : "#1c2230"; ctx.beginPath(); ctx.moveTo(PL, Yp(v)); ctx.lineTo(w - PR, Yp(v)); ctx.stroke(); ctx.fillStyle = "#8a92a6"; ctx.textAlign = "right"; ctx.fillText(`${v}`, PL - 4, Yp(v) + 3); }
+  for (let E = Math.ceil(e0 / 2) * 2; E <= e1; E += 2) { ctx.strokeStyle = "#1c2230"; ctx.beginPath(); ctx.moveTo(Xp(E), PT); ctx.lineTo(Xp(E), h - PB); ctx.stroke(); if (E % 4 === 0) { ctx.fillStyle = "#8a92a6"; ctx.textAlign = "center"; ctx.fillText(E === 72 ? "72 MeV" : `${E}`, Xp(E), h - 7); } }
+  ctx.save(); ctx.beginPath(); ctx.rect(PL, PT, w - PL - PR, h - PT - PB); ctx.clip();
+  const curve = (f, col, lw, dash) => { ctx.strokeStyle = col; ctx.lineWidth = lw; ctx.setLineDash(dash || []); ctx.beginPath(); for (let i = 0; i <= 240; i++) { const E = e0 + (e1 - e0) * i / 240, v = f(E); i ? ctx.lineTo(Xp(E), Yp(v)) : ctx.moveTo(Xp(E), Yp(v)); } ctx.stroke(); ctx.setLineDash([]); };
+  curve((E) => FB.pointD(bareSig, E, de), COL.bare, 1.3, [4, 3]);
+  if (cD) curve(cD, COL.cc, 2);
+  curve(mD, COL.model, 2);
+  // the barrier of each channel as a tick on the axis (rotor: the range of the orientation barriers)
+  ctx.fillStyle = COL.model + "55";
+  if (SY.kind === "rot") { const b0 = SY.tip.B, b1 = SY.side.B; ctx.fillRect(Xp(Math.min(b0, b1)), Yp(0) - 3, Math.abs(Xp(b1) - Xp(b0)), 3); }
+  else for (const c of MODEL) if (c.w > 0.005) ctx.fillRect(Xp(c.B) - 1, Yp(0) - 10 * Math.sqrt(c.w) - 2, 2, 10 * Math.sqrt(c.w) + 2);
+  ctx.strokeStyle = COL.data; ctx.fillStyle = COL.data; ctx.lineWidth = 1;
+  for (const [E, v, up, dn] of data) {
+    ctx.beginPath(); ctx.moveTo(Xp(E), Yp(v + up)); ctx.lineTo(Xp(E), Yp(v - dn)); ctx.stroke();
+    ctx.beginPath(); ctx.arc(Xp(E), Yp(v), 2.4, 0, 2 * Math.PI); ctx.fill();
+  }
+  ctx.restore();
+  ctx.strokeStyle = "#ffffff55"; ctx.beginPath(); ctx.moveTo(Xp(S.E), PT); ctx.lineTo(Xp(S.E), h - PB); ctx.stroke();
+  ctx.fillStyle = "#8a92a6"; ctx.textAlign = "left"; ctx.fillText("mb/MeV", PL + 4, PT + 10);
+  document.getElementById("capd").textContent = `ΔE = ${de.toFixed(2)} MeV point difference`;
+  document.getElementById("legd").innerHTML = `<span><i class="dot"></i>Leigh et al. 1995</span><span><i style="border-color:${COL.model}"></i>page model</span>${cD ? `<span><i style="border-color:${COL.cc}"></i>CCFULL</span>` : ""}<span><i style="border-color:${COL.bare};border-top-style:dashed"></i>one barrier</span><span><i style="border-color:${COL.model}55;border-top-width:3px"></i>${SY.kind === "rot" ? "orientation barriers" : "eigenbarriers, height ∝ √weight"}</span>`;
+  document.getElementById("dnote").innerHTML = `Every curve is turned into a barrier distribution the way the measurement was: the three-point difference [(Eσ)(E+ΔE) − 2(Eσ)(E) + (Eσ)(E−ΔE)]/ΔE² with ΔE = 2 MeV in the laboratory (Rumin, Hagino, Takigawa 2000, citing Leigh et al.), ${de.toFixed(2)} MeV in the centre of mass. For one barrier with the Wong formula the closed form is πR<sub>B</sub>²(2π/ħω) s(1−s), a peak of area πR<sub>B</sub>² at V<sub>B</sub>; the difference smooths it. Data points: the measured distribution as plotted by Hagino (2016); the error bars grow with energy because the second difference of a large Eσ amplifies its small relative errors${D.leigh[S.sys].D.some((r) => r[4]) ? "; a lower bar marked by the plot frame is cut there in the source figure" : ""}. In the σ panel, ${D.leigh[S.sys].sigma.filter((r) => r[3] === "res").length} of the ${D.leigh[S.sys].sigma.length} error bars are at most 1.5 % (4 drawing units of the source figure, 0.37 % each): their size there is only an upper bound, and they are drawn symmetric.`;
+}
+
+function rmsLog(f) {
+  const d = D.leigh[S.sys].sigma; let s = 0;
+  for (const [E, v] of d) { const r = Math.log(f(E) / v); s += r * r; }
+  return Math.sqrt(s / d.length);
+}
+function chiD(f) {                                 // mean squared deviation in units of the error bar, over the D points
+  const d = D.leigh[S.sys].D, de = dE(); let s = 0;
+  // a clipped point (its lower bar cut by the frame of the source figure) uses its upper bar both ways
+  for (const [E, v, up, dn, fl] of d) { const m = FB.pointD(f, E, de), e = m > v || fl === "clipped" ? up : dn; s += ((m - v) / e) ** 2; }
+  return s / d.length;
+}
+function drawCmp() {
+  const cc = ccOf("bare"), b = SY.bare;
+  const ccc = SY.ccKey && SY.ccKey !== "bare" ? (E) => ccSig(SY.ccKey, E) : null;
+  const fx = (v, n) => v.toFixed(n);
+  let t = `<tr><th></th><th>page</th><th>CCFULL</th></tr>`;
+  t += `<tr><td>bare V<sub>B</sub> (MeV)</td><td class="m">${fx(b.B, 2)}</td><td class="c">${fx(cc.barrier[1], 2)}</td></tr>`;
+  t += `<tr><td>R<sub>B</sub> (fm)</td><td class="m">${fx(b.R, 2)}</td><td class="c">${fx(cc.barrier[0], 2)}</td></tr>`;
+  t += `<tr><td>ħω (MeV)</td><td class="m">${fx(b.hw, 2)}</td><td class="c">${fx(cc.barrier[2], 2)}</td></tr>`;
+  t += `<tr><td>σ at ${S.E.toFixed(1)} MeV (mb)</td><td class="m">${sci(modelSig(S.E))}</td><td class="c">${ccc ? sci(ccc(S.E)) : "<small>not run</small>"}</td></tr>`;
+  t += `<tr><td>rms ln(σ/σ<sub>exp</sub>)</td><td class="m">${rmsLog(modelSig).toFixed(2)}</td><td class="c">${ccc ? rmsLog(ccc).toFixed(2) : ""}</td></tr>`;
+  t += `<tr><td>D: mean (Δ/error)²</td><td class="m">${chiD(modelSig).toFixed(1)}</td><td class="c">${ccc ? chiD(ccc).toFixed(1) : ""}</td></tr>`;
+  t += `<tr><td>one barrier (Wong)</td><td colspan="2">rms ln ${rmsLog(bareSig).toFixed(2)} · D ${chiD(bareSig).toFixed(1)}</td></tr>`;
+  document.getElementById("cmp").innerHTML = t;
+  const lowE = D.leigh[S.sys].sigma[0];
+  document.getElementById("cmpnote").innerHTML = `Bare barrier: the page finds the top of the same potential CCFULL uses (same constants), and agrees with the two decimals CCFULL prints. Over the ${D.leigh[S.sys].sigma.length} measured cross sections, rms of ln(σ/σ<sub>exp</sub>) (0.1 means about 10 %); over the ${D.leigh[S.sys].D.length} points of the barrier distribution, the mean square of (calculated − measured)/error bar (for the ${D.leigh[S.sys].D.filter((r) => r[4]).length} point${D.leigh[S.sys].D.filter((r) => r[4]).length === 1 ? "" : "s"} whose lower bar is cut by the source figure's frame, the upper bar is used both ways). No parameter is fitted to these data here. ${SY.kind === "rot" ? (S.b2 === P["16O154Sm"].beta2 && S.b4 === P["16O154Sm"].beta4 ? `¹⁵⁴Sm default: the potential of Rumin et al. 2001 with the β₂ = ${P["16O154Sm"].beta2} they fitted with it (λ = 2 only), a consistent published pair. Our CCFULL run of it reproduces their published curve (Rumin et al. 2001, Fig. 2(a), read from the vector figure) to ${(100 * Math.max(...D.rumin2001.map(([E, v]) => Math.abs(ccSig("rot", E) / v - 1)))).toFixed(1)} % at all ${D.rumin2001.length} energies from 52 to 75 MeV; that published curve itself lies below the data at the lowest energies, by a factor ${(lowE[1] / ccSig("rot", lowE[0])).toFixed(0)} at ${lowE[0].toFixed(2)} MeV, and they report their calculations deviating from these data.` : SY.ccKey === "rotmix" || S.b4 !== 0 || S.b2 !== P["16O154Sm"].beta2 ? "This deformation set is not the one published with this potential (a mixed or user set)." : "") : "¹⁴⁴Sm: the CCFULL test input; its 2⁺ line is switched off there, so β₂ = 0.11 is not a published value for this system."} At the lowest measured energy, ${lowE[0].toFixed(2)} MeV, σ<sub>exp</sub> = ${sci(lowE[1])} mb; page model ${sci(modelSig(lowE[0]))}${ccc ? `, CCFULL ${sci(ccc(lowE[0]))}` : ""}, one Wong barrier ${sci(bareSig(lowE[0]))} mb.`;
+}
+function drawWong() {
+  const cc = ccOf("bare"), b = SY.bare;
+  let t = `<tr><th>E − V<sub>B</sub></th><th>Wong (mb)</th><th>exact (mb)</th><th>ratio</th></tr>`;
+  for (const d of [-10, -8, -6, -4, -2, 0, 2, 5, 10]) {
+    const E = b.B + d, wv = FB.wong(E, b), ev = FB.interpLog(cc.E, cc.sigma, E);
+    t += `<tr><td>${d > 0 ? "+" : ""}${d} MeV</td><td>${sci(wv)}</td><td>${sci(ev)}</td><td class="m">${(wv / ev).toFixed(2)}</td></tr>`;
+  }
+  document.getElementById("wong").innerHTML = t;
+  document.getElementById("wongnote").innerHTML = `Same bare potential, no coupling. Exact: CCFULL with the target inert, the radial equation integrated for every partial wave with the incoming-wave condition inside the barrier (interpolated in log σ between its 0.1 MeV steps). Wong replaces the barrier by the parabola fitted at its top and treats every partial wave with the s-wave R<sub>B</sub> and ħω. A real Coulomb barrier is wider than the parabola below its top (the Coulomb tail falls off slowly), so it is harder to tunnel through: Wong overestimates more and more as the energy drops. Above the barrier the ratio drifts slowly above 1, the l-dependence of R<sub>B</sub> and ħω that Wong drops.`;
+}
+function drawInfo() {
+  const p = P[S.sys], q = FB.Q(window.AME, p.ZP, p.AP - p.ZP, p.ZT, p.AT - p.ZT);
+  const E = S.E;
+  const T0 = MODEL.reduce((a, c) => a + c.w / (1 + Math.exp(2 * Math.PI * (c.B - E) / c.hw)), 0);
+  const Tb = 1 / (1 + Math.exp(2 * Math.PI * (SY.bare.B - E) / SY.bare.hw));
+  const ccc = SY.ccKey && SY.ccKey !== "bare" ? ccSig(SY.ccKey, E) : null;
+  document.getElementById("info").innerHTML = `
+    <dt>E − V<sub>B</sub></dt><dd>${(E - SY.bare.B >= 0 ? "+" : "") + (E - SY.bare.B).toFixed(2)} MeV <span style="color:var(--muted)">(bare V<sub>B</sub> ${SY.bare.B.toFixed(2)})</span></dd>
+    <dt>σ, page</dt><dd class="hi">${sci(modelSig(E))} mb</dd>
+    <dt>σ, one barrier</dt><dd>${sci(bareSig(E))} mb <span style="color:var(--muted)">(× ${(modelSig(E) / bareSig(E)).toPrecision(3)})</span></dd>
+    ${ccc ? `<dt>σ, CCFULL</dt><dd>${sci(ccc)} mb</dd>` : ""}
+    <dt>s wave</dt><dd>T = ${sci(T0, 2)} <span style="color:var(--muted)">(one barrier ${sci(Tb, 2)})</span></dd>
+    <dt>drawn</dt><dd>${TALLY.n ? `${TALLY.fused} of ${TALLY.n} fused` : "…"}</dd>
+    <dt>${SYS[S.sys].cn}*</dt><dd>E* = E + Q = ${(E + q).toFixed(1)} MeV <span style="color:var(--muted)">(Q = ${q.toFixed(2)})</span></dd>`;
+  document.getElementById("eout").textContent = `${E.toFixed(1)} MeV`;
+}
+function drawStamp() {
+  const d = S.E - SY.bare.B, en = modelSig(S.E) / bareSig(S.E);
+  const where = Math.abs(d) < 0.3 ? "at the bare barrier" : d < 0 ? `${(-d).toFixed(1)} MeV below the bare barrier` : `${d.toFixed(1)} MeV above the bare barrier`;
+  document.getElementById("stamp").innerHTML = `<b>${SYS[S.sys].lab} · ${S.E.toFixed(1)} MeV</b><small>${where} · σ = ${sci(modelSig(S.E))} mb, <span class="hi">${en.toPrecision(3)} ×</span> one barrier${SY.kind === "rot" ? ` · barriers from ${Math.min(SY.tip.B, SY.side.B).toFixed(1)} to ${Math.max(SY.tip.B, SY.side.B).toFixed(1)} MeV` : S.modes.length ? ` · ${MODEL.filter((c) => c.w > 0.01).length} eigenbarriers` : ""}</small>`;
+}
+function drawNotes() {
+  const p = P[S.sys];
+  if (SY.kind === "vib") {
+    const M = SY.M;
+    const mlines = S.modes.length ? p.modes.filter((m) => S.modes.includes(m.lam)).map((m, i) => `F(${m.lam === 3 ? "3⁻" : "2⁺"}) = ${M[0][i + 1].toFixed(2)} MeV`).join(", ") : "";
+    document.getElementById("vibnote").innerHTML = S.modes.length ? `Coupling matrix at R<sub>B</sub> = ${SY.bare.R.toFixed(2)} fm: ${mlines} (nuclear and Coulomb parts have opposite signs). Diagonalised: ${MODEL.map((c) => `${c.B.toFixed(2)} MeV × ${c.w.toFixed(3)}`).join(", ")}. Constant-coupling eigenchannels, a simplified model. Raman et al. (2001) B(E2) table: 2⁺ at ${D.be2["144"][0]} keV, β₂ = ${D.be2["144"][1]} (R = 1.2 A<sup>1/3</sup> fm).` : `No coupling: one barrier, ${SY.bare.B.toFixed(2)} MeV.`;
+  } else {
+    document.getElementById("b2o").textContent = S.b2.toFixed(3); document.getElementById("b4o").textContent = S.b4.toFixed(3);
+    const r = D.be2["154"];
+    document.getElementById("rotnote").innerHTML = `Orientation average (2⁺ energy set to zero): one barrier per orientation θ of the symmetry axis, cos θ uniform. The tips (θ = 0) bring the nuclear surfaces closest: lowest barrier. R<sub>T</sub> = ${p.rT} A<sup>1/3</sup> fm. For comparison, the B(E2) table of Raman et al. (2001): 2⁺ at ${r[0]} keV, β₂ = ${r[1]} in their convention R = 1.2 A<sup>1/3</sup> fm; the coupling depends on β₂R<sub>T</sub> (nuclear) and β₂R<sub>T</sub>² (Coulomb), so values defined with different radii are not directly comparable (Rumin et al. 2000).`;
+  }
+}
+function drawStatic() {
+  const hw154 = FB.barrier(FB.make(P["16O154Sm"]), 0).hw.toFixed(2), hw144 = FB.barrier(FB.make(P["16O144Sm"]), 0).hw.toFixed(2);
+  const pE = P["16O144Sm"].modes.map((m) => m.E).sort().join(" and ");
+  document.getElementById("simp").innerHTML = `
+    <span><b>Wong formula.</b> Every barrier here is a parabola at its top, and every partial wave shares its R<sub>B</sub> and ħω. Below the barrier this overestimates σ, by a factor that grows fast (the table above).</span>
+    <span><b>Rotor: sudden limit.</b> The 2⁺ state of ¹⁵⁴Sm is at ${P["16O154Sm"].E2} MeV, small against the ħω = ${hw154} MeV of the bare barrier, so the orientation is frozen while the nuclei tunnel. The page sets that energy to zero and averages over continuous orientations; CCFULL keeps ${P["16O154Sm"].E2} MeV and the band up to 20⁺, as Rumin, Hagino and Takigawa (PRC 63, 044603 (2001)) did; they found the difference between the two much smaller than their distance from these data. The second-order Coulomb terms are those of ccfull.f: for λ = 4 the coefficient of β₂² is 9/(7√π) (function fct4), which the CCFULL paper prints as 9/7, a misprint.</span>
+    <span><b>¹⁵⁴Sm deformations.</b> Default: the published pair, the Rumin et al. 2001 potential with their β₂ = ${P["16O154Sm"].beta2}, β₄ = 0 (λ = 2 only), R<sub>T</sub> = 1.06 A<sup>1/3</sup> fm, band to 20⁺: with these inputs CCFULL reproduces their Fig. 2(a) curve to the resolution of the figure, so the setup is theirs; that curve, and so this default, falls below the data by more than a factor 2 below about 56 MeV (up to a factor 21 at the lowest point). The presets marked “mixed” take deformations from Rumin et al. 2000, which were obtained with a different (readjusted) potential, and put them on the 2001 potential; the mixed α-scattering set is also run in CCFULL. Neither is a fit made here.</span>
+    <span><b>Vibrator: constant coupling.</b> One phonon of each mode, linear coupling, the coupling matrix evaluated once at the bare barrier radius with the excitation energies kept in it: not the sudden limit, but eigenbarriers of the coupling matrix with finite excitation energy, as in Hagino and Takigawa 2012, Sec. 4.3 and Fig. 9 (there at every r, here at one). CCFULL instead solves the coupled equations at every r with the nuclear coupling to all orders. With ħω = ${hw144} MeV and phonons at ${pE} MeV, ¹⁴⁴Sm is far from the sudden limit, and the double peak of its measured distribution needs more than this: the coupled-channels analysis of Hagino, Takigawa and Kuyucak (PRL 79, 2943 (1997)) interprets it with anharmonic octupole phonons (Hagino and Takigawa 2012, Sec. 4.3).</span>
+    <span><b>Not included</b> anywhere on the page: the projectile's own excitations (¹⁶O is treated as inert, its excitations taken to be absorbed in the bare potential, as in Rumin et al. 2000), transfer channels, β₆ of ¹⁵⁴Sm, and the hindrance of fusion far below the barrier. No deep sub-barrier data are shown.</span>
+    <span><b>The 3D scene.</b> Height is the potential energy V(r) along each lane; across, the lanes share the incoming flux by their weights (for ¹⁵⁴Sm the lane coordinate is cos θ itself). The glowing line runs over the barrier tops: the barrier distribution as a ridge. The glass sheet is the energy E; where it cuts the slopes the contour lights up, and above it the ground is warm (classically forbidden). Each blue ball is an s-wave projectile in a random lane: it rides in, and at its lane's turning point it either turns back or, with the parabolic transmission of that lane, tunnels (drawn faint) and falls into the pit, where it fuses. Speeds, sizes and glow are presentation; the pit is cut flat 30 MeV below the bare barrier.</span>`;
+  document.getElementById("srcs").innerHTML = `
+    <span><b>Data</b>: J. R. Leigh, M. Dasgupta, D. J. Hinde, J. C. Mein, C. R. Morton, R. C. Lemmon, J. P. Lestone, J. O. Newton, H. Timmers, J. X. Wei, N. Rowley, Phys. Rev. C 52, 3151 (1995). Not in EXFOR (no entry cites the paper; searched 2026-10-05). The points and error bars are read from the vector figures of K. Hagino, Phys. Rev. C 93, 061601(R) (2016), arXiv:1602.07801, Figs. 3(b,c) and 4(b,c), whose captions take the data from Leigh et al. (scripts/build_fusionbarrier_data.py: positions to 0.005 MeV, σ to 0.4 %, D to 0.4 mb/MeV).</span>
+    <span><b>CCFULL</b>: K. Hagino, N. Rowley, A. T. Kruppa, Comput. Phys. Commun. 123, 143 (1999), arXiv:nucl-th/9903074; run for this page (scripts/run_fusionbarrier_ccfull.sh, inputs in data/fusionbarrier/ccfull/). The build used here reproduces the ¹⁶O + ¹⁴⁴Sm test run printed in that paper, barrier and σ at 16 of its 18 printed energies (55 to 70 MeV, the range run here), to every printed digit; the reference OUTPUT on Hagino's web page (data/fusionbarrier/ccfull/PROVENANCE.txt) agrees with the paper from 55 to 66 MeV and differs at 67 to 70 MeV by 1.3e-5 to 4.3e-5 relative (its title line is formatted differently, so it comes from another build of the code; the coupling setup it prints is identical).</span>
+    <span><b>¹⁶O + ¹⁴⁴Sm input</b>: the CCFULL test input: V₀ = 105.1 MeV, r₀ = 1.1 fm, a = 0.75 fm; 3⁻ at 1.81 MeV, β₃ = 0.205; r<sub>coup</sub> = 1.06 fm. The 2⁺ at 1.66 MeV with β₂ = 0.11 is the second-mode line of that input, switched off there: not a published value for this system. Runs: 3⁻ alone (the test input, as distributed) and 3⁻ with 2⁺ (one phonon each, no mutual excitation).</span>
+    <span><b>¹⁶O + ¹⁵⁴Sm input</b>: V₀ = 165 MeV, r₀ = 0.95 fm, a = 1.05 fm (T. Rumin, K. Hagino, N. Takigawa, Phys. Rev. C 63, 044603 (2001), arXiv:nucl-th/0006004, Table II, bare barrier ${P["16O154Sm"].tableII[0]} MeV, ${P["16O154Sm"].tableII[1]} fm, ${P["16O154Sm"].tableII[2]} MeV), with the β₂ = ${P["16O154Sm"].beta2} they fitted with it (λ = 2 only); R<sub>T</sub> = 1.06 A<sup>1/3</sup> fm as in T. Rumin, K. Hagino, N. Takigawa, Phys. Rev. C 61, 014605 (2000), arXiv:nucl-th/9908006 (the 2001 paper does not state it); 2⁺ at ${P["16O154Sm"].E2} MeV, rotational band to 20⁺. Mixed presets: β₂ = 0.317, β₄ = 0.070 (α inelastic scattering, Aponick et al. 1970, rescaled) and the fusion fit 0.322, 0.027 (with β₆ = 0.027), both from Table 1 of the 2000 paper, with its own potential.</span>
+    <span><b>Formulas</b>: C. Y. Wong, Phys. Rev. Lett. 31, 766 (1973); K. Hagino and N. Takigawa, Prog. Theor. Phys. 128, 1061 (2012), arXiv:1209.6435: Appendix B (Wong formula), Sec. 4.1 (sudden limit and orientation average), Sec. 4.3 (eigenchannels with finite excitation energy); coupling strengths as in the CCFULL paper, Sec. 3, and for the second-order λ = 4 Coulomb term as in ccfull.f.</span>
+    <span><b>Masses</b>: AME2020, Wang et al., Chin. Phys. C 45, 030003 (2021) (assets/shells-data.js), for the fusion Q value and E*. The potentials use CCFULL's constants (e² = ħc/137, nucleon mass 938 MeV) so the barrier compares with CCFULL's.</span>`;
+}
+
+// ================================================================ updates
+function rebuild() {
+  buildModel(); buildLandscape();
+  TALLY.n = TALLY.fused = 0;
+  for (const p of PR) { p.state = "idle"; p.t = Math.random() * 2.5; }
+  drawNotes(); drawSig(); drawD(); drawCmp(); drawWong(); setE(S.E);
+}
+function setSys(k) {
+  S.sys = SYS[k] ? k : "16O154Sm";
+  for (const b of document.querySelectorAll("#sys button")) b.setAttribute("aria-pressed", b.dataset.v === S.sys ? "true" : "false");
+  const vib = SYS[S.sys].kind === "vib";
+  document.getElementById("gvib").hidden = !vib; document.getElementById("grot").hidden = vib;
+  const es = document.getElementById("es"); es.min = SYS[S.sys].Er[0]; es.max = SYS[S.sys].Er[1];
+  rebuild(); buildChips(); fitCamera();
+}
+function setE(E) {
+  const [a, b] = SYS[S.sys].Er;
+  S.E = Math.min(b, Math.max(a, E));
+  document.getElementById("es").value = S.E;
+  LANDU.uE.value = S.E;
+  plane.position.y = Yv(Math.max(S.E, VLOW));
+  for (const btn of document.querySelectorAll("#echips button")) btn.setAttribute("aria-pressed", Math.abs(+btn.dataset.e - S.E) < 0.01 ? "true" : "false");
+  TALLY.n = TALLY.fused = 0;
+  for (const p of PR) if (p.state !== "idle") { p.state = "idle"; p.t = Math.random() * 1.5; }
+  drawInfo(); drawStamp(); drawSig(); drawD(); drawCmp(); setHash();
+}
+function buildChips() {
+  const b = SY.bare, d = D.leigh[S.sys].sigma;
+  const ch = [[+(b.B - 4).toFixed(2), "4 MeV below"], [+b.B.toFixed(2), `bare barrier ${b.B.toFixed(1)}`], [d[0][0], `lowest data ${d[0][0].toFixed(1)}`]];
+  if (SY.kind === "rot") ch.splice(1, 0, [+SY.tip.B.toFixed(2), `tip barrier ${SY.tip.B.toFixed(1)}`]);
+  document.getElementById("echips").innerHTML = ch.map(([e, s]) => `<button data-e="${e}">${s}</button>`).join("");
+  document.getElementById("modes").innerHTML = P["16O144Sm"].modes.map((m) => `<button data-l="${m.lam}" aria-pressed="${S.modes.includes(m.lam)}">${MODE_LAB[m.lam]}</button>`).join("");
+  document.getElementById("bchips").innerHTML = BPRE.map(([b2, b4, s, t], i) => `<button data-i="${i}" title="${t}" aria-pressed="${Math.abs(S.b2 - b2) < 1e-9 && Math.abs(S.b4 - b4) < 1e-9}">${s}</button>`).join("");
+  document.getElementById("b2").value = S.b2; document.getElementById("b4").value = S.b4;
+  for (const btn of document.querySelectorAll("#echips button")) btn.setAttribute("aria-pressed", Math.abs(+btn.dataset.e - S.E) < 0.01 ? "true" : "false");
+}
+function setHash() {
+  const c = SY.kind === "rot" ? (S.b2 === P["16O154Sm"].beta2 && S.b4 === P["16O154Sm"].beta4 ? "" : `/${S.b2.toFixed(3)},${S.b4.toFixed(3)}`)
+    : (S.modes.length === 2 ? "" : `/${S.modes.length ? S.modes.map((l) => (l === 3 ? "3-" : "2+")).join("") : "0"}`);
+  const h = `#${S.sys}@${+S.E.toFixed(2)}${c}`;
+  if (location.hash !== h) history.replaceState(null, "", h);
+}
+function parseHash() {
+  let s;
+  try { s = decodeURIComponent(location.hash.slice(1)); } catch (e) { return null; }
+  const m = s.match(/^(16O144Sm|16O154Sm)(?:@([0-9.]+))?(?:\/(.*))?$/);
+  if (!m) return null;
+  const out = { sys: m[1] };
+  if (m[2] != null && isFinite(+m[2]) && +m[2] > 0) out.E = +m[2];
+  if (m[3] != null) {
+    if (m[1] === "16O144Sm") { const c = m[3]; if (/^(0|3-|2\+|3-2\+|2\+3-)$/.test(c)) out.modes = c === "0" ? [] : [c.includes("3-") && 3, c.includes("2+") && 2].filter(Boolean); }
+    else { const b = m[3].split(",").map(Number); if (b.length === 2 && b.every(isFinite) && b[0] >= 0 && b[0] <= 0.4 && b[1] >= -0.1 && b[1] <= 0.15) { out.b2 = b[0]; out.b4 = b[1]; } }
+  }
+  return out;
+}
+document.getElementById("sys").addEventListener("click", (e) => { const b = e.target.closest("button"); if (b && b.dataset.v !== S.sys) setSys(b.dataset.v); });
+document.getElementById("echips").addEventListener("click", (e) => { const b = e.target.closest("button"); if (b) setE(+b.dataset.e); });
+document.getElementById("modes").addEventListener("click", (e) => {
+  const b = e.target.closest("button"); if (!b) return;
+  const l = +b.dataset.l; S.modes = S.modes.includes(l) ? S.modes.filter((x) => x !== l) : [...S.modes, l].sort((a, c) => c - a);
+  rebuild(); buildChips();
+});
+document.getElementById("bchips").addEventListener("click", (e) => { const b = e.target.closest("button"); if (!b) return; const p = BPRE[+b.dataset.i]; S.b2 = p[0]; S.b4 = p[1]; rebuild(); buildChips(); });
+let pend = null;
+const later = (fn) => { if (pend) return; pend = requestAnimationFrame(() => { pend = null; fn(); }); };
+document.getElementById("es").addEventListener("input", () => later(() => setE(+document.getElementById("es").value)));
+for (const id of ["b2", "b4"]) document.getElementById(id).addEventListener("input", () => later(() => { S.b2 = +document.getElementById("b2").value; S.b4 = +document.getElementById("b4").value; rebuild(); buildChips(); }));
+addEventListener("hashchange", () => {
+  const h = parseHash(); if (!h) return;
+  if (h.modes) S.modes = h.modes;
+  if (h.b2 != null) { S.b2 = h.b2; S.b4 = h.b4; }
+  if (h.E) S.E = h.E;
+  if (h.sys !== S.sys) setSys(h.sys); else { rebuild(); buildChips(); }
+});
+addEventListener("resize", () => {
+  camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight); composer.setSize(innerWidth, innerHeight);
+  fitCamera(); drawSig(); drawD();
+});
+let quality = innerWidth < 700 ? "low" : "high";
+function applyQuality() {
+  const g = quality === "high" ? GROUND_PRE_ACES : GROUND;
+  scene.background.copy(g); scene.fog.color.copy(g);
+  renderer.shadowMap.enabled = quality === "high";
+  RIG.key.castShadow = quality === "high";
+  for (const b of document.querySelectorAll("#qmode button")) b.setAttribute("aria-pressed", b.dataset.v === quality ? "true" : "false");
+  document.getElementById("vnote").innerHTML = `The landscape is the potential energy of the two nuclei against their separation r (left: touching, right: far apart), one lane per barrier, lanes as wide as their share of the flux. Glowing line: the barrier tops. Glass sheet: the energy. Details under “What is simplified”.`;
+}
+document.getElementById("qmode").addEventListener("click", (e) => { const b = e.target.closest("button"); if (!b) return; quality = b.dataset.v; applyQuality(); });
+function fitCamera() {
+  const wide = innerWidth / innerHeight;
+  const d = (wide > 1.2 ? 2.25 : 3.4) * LX;
+  controls.target.set(-1, BASEY + 6, 2);
+  camera.position.set(0.32, 0.5, 1.0).normalize().multiplyScalar(d).add(controls.target);
+}
+
+drawStatic();
+applyQuality();
+{
+  const h = parseHash();
+  if (h) { if (h.modes) S.modes = h.modes; if (h.b2 != null) { S.b2 = h.b2; S.b4 = h.b4; } S.sys = h.sys; if (h.E) S.E = h.E; }
+  setSys(S.sys);
+}
+
+let last = performance.now(), infoT = 0, tGlobal = 0;
+function animate(now) {
+  requestAnimationFrame(animate);
+  const dt = Math.min(0.1, Math.max(0, (now - last) / 1000)); last = now;
+  tGlobal += reduce ? 0 : dt;
+  controls.update();
+  updateProj(reduce ? 0 : dt);
+  // the vibrating glyphs breathe; the turned glyphs rock slightly about their orientation
+  for (const g of glyphs.children) {
+    if (g.userData.vib) { const s = 1 + 0.035 * Math.sin(tGlobal * 3.1 + g.position.z); g.scale.set(s, 1 / Math.sqrt(s), s); }
+  }
+  infoT += dt; if (infoT > 0.5) { infoT = 0; drawInfo(); }
+  if (quality === "high") composer.render(); else renderer.render(scene, camera);
+  drawLabels();
+}
+requestAnimationFrame(animate);
+</script>
+<script src="assets/glass.js"></script>
+</body>
+</html>

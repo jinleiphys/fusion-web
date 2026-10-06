@@ -1,0 +1,381 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>nuclearjs</title>
+<meta name="description" content="Nuclear physics, theory and experiment, as interactive 3D pages in the browser.">
+<style>
+:root{
+  color-scheme:dark;
+  --ground:#0b0d12; --ground2:#0f121a; --line:#232a39; --line2:#2f3850;
+  --ink:#eef0f5; --soft:#c4c9d6; --muted:#8a92a6; --accent:#f2c14e;
+  --c-structure:#9cc8f4; --c-reactions:#cdb0f2; --c-phenomena:#9fe0c6; --c-astro:#f2c98a; --c-experiment:#f6a07c;
+  --sans:"Avenir Next","Futura","Helvetica Neue","PingFang SC","Noto Sans SC",system-ui,sans-serif;
+  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);-webkit-font-smoothing:antialiased}
+a{color:inherit}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+
+/* ---------- top bar */
+.bar{position:fixed;top:0;left:0;right:0;z-index:10;display:flex;align-items:center;justify-content:space-between;
+  padding:calc(14px + env(safe-area-inset-top,0px)) clamp(16px,4vw,48px) 14px;transition:background .3s,border-color .3s;border-bottom:1px solid transparent}
+.bar.solid{background:rgba(11,13,18,.72);backdrop-filter:blur(14px) saturate(140%);-webkit-backdrop-filter:blur(14px) saturate(140%);border-bottom-color:var(--line)}
+.brand{font-weight:600;font-size:19px;letter-spacing:.01em;text-decoration:none}
+.brand span{color:var(--accent)}
+.bar nav{display:flex;gap:clamp(10px,2vw,26px);font:500 12px var(--mono);letter-spacing:.06em;text-transform:uppercase}
+.bar nav a{text-decoration:none;color:var(--muted);transition:color .2s}
+.bar nav a:hover{color:var(--ink)}
+@media (max-width:760px){.bar nav{display:none}}
+
+/* ---------- hero */
+.hero{position:relative;height:100vh;height:100svh;min-height:560px;overflow:hidden}
+#chart{position:absolute;inset:0;display:block;width:100%;height:100%}
+.hero::after{content:"";position:absolute;inset:0;pointer-events:none;
+  background:linear-gradient(90deg,rgba(11,13,18,.92) 0%,rgba(11,13,18,.6) 30%,rgba(11,13,18,0) 55%),
+             linear-gradient(180deg,rgba(11,13,18,.5) 0%,rgba(11,13,18,0) 20%,rgba(11,13,18,0) 62%,rgba(11,13,18,.9) 92%,var(--ground) 100%)}
+.hero-text{position:absolute;z-index:2;left:clamp(16px,6vw,96px);bottom:clamp(64px,12vh,128px);max-width:min(640px,calc(100% - 32px));pointer-events:none}
+.hero-text>*{pointer-events:auto}
+.eyebrow{font:500 12px var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--accent);margin:0 0 14px}
+h1{margin:0;font-weight:600;font-size:clamp(40px,6.4vw,84px);line-height:1.02;letter-spacing:-.015em}
+h1 span{color:var(--accent)}
+.lede{margin:20px 0 0;font-size:clamp(16px,1.5vw,19px);line-height:1.55;color:var(--soft);max-width:560px}
+.cta{display:flex;flex-wrap:wrap;gap:12px;margin-top:28px}
+.cta a{display:inline-flex;align-items:center;gap:8px;padding:11px 18px;border-radius:999px;text-decoration:none;font:500 14px var(--sans);transition:transform .2s,background .2s,border-color .2s}
+.cta .go{background:var(--accent);color:#14110a}
+.cta .go:hover{transform:translateY(-1px)}
+.cta .alt{border:1px solid var(--line2);color:var(--soft);background:rgba(15,18,26,.5);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
+.cta .alt:hover{border-color:var(--muted);color:var(--ink)}
+.legend{position:absolute;z-index:2;right:clamp(16px,4vw,48px);bottom:clamp(64px,12vh,128px);font:11px/1.6 var(--mono);color:var(--muted);text-align:right;max-width:360px}
+.legend .modes{margin-top:6px;display:flex;flex-wrap:wrap;justify-content:flex-end;gap:2px 10px}
+.legend .modes span{white-space:nowrap}
+.legend .modes i{display:inline-block;width:8px;height:8px;border-radius:2px;background:var(--c);margin-right:4px;vertical-align:0}
+@media (max-width:760px){.legend{display:none}}
+#tip{position:fixed;z-index:20;pointer-events:none;padding:6px 9px;border-radius:6px;background:rgba(11,13,18,.88);border:1px solid var(--line2);font:12px var(--mono);color:var(--ink);white-space:nowrap;opacity:0;transition:opacity .12s}
+#tip b{font:600 13px var(--sans)}
+.scroll{position:absolute;z-index:2;left:50%;bottom:22px;transform:translateX(-50%);font:11px var(--mono);letter-spacing:.14em;color:var(--muted);text-transform:uppercase;text-decoration:none}
+
+/* ---------- sections */
+main{position:relative;z-index:1}
+.sec{padding:clamp(56px,9vw,112px) clamp(16px,6vw,96px) 0;max-width:1440px;margin:0 auto}
+.sec-head{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:12px 48px;align-items:end;margin-bottom:28px;border-top:1px solid var(--line);padding-top:28px}
+@media (max-width:860px){.sec-head{grid-template-columns:1fr}}
+.sec-head .num{font:500 12px var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--tint)}
+.sec-head h2{margin:6px 0 0;font-size:clamp(28px,3.4vw,44px);font-weight:600;letter-spacing:-.01em}
+.sec-head p{margin:0;color:var(--muted);font-size:16px;line-height:1.6;max-width:620px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,300px),1fr));gap:18px}
+
+.card{position:relative;display:flex;flex-direction:column;text-decoration:none;border-radius:16px;overflow:hidden;background:var(--ground2);
+  border:1px solid var(--line);transition:transform .35s cubic-bezier(.2,.7,.2,1),border-color .35s,box-shadow .35s}
+.card:hover,.card:focus-visible{transform:translateY(-4px);border-color:color-mix(in srgb,var(--tint) 55%,var(--line));box-shadow:0 18px 50px -20px color-mix(in srgb,var(--tint) 45%,transparent)}
+.card:focus-visible{outline:2px solid var(--tint);outline-offset:3px}
+.thumb{position:relative;aspect-ratio:16/10;overflow:hidden;background:#090b10}
+.thumb img{display:block;width:100%;height:100%;object-fit:cover;transform:scale(1.02);transition:transform .8s cubic-bezier(.2,.7,.2,1),filter .4s;filter:saturate(.95)}
+.card:hover .thumb img{transform:scale(1.07);filter:saturate(1.1)}
+.thumb::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(15,18,26,0) 55%,var(--ground2) 100%)}
+.kick{position:absolute;z-index:1;top:12px;left:12px;font:500 10.5px var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--tint);
+  padding:4px 8px;border-radius:999px;background:rgba(11,13,18,.7);border:1px solid color-mix(in srgb,var(--tint) 35%,transparent);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
+.body{display:flex;flex-direction:column;gap:8px;padding:6px 20px 20px;flex:1}
+.card h3{margin:0;font-size:21px;font-weight:600;letter-spacing:-.005em}
+.card p{margin:0;color:var(--muted);font-size:14.5px;line-height:1.55;flex:1}
+.card .more{margin-top:8px;font:500 12px var(--mono);color:var(--soft);display:flex;align-items:center;gap:6px}
+.card .more i{font-style:normal;transition:transform .3s;color:var(--tint)}
+.card:hover .more i{transform:translateX(4px)}
+.card.wide{grid-column:1/-1;flex-direction:row}
+.card.wide .thumb{flex:0 0 60%;aspect-ratio:16/9}
+.card.wide .thumb::after{background:linear-gradient(90deg,rgba(15,18,26,0) 70%,var(--ground2) 100%)}
+.card.wide .body{justify-content:center;padding:28px 36px;gap:12px}
+.card.wide h3{font-size:clamp(24px,2.4vw,32px)}
+.card.wide p{flex:0;font-size:16px;max-width:440px}
+@media (max-width:860px){.card.wide{flex-direction:column}.card.wide .thumb{flex:none;aspect-ratio:16/10}.card.wide .body{padding:6px 20px 20px}}
+
+/* ---------- footer */
+.about{padding:clamp(64px,10vw,120px) clamp(16px,6vw,96px) 40px;max-width:1440px;margin:0 auto}
+.about-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr));gap:28px;border-top:1px solid var(--line);padding-top:32px}
+.about h4{margin:0 0 8px;font:500 12px var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--accent)}
+.about p{margin:0;color:var(--muted);font-size:14.5px;line-height:1.6}
+.foot{margin-top:56px;display:flex;flex-wrap:wrap;justify-content:space-between;gap:12px;font:12px var(--mono);color:var(--muted)}
+</style>
+<script data-goatcounter="https://jinleiphys.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
+</head>
+<body>
+
+<header class="bar" id="bar">
+  <a class="brand" href="index.html">nuclear<span>js</span></a>
+  <nav aria-label="Sections">
+    <a href="#structure">Structure</a><a href="#reactions">Reactions</a><a href="#phenomena">Decay</a><a href="#astro">Astrophysics</a><a href="#experiment">Experiment</a>
+  </nav>
+</header>
+
+<section class="hero" aria-label="Introduction">
+  <canvas id="chart" aria-label="Every known nucleus as a column: half-life as height, decay mode as colour"></canvas>
+  <div class="hero-text">
+    <p class="eyebrow">Nuclear physics in 3D</p>
+    <h1>Every nucleus,<br><span>in your hands.</span></h1>
+    <p class="lede">Theory and experiment of the atomic nucleus as pages you can turn over: shells and shapes, reactions, decays, the stars that made the elements, and the machines that make rare isotopes today.</p>
+    <div class="cta">
+      <a class="go" href="#structure">Start exploring <span aria-hidden="true">↓</span></a>
+      <a class="alt" href="https://vibeinscience.com/nuclides.html">Open the nuclide chart <span aria-hidden="true">↗</span></a>
+    </div>
+  </div>
+  <div class="legend" aria-hidden="true">
+    <div>3558 ground states, NUBASE2020</div>
+    <div>height: half-life, 1 µs to stable</div>
+    <div class="modes"><span><i style="--c:#f4efe2"></i>stable</span><span><i style="--c:#3f86d6"></i>β⁻</span><span><i style="--c:#e2647e"></i>β⁺/EC</span><span><i style="--c:#f2c14e"></i>α</span><span><i style="--c:#5fc48f"></i>fission</span><span><i style="--c:#f08a4b"></i>p</span><span><i style="--c:#9b7be0"></i>n</span></div>
+  </div>
+  <a class="scroll" href="#structure">scroll</a>
+</section>
+<div id="tip" role="status"></div>
+
+<main>
+  <section class="sec" id="structure" style="--tint:var(--c-structure)">
+    <div class="sec-head">
+      <div><div class="num">01 · Structure</div><h2>What a nucleus looks like</h2></div>
+      <p>Nucleons in a mean field: their orbitals, the shells they close, the shapes the nucleus takes when it stretches.</p>
+    </div>
+    <div class="grid">
+      <a class="card wide" href="nucleus.html#208Pb"><div class="thumb"><img src="assets/thumbs/nucleus.jpg" alt="" loading="lazy"><span class="kick">shell model</span></div>
+        <div class="body"><h3>Spherical shell model</h3><p>Single-particle levels of any nucleus in a Woods-Saxon well, each orbital drawn as a lit 3D density, against measured separation energies and ground-state spins.</p><span class="more">²⁰⁸Pb <i>→</i></span></div></a>
+      <a class="card" href="binding.html#208Pb~res"><div class="thumb"><img src="assets/thumbs/binding.jpg" alt="" loading="lazy"><span class="kick">live fit</span></div>
+        <div class="body"><h3>Binding energy</h3><p>B/A across the nuclide chart and the five-term liquid drop fitted live to AME2020; where it fails, the magic numbers.</p><span class="more">²⁰⁸Pb <i>→</i></span></div></a>
+      <a class="card" href="size.html#208Pb@500~fb"><div class="thumb"><img src="assets/thumbs/size.jpg" alt="" loading="lazy"><span class="kick">electron scattering</span></div>
+        <div class="body"><h3>The size of the nucleus</h3><p>Electrons diffract off the charge cloud: form factors, measured densities and 908 charge radii.</p><span class="more">²⁰⁸Pb <i>→</i></span></div></a>
+      <a class="card" href="deformed.html#166Er"><div class="thumb"><img src="assets/thumbs/deformed.jpg" alt="" loading="lazy"><span class="kick">Nilsson</span></div>
+        <div class="body"><h3>Deformed nuclei</h3><p>Stretch or flatten the well and watch each level split into its projections on the symmetry axis.</p><span class="more">Nilsson diagram <i>→</i></span></div></a>
+      <a class="card" href="collective.html#166Er"><div class="thumb"><img src="assets/thumbs/collective.jpg" alt="" loading="lazy"><span class="kick">spin it</span></div>
+        <div class="body"><h3>Collective motion</h3><p>Rotors and vibrators: R₄/₂ over 610 even-even nuclei, and backbending in ¹⁵⁸Er.</p><span class="more">¹⁶⁶Er <i>→</i></span></div></a>
+      <a class="card" href="deuteron.html#av18"><div class="thumb"><img src="assets/thumbs/deuteron.jpg" alt="" loading="lazy"><span class="kick">the NN force</span></div>
+        <div class="body"><h3>The deuteron</h3><p>One proton, one neutron, 2.2 MeV: the tensor force pulls it into two lobes or a ring, depending on its spin, and it spends most of its time outside its own force.</p><span class="more">²H, Argonne v18 <i>→</i></span></div></a>
+      <a class="card" href="giant.html#165Ho~sj"><div class="thumb"><img src="assets/thumbs/giant.jpg" alt="" loading="lazy"><span class="kick">photoabsorption</span></div>
+        <div class="body"><h3>Giant resonances</h3><p>Protons swing against neutrons: the GDR, its two peaks in deformed nuclei, and the TRK sum rule against Livermore and Saclay data.</p><span class="more">¹⁶⁵Ho <i>→</i></span></div></a>
+      <a class="card" href="halo.html#11Be"><div class="thumb"><img src="assets/thumbs/halo.jpg" alt="" loading="lazy"><span class="kick">weak binding</span></div>
+        <div class="body"><h3>Halo nuclei</h3><p>A nucleon bound so weakly its cloud reaches as far as a lead nucleus.</p><span class="more">¹¹Be <i>→</i></span></div></a>
+      <a class="card" href="shells.html#54Ca"><div class="thumb"><img src="assets/thumbs/shells.jpg" alt="" loading="lazy"><span class="kick">masses</span></div>
+        <div class="body"><h3>Magic numbers</h3><p>Shell gaps read straight off measured masses, and where they move far from stability.</p><span class="more">⁵⁴Ca <i>→</i></span></div></a>
+      <a class="card" href="coexistence.html#186Pb"><div class="thumb"><img src="assets/thumbs/coexistence.jpg" alt="" loading="lazy"><span class="kick">shapes</span></div>
+        <div class="body"><h3>Shape coexistence</h3><p>One nucleus, three shapes within 700 keV: spherical, oblate and prolate ¹⁸⁶Pb.</p><span class="more">¹⁸⁶Pb <i>→</i></span></div></a>
+    </div>
+  </section>
+
+  <section class="sec" id="reactions" style="--tint:var(--c-reactions)">
+    <div class="sec-head">
+      <div><div class="num">02 · Reactions</div><h2>Probing the nucleus by hitting it</h2></div>
+      <p>Waves that bend and get absorbed, projectiles that break up, nucleons knocked out in flight.</p>
+    </div>
+    <div class="grid">
+      <a class="card wide" href="scatter.html#p208Pb@30.3"><div class="thumb"><img src="assets/thumbs/scatter.jpg" alt="" loading="lazy"><span class="kick">optical model</span></div>
+        <div class="body"><h3>Elastic scattering</h3><p>A neutron, proton, deuteron or alpha wave meeting a nucleus: the wave itself, the shadow behind it, and cross sections against measured data.</p><span class="more">p + ²⁰⁸Pb, 30 MeV <i>→</i></span></div></a>
+      <a class="card" href="breakup.html"><div class="thumb"><img src="assets/thumbs/breakup.jpg" alt="" loading="lazy"><span class="kick">weakly bound</span></div>
+        <div class="body"><h3>Inclusive breakup</h3><p>A deuteron or ⁶Li breaks up near the target: elastic breakup, nonelastic breakup, incomplete fusion.</p><span class="more">d + ⁵⁸Ni <i>→</i></span></div></a>
+      <a class="card" href="fusionbarrier.html#16O154Sm@56"><div class="thumb"><img src="assets/thumbs/fusionbarrier.jpg" alt="" loading="lazy"><span class="kick">barrier distributions</span></div>
+        <div class="body"><h3>Fusion at the barrier</h3><p>Why heavy nuclei fuse far below their Coulomb barrier: a deformed or vibrating target splits one barrier into many, and d²(Eσ)/dE² shows the distribution.</p><span class="more">¹⁶O + ¹⁵⁴Sm <i>→</i></span></div></a>
+      <a class="card" href="resonance.html#238U@6.67"><div class="thumb"><img src="assets/thumbs/resonance.jpg" alt="" loading="lazy"><span class="kick">compound nucleus</span></div>
+        <div class="body"><h3>Neutron resonances</h3><p>The forest of ²³⁸U levels a few eV above S_n: Breit-Wigner lines, Doppler broadening, level repulsion.</p><span class="more">6.67 eV <i>→</i></span></div></a>
+      <a class="card" href="transfer.html#208Pb@22/0"><div class="thumb"><img src="assets/thumbs/transfer.jpg" alt="" loading="lazy"><span class="kick">(d,p) · S</span></div>
+        <div class="body"><h3>One-nucleon transfer</h3><p>A deuteron leaves its neutron in ²⁰⁹Pb: momentum matching, FRESCO curves, spectroscopic factors and how they move with the model.</p><span class="more">²⁰⁸Pb(d,p) <i>→</i></span></div></a>
+      <a class="card" href="knockout.html"><div class="thumb"><img src="assets/thumbs/knockout.jpg" alt="" loading="lazy"><span class="kick">fast beams</span></div>
+        <div class="body"><h3>One-nucleon knockout</h3><p>A fast projectile grazes ⁹Be and loses a nucleon from the tail of its orbital.</p><span class="more">measured cases <i>→</i></span></div></a>
+      <a class="card" href="quasifree.html"><div class="thumb"><img src="assets/thumbs/quasifree.jpg" alt="" loading="lazy"><span class="kick">(p,2p), (p,pα)</span></div>
+        <div class="body"><h3>Quasi-free knockout</h3><p>A 392 MeV proton knocks out a nucleon or an alpha cluster, and where in the nucleus that can happen.</p><span class="more">¹²⁰Sn(p,pα) <i>→</i></span></div></a>
+      <a class="card" href="trojanhorse.html"><div class="thumb"><img src="assets/thumbs/trojanhorse.jpg" alt="" loading="lazy"><span class="kick">indirect method</span></div>
+        <div class="body"><h3>The Trojan Horse Method</h3><p>A nucleus carries a reaction partner past the Coulomb barrier, so stellar energies can be reached.</p><span class="more">¹⁰B(p,α), ¹²C+¹²C <i>→</i></span></div></a>
+    </div>
+  </section>
+
+  <section class="sec" id="phenomena" style="--tint:var(--c-phenomena)">
+    <div class="sec-head">
+      <div><div class="num">03 · Decay</div><h2>How nuclei fall apart</h2></div>
+      <p>Tunnelling out through the Coulomb barrier, the weak step down the valley of stability, photons shedding excitation, and a charged drop stretching over its saddle into two.</p>
+    </div>
+    <div class="grid">
+      <a class="card wide" href="alpha.html#212Po"><div class="thumb"><img src="assets/thumbs/alpha.jpg" alt="" loading="lazy"><span class="kick">tunnelling</span></div>
+        <div class="body"><h3>Alpha decay</h3><p>An alpha particle leaks through the Coulomb barrier; one formula follows measured half-lives over thirty decades.</p><span class="more">²¹²Po <i>→</i></span></div></a>
+      <a class="card" href="beta.html#74Rb"><div class="thumb"><img src="assets/thumbs/beta.jpg" alt="" loading="lazy"><span class="kick">weak interaction</span></div>
+        <div class="body"><h3>Beta decay</h3><p>Nuclei step down the valley of stability, sharing the energy with a neutrino; the Fermi function, f, and the superallowed ft values.</p><span class="more">⁷⁴Rb <i>→</i></span></div></a>
+      <a class="card" href="doublebeta.html#136Xe"><div class="thumb"><img src="assets/thumbs/doublebeta.jpg" alt="" loading="lazy"><span class="kick">2νββ / 0νββ</span></div>
+        <div class="body"><h3>Double beta decay</h3><p>Two neutrons become two protons at once, with two antineutrinos or none: Q_ββ, the spectrum against detector resolution, and m_ββ.</p><span class="more">¹³⁶Xe <i>→</i></span></div></a>
+      <a class="card" href="gamma.html#60Ni/1332.5"><div class="thumb"><img src="assets/thumbs/gamma.jpg" alt="" loading="lazy"><span class="kick">multipoles</span></div>
+        <div class="body"><h3>Gamma decay</h3><p>The shape of a photon's escape: multipole patterns, Weisskopf rates over 36 decades, isomers that wait years, and the collectivity of B(E2).</p><span class="more">⁶⁰Ni <i>→</i></span></div></a>
+      <a class="card" href="fission.html#238U"><div class="thumb"><img src="assets/thumbs/fission.jpg" alt="" loading="lazy"><span class="kick">liquid drop</span></div>
+        <div class="body"><h3>Fission</h3><p>A charged drop stretching over its saddle point and snapping in two, and what it takes to get it there.</p><span class="more">²³⁸U <i>→</i></span></div></a>
+    </div>
+  </section>
+
+  <section class="sec" id="astro" style="--tint:var(--c-astro)">
+    <div class="sec-head">
+      <div><div class="num">04 · Astrophysics</div><h2>Where the elements come from</h2></div>
+      <p>Fusion in a narrow energy window inside stars, the reaction that decides carbon or oxygen, neutron captures that build gold, and stars made of nuclear matter.</p>
+    </div>
+    <div class="grid">
+      <a class="card wide" href="stellar.html"><div class="thumb"><img src="assets/thumbs/stellar.jpg" alt="" loading="lazy"><span class="kick">Gamow window</span></div>
+        <div class="body"><h3>Fusion in stars</h3><p>The Coulomb barrier, the Gamow window sliding with temperature, and how far below the lowest measurements stars burn.</p><span class="more">pp chain to helium burning <i>→</i></span></div></a>
+      <a class="card" href="bbn.html#eta=6.12&amp;t=180"><div class="thumb"><img src="assets/thumbs/bbn.jpg" alt="" loading="lazy"><span class="kick">first three minutes</span></div>
+        <div class="body"><h3>Big-Bang nucleosynthesis</h3><p>The cooling universe freezes its neutrons, waits out the deuterium bottleneck and puts them into ⁴He; the light elements against η, with Planck and the lithium problem.</p><span class="more">t = 180 s <i>→</i></span></div></a>
+      <a class="card" href="hburning.html#cno"><div class="thumb"><img src="assets/thumbs/hburning.jpg" alt="" loading="lazy"><span class="kick">pp vs CNO</span></div>
+        <div class="body"><h3>Hydrogen burning</h3><p>The pp chains and Bethe's CNO cycle on the nuclide chart, with the slow step that sets each pace and the neutrinos Borexino caught.</p><span class="more">CNO cycle <i>→</i></span></div></a>
+      <a class="card" href="xrayburst.html#path"><div class="thumb"><img src="assets/thumbs/xrayburst.jpg" alt="" loading="lazy"><span class="kick">rp process</span></div>
+        <div class="body"><h3>X-ray bursts</h3><p>A neutron star's thermonuclear flash: the rp path to the drip line, waiting points, and GS 1826−24's light curve.</p><span class="more">rp path <i>→</i></span></div></a>
+      <a class="card" href="holygrail.html"><div class="thumb"><img src="assets/thumbs/holygrail.jpg" alt="" loading="lazy"><span class="kick">the holy grail</span></div>
+        <div class="body"><h3>¹²C(α,γ)¹⁶O</h3><p>Needed at 300 keV, measured only above 0.9 MeV, steered by two states just below threshold.</p><span class="more">¹⁶O levels <i>→</i></span></div></a>
+      <a class="card" href="nucleosynthesis.html"><div class="thumb"><img src="assets/thumbs/nucleosynthesis.jpg" alt="" loading="lazy"><span class="kick">s and r process</span></div>
+        <div class="body"><h3>Making the heavy elements</h3><p>Neutron captures along stability and far from it, and why the r-process peaks sit below the s-process peaks.</p><span class="more">nuclide chart <i>→</i></span></div></a>
+      <a class="card" href="neutronstar.html"><div class="thumb"><img src="assets/thumbs/neutronstar.jpg" alt="" loading="lazy"><span class="kick">dense matter</span></div>
+        <div class="body"><h3>Neutron stars</h3><p>A 1.4 solar-mass star cut open at published layer depths, beside a city for scale.</p><span class="more">crust to core <i>→</i></span></div></a>
+    </div>
+  </section>
+
+  <section class="sec" id="experiment" style="--tint:var(--c-experiment)">
+    <div class="sec-head">
+      <div><div class="num">05 · Experiment</div><h2>Machines and detectors</h2></div>
+      <p>How rare-isotope beams are made at FRIB, GSI/FAIR, RIKEN and RCNP, and how a silicon telescope tells particles apart.</p>
+    </div>
+    <div class="grid">
+      <a class="card wide" href="accelerator.html"><div class="thumb"><img src="assets/thumbs/accelerator.jpg" alt="" loading="lazy"><span class="kick">facilities</span></div>
+        <div class="body"><h3>Accelerators</h3><p>A folded superconducting linac, charge stripping, focusing and in-flight separation, with FRIB as the worked example and three more laboratories to compare.</p><span class="more">FRIB, GSI/FAIR, RIKEN, RCNP <i>→</i></span></div></a>
+      <a class="card" href="hpge.html#60Co"><div class="thumb"><img src="assets/thumbs/hpge.jpg" alt="" loading="lazy"><span class="kick">live Monte Carlo</span></div>
+        <div class="body"><h3>Germanium gamma spectrometer</h3><p>Photoelectric, Compton and pair production in an HPGe crystal, and the spectrum they leave: peak, edge, escapes, backscatter.</p><span class="more">⁶⁰Co <i>→</i></span></div></a>
+      <a class="card" href="telescope.html"><div class="thumb"><img src="assets/thumbs/telescope.jpg" alt="" loading="lazy"><span class="kick">detectors</span></div>
+        <div class="body"><h3>ΔE-E telescope</h3><p>Energy loss in two silicon layers, the particle-identification bands, and punch-through.</p><span class="more">silicon telescope <i>→</i></span></div></a>
+    </div>
+  </section>
+
+  <section class="about" aria-label="About">
+    <div class="about-grid">
+      <div><h4>What you see</h4><p>Every scene is drawn from physics: computed densities and levels, exact kinematics, or published values. Colours, glow and magnification are presentation, and each page says which.</p></div>
+      <div><h4>Where numbers come from</h4><p>Simple models run live in the page and are checked against independent calculations; everything else is taken from cited evaluations and papers, shown as published.</p></div>
+      <div><h4>The map</h4><p>The nuclide chart behind this page shows all ground states of NUBASE2020; the full interactive chart lives at <a href="https://vibeinscience.com/nuclides.html">vibeinscience.com</a>.</p></div>
+    </div>
+    <div class="foot"><span>nuclearjs</span><span>masses AME2020 · half-lives NUBASE2020</span></div>
+  </section>
+</main>
+
+<script src="assets/three-bundle.js"></script>
+<script src="assets/nubase.js"></script>
+<script>
+"use strict";
+// top bar turns solid once the hero scrolls away
+const bar = document.getElementById("bar");
+addEventListener("scroll", () => bar.classList.toggle("solid", scrollY > innerHeight * 0.6), { passive: true });
+
+// ---------- hero: every ground state of NUBASE2020 as a column on the (N, Z) plane.
+// Height: log10 of the half-life, from 1 us (low) to stable (tallest). Colour: the main decay mode.
+// The scene is presentation; the numbers in the tooltip are the table's.
+(function hero() { try {
+  const canvas = document.getElementById("chart");
+  const NUC = window.NUC || [];
+  if (typeof THREE === "undefined" || !NUC.length) return;
+  const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const small = innerWidth < 700;
+  const renderer = new THREE.WebGLRenderer({ canvas, antialias: !small, powerPreference: "high-performance" });
+  renderer.setPixelRatio(Math.min(devicePixelRatio, small ? 1.5 : 2));
+  renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure = 1.15;
+  renderer.outputColorSpace = THREE.SRGBColorSpace;
+  renderer.shadowMap.enabled = !small;
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+  const scene = new THREE.Scene();
+  scene.background = new THREE.Color(0x0b0d12);
+  scene.fog = new THREE.Fog(0x0b0d12, 200, 460);
+  const camera = new THREE.PerspectiveCamera(32, 1, 1, 1000);
+
+  // studio light: soft environment, a warm key with shadows, a cool rim
+  const pmrem = new THREE.PMREMGenerator(renderer);
+  scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+  scene.add(new THREE.HemisphereLight(0x9fb4d8, 0x0b0d12, 0.35));
+  const key = new THREE.DirectionalLight(0xfff1dc, 2.2);
+  key.position.set(-60, 120, 80); key.castShadow = !small;
+  key.shadow.mapSize.set(2048, 2048);
+  Object.assign(key.shadow.camera, { left: -110, right: 110, top: 110, bottom: -110, near: 10, far: 400 });
+  key.shadow.bias = -0.0004;
+  scene.add(key, key.target);
+  const rim = new THREE.DirectionalLight(0x7fa6ff, 1.1); rim.position.set(120, 40, -90); scene.add(rim);
+
+  // columns
+  const rows = NUC.filter((r) => r[0] + r[1] > 1);
+  const N0 = 80, Z0 = 52;                          // chart centre in (N, Z)
+  const geo = new THREE.BoxGeometry(0.92, 1, 0.92); geo.translate(0, 0.5, 0);
+  const mat = new THREE.MeshStandardMaterial({ roughness: 0.42, metalness: 0.05, envMapIntensity: 0.6 });
+  const mesh = new THREE.InstancedMesh(geo, mat, rows.length);
+  mesh.castShadow = mesh.receiveShadow = !small;
+  const m4 = new THREE.Matrix4(), col = new THREE.Color(), q = new THREE.Quaternion(), s = new THREE.Vector3(), p = new THREE.Vector3();
+  const MODE = { stable: "#f4efe2", "B-": "#3f86d6", "B+": "#e2647e", A: "#f2c14e", SF: "#5fc48f", p: "#f08a4b", n: "#9b7be0" };
+  for (const k in MODE) MODE[k] = new THREE.Color(MODE[k]);
+  const other = new THREE.Color("#8a92a6");
+  rows.forEach((r, i) => {
+    const [Z, N, , lt, mode, ba] = r;
+    const h = mode === "stable" ? 7 : lt == null ? 0.3 : 0.4 + 5.6 * Math.min(1, Math.max(0, (lt + 6) / 22));
+    p.set(N - N0, 0, -(Z - Z0)); s.set(1, h, 1);
+    m4.compose(p, q, s); mesh.setMatrixAt(i, m4);
+    col.copy(MODE[mode] || other);
+    mesh.setColorAt(i, col);
+  });
+  scene.add(mesh);
+
+  // floor and magic-number lines
+  const floor = new THREE.Mesh(new THREE.PlaneGeometry(600, 600), new THREE.MeshStandardMaterial({ color: 0x10131b, roughness: 0.95 }));
+  floor.rotation.x = -Math.PI / 2; floor.position.y = -0.01; floor.receiveShadow = !small; scene.add(floor);
+  const lineMat = new THREE.LineBasicMaterial({ color: 0xf2c14e, transparent: true, opacity: 0.55 });
+  // magic numbers: each line spans only the nuclei known on it, plus two cells
+  const pts = [], span = (key, m) => { let lo = 1e9, hi = -1e9; for (const r of rows) if (r[key] === m) { const o = r[1 - key]; lo = Math.min(lo, o); hi = Math.max(hi, o); } return [lo - 2, hi + 2]; };
+  for (const m of [8, 20, 28, 50, 82, 126]) {
+    const [z0, z1] = span(1, m);   // N = m: from Z = z0 to z1
+    pts.push(new THREE.Vector3(m - N0 - 0.5, 0.03, -(z0 - Z0)), new THREE.Vector3(m - N0 - 0.5, 0.03, -(z1 - Z0)));
+    pts.push(new THREE.Vector3(m - N0 + 0.5, 0.03, -(z0 - Z0)), new THREE.Vector3(m - N0 + 0.5, 0.03, -(z1 - Z0)));
+    if (m <= 82) {
+      const [n0, n1] = span(0, m);   // Z = m: from N = n0 to n1
+      pts.push(new THREE.Vector3(n0 - N0, 0.03, -(m - Z0) + 0.5), new THREE.Vector3(n1 - N0, 0.03, -(m - Z0) + 0.5));
+      pts.push(new THREE.Vector3(n0 - N0, 0.03, -(m - Z0) - 0.5), new THREE.Vector3(n1 - N0, 0.03, -(m - Z0) - 0.5));
+    }
+  }
+  scene.add(new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints(pts), lineMat));
+
+  // camera: a slow drift around the valley, looking along the line of stability
+  const target = new THREE.Vector3(18, 0, -14);
+  let t0 = performance.now(), visible = true, mouse = { x: 0, y: 0 };
+  function place(t) {
+    const a = -0.35 + (reduce ? 0 : 0.14 * Math.sin(t * 0.00006)) + mouse.x * 0.06;   // a three-quarter view from above: N to the right, Z going back
+    const el = 0.9 + mouse.y * 0.04;
+    const R = small ? 300 : 175;
+    camera.position.set(target.x + R * Math.sin(a) * Math.cos(el), target.y + R * Math.sin(el), target.z + R * Math.cos(a) * Math.cos(el));
+    camera.lookAt(target);
+  }
+  function resize() {
+    const w = canvas.clientWidth, h = canvas.clientHeight;
+    renderer.setSize(w, h, false); camera.aspect = w / h;
+    camera.setViewOffset(w, h, small ? 0 : -w * 0.2, small ? -h * 0.14 : -h * 0.06, w, h);   // valley to the right of the headline
+    camera.updateProjectionMatrix();
+  }
+  resize(); addEventListener("resize", resize);
+  new IntersectionObserver((e) => (visible = e[0].isIntersecting)).observe(canvas);
+
+  // tooltip: the nucleus under the pointer
+  const tip = document.getElementById("tip"), ray = new THREE.Raycaster(), v2 = new THREE.Vector2();
+  const SUP = "⁰¹²³⁴⁵⁶⁷⁸⁹", sup = (n) => String(n).split("").map((d) => SUP[d]).join("");
+  canvas.addEventListener("pointermove", (e) => {
+    const r = canvas.getBoundingClientRect();
+    mouse.x = (e.clientX - r.left) / r.width - 0.5; mouse.y = (e.clientY - r.top) / r.height - 0.5;
+    v2.set(mouse.x * 2, -mouse.y * 2);
+    ray.setFromCamera(v2, camera);
+    const hit = ray.intersectObject(mesh)[0];
+    if (!hit) { tip.style.opacity = 0; return; }
+    const row = rows[hit.instanceId], [Z, N, sym, lt, mode, ba] = row;
+    const life = mode === "stable" ? "stable" : lt == null ? "half-life not measured" : `T½ 10^${lt.toFixed(1)} s`;
+    tip.innerHTML = `<b>${sup(Z + N)}${sym}</b>  Z ${Z} · N ${N} · ${ba != null ? "B/A " + ba.toFixed(3) + " MeV · " : ""}${life}`;
+    tip.style.left = e.clientX + 14 + "px"; tip.style.top = e.clientY + 14 + "px"; tip.style.opacity = 1;
+  });
+  canvas.addEventListener("pointerleave", () => (tip.style.opacity = 0));
+
+  (function frame(now) {
+    requestAnimationFrame(frame);
+    if (!visible) return;
+    place(now - t0);
+    renderer.render(scene, camera);
+  })(t0);
+} catch (e) { console.error("hero: " + e.stack); } })();
+</script>
+</body>
+</html>

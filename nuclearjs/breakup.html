@@ -1,0 +1,762 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Inclusive breakup · nuclearjs</title>
+<link rel="stylesheet" href="assets/glass.css">
+<style>
+body{margin:0}
+:root{
+  color-scheme:dark;
+  --ground:#0b0d12; --line:#262c3a;
+  --ink:#e6e8ee; --muted:#8a92a6; --accent:#f2c14e; --abs:#ffb347;
+  --sans:"Avenir Next","Futura","Helvetica Neue","PingFang SC","Noto Sans SC",system-ui,sans-serif;
+  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+}
+html,body{height:100%}
+body{background:var(--ground);color:var(--ink);font-family:var(--sans);overflow:hidden}
+#stage{position:fixed;inset:0}
+#stage canvas{display:block;touch-action:none}
+.panel{position:fixed;border-radius:18px;padding:16px 18px;display:flex;flex-direction:column;gap:12px;overflow:auto;box-sizing:border-box;z-index:2}
+.panel>*{flex-shrink:0}
+#ctl{left:16px;top:calc(16px + env(safe-area-inset-top,0px));width:min(330px,calc(100% - 32px));max-height:calc(100% - 32px)}
+#side{right:16px;top:calc(16px + env(safe-area-inset-top,0px));width:372px;max-height:calc(100% - 32px);gap:8px}
+h1{margin:0;font-size:22px;font-weight:600;letter-spacing:.01em}
+.sub{margin:2px 0 0;color:var(--muted);font-size:13px;line-height:1.45}
+.sub b{color:var(--ink);font-weight:500}
+sup,sub{line-height:0}
+.grp{display:flex;flex-direction:column;gap:6px}
+.lab{font-size:11px;text-transform:uppercase;letter-spacing:.12em;color:var(--muted)}
+.seg{display:flex;border:1px solid var(--line);border-radius:4px;overflow:hidden}
+.seg button{flex:1;background:none;border:0;color:var(--muted);font:500 12px var(--mono);padding:6px 3px;cursor:pointer;min-width:0}
+.seg[hidden]{display:none}
+.seg button+button{border-left:1px solid var(--line)}
+.seg button[aria-pressed="true"]{background:#1f2533;color:var(--ink)}
+button:focus-visible,input:focus-visible,summary:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chips button{background:#161a24;border:1px solid var(--line);border-radius:4px;color:var(--ink);font:12px var(--mono);padding:5px 8px;cursor:pointer}
+.chips button:hover{border-color:var(--muted)}
+.chips button[aria-pressed="true"]{border-color:var(--accent);color:var(--accent)}
+.row{display:flex;gap:8px;align-items:center;font:12px var(--mono);color:var(--muted)}
+.row input[type=range]{flex:1;accent-color:var(--accent);min-width:0}
+.row output{min-width:74px;text-align:right;color:var(--ink);font-variant-numeric:tabular-nums}
+.row span{min-width:22px}
+.play{background:#161a24;border:1px solid var(--line);border-radius:4px;color:var(--ink);font:12px var(--mono);padding:4px 9px;cursor:pointer;min-width:58px}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:3px 10px;font:12px var(--mono);font-variant-numeric:tabular-nums}
+.kv dt{color:var(--muted)}.kv dd{margin:0}
+details summary{cursor:pointer;font-size:11px;text-transform:uppercase;letter-spacing:.12em;color:var(--muted);list-style:none}
+details summary::before{content:"▸ "}
+details[open] summary::before{content:"▾ "}
+details .grp{margin-top:8px}
+.home{font:12px var(--mono);color:var(--muted);text-decoration:none}.home:hover{color:var(--ink)}
+.src{font-size:11px;color:var(--muted);line-height:1.45;margin:0}
+.src b{color:var(--ink);font-weight:500}
+.math{font:12px var(--mono);color:var(--ink);line-height:1.7;margin:0}
+.plot{width:100%;height:190px;display:block}
+.cap{display:flex;flex-wrap:wrap;gap:2px 8px;justify-content:space-between;align-items:baseline;font:11px var(--mono);color:var(--muted)}
+.cap b{font:600 13px var(--sans);color:var(--ink)}
+.leg{display:flex;flex-wrap:wrap;gap:3px 12px;font:11px var(--mono);color:var(--muted)}
+.leg i{display:inline-block;width:14px;height:0;border-top:2px solid;vertical-align:middle;margin-right:4px}
+.leg i.d{border-top-style:dotted}
+.leg i.p{width:7px;height:7px;border:0;border-radius:50%;vertical-align:middle}
+.leg i.o{width:6px;height:6px;border:1.5px solid;border-radius:50%;vertical-align:middle}
+.leg i.s{width:6px;height:6px;border:1.5px solid;vertical-align:middle}
+.cite{font:10.5px var(--mono);color:var(--muted);line-height:1.4;margin:0}
+table.pub{border-collapse:collapse;font:11.5px var(--mono);font-variant-numeric:tabular-nums;width:100%}
+table.pub td,table.pub th{padding:2px 4px;text-align:right;border-bottom:1px solid #1c2130}
+table.pub th{color:var(--muted);font-weight:400}
+table.pub tr.on td{color:var(--accent)}
+.axlab{position:fixed;font:500 11px var(--mono);pointer-events:none;transform:translate(-50%,-50%);white-space:nowrap;text-shadow:0 1px 3px #000}
+#stamp{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);text-align:center;pointer-events:none;max-width:44vw}
+#stamp b{display:block;font:600 clamp(26px,3.6vw,44px)/1 var(--sans);letter-spacing:-.01em}
+#stamp small{display:block;font:500 12.5px var(--mono);color:var(--muted);margin-top:8px;line-height:1.45}
+.hint{position:fixed;left:50%;transform:translateX(-50%);top:calc(14px + env(safe-area-inset-top,0px));font:11px var(--mono);color:var(--muted)}
+@media (max-width:900px){
+  #ctl{max-height:44vh}
+  #side{left:16px;right:16px;width:auto;top:auto;bottom:calc(12px + env(safe-area-inset-bottom,0px));max-height:34vh}
+  #stamp,.hint,.axlab{display:none}
+}
+@media (max-width:560px){.panel{padding:10px 12px;gap:9px}h1{font-size:18px}.plot{height:150px}}
+</style>
+<script data-goatcounter="https://jinleiphys.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
+</head>
+<body>
+
+<div id="stage"></div>
+
+<aside id="ctl" class="panel glass glass-deep" data-glass data-glass-bevel="22" data-glass-scale="42">
+  <div>
+    <a class="home" href="index.html">← nuclearjs</a> &nbsp; <a class="home" href="halo.html">halo</a> &nbsp; <a class="home" href="knockout.html">knockout</a> &nbsp; <a class="home" href="scatter.html">scattering</a>
+    <h1>Inclusive breakup</h1>
+    <p class="sub">A weakly bound projectile <b>a = b + x</b> passes a nucleus <b>A</b> and only <b>b</b> is detected. Either both fragments fly off and A stays in its ground state (<b>elastic breakup</b>), or x does something to A: excites it, exchanges nucleons with it, or fuses with it (<b>nonelastic breakup</b>; the fusion of x alone is <b>incomplete fusion</b>). The sum of the two is what an experiment that counts b measures.</p>
+  </div>
+  <div class="grp">
+    <div class="lab">Projectile and target</div>
+    <div class="chips" id="cases"></div>
+  </div>
+  <div class="grp">
+    <div class="lab">What happens to x</div>
+    <div class="seg" id="mode">
+      <button data-v="ebu" title="b and x both fly off, A stays in its ground state">elastic</button>
+      <button data-v="neb" title="x is absorbed by A: inelastic, transfer, fusion; only b is detected">nonelastic</button>
+      <button data-v="icf" title="x fuses with A, b flies on">incomplete fusion</button>
+    </div>
+    <div class="seg" id="path" hidden>
+      <button data-v="1" title="x is captured while a is still bound (from the projectile ground state)">one step</button>
+      <button data-v="2" title="a first breaks up, then x is captured">two step</button>
+    </div>
+    <p class="sub" id="modeNote"></p>
+    <div class="row"><button class="play" id="play">pause</button><input id="time" type="range" min="0" max="1" step="0.001" aria-label="time"><output id="tout" style="min-width:42px"></output></div>
+  </div>
+  <div class="grp">
+    <div class="lab">Kinematics, live</div>
+    <div class="row"><span>E</span><input id="E" type="range" min="0" max="1" step="0.001" aria-label="beam energy"><output id="Eout"></output></div>
+    <div class="row"><span>ε</span><input id="eps" type="range" min="0" max="4" step="0.05" aria-label="b-x relative energy"><output id="epsout"></output></div>
+    <dl class="kv" id="kin"></dl>
+    <p class="src" id="kinNote"></p>
+  </div>
+  <div class="grp">
+    <div class="lab">Rendering</div>
+    <div class="seg" id="qmode">
+      <button data-v="high" title="ray-marched volume, soft bloom">cinematic</button>
+      <button data-v="low" title="coarser volume, no bloom, for phones">fast</button>
+    </div>
+  </div>
+  <details>
+    <summary>The theory in plain words</summary>
+    <div class="grp" id="theory"></div>
+  </details>
+  <details>
+    <summary>Open questions</summary>
+    <div class="grp" id="open"></div>
+  </details>
+  <details>
+    <summary>What the picture shows</summary>
+    <div class="grp" id="render"></div>
+  </details>
+</aside>
+
+<aside id="side" class="panel glass glass-deep" data-glass data-glass-bevel="22" data-glass-scale="42">
+  <div class="cap"><b id="pubTitle">Published</b><span id="pubUnit"></span></div>
+  <canvas id="pub" class="plot"></canvas>
+  <div class="leg" id="pubLeg"></div>
+  <div id="pubTab"></div>
+  <p class="cite" id="pubSrc"></p>
+  <div class="lab" style="margin-top:4px">Nonelastic breakup in one line</div>
+  <p class="math">d²σ/dE<sub>b</sub>dΩ<sub>b</sub>|<sub>NEB</sub> = −(2/ħv<sub>a</sub>) ρ<sub>b</sub>(E<sub>b</sub>) ⟨ψ<sub>x</sub>|W<sub>x</sub>|ψ<sub>x</sub>⟩</p>
+  <p class="src">ψ<sub>x</sub>: the x wave left behind when b leaves with a given energy and direction; W<sub>x</sub> = Im U<sub>x</sub>, the absorptive part of the x + A optical potential; ρ<sub>b</sub> = μ<sub>b</sub>k<sub>b</sub>/((2π)³ħ²). What W<sub>x</sub> removes from ψ<sub>x</sub> is the nonelastic breakup; what ψ<sub>x</sub> carries to large distances is the elastic breakup. Total inclusive = EBU + NEB. Ichimura, Austern and Vincent, Phys. Rev. C 32, 431 (1985); Lei and Moro, Phys. Rev. C 92, 044616 (2015).</p>
+  <div class="lab" style="margin-top:4px" id="pubLab2">From the same papers</div>
+  <div class="grp" id="pubText"></div>
+</aside>
+
+<div id="tA" class="axlab" style="color:var(--muted)"></div>
+<div id="tB" class="axlab"></div>
+<div id="tX" class="axlab"></div>
+<div id="stamp"><b id="stTitle"></b><small id="stLine"></small></div>
+<div class="hint">drag to orbit · scroll to zoom · space pauses</div>
+
+<script src="assets/three-bundle.js"></script>
+<script src="assets/three-post.js"></script>
+<script src="assets/vol.js"></script>
+<script src="assets/shells-data.js"></script>
+<script src="assets/breakup.js"></script>
+<script src="assets/breakup-data.js"></script>
+<script>
+"use strict";
+const BK = window.BREAKUP, PUB = window.BREAKUP_DATA;
+const sup = (A) => `<sup>${A}</sup>`;
+const fmt = (x, d = 2) => (x == null || !isFinite(x) ? "n/a" : x.toFixed(d));
+const L10 = Math.log10;
+const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
+const smooth = (a, b, v) => { const t = clamp((v - a) / (b - a), 0, 1); return t * t * (3 - 2 * t); };
+
+// ---------------------------------------------------------------- cases
+// species: Z, A, label, colour, drawn radius (fm, schematic)
+const SP = {
+  p: { Z: 1, A: 1, html: "p", col: "#ff9656", r: 0.85 },
+  n: { Z: 0, A: 1, html: "n", col: "#a8cdf2", r: 0.85 },
+  d: { Z: 1, A: 2, html: "d", col: "#d9a3ff", r: 1.05 },
+  al: { Z: 2, A: 4, html: "α", col: "#f2c14e", r: 1.35 },
+  be10: { Z: 4, A: 10, html: `${sup(10)}Be`, col: "#8fe3c0", r: 2.0 },
+};
+const CASES = [
+  { id: "d58Ni", a: { Z: 1, A: 2, html: "d" }, b: "p", x: "n", T: { Z: 28, A: 58, sym: "Ni" }, E: 80, Emin: 15, Emax: 120, pub: "ni58",
+    reac: `${sup(58)}Ni(d,pX)` },
+  { id: "6Li209Bi", a: { Z: 3, A: 6, html: `${sup(6)}Li` }, b: "al", x: "d", T: { Z: 83, A: 209, sym: "Bi" }, E: 36, Emin: 24, Emax: 50, pub: "li6bi",
+    reac: `${sup(209)}Bi(${sup(6)}Li,αX)` },
+  { id: "11Be64Zn", a: { Z: 4, A: 11, html: `${sup(11)}Be` }, b: "be10", x: "n", T: { Z: 30, A: 64, sym: "Zn" }, E: 30, Emin: 15, Emax: 80, pub: null,
+    reac: `${sup(64)}Zn(${sup(11)}Be,${sup(10)}BeX)` },
+];
+const MODES = {
+  ebu: { title: "Elastic breakup", note: "b and x both leave; A stays in its ground state. Three particles in the final state, all in their ground states." },
+  neb: { title: "Nonelastic breakup", note: "x is absorbed where the imaginary part of its optical potential acts, in the surface of A; b flies on and is detected. The x + A system is left in any state B*: excited, rearranged, or fused." },
+  icf: { title: "Incomplete fusion", note: "x fuses with A into a compound nucleus B* = x + A, which cools by emitting neutrons and γ rays; b flies on. A part of the nonelastic breakup." },
+};
+const S = { c: CASES[0], mode: "neb", path: 1, E: 80, eps: 1, t: 0, play: true, k: null };
+let quality = innerWidth < 700 ? "low" : "high";
+
+// ---------------------------------------------------------------- masses and kinematics (live, closed form)
+const M = (Z, A) => BK.nucMass(window.AME, Z, A);
+function physics() {
+  const c = S.c, b = SP[c.b], x = SP[c.x];
+  const ma = M(c.a.Z, c.a.A), mb = M(b.Z, b.A), mx = M(x.Z, x.A), mA = M(c.T.Z, c.T.A);
+  const Sbx = BK.sep(ma, mb, mx), kap = BK.decayLength(mb, mx, Sbx);
+  const k0 = BK.kin({ ma, mb, mx, mA, Elab: S.E, eps: S.eps, th: 0, phi: 0 });
+  const Ecm = S.E * mA / (ma + mA);
+  const Bar = BK.barrier(c.a.Z, c.a.A, c.T.Z, c.T.A), BarX = BK.barrier(x.Z, x.A, c.T.Z, c.T.A);
+  // x's share of the beam energy at the beam velocity (eps = 0, forward): the energy it carries to A
+  const kx0 = BK.kin({ ma, mb, mx, mA, Elab: S.E, eps: 0, th: 0, phi: 0 });
+  const muxA = mx * mA / (mx + mA), ExRel = kx0 ? kx0.Ex * mA / (mx + mA) : null;
+  const kx = ExRel ? Math.sqrt(2 * muxA * ExRel) / BK.HBARC : 1;
+  const va = Math.sqrt(2 * S.E / ma);
+  return { ma, mb, mx, mA, Sbx, kap, k0, kx0, Ecm, Bar, BarX, kx, ExRel, va, b, x };
+}
+
+// ---------------------------------------------------------------- scene
+const stageEl = document.getElementById("stage");
+const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.setSize(innerWidth, innerHeight);
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.05;
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+stageEl.appendChild(renderer.domElement);
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(36, innerWidth / innerHeight, 0.5, 3000);
+const composer = new EffectComposer(renderer);
+composer.addPass(new RenderPass(scene, camera));
+const bloom = new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), 0.34, 0.5, 0.86);
+composer.addPass(bloom);
+composer.addPass(new OutputPass());
+composer.addPass(new SMAAPass(innerWidth * renderer.getPixelRatio(), innerHeight * renderer.getPixelRatio()));
+scene.environment = VOL.studioEnv(renderer);
+VOL.lightRig(scene);
+scene.fog = new THREE.Fog("#0b0d12", 150, 420);
+// background: drawn untouched on the direct path; on the bloom path OutputPass runs it through ACES, so it
+// takes the linear colour that ACES (exposure 1.05) maps back to exactly #0b0d12 (as on the other pages)
+const GROUND = new THREE.Color("#0b0d12");
+const GROUND_PRE_ACES = new THREE.Color().setRGB(0.0115476, 0.0131218, 0.0174740, THREE.LinearSRGBColorSpace);
+scene.background = GROUND.clone();
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true; controls.dampingFactor = 0.08;
+controls.minDistance = 20; controls.maxDistance = 420;
+controls.maxPolarAngle = Math.PI * 0.49;
+const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+const stage3 = new VOL.Stage(scene);
+const grid = new THREE.GridHelper(400, 200, "#2a3245", "#1d2333");
+grid.material.opacity = 0.5;
+stage3.fadeGrid(grid);
+scene.add(grid);
+const vol = new VOL.Volume({ steps: 140 }), volFast = new VOL.Volume({ cheap: true });
+const gov = new VOL.Governor(vol);
+scene.add(vol.mesh, volFast.mesh);
+const FLOOR = -13;
+
+// physics plane (x along the beam, y toward the deflection) -> scene (x, 0, y): the reaction plane is horizontal and the
+// projectile passes on the camera's side of the target, so the absorption shadow of x falls behind A, in view
+const P3 = (x, y, h = 0) => new THREE.Vector3(x, h, y);
+
+// ---------- target: nuclear density (Fermi shape) and, in orange, the absorptive region of the x + A potential
+// W(r) = Wv f(r) + 4 Ws a f'(r)-shape (volume plus surface peak); depths schematic, a few MeV as in global fits
+const WV = 4, WS = 7, AW = 0.65;
+let TGT = null;
+function buildTarget() {
+  const A = S.c.T.A, R = 1.12 * Math.cbrt(A) - 0.86 / Math.cbrt(A), RW = 1.25 * Math.cbrt(A);
+  const r = [], rho = [], w = [];
+  for (let i = 0; i <= 400; i++) {
+    const q = i * (RW + 7) / 400; r.push(q);
+    rho.push(1 / (1 + Math.exp((q - R) / 0.52)));
+    w.push(WS * 4 * Math.exp((q - RW) / AW) / (1 + Math.exp((q - RW) / AW)) ** 2);
+  }
+  const Z = S.c.T.Z, N = A - Z;
+  const F = VOL.radialField({ r, rmax: RW + 6, tau: 4,
+    iso: [{ w: [1, 1, 0], level: 0.5, alpha: 0.7 }, { w: [0, 0, 1], level: 0.35, alpha: 0.16, rim: 1 }],
+    channels: [
+      { rho: rho.map((v) => v * N / A), color: new THREE.Color("#a8cdf2") },
+      { rho: rho.map((v) => v * Z / A), color: new THREE.Color("#ff9656") },
+      { rho: w, color: new THREE.Color("#ffb347").multiplyScalar(1.5), group: 1, weight: 0.02, emission: 0.05 },
+    ] });
+  vol.setField(F, false); volFast.setField(F, false);
+  stage3.layout(FLOOR, RW + 6);
+  stage3.setShadow(F, 4);
+  vol.u.uFloorY.value = volFast.u.uFloorY.value = FLOOR;
+  grid.position.y = FLOOR + 0.01;
+  TGT = { R, RW };
+  glow.scale.setScalar(RW * 2.8);
+}
+
+// ---------- particles
+const sphGeo = new THREE.SphereGeometry(1, 40, 20);
+function ball(col) {
+  const c = new THREE.Color(col);
+  const m = new THREE.Mesh(sphGeo, new THREE.MeshStandardMaterial({ color: c, emissive: c, emissiveIntensity: 0.55, roughness: 0.32, metalness: 0, transparent: true }));
+  m.renderOrder = 12; scene.add(m); return m;
+}
+function radialTex(stops) {
+  const cv = document.createElement("canvas"); cv.width = cv.height = 128;
+  const x = cv.getContext("2d"), g = x.createRadialGradient(64, 64, 0, 64, 64, 64);
+  for (const [o, c] of stops) g.addColorStop(o, c);
+  x.fillStyle = g; x.fillRect(0, 0, 128, 128);
+  const t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace; return t;
+}
+function haloSprite(col, tex) {
+  const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, color: new THREE.Color(col), transparent: true, opacity: 0.5, blending: THREE.AdditiveBlending, depthWrite: false }));
+  s.renderOrder = 14; scene.add(s); return s;
+}
+const softTex = radialTex([[0, "rgba(255,255,255,0.9)"], [0.35, "rgba(255,255,255,0.35)"], [0.7, "rgba(255,255,255,0.08)"], [1, "rgba(255,255,255,0)"]]);
+const bBall = ball("#fff"), xBall = ball("#fff");
+const cloud = haloSprite("#d9a3ff", softTex);          // the bound b + x pair, size 2/kappa
+const glow = haloSprite("#ffb070", softTex);           // target excitation / compound nucleus
+glow.material.opacity = 0;
+const evap = [0, 1, 2].map(() => ball("#a8cdf2"));
+const evapDir = [[0.55, 0.3, 0.78], [-0.8, 0.45, -0.4], [0.2, -0.25, -0.95]].map((v) => new THREE.Vector3(...v).normalize());
+const gam = [0, 1].map(() => {
+  const m = new THREE.Mesh(new THREE.SphereGeometry(1, 48, 24), new THREE.MeshBasicMaterial({ color: new THREE.Color("#fff3c4"), transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.BackSide }));
+  m.renderOrder = 13; scene.add(m); return m;
+});
+
+// ---------- trails: tubes along the precomputed paths, revealed as the particle moves
+function makeTrail(col) {
+  const m = new THREE.Mesh(new THREE.BufferGeometry(), new THREE.MeshStandardMaterial({ color: new THREE.Color(col), emissive: new THREE.Color(col), emissiveIntensity: 0.35, roughness: 0.5, transparent: true, opacity: 0.55, depthWrite: false }));
+  m.renderOrder = 11; scene.add(m); return m;
+}
+const trails = { a: makeTrail("#d9a3ff"), b: makeTrail("#ff9656"), x: makeTrail("#a8cdf2") };
+function setTrail(m, pts) {
+  m.geometry.dispose();
+  if (pts.length < 2) { m.geometry = new THREE.BufferGeometry(); m.userData = {}; return; }
+  const curve = new THREE.CatmullRomCurve3(pts), seg = Math.min(400, pts.length * 2);
+  m.geometry = new THREE.TubeGeometry(curve, seg, 0.14, 6, false);
+  // cumulative length of the samples, for revealing by time (the tube itself is arc-length parametrized)
+  const L = [0]; for (let i = 1; i < pts.length; i++) L.push(L[i - 1] + pts[i].distanceTo(pts[i - 1]));
+  m.userData = { seg, L, tot: L[L.length - 1] };
+  m.geometry.setDrawRange(0, 0);
+}
+function revealTrail(m, f) {   // f: fraction of the samples passed (0..1, fractional index / (n - 1))
+  const u = m.userData; if (!u.L) return;
+  const n = u.L.length, fi = clamp(f, 0, 1) * (n - 1), i = Math.floor(fi), t = fi - i;
+  const s = i >= n - 1 ? u.tot : u.L[i] + (u.L[i + 1] - u.L[i]) * t;
+  m.geometry.setDrawRange(0, Math.floor(s / u.tot * u.seg) * 6 * 6);
+}
+
+// ---------- the x wave in the reaction plane: an outgoing wave from where a breaks up, damped along each straight
+// path by exp(-(1/hbar v) int W ds) (the eikonal form of absorption); in orange, W |psi|^2, the local rate at which
+// flux leaves the x + A elastic channel, i.e. the integrand of the NEB formula
+const waveMat = new THREE.ShaderMaterial({
+  transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide,
+  uniforms: {
+    uSrc: { value: new THREE.Vector2() }, uDir: { value: new THREE.Vector2(1, 0) }, uFront: { value: 0 }, uLen: { value: 30 },
+    uK: { value: 1 }, uPh: { value: 0 }, uRW: { value: 6 }, uHv: { value: 50 }, uAmp: { value: 1 }, uAbs: { value: 1 },
+    uAni: { value: 0.7 }, uCx: { value: new THREE.Color("#a8cdf2") }, uCabs: { value: new THREE.Color("#ffab3d") }, uDisc: { value: 60 },
+  },
+  vertexShader: `varying vec3 vW; void main(){ vec4 w = modelMatrix * vec4(position, 1.0); vW = w.xyz; gl_Position = projectionMatrix * viewMatrix * w; }`,
+  fragmentShader: `
+    uniform vec2 uSrc, uDir; uniform float uFront, uLen, uK, uPh, uRW, uHv, uAmp, uAbs, uAni, uDisc; uniform vec3 uCx, uCabs;
+    varying vec3 vW;
+    float Wr(float r){ float e = exp(min((r - uRW) / ${AW.toFixed(2)}, 30.0)); float f = 1.0 / (1.0 + e); return ${WV.toFixed(1)} * f + ${WS.toFixed(1)} * 4.0 * e * f * f; }
+    void main(){
+      vec2 p = vec2(vW.x, vW.z), d = p - uSrc; float dist = max(length(d), 1e-3);
+      float env = smoothstep(uFront + 0.5, uFront - 2.5, dist) * smoothstep(uFront - uLen - 8.0, uFront - uLen, dist);
+      float geo = 3.0 / max(dist, 3.0);
+      float c = dot(d / dist, uDir);
+      float ani = mix(1.0, 0.18 + 0.82 * pow(max(c, 0.0), 1.5), uAni);
+      float tau = 0.0;
+      for (int i = 0; i < 28; i++) { float s = (float(i) + 0.5) / 28.0; tau += Wr(length(uSrc + d * s)); }
+      tau *= dist / 28.0 / uHv;
+      float amp = env * geo * ani * exp(-tau);            // |psi|, for the absorbed-flux density W |psi|^2
+      float inten = env * geo * ani * exp(-2.0 * tau);    // |psi|^2 without the 1/r^2 (kept 1/r for legibility)
+      float crest = 0.5 + 0.5 * cos(uK * dist - uPh);
+      float edge = 1.0 - smoothstep(0.8 * uDisc, uDisc, length(p));
+      vec3 col = uCx * inten * (0.12 + 0.88 * crest * crest) * uAmp + uCabs * (Wr(length(p)) / ${(WV + WS).toFixed(1)}) * amp * amp * uAbs;
+      gl_FragColor = vec4(col * edge, 1.0);
+      #include <tonemapping_fragment>
+      #include <colorspace_fragment>
+    }`,
+});
+const wave = new THREE.Mesh(new THREE.CircleGeometry(1, 160), waveMat);
+wave.rotation.x = -Math.PI / 2; wave.position.y = 0.03; wave.renderOrder = 15; wave.scale.setScalar(62);
+waveMat.uniforms.uDisc.value = 62;
+scene.add(wave);
+
+// ---------------------------------------------------------------- the story: precomputed paths for the current case
+/* Time in seconds of the animation. The projectile follows the Coulomb orbit of a about A (fixed); 1 s of animation
+   moves the beam 24 fm, so every speed on screen is (its lab speed / beam speed) x 24 fm/s and the ratios are
+   those of the live kinematics. At the breakup point the pair separates with the relative velocity of energy eps
+   (elastic breakup), or x is drawn into A at its own speed (nonelastic, incomplete fusion). */
+const VS = 24;
+let ST = null;
+function buildStory() {
+  const P = physics(), c = S.c, Ra = 1.2 * Math.cbrt(c.a.A), RW = TGT.RW;
+  const rmin = RW + Ra + 1.5;
+  const orb = BK.orbit({ Z1: c.a.Z, Z2: c.T.Z, Ecm: P.Ecm, rmin, rmax: 70, n: 800 });
+  const tS = orb.t.map((v) => v / VS);                       // seconds (orbit t is in fm per unit beam speed)
+  // breakup point: closest approach (one step), or 9 fm before it on the way in (two-step incomplete fusion)
+  let iBU = orb.iMin;
+  if (S.mode === "icf" && S.path === 2) { const rr = orb.pts.map((q) => Math.hypot(q[0], q[1])); for (let i = 0; i < orb.iMin; i++) if (rr[i] < orb.rmin + 9) { iBU = i; break; } }
+  if (S.mode === "ebu" || S.mode === "neb" || (S.mode === "icf" && S.path === 1)) iBU = Math.max(0, orb.iMin - 18);
+  const tBU = tS[iBU], T = tBU + 6.2;
+  // relative motion of b and x after the breakup (elastic): lab-speed ratios from the live kinematics
+  const vr = S.mode === "ebu" ? Math.max(0.35, Math.sqrt(2 * Math.max(S.eps, 0.05) / (P.mb * P.mx / (P.mb + P.mx))) / P.va) * VS : 0;
+  const vxAbs = (P.kx0 ? Math.hypot(...P.kx0.vx) : P.va) / P.va * VS;
+  const pBU = orb.pts[iBU];
+  // direction of the pair's separation in EBU: across the orbit, b to the outside
+  const iN = Math.min(orb.pts.length - 1, iBU + 1), tg = [orb.pts[iN][0] - pBU[0], orb.pts[iN][1] - pBU[1]], tl = Math.hypot(...tg);
+  const tu = [tg[0] / tl, tg[1] / tl], outN = [tu[1], -tu[0]];
+  const side = (pBU[0] * outN[0] + pBU[1] * outN[1]) >= 0 ? 1 : -1;
+  const sep = [Math.cos(0.6) * tu[0] + Math.sin(0.6) * outN[0] * side, Math.cos(0.6) * tu[1] + Math.sin(0.6) * outN[1] * side];
+  const fb = P.mx / (P.mb + P.mx), fx = P.mb / (P.mb + P.mx);
+  const orbAt = (t) => {                                     // a's (or a*'s c.m.) position at time t
+    if (t <= tS[0]) return orb.pts[0].slice();
+    let lo = 0, hi = tS.length - 1;
+    if (t >= tS[hi]) { const q = orb.pts[hi], q0 = orb.pts[hi - 1], dt = tS[hi] - tS[hi - 1]; return [q[0] + (q[0] - q0[0]) / dt * (t - tS[hi]), q[1] + (q[1] - q0[1]) / dt * (t - tS[hi])]; }
+    while (hi - lo > 1) { const m = (lo + hi) >> 1; if (tS[m] <= t) lo = m; else hi = m; }
+    const u = (t - tS[lo]) / (tS[hi] - tS[lo]), a = orb.pts[lo], b = orb.pts[hi];
+    return [a[0] + (b[0] - a[0]) * u, a[1] + (b[1] - a[1]) * u];
+  };
+  // x heading for A: from the breakup point to the surface, then fading inside
+  const toC = [-pBU[0], -pBU[1]], dC = Math.hypot(...toC), uC = [toC[0] / dC, toC[1] / dC];
+  const tIn = (dC - 0.25 * RW) / vxAbs;                      // time for x to reach well inside the surface
+  const pos = (t) => {
+    const q = orbAt(t);
+    if (t <= tBU) return { a: q, b: null, x: null };
+    const dt = t - tBU;
+    if (S.mode === "ebu") return { a: q, b: [q[0] + fb * vr * dt * sep[0], q[1] + fb * vr * dt * sep[1]], x: [q[0] - fx * vr * dt * sep[0], q[1] - fx * vr * dt * sep[1]] };
+    const s = Math.min(dt, tIn * 1.4) * vxAbs;
+    return { a: q, b: q, x: [pBU[0] + uC[0] * s, pBU[1] + uC[1] * s] };
+  };
+  // samples for the trails
+  const N = 260, sa = [], sb = [], sx = [];
+  for (let i = 0; i <= N; i++) {
+    const t = i / N * T, p = pos(t);
+    if (t <= tBU) sa.push(P3(p.a[0], p.a[1])); else { sb.push(P3(p.b[0], p.b[1])); sx.push(P3(p.x[0], p.x[1])); }
+  }
+  sb.unshift(P3(pBU[0], pBU[1])); sx.unshift(P3(pBU[0], pBU[1]));
+  if (sa.length) sa.push(P3(pBU[0], pBU[1]));
+  setTrail(trails.a, sa); setTrail(trails.b, sb); setTrail(trails.x, S.mode === "ebu" ? sx : sx.slice(0, Math.max(2, Math.round(sx.length * Math.min(1, tIn * 1.05 / (T - tBU))))));
+  // colours
+  trails.a.material.color.set(SP.d.col); trails.a.material.emissive.set(SP.d.col);
+  for (const [m, k] of [[trails.b, c.b], [trails.x, c.x]]) { m.material.color.set(SP[k].col); m.material.emissive.set(SP[k].col); }
+  for (const [m, k] of [[bBall, c.b], [xBall, c.x]]) { m.material.color.set(SP[k].col); m.material.emissive.set(SP[k].col); m.scale.setScalar(SP[k].r); }
+  cloud.scale.setScalar(2.2 * Math.min(P.kap, 8));
+  // wave parameters: real wavelength of x (k from x's share of the beam energy), crests at the phase velocity
+  const wu = waveMat.uniforms;
+  wu.uSrc.value.set(pBU[0], pBU[1]);
+  const dir = S.mode === "ebu" ? [tu[0] * 0.8 - sep[0] * 0.6, tu[1] * 0.8 - sep[1] * 0.6] : uC, dl = Math.hypot(...dir);
+  wu.uDir.value.set(dir[0] / dl, dir[1] / dl);
+  wu.uK.value = P.kx; wu.uRW.value = RW;
+  wu.uHv.value = BK.HBARC * (P.kx0 ? Math.hypot(...P.kx0.vx) : P.va);   // hbar v of x, MeV fm
+  wu.uCx.value.set(SP[c.x].col);
+  wu.uAni.value = S.mode === "ebu" ? 0.75 : 0.8;
+  wu.uAbs.value = S.mode === "ebu" ? 2 : 7;
+  ST = { orb, tS, tBU, T, pos, vxAbs, tIn, pBU, P, iBU };
+  document.getElementById("time").max = T.toFixed(3);
+}
+
+// ---------------------------------------------------------------- per frame
+const tmp = new THREE.Vector3();
+function stageText(t) {
+  const c = S.c, bh = SP[c.b].html, xh = SP[c.x].html;
+  if (!ST) return "";
+  if (t < ST.tBU - 0.9) return `1 · ${c.a.html} = ${bh} + ${xh} approaches ${sup(c.T.A)}${c.T.sym}`;
+  if (t < ST.tBU + 0.4) return `2 · in the surface region of A, ${xh} leaves ${bh}`;
+  if (S.mode === "ebu") return t < ST.tBU + 3 ? `3 · ${bh} and ${xh} scatter elastically; A stays in its ground state` : `4 · ${bh} is detected; ${xh} and A fly off unexcited`;
+  if (S.mode === "neb") return t < ST.tBU + 2.6 ? `3 · ${xh}'s wave fades where W<sub>x</sub> acts; ${bh} flies on` : `4 · ${bh} is detected; ${xh} + A is left in some state B*`;
+  return t < ST.tBU + 2.2 ? `3 · ${xh} is captured: compound nucleus B* = ${xh} + A` : `4 · B* cools by n and γ emission; ${bh} is detected`;
+}
+function update(t) {
+  const c = S.c, P = ST.P, p = ST.pos(t), pre = t <= ST.tBU, dt = t - ST.tBU;
+  // the pair before breakup: b and x on opposite sides of their c.m., turning slowly (schematic), inside a cloud of size 1/kappa
+  const sepD = Math.min(P.kap, 5.5) * 0.85, fb = P.mx / (P.mb + P.mx), fx = P.mb / (P.mb + P.mx), w = 1.3 * t;
+  const ax = Math.cos(w), ay = Math.sin(w) * 0.6, az = Math.sin(w) * 0.8;
+  if (pre) {
+    const A = P3(p.a[0], p.a[1]);
+    bBall.position.set(A.x - fb * sepD * ax, -fb * sepD * ay, A.z - fb * sepD * az);
+    xBall.position.set(A.x + fx * sepD * ax, fx * sepD * ay, A.z + fx * sepD * az);
+    cloud.position.copy(A); cloud.material.opacity = 0.55;
+    xBall.material.opacity = 1;
+  } else {
+    bBall.position.copy(P3(p.b[0], p.b[1]));
+    const X = P3(p.x[0], p.x[1]); xBall.position.copy(X);
+    cloud.position.lerpVectors(bBall.position, xBall.position, 0.5);
+    cloud.material.opacity = 0.55 * Math.exp(-dt / 0.35);
+    if (S.mode !== "ebu") {
+      const r = Math.hypot(p.x[0], p.x[1]);
+      xBall.material.opacity = smooth(0.3 * TGT.RW, TGT.RW + 1.5, r);
+    } else xBall.material.opacity = 1;
+  }
+  bBall.material.opacity = 1;
+  xBall.visible = xBall.material.opacity > 0.02;
+  // wave
+  const wu = waveMat.uniforms, on = !pre;
+  wave.visible = on;
+  if (on) {
+    wu.uFront.value = ST.vxAbs * dt;
+    wu.uPh.value = 0.5 * wu.uK.value * ST.vxAbs * dt;          // crests move at half the group speed
+    wu.uLen.value = 44;
+    wu.uAmp.value = (S.mode === "icf" ? 0.75 : 1.0) * Math.exp(-Math.max(0, dt - 2.6) / 1.2);
+  }
+  // target response
+  let g = 0;
+  if (S.mode !== "ebu" && !pre) {
+    const tA = ST.tIn * 0.8;
+    g = S.mode === "icf" ? smooth(tA * 0.6, tA, dt) * (0.55 + 0.45 * Math.exp(-Math.max(0, dt - tA) / 2.2)) : smooth(tA * 0.5, tA, dt) * Math.exp(-Math.max(0, dt - tA) / 1.6) * 0.7;
+  }
+  glow.material.opacity = 0.3 * g;
+  (quality === "high" ? vol : volFast).setExposure(0.5 * (1 + 0.6 * g));
+  // incomplete fusion: evaporation and gammas from B*
+  const tE = ST.tIn * 0.8 + 0.6;
+  evap.forEach((m, i) => {
+    const te = dt - tE - 0.7 * i;
+    m.visible = S.mode === "icf" && !pre && te > 0;
+    if (m.visible) { m.scale.setScalar(0.7); m.position.copy(evapDir[i]).multiplyScalar(TGT.RW + 0.6 + te * 0.32 * VS); m.material.opacity = 1 - smooth(2.2, 3.2, te); }
+  });
+  gam.forEach((m, i) => {
+    const te = dt - tE - 0.35 - 1.1 * i;
+    m.visible = S.mode === "icf" && !pre && te > 0 && te < 1.6;
+    if (m.visible) { m.scale.setScalar(TGT.RW + te * 30); m.material.opacity = 0.16 * (1 - te / 1.6); }
+  });
+  // trails
+  const fa = clamp(t / ST.tBU, 0, 1);
+  revealTrail(trails.a, fa);
+  const fpost = pre ? 0 : clamp(dt / (ST.T - ST.tBU), 0, 1);
+  revealTrail(trails.b, fpost);
+  revealTrail(trails.x, S.mode === "ebu" ? fpost : clamp(dt / (ST.tIn * 1.05), 0, 1));
+  trails.x.visible = trails.b.visible = !pre;
+  // text
+  document.getElementById("stLine").innerHTML = stageText(t);
+  document.getElementById("time").value = t.toFixed(3);
+  document.getElementById("tout").textContent = t.toFixed(1) + " s";
+}
+
+// ---------------------------------------------------------------- panels
+function caseChips() {
+  document.getElementById("cases").innerHTML = CASES.map((c) => `<button data-id="${c.id}" aria-pressed="${c === S.c}">${c.a.html} + ${sup(c.T.A)}${c.T.sym}</button>`).join("");
+}
+function drawKin() {
+  const P = physics(), c = S.c, x = SP[c.x], bh = SP[c.b].html, xh = x.html;
+  document.getElementById("Eout").textContent = S.E.toFixed(1) + " MeV";
+  document.getElementById("epsout").textContent = S.eps.toFixed(2) + " MeV";
+  const k = P.k0, kx = P.kx0;
+  const below = kx && x.Z > 0 && P.ExRel < P.BarX.V;
+  document.getElementById("kin").innerHTML = `
+    <dt>S<sub>${bh}+${xh}</sub></dt><dd>${fmt(P.Sbx, 4)} MeV (AME2020 masses)</dd>
+    <dt>1/κ</dt><dd>${fmt(P.kap, 2)} fm, the tail length of ${c.a.html}</dd>
+    <dt>E<sub>c.m.</sub></dt><dd>${fmt(P.Ecm, 2)} MeV; barrier ≈ ${fmt(P.Bar.V, 1)} MeV</dd>
+    <dt>${xh} brings</dt><dd>${kx ? fmt(P.ExRel, 1) : "n/a"} MeV to A; ${x.Z ? `its barrier ≈ ${fmt(P.BarX.V, 1)} MeV` : "no Coulomb barrier"}</dd>
+    <dt>λ<sub>${xh}</sub></dt><dd>${fmt(2 * Math.PI / P.kx, 2)} fm (drawn wavelength)</dd>
+    <dt>E<sub>${bh}</sub></dt><dd>${k ? `${fmt(k.Ebmin, 1)} to ${fmt(k.Ebmax, 1)} MeV` : "below threshold"} (EBU, lab, at ε)</dd>`;
+  const bar = c.id === "6Li209Bi" ? ` For <sup>6</sup>Li + <sup>209</sup>Bi the nominal barrier quoted in Lei and Moro, Phys. Rev. Lett. 123, 232501 (2019) is 30.1 MeV in the c.m. frame (Dasgupta et al., Phys. Rev. C 66, 041602(R) (2002)), 31.0 MeV in the lab, where the plot marks it.` : "";
+  document.getElementById("kinNote").innerHTML = `Sequential breakup, nonrelativistic, with the c.m. velocity of a + A kept for a* + A (energy and momentum balance to about 10⁻⁴ MeV and 10⁻⁴ of the beam momentum): a + A → a* + A at ε above the ${bh} + ${xh} threshold, then a* → ${bh} + ${xh}. E<sub>${bh}</sub> spans the given range as ${bh} leaves a* forward or backward (a* along the beam). "${xh} brings": the c.m. energy of ${xh} + A when ${xh} moves at the beam velocity${below ? `, <b style="color:var(--accent)">below</b> its own barrier: inside a, ${xh} still reaches A (the Trojan horse effect)` : ""}. Barrier: Coulomb energy at 1.5(A<sub>1</sub><sup>1/3</sup> + A<sub>2</sub><sup>1/3</sup>) fm, a rough estimate.${bar}`;
+}
+function drawMode() {
+  for (const b of document.querySelectorAll("#mode button")) b.setAttribute("aria-pressed", b.dataset.v === S.mode ? "true" : "false");
+  for (const b of document.querySelectorAll("#path button")) b.setAttribute("aria-pressed", +b.dataset.v === S.path ? "true" : "false");
+  for (const b of document.querySelectorAll("#cases button")) b.setAttribute("aria-pressed", b.dataset.id === S.c.id ? "true" : "false");
+  document.getElementById("path").hidden = S.mode !== "icf";
+  let note = MODES[S.mode].note;
+  if (S.mode === "icf") note += S.path === 1 ? " <b>One step</b>: x is captured directly from the bound projectile." : " <b>Two step</b>: a breaks up first, then x is captured (breakup fusion).";
+  document.getElementById("modeNote").innerHTML = note;
+  document.getElementById("stTitle").textContent = MODES[S.mode].title;
+}
+
+// ---------- published plot (values as published, read from the vector figures of Lei and Moro 2015)
+function setupCanvas(cv) {
+  const d = Math.min(devicePixelRatio, 2), w = cv.clientWidth, h = cv.clientHeight;
+  cv.width = w * d; cv.height = h * d;
+  const x = cv.getContext("2d"); x.setTransform(d, 0, 0, d, 0, 0);
+  return { x, w, h };
+}
+const L0 = 40, R0 = 8, T0 = 8, B0 = 20;
+const supNum = (e) => "10" + String(e).replace("-", "⁻").replace(/\d/g, (q) => "⁰¹²³⁴⁵⁶⁷⁸⁹"[q]);
+function axes(ctx, w, h, X, Y, xt, ylo, yhi, xl) {
+  ctx.font = "10px ui-monospace,Menlo,monospace"; ctx.strokeStyle = "#1e2432"; ctx.fillStyle = "#8a92a6"; ctx.lineWidth = 1;
+  for (let e = Math.ceil(ylo); e <= yhi; e++) { ctx.beginPath(); ctx.moveTo(L0, Y(e)); ctx.lineTo(w - R0, Y(e)); ctx.stroke(); ctx.textAlign = "right"; ctx.fillText(supNum(e), L0 - 4, Y(e) + 3); }
+  ctx.textAlign = "center";
+  for (const v of xt) { ctx.beginPath(); ctx.moveTo(X(v), T0); ctx.lineTo(X(v), h - B0); ctx.stroke(); ctx.fillText(v, X(v), h - 6); }
+  ctx.textAlign = "right"; ctx.fillText(xl, w - R0, h - B0 - 4);
+}
+function line(ctx, pts, X, Y, col, wd, dash) {
+  ctx.save(); ctx.beginPath(); ctx.rect(L0, T0, 1e4, 1e4); ctx.clip();
+  ctx.strokeStyle = col; ctx.lineWidth = wd; ctx.setLineDash(dash || []); ctx.beginPath();
+  pts.forEach(([x, y], i) => (i ? ctx.lineTo(X(x), Y(L10(y))) : ctx.moveTo(X(x), Y(L10(y))))); ctx.stroke(); ctx.restore();
+}
+function marks(ctx, xs, ys, X, Y, col, kind) {
+  ctx.lineWidth = 1.5; ctx.strokeStyle = col; ctx.fillStyle = col;
+  xs.forEach((x, i) => {
+    const px = X(x), py = Y(L10(ys[i])); ctx.beginPath();
+    if (kind === "s") ctx.rect(px - 3.5, py - 3.5, 7, 7); else ctx.arc(px, py, kind === "dot" ? 2.2 : 3.6, 0, 2 * Math.PI);
+    if (kind === "f" || kind === "dot") ctx.fill(); else ctx.stroke();
+  });
+}
+function drawPub() {
+  const c = S.c, cv = document.getElementById("pub"), tab = document.getElementById("pubTab");
+  const { x: ctx, w, h } = setupCanvas(cv);
+  const leg = document.getElementById("pubLeg"), src = document.getElementById("pubSrc"), txt = document.getElementById("pubText");
+  tab.innerHTML = "";
+  if (c.pub === "ni58") {
+    const D = PUB.ni58, xmax = 82, ylo = -1, yhi = 3;
+    const X = (e) => L0 + e / xmax * (w - L0 - R0), Y = (v) => T0 + (yhi - v) / (yhi - ylo) * (h - T0 - B0);
+    axes(ctx, w, h, X, Y, [0, 20, 40, 60, 80], ylo, yhi, "E_p lab (MeV)");
+    line(ctx, D.PECN, X, Y, "#6d6478", 1.3, [6, 3, 1.5, 3]);
+    line(ctx, D.EBU, X, Y, "#e0607a", 2, [1.5, 3]);
+    line(ctx, D.NEB, X, Y, "#ffb347", 2);
+    line(ctx, D.total, X, Y, "#e6e8ee", 1.4);
+    marks(ctx, D.data.map((q) => q[0]), D.data.map((q) => q[1]), X, Y, "#f2c14e", "dot");
+    document.getElementById("pubTitle").innerHTML = `${sup(58)}Ni(d,pX), E<sub>d</sub> = 80 MeV`;
+    document.getElementById("pubUnit").textContent = "dσ/dE_p, mb/MeV";
+    leg.innerHTML = `<span><i style="border-color:#ffb347"></i>NEB</span><span><i class="d" style="border-color:#e0607a"></i>EBU</span><span><i style="border-color:#6d6478;border-top-style:dashed"></i>pre-eq. + compound</span><span><i style="border-color:#e6e8ee"></i>sum</span><span><i class="p" style="background:#f2c14e"></i>data</span>`;
+    const pk = (s) => s.reduce((a, q) => (q[1] > a[1] ? q : a));
+    const pn = pk(D.NEB), pe = pk(D.EBU);
+    src.innerHTML = `Curves and points as published in ${PUB.src}, ${D.fig}, read from the vector data of the arXiv figure (EBU: CDCC; NEB: finite-range DWBA of the IAV model; pre-equilibrium + compound: the estimate the paper adopts from another work). Data: ${D.dataRef}.`;
+    txt.innerHTML = `<p class="src">Read off this figure: the NEB curve peaks at ${pn[1]} mb/MeV near E<sub>p</sub> = ${pn[0]} MeV, the EBU curve at ${pe[1]} mb/MeV near ${pe[0]} MeV. Both are bell shaped around half the beam energy, where the proton keeps the beam velocity; the low-energy protons come from compound and preequilibrium emission. Protons above about 74 MeV leave the neutron bound to the target (transfer), not included in the outgoing-wave formula (same paper).</p>
+    <p class="src">For <sup>93</sup>Nb(d,pX) at 25.5 MeV and E<sub>p</sub> = 14 MeV the same paper finds the inclusive cross section largely dominated by NEB except at the smallest angles, and Lei and Moro, Phys. Rev. Lett. 123, 232501 (2019), find the NEB from the full three-body (CDCC) wave function, from its ground-state part alone, and from DWBA very similar: the neutron is absorbed directly from the deuteron ground state.</p>`;
+  } else if (c.pub === "li6bi") {
+    const D = PUB.li6bi, x0 = 22, x1 = 52, ylo = 0, yhi = 4;
+    const X = (e) => L0 + (e - x0) / (x1 - x0) * (w - L0 - R0), Y = (v) => T0 + (yhi - v) / (yhi - ylo) * (h - T0 - B0);
+    axes(ctx, w, h, X, Y, [25, 30, 35, 40, 45, 50], ylo, yhi, "E_lab (MeV)");
+    const Vbl = 30.1 * 215 / 209;                                   // c.m. barrier 30.1 MeV on this E_lab axis: x (A_a + A_A)/A_A
+    ctx.strokeStyle = "#e0607a"; ctx.setLineDash([3, 3]); ctx.beginPath(); ctx.moveTo(X(Vbl), T0); ctx.lineTo(X(Vbl), h - B0); ctx.stroke(); ctx.setLineDash([]);
+    ctx.fillStyle = "#e0607a"; ctx.textAlign = "left"; ctx.fillText("V_b", X(Vbl) + 3, T0 + 10);
+    const Es = clamp(S.E, x0, x1);
+    ctx.strokeStyle = "#ffffff55"; ctx.beginPath(); ctx.moveTo(X(Es), T0); ctx.lineTo(X(Es), h - B0); ctx.stroke();
+    marks(ctx, D.E, D.sigR, X, Y, "#5fbf7f", "f");
+    marks(ctx, D.E, D.EBU, X, Y, "#e6e8ee", "o");
+    marks(ctx, D.E, D.NEB, X, Y, "#ffb347", "s");
+    document.getElementById("pubTitle").innerHTML = `${sup(6)}Li + ${sup(209)}Bi, α production`;
+    document.getElementById("pubUnit").textContent = "σ, mb";
+    leg.innerHTML = `<span><i class="s" style="border-color:#ffb347"></i>NEB (d absorbed)</span><span><i class="o" style="border-color:#e6e8ee"></i>EBU (α + d)</span><span><i class="p" style="background:#5fbf7f"></i>σ<sub>R</sub></span>`;
+    // table row nearest the slider energy
+    let iN = 0; D.E.forEach((e, i) => { if (Math.abs(e - S.E) < Math.abs(D.E[iN] - S.E)) iN = i; });
+    tab.innerHTML = `<table class="pub"><tr><th>E<sub>lab</sub></th><th>σ<sub>EBU</sub></th><th>σ<sub>NEB</sub></th><th>NEB/(EBU+NEB)</th><th>σ<sub>R</sub></th></tr>` +
+      D.E.map((e, i) => `<tr class="${i === iN ? "on" : ""}"><td>${e}</td><td>${D.EBU[i]}</td><td>${D.NEB[i]}</td><td>${(D.NEB[i] / (D.NEB[i] + D.EBU[i])).toFixed(2)}</td><td>${D.sigR[i]}</td></tr>`).join("") + `</table>`;
+    src.innerHTML = `Values (mb) as published in ${PUB.src}, ${D.fig}, read from the vector data of the arXiv figure (3 significant figures; the ratio column is formed here). EBU: CDCC; NEB: finite-range DWBA; σ<sub>R</sub>: CDCC. V<sub>b</sub> = 30.1 MeV as quoted there. The highlighted row is nearest the beam-energy slider.`;
+    txt.innerHTML = `<p class="src">Above the barrier the NEB dominates the α yield; below it, EBU and NEB become comparable, since the deuteron no longer comes close enough for its imaginary potential to act (same paper).</p>
+    <p class="src"><b>Complete fusion suppression.</b> Lei and Moro, Phys. Rev. Lett. 122, 042503 (2019), write σ<sub>R</sub> ≈ σ<sub>CF</sub> + σ<sub>inel</sub> + σ<sub>EBU</sub> + σ<sub>NEB</sub><sup>(b)</sup> + σ<sub>NEB</sub><sup>(x)</sup> and obtain σ<sub>CF</sub> for <sup>6,7</sup>Li + <sup>209</sup>Bi close to the data, which lie about 30% and 25% below the barrier-penetration expectation. The flux that CF loses goes mainly into α-producing NEB; EBU plays a minor role. The deuteron or triton carries only about its Coulomb barrier with <sup>209</sup>Bi (about 10 to 11 MeV), yet the three-body (<sup>6,7</sup>Li,αX) cross sections stay large: a Trojan horse effect (Baur, Phys. Lett. B 178, 135 (1986)).</p>
+    <p class="src"><b>One step or two.</b> In Phys. Rev. Lett. 123, 232501 (2019) the NEB is computed with the full three-body (CDCC) wave function and with its ground-state part only. Dropping the α + d breakup states lowers the NEB by 11% at the highest energy studied (40 MeV) and by about 11% when the α + d separation energy is lowered to 1 MeV (at 36 MeV); the DWBA result is 7% low at 40 MeV. Partial fusion is mainly a one-step process.</p>`;
+  } else {
+    ctx.fillStyle = "#8a92a6"; ctx.font = "12px ui-monospace,Menlo,monospace"; ctx.textAlign = "center";
+    ctx.fillText("no published EBU/NEB values on this page", w / 2, h / 2 - 8);
+    ctx.fillText("for this case", w / 2, h / 2 + 10);
+    document.getElementById("pubTitle").innerHTML = `${sup(11)}Be + ${sup(64)}Zn`;
+    document.getElementById("pubUnit").textContent = "";
+    leg.innerHTML = ""; src.innerHTML = "";
+    txt.innerHTML = `<p class="src">A one-neutron halo: the neutron is bound by only ${fmt(physics().Sbx * 1000, 0)} keV (AME2020), so its tail length 1/κ is about ${fmt(physics().kap, 1)} fm, wider than the <sup>64</sup>Zn nucleus itself; compare the deuteron. The scene is the same mechanism with <sup>10</sup>Be detected. No numbers from the papers read for this page are shown for it; see the <a class="home" href="halo.html">halo page</a> for the halo itself.</p>`;
+  }
+}
+function drawStatic() {
+  document.getElementById("theory").innerHTML = `
+  <p class="sub"><b>Spectator and participant.</b> The detected fragment b only feels A through an optical potential. The other fragment x may do anything with A. Summing over everything x can do would need every state of x + A; Ichimura, Austern and Vincent, Phys. Rev. C 32, 431 (1985), did the sum in closed form, so only the x + A <i>optical</i> potential U<sub>x</sub> = V<sub>x</sub> + iW<sub>x</sub> is needed.</p>
+  <p class="math">(E<sub>x</sub> − K<sub>x</sub> − U<sub>x</sub>) ψ<sub>x</sub> = (χ<sub>b</sub><sup>(−)</sup>| V<sub>post</sub> |Ψ<sup>3b</sup>⟩<br>V<sub>post</sub> = V<sub>bx</sub> + U<sub>bA</sub> − U<sub>bB</sub></p>
+  <p class="sub">ψ<sub>x</sub> is the x wave once b has left with momentum k<sub>b</sub>; it is purely outgoing. Its flux to large distances is the elastic breakup (computed in the papers with continuum-discretized coupled channels); the flux W<sub>x</sub> absorbs is the nonelastic breakup, the formula on the right. Lei and Moro, Phys. Rev. C 92, 044616 (2015), derived it from the coupled-channels optical theorem (Cotanch, Nucl. Phys. A 842, 48 (2010)): NEB is the absorption in the x + A channel. Kasano and Ichimura, Phys. Lett. B 115, 81 (1982), had obtained it by other arguments. In practice Ψ<sup>3b</sup> ≈ χ<sub>a</sub>φ<sub>a</sub> (DWBA), or the CDCC three-body wave function (Lei and Moro, Phys. Rev. Lett. 123, 232501 (2019), the three-body model of Austern et al., Phys. Rep. 154, 125 (1987)).</p>
+  <p class="sub"><b>Post and prior.</b> Udagawa and Tamura, Phys. Rev. C 24, 1348 (1981), used the prior form and got a smaller NEB; the dispute lasted more than a decade. With ψ<sub>x</sub><sup>post</sup> = ψ<sub>x</sub><sup>prior</sup> + ψ<sub>x</sub><sup>NO</sup>, the post-form NEB equals the Udagawa–Tamura term plus a nonorthogonality term and an interference term. Lei and Moro, Phys. Rev. C 92, 061602(R) (2015), computed both forms for <sup>62</sup>Ni(d,pX) at 25.5 MeV and <sup>209</sup>Bi(<sup>6</sup>Li,αX) at 36 MeV: post and prior agree, and the Udagawa–Tamura term alone underpredicts the data.</p>
+  <p class="sub"><b>Elastic breakup is the same in both forms</b> (Ichimura, Austern and Vincent 1985). Incomplete fusion is the part of NEB in which x fuses with A.</p>`;
+  document.getElementById("open").innerHTML = `
+  <p class="sub"><b>How much of NEB is fusion.</b> Separating incomplete fusion from the rest of NEB (inelastic x + A, nucleon exchange) needs a split of W<sub>x</sub> into an inner and a peripheral part, which is not unique; Lei and Moro, Phys. Rev. Lett. 123, 232501 (2019), therefore keep the full NEB.</p>
+  <p class="sub"><b>Which split is model dependent.</b> For <sup>6</sup>Li described as α + d, part of the deuteron absorption is d → p + n breakup, which in an α + p + n model would count as elastic breakup; the sum EBU + NEB is better determined than the split (Lei and Moro, Phys. Rev. C 92, 044616 (2015)).</p>
+  <p class="sub"><b>Which potential.</b> The exact U<sub>x</sub> is nonlocal and energy dependent; calculations replace it by a phenomenological fit to x + A elastic scattering at the energy x has inside the three-body system (same paper). Transfer of x to bound states of A lies outside the outgoing-wave formula as written.</p>`;
+  document.getElementById("render").innerHTML = `
+  <p class="sub">The volume is the target's density (Fermi shape, half-density radius 1.12A<sup>1/3</sup> − 0.86A<sup>−1/3</sup> fm), with the absorptive region of the x + A potential as a faint orange shell. The flat disc in the reaction plane is x's wave after the breakup: an outgoing wave from the breakup point with the real wavelength of x at the beam velocity, damped along each straight path through A by exp(−∫W ds/ħv) with a schematic W (volume ${WV} MeV, surface ${WS} MeV, radius 1.25A<sup>1/3</sup> fm). In orange on the disc, W|ψ|², where the flux is lost: the integrand of the NEB formula. Not computed: the wave's angular shape (a soft lobe toward the target is drawn) and its amplitude.</p>
+  <p class="sub">The projectile follows the Coulomb orbit about a fixed target (no nuclear force) that grazes the absorptive region. Speeds are the live lab speeds, scaled by 24 fm/s per beam speed; the b-x separation in elastic breakup uses the relative velocity of energy ε (at least a visible minimum). b and x circle each other inside a cloud of size 2/κ (schematic motion). The compound-nucleus glow, neutrons and γ flashes are illustrations.</p>`;
+}
+
+// ---------------------------------------------------------------- hash: #d58Ni/neb/80 (+ /2 for two-step ICF)
+function setHash() {
+  const h = `#${S.c.id}/${S.mode}/${+S.E.toFixed(1)}${S.mode === "icf" && S.path === 2 ? "/2" : ""}`;
+  if (location.hash !== h) history.replaceState(null, "", h);
+}
+function parseHash() {
+  const m = location.hash.slice(1).split("/");
+  const c = CASES.find((q) => q.id === m[0]); if (!c) return null;
+  return { c, mode: MODES[m[1]] ? m[1] : "neb", E: m[2] && isFinite(+m[2]) ? +m[2] : c.E, path: m[3] === "2" ? 2 : 1 };
+}
+
+// ---------------------------------------------------------------- wiring
+function setE(v) { S.E = clamp(v, S.c.Emin, S.c.Emax); document.getElementById("E").value = (S.E - S.c.Emin) / (S.c.Emax - S.c.Emin); }
+function reset(keepT) {
+  buildStory(); drawMode(); drawKin(); drawPub(); setHash();
+  if (!keepT) S.t = 0;
+  S.t = Math.min(S.t, ST.T);
+  update(S.t);
+}
+function loadCase(c, E) {
+  const changed = S.c !== c;
+  S.c = c; setE(E != null ? E : c.E);
+  if (changed || !TGT) buildTarget();
+  reset();
+}
+caseChips();
+document.getElementById("cases").addEventListener("click", (e) => { const b = e.target.closest("button"); if (b) loadCase(CASES.find((c) => c.id === b.dataset.id)); });
+document.getElementById("mode").addEventListener("click", (e) => { const b = e.target.closest("button"); if (!b) return; S.mode = b.dataset.v; S.play = true; reset(); playLabel(); });
+document.getElementById("path").addEventListener("click", (e) => { const b = e.target.closest("button"); if (!b) return; S.path = +b.dataset.v; S.play = true; reset(); playLabel(); });
+const playBtn = document.getElementById("play");
+function playLabel() { playBtn.textContent = S.play ? "pause" : "play"; }
+playBtn.addEventListener("click", () => { S.play = !S.play; if (S.play && S.t >= ST.T) S.t = 0; playLabel(); });
+document.getElementById("time").addEventListener("input", (e) => { S.play = false; playLabel(); S.t = +e.target.value; update(S.t); });
+const eIn = document.getElementById("E");
+eIn.addEventListener("input", () => { S.E = S.c.Emin + (+eIn.value) * (S.c.Emax - S.c.Emin); drawKin(); });
+eIn.addEventListener("change", () => reset(true));
+const epsIn = document.getElementById("eps");
+epsIn.value = S.eps;
+epsIn.addEventListener("input", () => { S.eps = +epsIn.value; drawKin(); });
+epsIn.addEventListener("change", () => reset(true));
+addEventListener("keydown", (e) => { if (e.code === "Space" && e.target === document.body) { e.preventDefault(); playBtn.click(); } });
+addEventListener("hashchange", () => { const h = parseHash(); if (!h) return; S.mode = h.mode; S.path = h.path; loadCase(h.c, h.E); });
+addEventListener("resize", () => {
+  camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight); composer.setSize(innerWidth, innerHeight);
+  drawPub();
+});
+function applyQuality() {
+  const hi = quality === "high", g = hi ? GROUND_PRE_ACES : GROUND;
+  scene.background.copy(g); scene.fog.color.copy(g); renderer.setClearColor(g);
+  vol.mesh.visible = hi; volFast.mesh.visible = !hi;
+  for (const b of document.querySelectorAll("#qmode button")) b.setAttribute("aria-pressed", b.dataset.v === quality ? "true" : "false");
+}
+document.getElementById("qmode").addEventListener("click", (e) => { const b = e.target.closest("button"); if (!b) return; quality = b.dataset.v; applyQuality(); });
+
+// ---------------------------------------------------------------- start
+drawStatic(); applyQuality();
+{
+  const h = parseHash();
+  if (h) { S.mode = h.mode; S.path = h.path; loadCase(h.c, h.E); } else loadCase(CASES[0]);
+  const narrow = innerWidth < 900;
+  camera.position.set(narrow ? -6 : -4, narrow ? 100 : 46, narrow ? 104 : 70);
+  controls.target.set(narrow ? 0 : 4, 0, narrow ? 6 : -6);
+  if (S.t === 0 && reduce) S.play = false;
+  playLabel();
+}
+
+// ---------------------------------------------------------------- loop
+const tA = document.getElementById("tA"), tB = document.getElementById("tB"), tX = document.getElementById("tX");
+function tag(el, v, html, color) {
+  tmp.copy(v).project(camera);
+  const vis = html && tmp.z < 1 && Math.abs(tmp.x) < 0.95 && Math.abs(tmp.y) < 0.95;
+  el.hidden = !vis;
+  if (vis) { el.innerHTML = html; if (color) el.style.color = color; el.style.left = (tmp.x * 0.5 + 0.5) * innerWidth + "px"; el.style.top = (-tmp.y * 0.5 + 0.5) * innerHeight - 16 + "px"; }
+}
+let last = performance.now();
+function animate(now) {
+  requestAnimationFrame(animate);
+  const dt = Math.min(0.1, Math.max(0, (now - last) / 1000)); last = now;
+  if (S.play && ST) {
+    S.t += dt;
+    if (S.t > ST.T + 1.2) S.t = 0;
+    update(Math.min(S.t, ST.T));
+  }
+  if (quality === "high") gov.tick(dt);
+  controls.update();
+  stage3.update(camera);
+  camera.getWorldDirection(vol.u.uFwd.value); volFast.u.uFwd.value.copy(vol.u.uFwd.value);
+  if (quality === "high") composer.render(); else renderer.render(scene, camera);
+  if (ST) {
+    const c = S.c, pre = S.t <= ST.tBU, ebu = S.mode === "ebu";
+    tag(tA, new THREE.Vector3(0, TGT.RW + 3, 0), S.mode === "icf" && !pre && S.t > ST.tBU + ST.tIn * 0.8 ? `B* = ${SP[c.x].html} + ${sup(c.T.A)}${c.T.sym}` : `${sup(c.T.A)}${c.T.sym}`);
+    tag(tB, bBall.position.clone().add(new THREE.Vector3(0, 2.6, 0)), pre ? `${c.a.html} = ${SP[c.b].html} + ${SP[c.x].html}` : `${SP[c.b].html}${S.t > ST.tBU + 1.5 ? " → detected" : ""}`, pre ? "#d9a3ff" : SP[c.b].col);
+    tag(tX, xBall.position.clone().add(new THREE.Vector3(0, 2.4, 0)), pre || !xBall.visible ? "" : `${SP[c.x].html}${ebu ? "" : " absorbed"}`, SP[c.x].col);
+  }
+}
+requestAnimationFrame(animate);
+</script>
+<script src="assets/glass.js"></script>
+</body>
+</html>

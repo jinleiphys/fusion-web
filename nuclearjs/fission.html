@@ -1,0 +1,910 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Fission · nuclearjs</title>
+<link rel="stylesheet" href="assets/glass.css">
+<style>
+body{margin:0}
+:root{
+  color-scheme:dark;
+  --ground:#0b0d12; --line:#262c3a;
+  --ink:#e6e8ee; --muted:#8a92a6; --accent:#f2c14e;
+  --neu:#a8cdf2; --pro:#ff9656;
+  --sans:"Avenir Next","Futura","Helvetica Neue","PingFang SC","Noto Sans SC",system-ui,sans-serif;
+  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+}
+html,body{height:100%}
+body{background:var(--ground);color:var(--ink);font-family:var(--sans);overflow:hidden}
+#stage{position:fixed;inset:0}
+#stage canvas{display:block;touch-action:none}
+.panel{position:fixed;border-radius:18px;padding:16px 18px;display:flex;flex-direction:column;gap:12px;overflow:auto;box-sizing:border-box}
+.panel{z-index:2}
+.panel>*{flex-shrink:0}
+#ctl{left:16px;top:calc(16px + env(safe-area-inset-top,0px));width:min(310px,calc(100% - 32px));max-height:calc(100% - 32px)}
+#side{right:16px;top:calc(16px + env(safe-area-inset-top,0px));width:380px;max-height:calc(100% - 32px);gap:10px;overflow-x:hidden}
+h1{margin:0;font-size:22px;font-weight:600;letter-spacing:.01em}
+h1 sup{font-size:.6em}
+.sub{margin:2px 0 0;color:var(--muted);font-size:13px;line-height:1.45}
+.sub sup,.src sup{font-size:.7em}
+.grp{display:flex;flex-direction:column;gap:6px}
+.lab{font-size:11px;text-transform:uppercase;letter-spacing:.12em;color:var(--muted)}
+.seg{display:flex;border:1px solid var(--line);border-radius:4px;overflow:hidden}
+.seg button{flex:1;background:none;border:0;color:var(--muted);font:500 12px var(--mono);padding:6px 4px;cursor:pointer}
+.seg button+button{border-left:1px solid var(--line)}
+.seg button[aria-pressed="true"]{background:#1f2533;color:var(--ink)}
+button:focus-visible,input:focus-visible,summary:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+input[type=text]{background:#0f121a;border:1px solid var(--line);border-radius:4px;color:var(--ink);font:13px var(--mono);padding:6px 8px;width:100%;box-sizing:border-box}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chips button{background:#161a24;border:1px solid var(--line);border-radius:4px;color:var(--ink);font:12px var(--mono);padding:5px 8px;cursor:pointer}
+.chips button:hover{border-color:var(--muted)}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:3px 10px;font:12px var(--mono);font-variant-numeric:tabular-nums}
+.kv dt{color:var(--muted)}.kv dd{margin:0}
+.row{display:flex;gap:8px;align-items:center;font:12px var(--mono);color:var(--muted)}
+.row input[type=range]{flex:1;accent-color:var(--accent);min-width:0}
+.row output{min-width:58px;text-align:right;color:var(--ink);font-variant-numeric:tabular-nums}
+.row span{min-width:20px}
+.play{background:#161a24;border:1px solid var(--line);border-radius:4px;color:var(--ink);font:12px var(--mono);padding:4px 9px;cursor:pointer;min-width:58px}
+details summary{cursor:pointer;font-size:11px;text-transform:uppercase;letter-spacing:.12em;color:var(--muted);list-style:none}
+details summary::before{content:"▸ ";}
+details[open] summary::before{content:"▾ ";}
+details .grp{margin-top:8px}
+.linkbtn{background:none;border:0;color:var(--muted);font:12px var(--mono);padding:0;cursor:pointer;text-decoration:underline;align-self:flex-start}
+.home{font:12px var(--mono);color:var(--muted);text-decoration:none}.home:hover{color:var(--ink)}
+.src{font-size:11px;color:var(--muted);line-height:1.45}
+.src a{color:var(--muted)}
+.warn{font-size:12px;color:var(--accent);line-height:1.4}
+.plot{width:100%;height:170px;display:block}
+#land{width:100%;height:250px;display:block;border-radius:10px;touch-action:none;cursor:grab}
+.cap{display:flex;flex-wrap:wrap;gap:2px 10px;justify-content:space-between;align-items:baseline;font:11px var(--mono);color:var(--muted)}
+.cap b{font:600 13px var(--sans);color:var(--ink)}
+.leg{font:11px var(--mono);color:var(--muted);line-height:1.5;overflow-wrap:anywhere}
+.leg i{display:inline-block;width:16px;height:0;border-top:2px solid;vertical-align:middle;margin-right:4px}
+table.bt{width:100%;border-collapse:collapse;font:11px var(--mono);font-variant-numeric:tabular-nums}
+table.bt th{color:var(--muted);font-weight:500;text-align:right;padding:2px 3px;border-bottom:1px solid var(--line)}
+table.bt td{text-align:right;padding:2px 3px}
+table.bt th:first-child,table.bt td:first-child{text-align:left}
+table.bt tr.cur td{color:var(--accent)}
+table.bt td.d{color:var(--pro)}
+#stamp{position:fixed;left:50%;bottom:calc(26px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);text-align:center;pointer-events:none}
+#stamp b{display:block;font:600 clamp(28px,4.2vw,50px)/1 var(--sans);letter-spacing:-.01em}
+#stamp b sup{font-size:.55em}
+#stamp small{display:block;font:500 12px var(--mono);color:var(--muted);margin-top:6px}
+.hint{position:fixed;left:346px;bottom:calc(14px + env(safe-area-inset-bottom,0px));font:11px var(--mono);color:var(--muted)}
+@media (max-width:1100px){#side{width:340px}}
+@media (max-width:900px){
+  #ctl{max-height:42vh}
+  #side{left:16px;right:16px;width:auto;top:auto;bottom:calc(12px + env(safe-area-inset-bottom,0px));max-height:44vh}
+  #stamp,.hint{display:none}
+}
+@media (max-width:560px){.panel{padding:10px 12px;gap:9px}h1{font-size:18px}}
+</style>
+<script data-goatcounter="https://jinleiphys.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
+</head>
+<body>
+
+<div id="stage"></div>
+
+<aside id="ctl" class="panel glass glass-deep" data-glass data-glass-bevel="22" data-glass-scale="42">
+  <div>
+    <a class="home" href="index.html">← nuclearjs</a> &nbsp; <a class="home" id="toNucleus" href="nucleus.html#238U">its shell model →</a>
+    <h1 id="title">Fission</h1>
+    <p class="sub">A uniformly charged liquid drop with surface tension. Stretching it costs surface energy and gains Coulomb energy; past the saddle point the charge wins and the drop snaps in two.</p>
+  </div>
+  <div class="grp">
+    <label class="lab" for="find">Nucleus</label>
+    <input id="find" type="text" placeholder="238U, 208Pb, 252Cf" autocomplete="off" spellcheck="false">
+    <div class="chips" id="chips">
+      <button data-n="238U">238U</button><button data-n="236U">236U</button><button data-n="252Cf">252Cf</button>
+      <button data-n="208Pb">208Pb</button><button data-n="198Hg">198Hg</button>
+    </div>
+  </div>
+  <div class="grp">
+    <div class="lab">Fissility x = E<sub>C</sub><sup>(0)</sup> / 2E<sub>S</sub><sup>(0)</sup></div>
+    <div class="row"><span>x</span><input id="xs" type="range" min="0.45" max="1.05" step="0.0025"><output id="xout"></output></div>
+    <p class="sub" id="xnote"></p>
+  </div>
+  <div class="grp">
+    <div class="lab">Along the fission path</div>
+    <div class="row"><button class="play" id="play" type="button">play</button><input id="ps" type="range" min="0" max="1.18" step="0.001" value="0" aria-label="position along the fission path"><output id="pout"></output></div>
+    <dl class="kv" id="here"></dl>
+  </div>
+  <div class="grp">
+    <div class="lab">Rendering</div>
+    <div class="seg" id="qmode">
+      <button data-v="high" title="glass, shadows and bloom">cinematic</button>
+      <button data-v="low">fast</button>
+    </div>
+    <p class="src">The drop's shape is the computed one, lengths in fm. Its look is illustration: a clear amber liquid with a faint warm glow inside standing for the uniform charge, a studio's reflections, a stage and the shadow it receives.</p>
+  </div>
+  <div class="grp">
+    <div class="lab">Liquid drop</div>
+    <dl class="kv" id="info"></dl>
+    <p class="warn" id="warn" hidden></p>
+  </div>
+  <details>
+    <summary>Model and checks</summary>
+    <div class="grp">
+      <p class="sub">E<sub>def</sub> = E<sub>S</sub><sup>(0)</sup>[(B<sub>s</sub> − 1) + 2x(B<sub>c</sub> − 1)], B<sub>s</sub> and B<sub>c</sub> the surface area and Coulomb self-energy relative to the sphere. Sharp surface, uniform charge, no shell or pairing energy, no rotation.</p>
+      <p class="sub">Shapes: the (c, h) "funny hills" of Brack et al. at α = 0 (mass-symmetric); c is the half length in units of R<sub>0</sub>, h controls the neck. Coulomb energy as a double surface integral, azimuth in closed form with elliptic integrals; spheres and spheroids reproduce the closed forms to 10<sup>−15</sup>, and an independent solver agrees to 5×10<sup>−9</sup>.</p>
+      <p class="sub">Saddle: lowest pass from the sphere to the scission region on the (c, h) grid, then Newton on ∇E = 0 with the direct energies, accepted only if it converges to a point with exactly one unstable direction. For 1 − x &lt; 10<sup>−3</sup>, where Newton on the direct energies approaches their rounding floor, the barrier is Bohr and Wheeler's series, Eq. (24); the saddle's location there comes from at most six Newton steps on the direct energies, accepted only if its energy meets the series to 10<sup>−4</sup> (down to 1 − x ≈ 4×10<sup>−4</sup>), and is otherwise extrapolated. A richer shape family (even Legendre terms to P<sub>16</sub>) finds saddles 0.02 to 3.7% lower: the funny-hills barrier is an upper bound.</p>
+      <p class="sub">Path: steepest descent from the saddle down to the sphere and down to scission, which is taken to be the shape whose neck radius has fallen to 0.02 R<sub>0</sub> (the step is cut back so the end point is that shape). The step adapts and is accepted only if the direct energy falls, so no point of the path lies above the saddle; while a slider moves the grid's interpolated energies decide instead and the path is provisional until it stops. For 1 − x below about 4×10<sup>−4</sup> the direct energies cannot locate the saddle, and the path drawn there, started from the extrapolated location, is illustrative: its highest point is not the quoted barrier. If the descent does not get there, the drop is not split. What follows scission in the animation, the halves rounding off and flying apart, is illustration on a fixed schedule, not a solution of their Coulomb motion.</p>
+    </div>
+  </details>
+  <div class="src">
+    E<sub>S</sub><sup>(0)</sup> = 17.9439(1 − 1.7826 I<sup>2</sup>)A<sup>2/3</sup> MeV, E<sub>C</sub><sup>(0)</sup> = (3e<sup>2</sup>/5r<sub>0</sub>)Z<sup>2</sup>A<sup>−1/3</sup>, r<sub>0</sub> = 1.2249 fm, e<sup>2</sup> = 1.44 MeV fm, I = (N − Z)/A: the Myers–Swiatecki drop as quoted by Poenaru et al., J. Phys. G 26, L97 (2000) [nucl-th/0002008]. Shapes: Brack et al., Rev. Mod. Phys. 44, 320 (1972), in the form of Schunck &amp; Robledo, Rep. Prog. Phys. 79, 116301 (2016). Small deformations: Bohr &amp; Wheeler, Phys. Rev. 56, 426 (1939), Eqs. (9), (24).<br>
+    Empirical barriers: RIPL-3, <a href="https://www-nds.iaea.org/RIPL-3/fission/">fission/empirical-barriers.dat</a> (V. Maslov; G. N. Smirenkin, INDC(CCP)-359, 1993).
+  </div>
+</aside>
+
+<aside id="side" class="panel glass glass-deep" data-glass data-glass-bevel="22" data-glass-scale="42">
+  <div class="cap"><b>Deformation-energy landscape</b><span id="lunit">MeV</span></div>
+  <canvas id="land" aria-label="deformation energy over elongation c and neck parameter h"></canvas>
+  <div class="leg">height and colour E<sub>def</sub>(c, h) · <span style="color:var(--accent)">amber</span> the fission path · white the saddle · dashed where the neck closes (radius 0); the path ends at scission, neck radius 0.02 R<sub>0</sub> · <span id="lclip"></span> · drag to turn</div>
+  <div class="cap"><b>Energy along the path</b><span>vs quadrupole deformation α<sub>2</sub></span></div>
+  <canvas id="path" class="plot"></canvas>
+  <div class="leg"><i style="border-color:#f2c14e"></i>this drop <i style="border-color:#a8cdf2;border-top-style:dashed"></i>Bohr–Wheeler (2/5)(1−x)α<sub>2</sub><sup>2</sup> <i style="border-color:#8a92a6;border-top-style:dotted"></i>+ cubic term −(4/105)(1+2x)α<sub>2</sub><sup>3</sup></div>
+  <div class="cap"><b>Barrier vs fissility</b><span>E<sub>f</sub> / E<sub>S</sub><sup>(0)</sup></span></div>
+  <canvas id="bx" class="plot" style="height:190px"></canvas>
+  <div class="leg"><i style="border-color:#f2c14e"></i>funny hills <span style="color:#ffffff">●</span> Legendre P<sub>2</sub>–P<sub>16</sub> <i style="border-color:#a8cdf2;border-top-style:dashed"></i>BW Eq. (24) <i style="border-color:#8a92a6;border-top-style:dotted"></i>Cohen–Swiatecki fit <span style="color:#ff9656">◆</span> empirical (higher hump)</div>
+  <div class="cap"><b>Liquid drop vs measured</b><span>MeV</span></div>
+  <table class="bt" id="bt"></table>
+  <p class="sub" id="why"></p>
+  <div class="src" id="bsrc"></div>
+</aside>
+
+<div id="stamp"></div>
+<div class="hint">drag to orbit · scroll to zoom · press play</div>
+
+<script src="assets/three-bundle.js"></script>
+<script src="assets/three-post.js"></script>
+<script src="assets/hw-studio.js"></script>
+<script src="assets/nubase.js"></script>
+<script src="assets/shells-data.js"></script>
+<script src="assets/fission.js"></script>
+<script src="assets/fission-grid.js"></script>
+<script src="assets/fission-saddles.js"></script>
+<script>
+"use strict";
+// ---------- data
+const NUC = window.NUC;                    // [Z, N, sym, log10 T1/2, mode, B/A, est, J^pi, year]
+const ROW = new Map(), SYM = {}, ELEM = {};
+for (const r of NUC) { ROW.set(r[0] + "," + r[1], r); SYM[r[2].toLowerCase()] = r[0]; ELEM[r[0]] = r[2]; }
+// AME2020 mass excesses (keV), for the neutron separation energy S_n(Z, N) = D(Z, N-1) + D_n - D(Z, N)
+const AMEX = new Map(); for (const a of window.AME) AMEX.set(a[0] + "," + a[1], a);
+function Sn(Z, N) {
+  const a = AMEX.get(Z + "," + N), b = AMEX.get(Z + "," + (N - 1)), n = AMEX.get("0,1");
+  return a && b && n ? { S: (b[2] + n[2] - a[2]) / 1000, est: !!(a[4] || b[4]) } : null;
+}
+const sup = (A) => `<sup>${A}</sup>`;
+const F = window.FISSION;
+const G = window.FISSION_GRID;
+G.Bs = G.Bs.map((v) => (v == null ? NaN : v)); G.Bc = G.Bc.map((v) => (v == null ? NaN : v));
+G.neck = F.gridNeck(G);
+const SAD = window.FISSION_SADDLES;
+const RIPL = new Map(SAD.ripl.map((r) => [r.Z + "," + r.A, r]));
+
+function parseNucleus(s) {
+  s = s.trim().replace(/@.*$/, "");
+  let m = s.match(/^#?Z(\d+)N(\d+)$/i);
+  if (m) return { Z: +m[1], N: +m[2] };
+  s = s.toLowerCase().replace(/^#/, "").replace(/[-\s]/g, "");
+  m = s.match(/^(\d+)([a-z]+)$/) || s.match(/^([a-z]+)(\d+)$/);
+  if (!m) return null;
+  let A, el;
+  if (/^\d/.test(m[1])) { A = +m[1]; el = m[2]; } else { el = m[1]; A = +m[2]; }
+  const Z = SYM[el];
+  if (Z == null || A <= Z) return null;
+  return { Z, N: A - Z };
+}
+
+// cubic (Catmull-Rom) interpolation in a table with uniform x
+function interpTable(rows, col, x) {
+  const x0 = rows[0][0], dx = rows[1][0] - rows[0][0], n = rows.length;
+  if (x < x0 || x > rows[n - 1][0]) return NaN;
+  let i = Math.min(n - 2, Math.floor((x - x0) / dx));
+  const t = (x - rows[i][0]) / dx;
+  const p = (k) => rows[Math.max(0, Math.min(n - 1, k))][col];
+  const p0 = p(i - 1), p1 = p(i), p2 = p(i + 1), p3 = p(i + 2);
+  return 0.5 * (2 * p1 + (-p0 + p2) * t + (2 * p0 - 5 * p1 + 4 * p2 - p3) * t * t + (-p0 + 3 * p1 - 3 * p2 + p3) * t * t * t);
+}
+// the funny-hills barrier E_f/E_S0 from the table (log-interpolated: it spans five decades)
+function fFH(x) {
+  if (x >= 1) return 0;
+  if (x > 0.995) { const y = 1 - x; return 98 / 135 * y ** 3 - 11368 / 34425 * y ** 4; }
+  const rows = SAD.fh.map((r) => [r[0], Math.log(r[3])]);
+  return Math.exp(interpTable(rows, 1, x));
+}
+function fLeg(x) { const rows = SAD.leg.filter((r) => r[1] != null).map((r) => [r[0], Math.log(r[1])]); return Math.exp(interpTable(rows, 1, x)); }
+
+// ---------- state
+const S = { Z: 92, N: 146, x: null, xNat: null, d: null, sad: null, status: null, path: null, s: 0, playing: false };
+// how far along the path the slider may go: past 1 only if the path really reached scission
+const sMax = () => (S.path && S.path.scission ? 1.18 : 1);
+
+// ---------- energy on the grid (bilinear in B_s, B_c); the path itself is F.fissionPath (assets/fission.js),
+// the same code that tests/check_fission_saddle.js runs
+const eGrid = (x, c, h) => F.gridEnergy(G, x, c, h);
+// grid where it has the shape, else direct (next to the scission line the grid has no shapes)
+const eAny = (x, c, h) => { const e = eGrid(x, c, h); return e === e ? e : F.directEnergy(x, c, h); };
+const neckOf = (c, h) => Math.max(0, F.neckRadius(c, h));
+const XMIN = 0.45;                         // lowest fissility this page solves
+function pathAt(s) {
+  const P = S.path, t = Math.max(0, Math.min(1, s)) * P.total;
+  let i = 1; while (i < P.L.length - 1 && P.L[i] < t) i++;
+  const a = (t - P.L[i - 1]) / Math.max(1e-12, P.L[i] - P.L[i - 1]);
+  return [P.pts[i - 1][0] + a * (P.pts[i][0] - P.pts[i - 1][0]), P.pts[i - 1][1] + a * (P.pts[i][1] - P.pts[i - 1][1])];
+}
+
+// ---------- main scene: the drop
+const stage = document.getElementById("stage");
+const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.setSize(innerWidth, innerHeight);
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.05;
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+stage.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(36, innerWidth / innerHeight, 0.1, 500);
+// cinematic: scene, restrained bloom (only the specular highlights on the liquid are bright
+// enough), ACES output, SMAA. No ambient-occlusion pass: nothing solid here touches anything else,
+// and screen-space occlusion mistakes a transmissive surface for an occluder
+const POST = HW.post(renderer, scene, camera, { bloom: [0.3, 0.5, 0.88], ao: false });
+const composer = POST.composer, bloom = POST.bloom;
+// a photographic studio for the reflections: soft overhead key, strip lights, a warm kicker
+scene.environment = HW.studioEnv(renderer, { intensity: 1.15 });
+scene.fog = new THREE.Fog("#0b0d12", 90, 230);
+// The ground colour #0b0d12 is drawn untouched on the direct path, but OutputPass runs it through
+// ACES, whose toe crushes it to black. On the bloom path the background and fog therefore take the
+// linear colour that ACES (exposure 1.05) maps back to exactly #0b0d12: found by Newton on the r160
+// shader formula, residual 1e-11, sRGB out (11, 13, 18).
+const GROUND = new THREE.Color("#0b0d12");
+const GROUND_PRE_ACES = new THREE.Color().setRGB(0.0115476, 0.0131218, 0.0174740, THREE.LinearSRGBColorSpace);
+scene.background = GROUND.clone();
+
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+controls.dampingFactor = 0.08;
+controls.minDistance = 6;
+controls.maxDistance = 160;
+const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+controls.autoRotate = !reduce;
+controls.autoRotateSpeed = 0.3;
+controls.addEventListener("start", () => (controls.autoRotate = false));
+
+scene.add(new THREE.HemisphereLight("#cfd8ff", "#1a1410", 0.55));
+// the key light is split in two: one part casts the shadow, the other does not, so the shadow of a
+// clear liquid comes out partial rather than black
+const sun = new THREE.DirectionalLight("#fff3e0", 1.25);
+sun.position.set(-18, 60, 22);
+sun.shadow.mapSize.set(2048, 2048);
+Object.assign(sun.shadow.camera, { left: -48, right: 48, top: 48, bottom: -48, near: 10, far: 140 });
+sun.shadow.bias = -0.0004;
+sun.shadow.normalBias = 0.04;
+scene.add(sun, sun.target);
+const sunFill = new THREE.DirectionalLight("#fff3e0", 0.95);
+sunFill.position.copy(sun.position);
+scene.add(sunFill);
+const rimL = new THREE.DirectionalLight("#7fa6ff", 1.0);
+rimL.position.set(40, 10, -50);
+scene.add(rimL);
+
+const grid = new THREE.GridHelper(240, 240, "#252c3d", "#1b2130");
+grid.material.transparent = true;
+grid.material.opacity = 0.6;
+scene.add(grid);
+// a round stage under the drop: dark satin top with a fine engraved grid (so the refraction in the
+// liquid has something to bend), a brushed metal rim; it receives the drop's soft shadow
+const rnd = HW.rng(238);
+const stageTop = HW.canvasTex(1024, 1024, (x, w, h) => {
+  x.fillStyle = "#4a505b"; x.fillRect(0, 0, w, h);
+  for (let i = 0; i < 9000; i++) { const v = 40 + rnd() * 26 | 0; x.fillStyle = `rgba(${v},${v + 2},${v + 6},0.25)`; x.fillRect(rnd() * w, rnd() * h, 2, 2); }
+  x.strokeStyle = "rgba(190,205,230,0.32)"; x.lineWidth = 1.4;
+  for (let k = 0; k <= 32; k++) { const u = k * w / 32; x.beginPath(); x.moveTo(u, 0); x.lineTo(u, h); x.stroke(); x.beginPath(); x.moveTo(0, u); x.lineTo(w, u); x.stroke(); }
+  x.strokeStyle = "rgba(242,193,78,0.28)"; x.lineWidth = 2;
+  for (const r of [0.25, 0.42]) { x.beginPath(); x.arc(w / 2, h / 2, r * w, 0, 7); x.stroke(); }
+}, null, true);
+const stageRough = HW.canvasTex(256, 256, (x, w, h) => {
+  x.fillStyle = "#6a6a6a"; x.fillRect(0, 0, w, h);
+  for (let i = 0; i < 3000; i++) { const v = 80 + rnd() * 70 | 0; x.fillStyle = `rgb(${v},${v},${v})`; x.fillRect(rnd() * w, rnd() * h, 1, 1); }
+}, [6, 6]);
+const brushed = HW.canvasTex(512, 64, (x, w, h) => {
+  x.fillStyle = "#808080"; x.fillRect(0, 0, w, h);
+  for (let i = 0; i < 500; i++) { const v = 95 + rnd() * 80 | 0; x.strokeStyle = `rgba(${v},${v},${v},0.35)`; x.lineWidth = 0.7; const y = rnd() * h; x.beginPath(); x.moveTo(0, y); x.lineTo(w, y); x.stroke(); }
+}, [8, 1]);
+const plinth = new THREE.Group();
+{
+  const top = new THREE.MeshStandardMaterial({ map: stageTop, roughnessMap: stageRough, roughness: 0.75, metalness: 0.15, envMapIntensity: 0.6 });
+  const rimM = new THREE.MeshStandardMaterial({ color: "#9aa1aa", metalness: 0.9, roughness: 0.32, bumpMap: brushed, bumpScale: 0.004, envMapIntensity: 0.7 });
+  const base = new THREE.MeshStandardMaterial({ color: "#14171d", roughness: 0.6, metalness: 0.2 });
+  const disc = new THREE.Mesh(new THREE.CylinderGeometry(1, 1, 0.06, 128), [rimM, top, base]);
+  disc.position.y = -0.03; disc.receiveShadow = true; plinth.add(disc);
+  const body = new THREE.Mesh(new THREE.CylinderGeometry(0.985, 0.95, 0.12, 128), base);
+  body.position.y = -0.12; body.receiveShadow = true; plinth.add(body);
+}
+scene.add(plinth);
+
+// surface of revolution about the x axis, rebuilt in place from a meridian (rho(t), z(t))
+const NT = 160, NPH = 96;
+function makeLathe() {
+  const g = new THREE.BufferGeometry();
+  g.setAttribute("position", new THREE.BufferAttribute(new Float32Array((NT + 1) * (NPH + 1) * 3), 3));
+  g.setAttribute("normal", new THREE.BufferAttribute(new Float32Array((NT + 1) * (NPH + 1) * 3), 3));
+  const idx = [];
+  for (let i = 0; i < NT; i++) for (let j = 0; j < NPH; j++) {
+    const a = i * (NPH + 1) + j, b = a + NPH + 1;
+    idx.push(a, a + 1, b, b, a + 1, b + 1);   // counter-clockwise seen from outside: the front faces are the outer surface
+  }
+  g.setIndex(idx);
+  return g;
+}
+// fill a lathe from a list of meridian samples [rho, z, n_rho, n_z] (lengths in fm), axis along world x
+function fillLathe(g, prof, x0) {
+  const P = g.attributes.position.array, Nn = g.attributes.normal.array;
+  for (let i = 0; i <= NT; i++) {
+    const [r, z, nr, nz] = prof[i];
+    for (let j = 0; j <= NPH; j++) {
+      const ph = 2 * Math.PI * j / NPH, cp = Math.cos(ph), sp = Math.sin(ph), k = 3 * (i * (NPH + 1) + j);
+      P[k] = z + x0; P[k + 1] = r * cp; P[k + 2] = r * sp;
+      Nn[k] = nz; Nn[k + 1] = nr * cp; Nn[k + 2] = nr * sp;
+    }
+  }
+  g.attributes.position.needsUpdate = true; g.attributes.normal.needsUpdate = true;
+  g.computeBoundingSphere();
+}
+// a clear liquid with an amber body colour (absorption with depth), a thin-film sheen and a wet
+// clearcoat; in fast mode an opaque glossy stand-in
+const dropMat = new THREE.MeshPhysicalMaterial({
+  color: "#fff1e4", transmission: 1, thickness: 7, ior: 1.33, roughness: 0.03, metalness: 0,
+  clearcoat: 1, clearcoatRoughness: 0.03, specularIntensity: 1, envMapIntensity: 1.25,
+  attenuationColor: "#ff9d55", attenuationDistance: 13, iridescence: 0.35, iridescenceIOR: 1.3, iridescenceThicknessRange: [180, 520],
+  side: THREE.FrontSide,
+});
+// Fresnel rim, cool above and warm below, as on the other pages
+const rimMat = new THREE.ShaderMaterial({
+  vertexShader: `
+    varying vec3 vN; varying vec3 vV; varying float vY;
+    void main(){
+      vec4 mv = modelViewMatrix * vec4(position, 1.0);
+      vN = normalize(normalMatrix * normal); vV = normalize(-mv.xyz); vY = normal.y;
+      gl_Position = projectionMatrix * mv;
+    }`,
+  fragmentShader: `
+    varying vec3 vN; varying vec3 vV; varying float vY;
+    void main(){
+      float f = pow(1.0 - abs(dot(normalize(vN), normalize(vV))), 3.0);
+      vec3 c = mix(vec3(1.0, 0.80, 0.58), vec3(0.72, 0.86, 1.0), smoothstep(-0.6, 0.6, vY));
+      gl_FragColor = vec4(c * f * 0.45, f * 0.45);
+      #include <tonemapping_fragment>
+      #include <colorspace_fragment>
+    }`,
+  transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
+});
+// a warm glow inside the drop (the charge), bright enough to bloom
+const coreMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(1.5, 0.62, 0.3), transparent: true, opacity: 0.04, depthWrite: false, blending: THREE.AdditiveBlending });
+const drops = [];
+for (let k = 0; k < 2; k++) {
+  const g = makeLathe(), gc = makeLathe();
+  const body = new THREE.Mesh(g, dropMat), rim = new THREE.Mesh(g, rimMat), core = new THREE.Mesh(gc, coreMat);
+  rim.renderOrder = 3; core.renderOrder = 2;
+  body.castShadow = true; rim.userData.noAO = core.userData.noAO = true;
+  scene.add(body); scene.add(rim); scene.add(core);
+  drops.push({ g, gc, body, rim, core });
+}
+
+// meridian of a funny-hills shape in fm, centred on its centre of mass; t in [ta, tb]
+function meridian(sh, R0, ta, tb, zc) {
+  const o = {}, prof = [];
+  for (let i = 0; i <= NT; i++) {
+    const u = i / NT, t = ta + (tb - ta) * (0.5 - 0.5 * Math.cos(Math.PI * u));
+    sh.at(t, o);
+    let nr = o.zt, nz = -o.rt; const n = Math.hypot(nr, nz) || 1;
+    prof.push([R0 * o.r, R0 * (o.z - zc), nr / n, nz / n]);
+  }
+  return prof;
+}
+function shrink(prof, f) { return prof.map(([r, z, nr, nz]) => [r * f, z * f, nr, nz]); }
+// a sphere of radius R as a meridian
+function sphereProf(R) { const p = []; for (let i = 0; i <= NT; i++) { const t = Math.PI * i / NT; p.push([R * Math.sin(t), -R * Math.cos(t), Math.sin(t), -Math.cos(t)]); } return p; }
+function blendProf(a, b, w) { return a.map((p, i) => { const q = b[i]; const nr = p[2] * (1 - w) + q[2] * w, nz = p[3] * (1 - w) + q[3] * w, n = Math.hypot(nr, nz) || 1; return [p[0] * (1 - w) + q[0] * w, p[1] * (1 - w) + q[1] * w, nr / n, nz / n]; }); }
+
+let lastShape = null;
+function showOne(prof) {
+  fillLathe(drops[0].g, prof, 0); fillLathe(drops[0].gc, shrink(prof, 0.86), 0);
+  for (const k of [0, 1]) { drops[k].body.visible = drops[k].rim.visible = drops[k].core.visible = k === 0; }
+}
+function showShape(s) {
+  const R0 = S.d.R0;
+  if (!S.path) { lastShape = null; showOne(sphereProf(R0)); return; }   // no path computed: the sphere
+  s = Math.min(s, sMax());
+  if (s <= 1) {
+    let [c, h] = pathAt(s), sh = F.funnyHills(c, h, 0);
+    if (!sh.valid) {
+      // a chord between two valid path points can cross the curved scission line: use the nearest vertex
+      const P = S.path, t = Math.max(0, Math.min(1, s)) * P.total;
+      let i = 0; while (i < P.L.length - 1 && P.L[i + 1] <= t) i++;
+      if (i < P.L.length - 1 && P.L[i + 1] - t < t - P.L[i]) i++;
+      [c, h] = P.pts[i]; sh = F.funnyHills(c, h, 0);
+    }
+    lastShape = { c, h, sh };
+    showOne(meridian(sh, R0, 0, Math.PI, 0));
+  } else {
+    // past scission (reached only when the path ends on a valid shape with neck radius SCISSION_NECK R0):
+    // the two halves are cut at the neck. What follows is ILLUSTRATIVE, not computed: each half is blended
+    // into a sphere and the two move apart on a prescribed schedule, with no Coulomb equation of motion.
+    const end = pathAt(1), sh = F.funnyHills(end[0], end[1], 0), tau = (s - 1) / 0.18;
+    const o = {}, Rf = R0 * Math.cbrt(0.5);
+    // centre of mass of the right half, in units of R0
+    let num = 0, den = 0;
+    for (let i = 0; i < 400; i++) { const z = end[0] * (i + 0.5) / 400, r2 = sh.rho2(z); num += r2 * z; den += r2; }
+    const zcm = num / den;
+    const right = meridian(sh, R0, Math.PI / 2, Math.PI, zcm), round = blendProf(right, sphereProf(Rf), Math.min(1, 1.3 * tau));
+    const sep = R0 * (zcm + 0.9 * tau * tau + 0.6 * tau);
+    const left = round.map(([r, z, nr, nz]) => [r, -z, nr, -nz]).reverse();
+    fillLathe(drops[0].g, round, sep); fillLathe(drops[0].gc, shrink(round, 0.86), sep);
+    fillLathe(drops[1].g, left, -sep); fillLathe(drops[1].gc, shrink(left, 0.86), -sep);
+    for (const k of [0, 1]) drops[k].body.visible = drops[k].rim.visible = drops[k].core.visible = true;
+    lastShape = null;
+  }
+}
+
+// ---------- the landscape: a second, small renderer in the side panel
+const landCv = document.getElementById("land");
+const lr = new THREE.WebGLRenderer({ canvas: landCv, antialias: true, alpha: false });
+lr.setPixelRatio(Math.min(devicePixelRatio, 2));
+lr.toneMapping = THREE.ACESFilmicToneMapping; lr.toneMappingExposure = 1.05;
+lr.outputColorSpace = THREE.SRGBColorSpace;
+const lscene = new THREE.Scene();
+lscene.background = new THREE.Color("#0f121a");
+const lcam = new THREE.PerspectiveCamera(34, 1, 0.1, 100);
+const lctl = new OrbitControls(lcam, landCv);
+lctl.enableDamping = true; lctl.enablePan = false; lctl.minDistance = 2.5; lctl.maxDistance = 9;
+lscene.add(new THREE.HemisphereLight("#dfe6ff", "#202028", 1.4));
+const lsun = new THREE.DirectionalLight("#ffffff", 1.3); lsun.position.set(-2, 4, 3); lscene.add(lsun);
+// map (c, h) to the floor: c -> X in [-1.6, 1.6], h -> Z
+const LX = (c) => (c - 1.7) * 1.6, LZ = (h) => -(h - 0.12) * 2.6;
+let LY = (E) => E;
+const landGeo = new THREE.BufferGeometry();
+landGeo.setAttribute("position", new THREE.BufferAttribute(new Float32Array(G.nc * G.nh * 3), 3));
+landGeo.setAttribute("color", new THREE.BufferAttribute(new Float32Array(G.nc * G.nh * 3), 3));
+const landMesh = new THREE.Mesh(landGeo, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.55, metalness: 0, side: THREE.DoubleSide, flatShading: false }));
+lscene.add(landMesh);
+const landWire = new THREE.LineSegments(new THREE.BufferGeometry(), new THREE.LineBasicMaterial({ color: "#0b0d12", transparent: true, opacity: 0.35 }));
+lscene.add(landWire);
+const pathLine = new THREE.Mesh(new THREE.BufferGeometry(), new THREE.MeshBasicMaterial({ color: "#f2c14e", toneMapped: false }));
+lscene.add(pathLine);
+const sciLine = new THREE.LineSegments(new THREE.BufferGeometry(), new THREE.LineDashedMaterial({ color: "#c9d2e6", dashSize: 0.06, gapSize: 0.05 }));
+lscene.add(sciLine);
+const sadDot = new THREE.Mesh(new THREE.SphereGeometry(0.05, 20, 14), new THREE.MeshBasicMaterial({ color: "#ffffff", toneMapped: false }));
+lscene.add(sadDot);
+const curDot = new THREE.Mesh(new THREE.SphereGeometry(0.065, 20, 14), new THREE.MeshBasicMaterial({ color: "#f2c14e", toneMapped: false }));
+lscene.add(curDot);
+const sphDot = new THREE.Mesh(new THREE.SphereGeometry(0.035, 16, 12), new THREE.MeshBasicMaterial({ color: "#a8cdf2", toneMapped: false }));
+lscene.add(sphDot);
+lcam.position.set(1.9, 3.7, 3.6); lctl.target.set(0, 0.25, 0);
+const STOPS = ["#1c2a4a", "#265c8f", "#2f9ab0", "#6fd0a4", "#e4e98a", "#fff6d6"].map((c) => new THREE.Color(c));
+function ramp(v, out) { if (!(v === v)) v = 1; v = Math.min(1, Math.max(0, v)) * (STOPS.length - 1); const i = Math.min(STOPS.length - 2, Math.floor(v)); return out.copy(STOPS[i]).lerp(STOPS[i + 1], v - i); }
+let landE = null, landTop = 1, landBot = 0;
+function buildLand() {
+  const x = S.x, ES0 = S.d.ES0, E = F.gridE(G, x), P = landGeo.attributes.position.array, C = landGeo.attributes.color.array, col = new THREE.Color();
+  const B = S.sad ? S.sad.E * ES0 : 0;
+  // vertical range: from the lowest point shown to a few barriers above the saddle
+  landBot = 0; for (let k = 0; k < E.length; k++) if (E[k] === E[k] && G.neck[k] > 0.02 && E[k] * ES0 < landBot) landBot = E[k] * ES0;
+  landBot = Math.max(landBot, -Math.max(12, 3 * B));
+  landTop = Math.max(B * 2.4, 6);
+  const span = landTop - landBot;
+  document.getElementById("lclip").textContent = `clipped: flat at ${landTop.toFixed(1)} MeV (cells wholly above it left out), colour saturating below ${landBot.toFixed(1)} MeV`;
+  LY = (Em) => 1.25 * (Math.min(Em, landTop) - landBot) / span - 0.2;
+  for (let i = 0; i < G.nc; i++) for (let j = 0; j < G.nh; j++) {
+    const k = i * G.nh + j, c = G.c0 + i * G.dc, h = G.h0 + j * G.dh, e = E[k] * ES0;
+    P[3 * k] = LX(c); P[3 * k + 2] = LZ(h); P[3 * k + 1] = e === e ? LY(e) : 0;
+    ramp((Math.min(e, landTop) - landBot) / span, col);
+    C[3 * k] = col.r; C[3 * k + 1] = col.g; C[3 * k + 2] = col.b;
+  }
+  // triangles only where all corners exist and the neck is open, and the corners are not clipped together
+  const idx = [], wire = [];
+  const ok = (k) => E[k] === E[k] && G.neck[k] > 0.02;
+  for (let i = 0; i < G.nc - 1; i++) for (let j = 0; j < G.nh - 1; j++) {
+    const a = i * G.nh + j, b = a + G.nh, c = a + 1, d = b + 1;
+    if (ok(a) && ok(b) && ok(c) && ok(d)) {
+      if (E[a] * ES0 < landTop || E[b] * ES0 < landTop || E[c] * ES0 < landTop || E[d] * ES0 < landTop) idx.push(a, b, c, b, d, c);
+      if (i % 5 === 0) wire.push(a, c); if (j % 5 === 0) wire.push(a, b);
+    }
+  }
+  landGeo.setIndex(idx);
+  landGeo.attributes.position.needsUpdate = true; landGeo.attributes.color.needsUpdate = true;
+  landGeo.computeVertexNormals();
+  const wp = [];
+  for (let q = 0; q < wire.length; q += 2) for (const k of [wire[q], wire[q + 1]]) wp.push(P[3 * k], P[3 * k + 1] + 0.003, P[3 * k + 2]);
+  landWire.geometry.setAttribute("position", new THREE.Float32BufferAttribute(wp, 3));
+  // scission line, neck radius 0: h = [5/c^3 - (c - 1)/2] / 2 where B >= 0
+  const sp = [];
+  let prev = null;
+  for (let c = G.c0; c <= G.c0 + (G.nc - 1) * G.dc + 1e-9; c += 0.01) {
+    const h = (5 / c ** 3 - (c - 1) / 2) / 2;
+    const p = h >= G.h0 && h <= G.h0 + (G.nh - 1) * G.dh ? [LX(c), LY(landTop) * 0 + 1.06, LZ(h)] : null;
+    if (p && prev) sp.push(...prev, ...p);
+    prev = p;
+  }
+  sciLine.geometry.setAttribute("position", new THREE.Float32BufferAttribute(sp, 3));
+  sciLine.computeLineDistances();
+  // path, raised a little above the surface
+  const pp = [];
+  for (const [c, h] of S.path ? S.path.pts : []) { const e = eAny(x, c, h) * ES0; if (e === e) pp.push(new THREE.Vector3(LX(c), LY(e) + 0.025, LZ(h))); }
+  pathLine.geometry.dispose();
+  pathLine.geometry = pp.length > 1 ? new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pp), Math.min(400, 3 * pp.length), 0.018, 8, false) : new THREE.BufferGeometry();
+  if (S.sad) { sadDot.visible = true; sadDot.position.set(LX(S.sad.c), LY(S.sad.E * ES0) + 0.02, LZ(S.sad.h)); } else sadDot.visible = false;
+  sphDot.position.set(LX(1), LY(0) + 0.02, LZ(0));
+}
+function sizeLand() {
+  const w = landCv.clientWidth, h = landCv.clientHeight;
+  lr.setSize(w, h, false); lcam.aspect = w / h; lcam.updateProjectionMatrix();
+}
+
+// ---------- 2D plots
+function setupCanvas(c) {
+  const d = Math.min(devicePixelRatio, 2), w = c.clientWidth, h = c.clientHeight;
+  c.width = w * d; c.height = h * d;
+  const x = c.getContext("2d");
+  x.setTransform(d, 0, 0, d, 0, 0);
+  return { x, w, h };
+}
+const PL = 40, PR = 8, PT = 8, PB = 20;
+function axes(ctx, w, h, xr, yr, xt, yt, xf, yf, ylog) {
+  const X = (v) => PL + (v - xr[0]) / (xr[1] - xr[0]) * (w - PL - PR);
+  const Y = ylog ? (v) => PT + (Math.log10(yr[1]) - Math.log10(v)) / (Math.log10(yr[1]) - Math.log10(yr[0])) * (h - PT - PB)
+                 : (v) => PT + (yr[1] - v) / (yr[1] - yr[0]) * (h - PT - PB);
+  ctx.font = "10px ui-monospace,Menlo,monospace"; ctx.lineWidth = 1;
+  for (const v of yt) { ctx.strokeStyle = "#1e2432"; ctx.beginPath(); ctx.moveTo(PL, Y(v)); ctx.lineTo(w - PR, Y(v)); ctx.stroke(); ctx.fillStyle = "#8a92a6"; ctx.textAlign = "right"; ctx.fillText(yf(v), PL - 4, Y(v) + 3); }
+  ctx.textAlign = "center";
+  for (const v of xt) ctx.fillText(xf(v), X(v), h - 6);
+  return { X, Y };
+}
+function curve(ctx, pts, X, Y, color, w, dash) {
+  ctx.beginPath(); ctx.strokeStyle = color; ctx.lineWidth = w; ctx.setLineDash(dash || []);
+  let on = false;
+  for (const [a, b] of pts) { if (!(b === b) || !(a === a)) { on = false; continue; } if (!on) { ctx.moveTo(X(a), Y(b)); on = true; } else ctx.lineTo(X(a), Y(b)); }
+  ctx.stroke(); ctx.setLineDash([]);
+}
+// energy along the path against the P2 content of each shape
+let pathCurve = null;
+// fine: direct energies; otherwise (while a slider moves) the grid interpolation
+function computePathCurve(fine) {
+  const ES0 = S.d.ES0, out = [];
+  if (!S.path) { pathCurve = null; return; }
+  const n = fine ? 70 : 40;
+  for (let i = 0; i <= n; i++) {
+    const s = i / n, [c, h] = pathAt(s);
+    let e;
+    if (fine) { const B = F.shapeB(c, h, 0); if (!B.valid) continue; e = F.edef(S.x, B); }
+    else { e = eGrid(S.x, c, h); if (!(e === e)) continue; }
+    out.push([F.projectFH(c, h, [2], fine ? 48 : 24)[2], e * ES0, s]);
+  }
+  pathCurve = out;
+}
+function drawPathPlot() {
+  const { x: ctx, w, h } = setupCanvas(document.getElementById("path"));
+  if (!pathCurve || !pathCurve.length) return;
+  const ES0 = S.d.ES0, x = S.x;
+  const amax = Math.min(1.6, Math.max(...pathCurve.map((p) => p[0])) * 1.02);
+  const B = S.sad ? S.sad.E * ES0 : 1;
+  const ylo = Math.min(-0.5, ...pathCurve.map((p) => p[1])), yhi = Math.max(1.6 * B, 1);
+  const step = yhi - ylo > 40 ? 10 : yhi - ylo > 16 ? 5 : yhi - ylo > 6 ? 2 : yhi - ylo > 2.5 ? 1 : 0.5;
+  const yt = []; for (let v = Math.ceil(ylo / step) * step; v <= yhi; v += step) yt.push(+v.toFixed(3));
+  const xt = []; for (let v = 0; v <= amax; v += amax > 0.8 ? 0.2 : 0.1) xt.push(+v.toFixed(2));
+  const { X, Y } = axes(ctx, w, h, [0, amax], [ylo, yhi], xt, yt, (v) => v, (v) => v);
+  const clipY = (v) => (v < ylo || v > yhi ? NaN : v);
+  const bw2 = [], bw3 = [];
+  for (let i = 0; i <= 100; i++) { const a = amax * i / 100; bw2.push([a, clipY(ES0 * 0.4 * (1 - x) * a * a)]); bw3.push([a, clipY(ES0 * (0.4 * (1 - x) * a * a - 4 / 105 * (1 + 2 * x) * a ** 3))]); }
+  curve(ctx, bw2, X, Y, "#a8cdf2", 1.3, [5, 4]);
+  curve(ctx, bw3, X, Y, "#8a92a6", 1.3, [2, 3]);
+  curve(ctx, pathCurve.map((p) => [p[0], p[1]]), X, Y, "#f2c14e", 2);
+  if (S.sad) {
+    const a = F.projectFH(S.sad.c, S.sad.h, [2], 48)[2];
+    ctx.fillStyle = "#ffffff"; ctx.beginPath(); ctx.arc(X(a), Y(B), 3.5, 0, 7); ctx.fill();
+    ctx.fillStyle = "#e6e8ee"; ctx.textAlign = "left"; ctx.fillText("saddle " + fmtB(B), X(a) + 6, Y(B) - 5);
+  }
+  // current point
+  if (lastShape) {
+    const a = F.projectFH(lastShape.c, lastShape.h, [2], 48)[2], B2 = F.shapeB(lastShape.c, lastShape.h, 0);
+    if (B2.valid) { ctx.strokeStyle = "#f2c14e"; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(X(a), Y(clipY(F.edef(x, B2) * ES0)), 5, 0, 7); ctx.stroke(); }
+  }
+  ctx.fillStyle = "#8a92a6"; ctx.textAlign = "left"; ctx.fillText("MeV", PL + 4, PT + 10);
+}
+function drawBx() {
+  const { x: ctx, w, h } = setupCanvas(document.getElementById("bx"));
+  const xr = [0.45, 1.0], yr = [1e-5, 0.3];
+  const { X, Y } = axes(ctx, w, h, xr, yr, [0.5, 0.6, 0.7, 0.8, 0.9, 1.0], [1e-5, 1e-4, 1e-3, 1e-2, 1e-1], (v) => v.toFixed(1), (v) => "1e" + Math.round(Math.log10(v)), true);
+  // outside the axis range a curve ends (NaN breaks it) rather than running along the edge: below
+  // 1e-5 the barriers go on falling, as (1 - x)^3, to zero at x = 1
+  const cl = (v) => (v >= yr[0] && v <= yr[1] ? v : NaN);
+  // Cohen-Swiatecki two-piece fit
+  const cs = []; for (let x = 0.45; x <= 0.999; x += 0.002) cs.push([x, x > 2 / 3 ? 0.83 * (1 - x) ** 3 : 0.38 * (0.75 - x)]);
+  curve(ctx, cs.map(([a, b]) => [a, cl(b)]), X, Y, "#8a92a6", 1.2, [2, 3]);
+  const bw = []; for (let x = 0.7; x <= 0.9995; x += 0.002) { const y = 1 - x; bw.push([x, 98 / 135 * y ** 3 - 11368 / 34425 * y ** 4]); }
+  curve(ctx, bw.map(([a, b]) => [a, cl(b)]), X, Y, "#a8cdf2", 1.3, [5, 4]);
+  curve(ctx, SAD.fh.map((r) => [r[0], cl(r[3])]), X, Y, "#f2c14e", 2);
+  ctx.fillStyle = "#ffffff";
+  for (const r of SAD.leg) if (r[1] != null) { ctx.beginPath(); ctx.arc(X(r[0]), Y(r[1]), 2.4, 0, 7); ctx.fill(); }
+  // empirical: the higher hump, over the liquid-drop E_S0 of each nucleus
+  ctx.fillStyle = "#ff9656";
+  for (const r of SAD.ripl) {
+    const d = F.drop(r.Z, r.A), b = Math.max(r.Ea, r.Eb || 0) / d.ES0;
+    if (d.x < xr[0] || d.x > xr[1]) continue;
+    if (!(cl(b) === cl(b))) continue;
+    const px = X(d.x), py = Y(b);
+    ctx.beginPath(); ctx.moveTo(px, py - 3.2); ctx.lineTo(px + 3.2, py); ctx.lineTo(px, py + 3.2); ctx.lineTo(px - 3.2, py); ctx.fill();
+  }
+  // current fissility
+  ctx.strokeStyle = "#f2c14e"; ctx.setLineDash([3, 3]); ctx.lineWidth = 1;
+  if (S.x >= xr[0] && S.x <= xr[1]) { ctx.beginPath(); ctx.moveTo(X(S.x), PT); ctx.lineTo(X(S.x), h - PB); ctx.stroke(); }
+  ctx.setLineDash([]);
+
+}
+
+// ---------- the table: liquid drop vs RIPL-3 empirical barriers
+const TABLE = [[80, 198], [82, 208], [83, 209], [84, 210], [85, 213], [88, 226], [90, 232], [92, 236], [92, 238], [94, 240], [96, 248], [98, 252]];
+function drawTable() {
+  let s = `<tr><th>nucleus</th><th>x</th><th>drop</th><th>P<sub>16</sub></th><th>inner</th><th>outer</th><th>diff.</th></tr>`;
+  for (const [Z, A] of TABLE) {
+    const d = F.drop(Z, A), f = fFH(d.x), fl = fLeg(d.x), r = RIPL.get(Z + "," + A);
+    const B = f * d.ES0, BL = fl * d.ES0, meas = r ? Math.max(r.Ea, r.Eb || 0) : null;
+    const cur = Z === S.Z && A === S.Z + S.N ? " class=cur" : "";
+    s += `<tr${cur}><td>${sup(A)}${ELEM[Z]}</td><td>${d.x.toFixed(3)}</td><td>${B.toFixed(1)}</td><td>${BL === BL ? BL.toFixed(1) : "n/a"}</td>` +
+      `<td>${r ? r.Ea.toFixed(1) : "n/a"}</td><td>${r && r.Eb ? r.Eb.toFixed(1) : (r ? "" : "n/a")}</td><td class=d>${meas != null ? (meas - B >= 0 ? "+" : "−") + Math.abs(meas - B).toFixed(1) : ""}</td></tr>`;
+  }
+  document.getElementById("bt").innerHTML = s;
+  // the numbers quoted in the text are read off the same table
+  const dB = (Z, A) => { const d = F.drop(Z, A), r = RIPL.get(Z + "," + A); return { B: fFH(d.x) * d.ES0, m: r ? Math.max(r.Ea, r.Eb || 0) : null }; };
+  const hg = dB(80, 198), pb = dB(82, 208), cf = dB(98, 252), pu = dB(94, 240), cm = dB(96, 248);
+  const ACT = [[88, 226], [89, 227], [90, 232], [92, 236], [92, 238]];
+  const act = ACT.map(([Z, A]) => { const q = dB(Z, A); return Math.abs(q.m - q.B); });
+  // the evaluated hump structure, read off the RIPL-3 file (S symmetric, GA axially asymmetric = triaxial, MA mass asymmetric)
+  const SYMW = { S: "symmetric", GA: "triaxial (GA)", MA: "mass-asymmetric (MA)" };
+  const humps = ACT.map(([Z, A]) => { const r = RIPL.get(Z + "," + A), n = `${sup(A)}${ELEM[Z]}`;
+    return r.Eb ? `${n} a ${SYMW[r.symA] || r.symA} inner and a ${SYMW[r.symB] || r.symB} outer hump` : `${n} one ${SYMW[r.symA] || r.symA} hump`; });
+  // what the restricted (c, h) family costs: funny-hills saddle against the even-Legendre P2..P16 saddle
+  const fam = SAD.leg.filter((r) => r[1] != null).map((r) => (fFH(r[0]) - r[1]) / r[1]);
+  const og = F.drop(118, 294).x;
+  document.getElementById("why").innerHTML = `The drop has no shell or pairing energy. The largest miss is doubly magic <sup>208</sup>Pb, ${(pb.m - pb.B).toFixed(1)} MeV short, and that one is a shell effect: its ground state is bound more strongly than the drop, while the elongated saddle gains little from shells, so the extra binding adds to the barrier. <sup>198</sup>Hg, away from closed shells, comes out ${Math.abs(hg.m - hg.B) < 0.1 ? "within 0.1 MeV of" : Math.abs(hg.m - hg.B).toFixed(1) + " MeV from"} the empirical value. The other differences are not attributed here: the two-parameter shape family alone puts the saddle ${(100 * Math.min(...fam)).toFixed(2)} to ${(100 * Math.max(...fam)).toFixed(1)}% above a richer one (the P<sub>16</sub> column), pairing is left out, and the empirical barriers are themselves extracted through a model. From Ra to U the heights agree within ${Math.max(...act).toFixed(1)} MeV, but the two sides describe different barriers: the drop has one hump and axially and mass-symmetric shapes, while the evaluation gives ${humps.slice(0, -1).join(", ")} and ${humps[humps.length - 1]}; where there are two humps the table compares with the higher one. For <sup>240</sup>Pu and <sup>248</sup>Cm the empirical barrier is ${(pu.m - pu.B).toFixed(1)} and ${(cm.m - cm.B).toFixed(1)} MeV above the drop. The drop gives <sup>252</sup>Cf ${cf.B.toFixed(1)} MeV, and at x = 1 nothing: with these constants <sup>294</sup>Og has x = ${og.toFixed(4)}. Nuclei that heavy exist only because shells give them a barrier.`;
+  document.getElementById("bsrc").innerHTML = `"drop": funny-hills saddle, the landscape above. "P<sub>16</sub>": saddle with even Legendre terms to P<sub>16</sub>, interpolated in x (below x = 0.7 it still moves by about 1% between P<sub>12</sub> and P<sub>16</sub>). Inner, outer: RIPL-3 empirical barriers (one hump for Hg to Ac), extracted from fission data through a model; they are evaluated parameters, not direct measurements. Diff. = higher hump − drop. <sup>252</sup>Cf is not in that file. Fit curve: 0.83(1−x)<sup>3</sup>, x &gt; 2/3, and 0.38(0.75 − x), a two-piece fit to the Cohen–Swiatecki saddle energies, as quoted by Piperova et al., Nucl. Phys. A 652, 142 (1999) and Chen et al., Eur. Phys. J. A 53, 95 (2017).`;
+}
+
+// ---------- panels
+function fmtE(v) { return Math.abs(v) < 0.05 && v !== 0 ? v.toExponential(1) : v.toFixed(2); }
+// barrier in MeV: small near-critical barriers in exponent form, never rounded to 0.00
+function fmtB(v) { return v >= 0.01 ? v.toFixed(2) : v.toExponential(2); }
+function barrierText() {
+  const B = S.sad ? S.sad.E * S.d.ES0 : 0;
+  switch (S.status) {
+    case "verified": case "table": return fmtB(B) + " MeV";
+    case "asymptotic": return fmtB(B) + " MeV (Bohr–Wheeler series)";
+    case "none": return "none (x ≥ 1)";
+    case "unresolved": return "not resolved numerically (unknown, not zero)";
+    case "outside": return `not computed (x < ${XMIN})`;
+  }
+  return "";
+}
+function stampHTML(A) {
+  const nm = `${sup(A)}${ELEM[S.Z]}`, hand = Math.abs(S.x - S.d.x) > 1e-9 ? " (set by hand)" : "";
+  if (S.sad) return `<b>${fmtB(S.sad.E * S.d.ES0)} MeV</b><small>liquid-drop barrier of ${nm} · x = ${S.x.toFixed(4)}${hand}${S.status === "asymptotic" ? " · Bohr–Wheeler series" : ""}</small>`;
+  if (S.status === "none") return `<b>no barrier</b><small>x = ${S.x.toFixed(4)} ≥ 1: the spherical drop is already unstable</small>`;
+  if (S.status === "outside") return `<b>${nm}</b><small>x = ${S.x.toFixed(4)}: below the range this page solves (${XMIN} to 1)</small>`;
+  return `<b>barrier not resolved</b><small>${nm} · x = ${S.x.toFixed(4)}: no verified saddle found; unknown, not zero</small>`;
+}
+// what it takes: the barrier (empirical higher hump where evaluated, else the drop) against the excitation
+// energy a slow neutron brings when it is captured by the nucleus with one neutron less, E* = S_n(Z, N)
+function takes() {
+  const A = S.Z + S.N, r = RIPL.get(S.Z + "," + A), sn = Sn(S.Z, S.N);
+  const B = r ? Math.max(r.Ea, r.Eb || 0) : S.sad ? S.sad.E * S.d.ES0 : null;
+  if (B == null || !sn) return "";
+  const src = r ? "empirical" : "liquid drop", tgt = `${sup(A - 1)}${ELEM[S.Z]}`;
+  const verdict = sn.S > B
+    ? `above the barrier: a slow neutron on ${tgt} makes it fission`
+    : B - sn.S < 3 ? `${(B - sn.S).toFixed(1)} MeV short: neutrons on ${tgt} need roughly that much kinetic energy (less with tunnelling)`
+    : `${(B - sn.S).toFixed(0)} MeV short: only reactions that deposit far more energy make it fission`;
+  return `<dt>to fission</dt><dd>barrier ${B.toFixed(1)} MeV (${src}); a slow neutron captured on ${tgt} brings E* = S<sub>n</sub> = ${sn.S.toFixed(2)} MeV${sn.est ? " (estimated mass)" : ""}: ${verdict}</dd>`;
+}
+function drawInfo() {
+  const d = S.d, A = S.Z + S.N, r = RIPL.get(S.Z + "," + A);
+  const custom = Math.abs(S.x - d.x) > 1e-9;
+  let meas = "not in RIPL-3 empirical table";
+  if (r) meas = r.Eb ? `inner ${r.Ea.toFixed(2)} (${r.symA}), outer ${r.Eb.toFixed(2)} (${r.symB})` : `${r.Ea.toFixed(1)} (one hump)`;
+  const neck = S.sad ? neckOf(S.sad.c, S.sad.h) * d.R0 : null;
+  document.getElementById("info").innerHTML = `
+    <dt>Z, N</dt><dd>${S.Z}, ${S.N} · I = ${d.I.toFixed(4)}</dd>
+    <dt>E<sub>S</sub><sup>(0)</sup></dt><dd>${d.ES0.toFixed(1)} MeV</dd>
+    <dt>E<sub>C</sub><sup>(0)</sup></dt><dd>${d.EC0.toFixed(1)} MeV</dd>
+    <dt>Z²/A</dt><dd>${d.zza.toFixed(2)} of ${d.zzaCrit.toFixed(2)} (x = 1)</dd>
+    <dt>x</dt><dd>${d.x.toFixed(4)}${custom ? ` · set by hand to ${S.x.toFixed(4)}` : ""}</dd>
+    <dt>barrier</dt><dd style="color:var(--accent)">${barrierText()}</dd>
+    <dt>saddle</dt><dd>${S.sad ? (Math.abs(S.sad.c - 1) < 0.01 ? `c = 1 + ${(S.sad.c - 1).toExponential(2)}, h = ${S.sad.h.toExponential(2)}` : `c = ${S.sad.c.toFixed(3)}, h = ${S.sad.h.toFixed(3)}`) + (S.status === "asymptotic" ? (S.sad.located ? " (Newton on the direct energies)" : " (extrapolated)") : "") : "n/a"}</dd>
+    <dt>waist</dt><dd>${neck != null ? "radius " + neck.toFixed(2) + " fm at the saddle, R₀ = " + d.R0.toFixed(2) + " fm" : "n/a"}</dd>
+    <dt>empirical</dt><dd>${custom ? "n/a (x set by hand)" : meas}</dd>
+    ${custom ? "" : takes()}`;
+  const w = [];
+  if (S.x < 0.6 && S.sad) w.push("Below x ≈ 0.6 the saddle sits close to scission and a mass-asymmetric or more general shape family is needed; the barrier shown is an upper bound.");
+  if (S.status === "outside") w.push(`x = ${S.x.toFixed(4)} is below ${XMIN}, the lowest fissility this page solves. For light drops the symmetric saddle moves onto the scission shape and, below the Businaro–Gallone point near x ≈ 0.4, the saddle becomes mass asymmetric, which the two-parameter symmetric family here cannot represent. The landscape is drawn at the true x; no barrier or path is computed, and the fissility is not replaced by another one.`);
+  if (S.sad && S.x >= 0.99 && S.x < 1) w.push(`The barrier is ${S.sad.E.toExponential(1)} E_S0: the sphere is almost unstable.`);
+  if (S.status === "asymptotic") w.push("For 1 − x < 10⁻³ the saddle is a deformation of order 1 − x and Newton on the direct energies approaches their rounding floor, so the barrier is Bohr and Wheeler's series, Eq. (24), which this solver reproduces (direct saddles meet it to 10⁻⁵ at 1 − x = 2×10⁻³)." + (S.sad && S.sad.located ? " The saddle location is found by Newton on the direct energies, whose saddle energy meets the series to 10⁻⁴." : " The saddle location is extrapolated from the direct saddles, which the quadrature can no longer place this close to x = 1, so the path drawn is illustrative: its highest point is not the quoted barrier (1 to 12% above it for 1 − x from 4×10⁻⁴ to 5×10⁻⁵)."));
+  if (S.status === "unresolved") w.push("No verified saddle (Newton on the direct energies did not converge to a point with one unstable direction): the barrier is unknown here, not zero.");
+  if (S.path && !S.path.scission) w.push("The path did not reach scission, so the drop is not split.");
+  const row = ROW.get(S.Z + "," + S.N);
+  if (!custom && row && row[4] === "stable") w.push(`${sup(A)}${ELEM[S.Z]} is stable: it does not fission by itself. The drop splitting here is what the liquid drop does once it is given at least the barrier energy (see "to fission" above); tunnelling through the barrier from the ground state is not computed on this page.`);
+  const W = document.getElementById("warn"); W.hidden = !w.length; W.innerHTML = w.join(" ");
+  document.getElementById("title").innerHTML = `${sup(A)}${ELEM[S.Z]}`;
+  document.title = `${A}${ELEM[S.Z]} fission · nuclearjs`;
+  document.getElementById("toNucleus").href = `nucleus.html#${A}${ELEM[S.Z]}`;
+}
+function drawHere() {
+  const ES0 = S.d.ES0;
+  let html = "";
+  if (S.s <= 1 && lastShape) {
+    const B = F.shapeB(lastShape.c, lastShape.h, 0), nk = neckOf(lastShape.c, lastShape.h) * S.d.R0;
+    const E = F.edef(S.x, B) * ES0;
+    html = `<dt>shape</dt><dd>c = ${lastShape.c.toFixed(3)}, h = ${lastShape.h.toFixed(3)}</dd>
+      <dt>E<sub>def</sub></dt><dd>${fmtE(E)} MeV</dd>
+      <dt>surface</dt><dd>+${((B.Bs - 1) * ES0).toFixed(2)} MeV (B<sub>s</sub> = ${B.Bs.toFixed(5)})</dd>
+      <dt>Coulomb</dt><dd>${((B.Bc - 1) * 2 * S.x * ES0).toFixed(2)} MeV (B<sub>c</sub> = ${B.Bc.toFixed(5)})</dd>
+      <dt>length</dt><dd>${(2 * lastShape.c * S.d.R0).toFixed(1)} fm · waist radius ${nk > 0.05 ? nk.toFixed(2) + " fm" : "closed"}</dd>`;
+  } else if (S.path && S.s > 1) html = `<dt>after</dt><dd>scission at neck radius ${(F.SCISSION_NECK * S.d.R0).toFixed(2)} fm (${F.SCISSION_NECK} R₀): two fragments, Z = ${(S.Z / 2).toFixed(1)}, A = ${((S.Z + S.N) / 2).toFixed(1)} each</dd>
+      <dt>note</dt><dd>illustrative from here on: the halves are rounded into spheres and moved apart on a fixed schedule, not by solving their Coulomb motion</dd>`;
+  else html = `<dt>shape</dt><dd>sphere (no path computed at this x)</dd>`;
+  document.getElementById("here").innerHTML = html;
+  document.getElementById("pout").textContent = !S.path ? "n/a" : S.s <= 1 ? (S.s < S.path.sSad - 0.005 ? "uphill" : S.s < S.path.sSad + 0.005 ? "saddle" : "downhill") : "split";
+  const st = document.getElementById("stamp"), A = S.Z + S.N;
+  st.innerHTML = stampHTML(A);
+  // the state, for tests/check_fission_page.js (headless browser)
+  const end = S.path ? S.path.pts[S.path.pts.length - 1] : null;
+  document.body.dataset.fission = JSON.stringify({ x: S.x, status: S.status, E: S.sad ? S.sad.E : null, s: S.s, split: !!(S.path && S.path.scission && S.s > 1),
+    scission: S.path ? S.path.scission : null, illustrative: S.path ? S.path.illustrative : null, located: S.sad ? !!S.sad.located : null, end, endNeck: S.path ? S.path.endNeck : null, shown: lastShape ? [lastShape.c, lastShape.h, lastShape.sh.valid] : null });
+}
+
+// ---------- solving
+// S.status: 'verified' (Newton saddle on the direct energies), 'asymptotic' (1 - x < 1e-3, Bohr-Wheeler
+// Eq. 24), 'table' (slider moving: barrier interpolated in the precomputed table, location from its
+// nearest row), 'none' (x >= 1), 'unresolved' (no verified saddle: barrier unknown, not zero),
+// 'outside' (x below XMIN: nothing computed)
+let fineTimer = 0;
+function solveX(fine) {
+  const x = S.x;
+  if (x < XMIN) { S.status = "outside"; S.sad = null; S.path = null; }
+  else {
+    let sad;
+    if (fine || x >= 1) sad = F.findSaddle(G, x);
+    else if (1 - x < F.ASYMPTOTIC_Y) sad = F.findSaddle(G, x);
+    else {
+      const y = 1 - x, rr = SAD.fh.reduce((a, r) => (Math.abs(r[0] - x) < Math.abs(a[0] - x) ? r : a));
+      sad = x <= SAD.fh[SAD.fh.length - 1][0] + 0.0025 ? { c: rr[1], h: rr[2] } : { c: 1 + 2.33 * y, h: -0.57 * y };
+      sad.E = fFH(x); sad.status = "table";
+    }
+    S.status = sad.status;
+    S.sad = sad.status === "verified" || sad.status === "asymptotic" || sad.status === "table" ? sad : null;
+    // fine: the line search on the direct energies; while a slider moves, the grid's (provisional)
+    S.path = sad.status === "unresolved" ? null : F.fissionPath(G, x, S.sad, undefined, !fine && x < 1 && sad.status === "table");
+  }
+  if (S.s > sMax()) S.s = sMax();
+  buildLand();
+  computePathCurve(fine);
+  drawInfo(); drawBx(); drawTable();
+  showShape(S.s); drawHere(); drawPathPlot();
+}
+function setX(x, fine) {
+  S.x = x;
+  document.getElementById("xs").value = Math.min(1.05, Math.max(XMIN, x));
+  document.getElementById("xout").textContent = x.toFixed(4);
+  document.getElementById("xnote").textContent = Math.abs(x - S.d.x) < 1e-9 ? `natural value for ${S.Z + S.N}${ELEM[S.Z]}; slide to change the charge at fixed surface energy` : `natural value ${S.d.x.toFixed(4)}; reset by choosing the nucleus again`;
+  solveX(fine);
+  clearTimeout(fineTimer);
+  if (!fine) fineTimer = setTimeout(() => solveX(true), 160);
+}
+let fitTo = 0;
+function load(Z, N) {
+  S.Z = Z; S.N = N; S.d = F.drop(Z, Z + N);
+  fitTo = (9.6 * S.d.R0 + 10) * Math.max(1, 0.9 * innerHeight / innerWidth);
+  grid.position.y = -2.3 * S.d.R0;
+  plinth.position.y = -2.3 * S.d.R0 + 0.01; plinth.scale.set(4.6 * S.d.R0, 4.6 * S.d.R0, 4.6 * S.d.R0);
+  setX(S.d.x, true);              // the natural fissility, never clipped; outside 0.45..1.05 the page says so
+  const A = Z + N, hash = `#${A}${ELEM[Z]}`;
+  if (location.hash.replace(/@.*$/, "") !== hash) history.replaceState(null, "", hash);
+}
+
+// ---------- UI
+const find = document.getElementById("find");
+find.addEventListener("keydown", (e) => {
+  if (e.key !== "Enter") return;
+  const p = parseNucleus(find.value);
+  if (!p || !ROW.get(p.Z + "," + p.N)) { find.setCustomValidity("no such nucleus in NUBASE2020"); find.reportValidity(); return; }
+  find.setCustomValidity(""); load(p.Z, p.N);
+});
+find.addEventListener("input", () => find.setCustomValidity(""));
+document.getElementById("chips").addEventListener("click", (e) => {
+  const b = e.target.closest("button"); if (!b) return;
+  const p = parseNucleus(b.dataset.n); load(p.Z, p.N);
+});
+document.getElementById("xs").addEventListener("input", (e) => setX(+e.target.value, false));
+const ps = document.getElementById("ps"), playB = document.getElementById("play");
+ps.addEventListener("input", (e) => { S.s = Math.min(sMax(), +e.target.value); ps.value = S.s; S.playing = false; playB.textContent = "play"; showShape(S.s); drawHere(); drawPathPlot(); });
+playB.addEventListener("click", () => { S.playing = !S.playing; if (S.playing && S.s >= sMax() - 0.001) S.s = 0; playB.textContent = S.playing ? "pause" : "play"; });
+addEventListener("hashchange", () => { const p = parseNucleus(location.hash); if (p && ROW.get(p.Z + "," + p.N) && (p.Z !== S.Z || p.N !== S.N)) load(p.Z, p.N); });
+addEventListener("resize", () => {
+  camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight); composer.setSize(innerWidth, innerHeight);
+  sizeLand(); drawPathPlot(); drawBx();
+});
+let quality = innerWidth < 700 ? "low" : "high";
+function applyQuality() {
+  const g = quality === "high" ? GROUND_PRE_ACES : GROUND;
+  scene.background.copy(g); scene.fog.color.copy(g);
+  const q = quality === "high";
+  dropMat.transmission = q ? 1 : 0;
+  dropMat.color.set(q ? "#fff1e4" : "#d9773f");
+  dropMat.envMapIntensity = q ? 1.25 : 0.7;
+  dropMat.needsUpdate = true;
+  renderer.shadowMap.enabled = q; sun.castShadow = q;
+  sun.intensity = q ? 1.25 : 2.2; sunFill.intensity = q ? 0.95 : 0;
+  scene.traverse((o) => { if (o.material && !Array.isArray(o.material) && o.material.isMeshStandardMaterial) o.material.needsUpdate = true; });
+  for (const c of plinth.children) for (const m of [].concat(c.material)) m.needsUpdate = true;
+  for (const b of document.querySelectorAll("#qmode button")) b.setAttribute("aria-pressed", b.dataset.v === quality ? "true" : "false");
+}
+document.getElementById("qmode").addEventListener("click", (e) => { const b = e.target.closest("button"); if (!b) return; quality = b.dataset.v; applyQuality(); });
+applyQuality();
+
+// ---------- start
+{
+  sizeLand();
+  const p = parseNucleus(location.hash || "238U");
+  const ok = p && ROW.get(p.Z + "," + p.N);
+  const at = (location.hash.match(/@([\d.]+)$/) || [])[1];
+  S.s = at != null && isFinite(+at) ? Math.min(1.18, +at) : 0.0;
+  load(ok ? p.Z : 92, ok ? p.N : 146);
+  ps.value = S.s;
+  const qx = +new URLSearchParams(location.search).get("x");   // fission.html?x=0.98#238U: fissility set by hand
+  if (qx >= XMIN && qx <= 1.05) setX(qx, true);
+  camera.position.set(0.15, 0.55, 1).setLength(fitTo);
+  controls.target.set(0, 0, 0);
+  S.playing = !reduce && at == null && !!S.path; playB.textContent = S.playing ? "pause" : "play";
+}
+
+// ---------- loop
+let last = performance.now(), hold = 0;
+function animate(now) {
+  requestAnimationFrame(animate);
+  // the first rAF timestamp can predate the performance.now() taken at start: never let dt go negative
+  const dt = Math.min(0.1, Math.max(0, (now - last) / 1000)); last = now;
+  if (S.playing && S.path) {
+    if (hold > 0) { hold -= dt; if (hold <= 0) S.s = 0; }
+    else {
+      // slower up the hill and across the saddle, faster down to scission
+      const rate = S.s < S.path.sSad ? 0.16 : S.s < 1 ? 0.24 : 0.3;
+      S.s = Math.min(sMax(), S.s + dt * rate);
+      if (S.s >= sMax()) hold = 1.4;
+    }
+    ps.value = S.s; showShape(S.s); drawHere();
+    if ((now | 0) % 6 === 0) drawPathPlot();
+  }
+  const dist = camera.position.distanceTo(controls.target);
+  if (fitTo && Math.abs(dist - fitTo) > 0.05) {
+    const k = reduce ? 1 : 1 - Math.exp(-dt / 0.35);
+    camera.position.sub(controls.target).multiplyScalar((dist + (fitTo - dist) * k) / dist).add(controls.target);
+  } else fitTo = 0;
+  controls.update();
+  if (quality === "high") composer.render(); else renderer.render(scene, camera);
+  // landscape marker
+  if (S.s <= 1 && lastShape) {
+    const e = eAny(S.x, lastShape.c, lastShape.h) * S.d.ES0;
+    if (e === e) curDot.position.set(LX(lastShape.c), LY(e) + 0.03, LZ(lastShape.h));
+    curDot.visible = true;
+  } else curDot.visible = false;
+  lctl.update();
+  lr.render(lscene, lcam);
+}
+requestAnimationFrame(animate);
+</script>
+<script src="assets/glass.js"></script>
+</body>
+</html>

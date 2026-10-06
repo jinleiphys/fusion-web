@@ -1,0 +1,908 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>The Trojan horse method · nuclearjs</title>
+<link rel="stylesheet" href="assets/glass.css">
+<style>
+body{margin:0}
+:root{
+  color-scheme:dark;
+  --ground:#0b0d12; --line:#262c3a;
+  --ink:#e6e8ee; --muted:#8a92a6; --accent:#f2c14e;
+  --pro:#ff9656; --neu:#a8cdf2; --horse:#e9c37a; --ring:#8fd3ff; --bar:#ffb347; --bar2:#c9a2ff;
+  --sans:"Avenir Next","Futura","Helvetica Neue","PingFang SC","Noto Sans SC",system-ui,sans-serif;
+  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+}
+html,body{height:100%}
+body{background:var(--ground);color:var(--ink);font-family:var(--sans);overflow:hidden}
+#stage{position:fixed;inset:0}
+#stage canvas{display:block;touch-action:none}
+.panel{position:fixed;border-radius:18px;padding:16px 18px;display:flex;flex-direction:column;gap:12px;overflow:auto;box-sizing:border-box;z-index:2}
+.panel>*{flex-shrink:0}
+#ctl{left:16px;top:calc(16px + env(safe-area-inset-top,0px));width:min(330px,calc(100% - 32px));max-height:calc(100% - 32px)}
+#side{right:16px;top:calc(16px + env(safe-area-inset-top,0px));width:372px;max-height:calc(100% - 32px);gap:8px}
+h1{margin:0;font-size:22px;font-weight:600;letter-spacing:.01em}
+.sub{margin:2px 0 0;color:var(--muted);font-size:13px;line-height:1.45}
+.sub sup,.src sup,.kv sup{font-size:.7em}
+.grp{display:flex;flex-direction:column;gap:6px}
+.lab{font-size:11px;text-transform:uppercase;letter-spacing:.12em;color:var(--muted)}
+.seg{display:flex;border:1px solid var(--line);border-radius:4px;overflow:hidden}
+.seg button{flex:1;background:none;border:0;color:var(--muted);font:500 12px var(--mono);padding:6px 3px;cursor:pointer;min-width:0}
+.seg button+button{border-left:1px solid var(--line)}
+.seg button[aria-pressed="true"]{background:#1f2533;color:var(--ink)}
+button:focus-visible,input:focus-visible,summary:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chips button{background:#161a24;border:1px solid var(--line);border-radius:4px;color:var(--ink);font:12px var(--mono);padding:5px 8px;cursor:pointer}
+.chips button:hover{border-color:var(--muted)}
+.chips button[aria-pressed="true"]{border-color:var(--accent);color:var(--accent)}
+.row{display:flex;gap:8px;align-items:center;font:12px var(--mono);color:var(--muted)}
+.row input[type=range]{flex:1;accent-color:var(--accent);min-width:0}
+.row output{min-width:74px;text-align:right;color:var(--ink);font-variant-numeric:tabular-nums}
+.row span{min-width:30px}
+.play{background:#161a24;border:1px solid var(--line);border-radius:4px;color:var(--ink);font:12px var(--mono);padding:4px 8px;cursor:pointer;min-width:58px}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:3px 10px;font:12px var(--mono);font-variant-numeric:tabular-nums}
+.kv dt{color:var(--muted)}.kv dd{margin:0}
+details summary{cursor:pointer;font-size:11px;text-transform:uppercase;letter-spacing:.12em;color:var(--muted);list-style:none}
+details summary::before{content:"▸ ";}
+details[open] summary::before{content:"▾ ";}
+details .grp{margin-top:8px}
+.home{font:12px var(--mono);color:var(--muted);text-decoration:none}.home:hover{color:var(--ink)}
+.src{font-size:11.5px;color:var(--muted);line-height:1.5;margin:0}
+.src b{color:var(--ink);font-weight:500}
+.math{font:12px var(--mono);color:var(--ink);line-height:1.6;margin:0}
+.plot{width:100%;height:170px;display:block}
+.plot.s{height:132px}
+.cap{display:flex;flex-wrap:wrap;gap:2px 8px;justify-content:space-between;align-items:baseline;font:11px var(--mono);color:var(--muted)}
+.cap b{font:600 13px var(--sans);color:var(--ink)}
+.leg{display:flex;flex-wrap:wrap;gap:3px 12px;font:11px var(--mono);color:var(--muted)}
+.leg i{display:inline-block;width:14px;height:0;border-top:2px solid;vertical-align:middle;margin-right:4px}
+.leg i.d{border-top-style:dashed}
+.leg i.b{width:10px;height:8px;border:0;background:rgba(242,193,78,.22)}
+.cite{font:10.5px var(--mono);color:var(--muted);line-height:1.45}
+.res{display:flex;flex-direction:column;gap:6px;font-size:12px;line-height:1.4}
+.res div{display:grid;grid-template-columns:1fr auto;gap:2px 8px}
+.res .k{color:var(--muted)}.res .v{color:var(--ink);font-family:var(--mono);font-size:11.5px;text-align:right}
+.res .r{grid-column:1/3;font:10.5px var(--mono);color:#6d7588}
+.axlab{position:fixed;font:500 11px var(--mono);pointer-events:none;transform:translate(-50%,-50%);white-space:nowrap;text-shadow:0 1px 3px #000,0 0 8px #000;z-index:1}
+#stamp{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);text-align:center;pointer-events:none;z-index:1}
+#stamp b{display:block;font:600 clamp(26px,3.8vw,46px)/1 var(--sans);letter-spacing:-.01em}
+#stamp b sub{font-size:.5em}
+#stamp small{display:block;font:500 12px var(--mono);color:var(--muted);margin-top:6px}
+#phase{position:fixed;left:50%;transform:translateX(-50%);top:calc(14px + env(safe-area-inset-top,0px));font:12px var(--mono);color:var(--ink);text-align:center;pointer-events:none;z-index:1;text-shadow:0 1px 3px #000}
+#phase small{display:block;color:var(--muted);font-size:11px;margin-top:2px}
+@media (max-width:900px){
+  #ctl{max-height:42vh}
+  #side{left:16px;right:16px;width:auto;top:auto;bottom:calc(12px + env(safe-area-inset-bottom,0px));max-height:40vh}
+  #stamp,#phase{display:none}
+  .axlab.minor{display:none}
+}
+@media (max-width:560px){.panel{padding:10px 12px;gap:9px}h1{font-size:18px}.axlab{font-size:10px}}
+</style>
+<script data-goatcounter="https://jinleiphys.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
+</head>
+<body>
+
+<div id="stage"></div>
+
+<aside id="ctl" class="panel glass glass-deep" data-glass data-glass-bevel="22" data-glass-scale="42">
+  <div>
+    <a class="home" href="index.html">← nuclearjs</a> &nbsp; <a class="home" href="stellar.html">fusion in stars</a> &nbsp; <a class="home" href="breakup.html">inclusive breakup</a> &nbsp; <a class="home" href="quasifree.html">quasi-free knockout</a>
+    <h1>The Trojan horse method</h1>
+    <p class="sub">Two nuclei that react in a star meet at energies far below their Coulomb barrier, so in the laboratory they almost never touch. The trick: hide one of them inside a bigger nucleus and fire that in fast enough to get over the barrier. Inside the nuclear field the carrier breaks up; the hidden piece reacts at the low relative energy of the star, and the rest flies on and is detected.</p>
+  </div>
+  <div class="grp">
+    <div class="lab">Measured case</div>
+    <div class="chips" id="chips"></div>
+    <p class="sub" id="caseNote"></p>
+  </div>
+  <div class="grp">
+    <div class="lab">Show</div>
+    <div class="seg" id="view">
+      <button data-v="both" title="the direct reaction, then the Trojan horse">both in turn</button>
+      <button data-v="direct" title="x alone at the same relative energy">direct</button>
+      <button data-v="horse" title="the Trojan horse reaction">Trojan horse</button>
+    </div>
+    <div class="row"><button class="play" id="play" aria-label="pause">pause</button><input id="tl" type="range" min="0" max="1" step="0.001" aria-label="stage of the process"><output id="tlOut"></output></div>
+  </div>
+  <div class="grp">
+    <div class="lab">Spectator momentum inside the horse</div>
+    <div class="row"><span>|p<sub>s</sub>|</span><input id="ps" type="range" min="0" max="120" step="1"><output id="psOut"></output></div>
+    <div class="row"><span>θ<sub>s</sub></span><input id="th" type="range" min="0" max="180" step="1"><output id="thOut"></output></div>
+    <p class="src" id="psNote"></p>
+  </div>
+  <div class="grp">
+    <div class="lab">This event</div>
+    <dl class="kv" id="info"></dl>
+  </div>
+  <div class="grp">
+    <div class="lab">Rendering</div>
+    <div class="seg" id="qmode">
+      <button data-v="high" title="soft shadows, ambient occlusion, bloom">cinematic</button>
+      <button data-v="low" title="no post-processing, for phones">fast</button>
+    </div>
+  </div>
+  <details>
+    <summary>How the method works</summary>
+    <div class="grp" id="how"></div>
+  </details>
+  <details>
+    <summary>What comes out: a bare S-factor</summary>
+    <div class="grp" id="what"></div>
+  </details>
+  <details>
+    <summary>From inclusive breakup to the THM formula</summary>
+    <div class="grp" id="lei"></div>
+  </details>
+  <details>
+    <summary>Open questions</summary>
+    <div class="grp" id="open"></div>
+  </details>
+  <details>
+    <summary>Formulas and checks</summary>
+    <div class="grp" id="verif"></div>
+  </details>
+  <details>
+    <summary>What the picture shows</summary>
+    <div class="grp" id="rnote"></div>
+  </details>
+</aside>
+
+<aside id="side" class="panel glass glass-deep" data-glass data-glass-bevel="22" data-glass-scale="42">
+  <div class="cap"><b>Why the barrier matters</b><span>potential energy, MeV</span></div>
+  <canvas id="pot" class="plot"></canvas>
+  <div class="leg" id="potLeg"></div>
+  <div class="cap"><b>Spectator momentum</b><span id="mdUnit">inside the horse, MeV/c</span></div>
+  <canvas id="md" class="plot s"></canvas>
+  <div class="leg" id="mdLeg"></div>
+  <div class="cite" id="mdSrc"></div>
+  <div class="cap"><b>Published</b><span id="resUnit"></span></div>
+  <div class="res" id="res"></div>
+</aside>
+
+<div id="phase"></div>
+<div id="stamp"></div>
+<div id="tags"></div>
+
+<script src="assets/three-bundle.js"></script>
+<script src="assets/three-post.js"></script>
+<script src="assets/wave-stage.js"></script>
+<script src="assets/trojanhorse.js"></script>
+<script src="assets/trojanhorse-data.js"></script>
+<script>
+"use strict";
+// ---------- data
+const D = window.THM_DATA, CASES = D.cases;
+const deg = Math.PI / 180;
+const fmtE = (E) => { const a = Math.abs(E); return a < 1 ? (E * 1000).toFixed(a < 0.1 ? 1 : 0) + " keV" : E.toFixed(a < 10 ? 2 : 1) + " MeV"; };
+const supE = (x, d = 1) => {
+  if (!(x > 0)) return "0";
+  const e = Math.floor(Math.log10(x)), m = x / 10 ** e;
+  if (e > -3 && e < 3) return x.toPrecision(2);
+  return `${m.toFixed(d)} × 10<sup>${e}</sup>`;
+};
+const mass = (sp) => D.masses[sp.join(",")];
+
+// ---------- state
+const S = { c: null, view: "both", ps: 0, th: 90, t: 0, playing: true, K: null };
+const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+if (reduce) S.playing = false;
+
+// ---------- scene
+const stage = document.getElementById("stage");
+const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.setSize(innerWidth, innerHeight);
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.05;
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+stage.appendChild(renderer.domElement);
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(34, innerWidth / innerHeight, 0.1, 900);
+const SKY = WaveStage.skyGLSL(new THREE.Vector3(-0.3, 0.85, 0.42));
+scene.environment = WaveStage.environment(renderer, SKY);
+scene.fog = new THREE.Fog("#0b0d12", 150, 330);
+// The ground colour #0b0d12 is drawn untouched on the direct path; on the bloom path OutputPass runs it through
+// ACES, so there the background takes the linear colour that ACES (exposure 1.05) maps back to #0b0d12.
+const GROUND = new THREE.Color("#0b0d12");
+const GROUND_PRE_ACES = new THREE.Color().setRGB(0.0115476, 0.0131218, 0.0174740, THREE.LinearSRGBColorSpace);
+scene.background = GROUND.clone();
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true; controls.dampingFactor = 0.08;
+controls.minDistance = 8; controls.maxDistance = 260;
+controls.maxPolarAngle = Math.PI * 0.49;
+const RIG = WaveStage.rig(scene, SKY, 160, 60);
+const POST = WaveStage.post(renderer, scene, camera, [0.42, 0.55, 0.82], { intensity: 0.7, radius: 1.2, thickness: 1 });
+const composer = POST.composer;
+
+/* Geometry (scene units are fm). The target A sits at the origin; the beam comes along +x; the reaction plane is
+   the horizontal plane y = 0. Beyond R1 from the target, distances are compressed: a point at distance r is drawn
+   at comp(r) = R1 + K ln(1 + (r - R1)/K), so the classical turning point of a slow particle, hundreds of fm out,
+   fits next to a nucleus 3 fm across. The relief underneath is the Coulomb barrier of x + A, drawn as a surface. */
+const R1 = 8, KC = 4;
+const comp = (r) => (r <= R1 ? r : R1 + KC * Math.log(1 + (r - R1) / KC));
+const icomp = (q) => (q <= R1 ? q : R1 + KC * (Math.exp((q - R1) / KC) - 1));
+const RELR = 32, Y0 = -6.5, HB = 5.2;          // relief radius (scene), base height, height of the barrier top
+const RMAXPHYS = icomp(RELR);                    // about 1600 fm
+const toScene = (px, pz, out) => {                // physical in-plane coordinates (fm) -> scene, radially compressed
+  const r = Math.hypot(px, pz), f = r > 1e-9 ? comp(r) / r : 1;
+  return out.set(px * f, 0, pz * f);
+};
+
+// ---------- nuclei as packed nucleons (positions schematic; nucleon radius 0.8 fm)
+const NUC_R = 0.8;
+const sphGeo = new THREE.SphereGeometry(NUC_R, 36, 24);
+function nucMat(color) {
+  const c = new THREE.Color(color);
+  return new THREE.MeshPhysicalMaterial({ color: c, roughness: 0.34, metalness: 0.0, clearcoat: 0.7, clearcoatRoughness: 0.28,
+    emissive: c.clone().multiplyScalar(0.12), emissiveIntensity: 1, envMapIntensity: 0.9 });
+}
+function rng(seed) { let s = seed >>> 0 || 1; return () => ((s = (s * 16807) % 2147483647) / 2147483647); }
+// A points packed in a ball: golden-spiral start, then a few hundred steps of pairwise repulsion inside a soft wall
+function pack(A, seed) {
+  if (A === 1) return [[0, 0, 0]];
+  if (A === 2) return [[-0.78, 0, 0], [0.78, 0, 0]];
+  const R = 0.98 * Math.cbrt(A) * NUC_R * 1.25, P = [], rnd = rng(seed + 7 * A);
+  for (let i = 0; i < A; i++) {
+    const u = (i + 0.5) / A, r = R * Math.cbrt(u) * 0.8, th = Math.acos(1 - 2 * rnd()), ph = 2 * Math.PI * rnd();
+    P.push([r * Math.sin(th) * Math.cos(ph), r * Math.sin(th) * Math.sin(ph), r * Math.cos(th)]);
+  }
+  const dmin = 1.62;
+  for (let it = 0; it < 260; it++) {
+    for (let i = 0; i < A; i++) {
+      const p = P[i];
+      for (let j = i + 1; j < A; j++) {
+        const q = P[j], dx = p[0] - q[0], dy = p[1] - q[1], dz = p[2] - q[2], d = Math.hypot(dx, dy, dz) || 1e-3;
+        if (d < dmin) { const k = 0.5 * (dmin - d) / d; p[0] += dx * k; p[1] += dy * k; p[2] += dz * k; q[0] -= dx * k; q[1] -= dy * k; q[2] -= dz * k; }
+      }
+      const r = Math.hypot(p[0], p[1], p[2]);       // pull toward the centre
+      const k = 0.02; p[0] -= p[0] * k; p[1] -= p[1] * k; p[2] -= p[2] * k;
+      if (r > R) { const s = R / r; p[0] *= s; p[1] *= s; p[2] *= s; }
+    }
+  }
+  // centre on the mean
+  const m = [0, 0, 0]; for (const p of P) { m[0] += p[0] / A; m[1] += p[1] / A; m[2] += p[2] / A; }
+  return P.map((p) => [p[0] - m[0], p[1] - m[1], p[2] - m[2]]);
+}
+const MAT = { p: nucMat("#ff9656"), n: nucMat("#a8cdf2") };
+function cluster([Z, A], seed, hot) {
+  const g = new THREE.Group(), P = pack(A, seed), rnd = rng(seed * 31 + Z);
+  // protons and neutrons spread through the cluster: shuffle the labels
+  const lab = []; for (let i = 0; i < A; i++) lab.push(i < Z ? "p" : "n");
+  for (let i = A - 1; i > 0; i--) { const j = Math.floor(rnd() * (i + 1)); [lab[i], lab[j]] = [lab[j], lab[i]]; }
+  const mats = hot ? { p: MAT.p.clone(), n: MAT.n.clone() } : MAT;
+  P.forEach((p, i) => {
+    const m = new THREE.Mesh(sphGeo, mats[lab[i]]);
+    m.position.set(p[0], p[1], p[2]); m.castShadow = true; m.receiveShadow = true;
+    g.add(m);
+  });
+  g.userData = { mats, R: Math.cbrt(A) * 1.0 + 0.4 };
+  return g;
+}
+
+// ---------- glow sprites (additive): the hot compound, the break-up flash
+function glowTex(stops) {
+  const c = document.createElement("canvas"); c.width = c.height = 128;
+  const x = c.getContext("2d"), g = x.createRadialGradient(64, 64, 0, 64, 64, 64);
+  for (const [t, col] of stops) g.addColorStop(t, col);
+  x.fillStyle = g; x.fillRect(0, 0, 128, 128);
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t;
+}
+const GLOW = glowTex([[0, "rgba(255,236,200,1)"], [0.18, "rgba(255,190,110,.75)"], [0.5, "rgba(255,120,60,.18)"], [1, "rgba(255,90,40,0)"]]);
+function sprite(tex, size, color) {
+  const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, color: color || 0xffffff, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending }));
+  s.scale.setScalar(size); s.renderOrder = 30; s.userData.noAO = true; scene.add(s); return s;
+}
+const flash = sprite(GLOW, 10), hotGlow = sprite(GLOW, 8);
+const HALO = glowTex([[0, "rgba(255,255,255,.55)"], [0.35, "rgba(255,255,255,.16)"], [1, "rgba(255,255,255,0)"]]);
+const halo = { d: sprite(HALO, 5, "#8fd3ff"), a: sprite(HALO, 9, "#e9c37a"), s: sprite(HALO, 5, "#a8cdf2"), c: sprite(HALO, 6, "#ffd08a"), C: sprite(HALO, 8, "#ff9a7a") };
+
+// ---------- the horse envelope: a pale gold Fresnel shell around x + s
+const shellMat = new THREE.ShaderMaterial({
+  transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
+  uniforms: { uCol: { value: new THREE.Color("#e9c37a") }, uA: { value: 1 } },
+  vertexShader: `varying vec3 vN; varying vec3 vV;
+    void main(){ vec4 mv = modelViewMatrix * vec4(position, 1.0); vN = normalize(normalMatrix * normal); vV = -mv.xyz; gl_Position = projectionMatrix * mv; }`,
+  fragmentShader: `uniform vec3 uCol; uniform float uA; varying vec3 vN; varying vec3 vV;
+    void main(){ float f = pow(1.0 - abs(dot(normalize(vN), normalize(vV))), 2.6);
+      gl_FragColor = vec4(uCol * (0.02 + 0.75 * f) * uA, 1.0);
+      #include <tonemapping_fragment>
+      #include <colorspace_fragment>
+    }`,
+});
+const shell = new THREE.Mesh(new THREE.SphereGeometry(1, 48, 32), shellMat);
+shell.renderOrder = 20; shell.userData.noAO = true; scene.add(shell);
+
+// ---------- the relief: Coulomb barrier of x + A as a surface
+const relGeo = new THREE.BufferGeometry();
+{
+  // replace the fan by a polar grid: rings dense near the centre
+  const NR = 150, NA = 220, pos = [], idx = [], uvr = [];
+  for (let i = 0; i <= NR; i++) {
+    const q = RELR * Math.pow(i / NR, 1.35);
+    for (let j = 0; j <= NA; j++) { const a = 2 * Math.PI * j / NA; pos.push(q * Math.cos(a), 0, q * Math.sin(a)); uvr.push(q); }
+  }
+  for (let i = 0; i < NR; i++) for (let j = 0; j < NA; j++) {
+    const a = i * (NA + 1) + j, b = a + NA + 1;
+    idx.push(a, b, a + 1, b, b + 1, a + 1);
+  }
+  relGeo.setIndex(idx);
+  relGeo.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3));
+  relGeo.setAttribute("aQ", new THREE.Float32BufferAttribute(uvr, 1));
+  relGeo.setAttribute("aV", new THREE.Float32BufferAttribute(new Float32Array(uvr.length), 1));
+  relGeo.setAttribute("color", new THREE.Float32BufferAttribute(new Float32Array(uvr.length * 3), 3));
+}
+const relMat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.5, metalness: 0.2, envMapIntensity: 0.5, side: THREE.DoubleSide, transparent: true });
+const RELU = { uRing: { value: 0 } };
+relMat.onBeforeCompile = (sh) => {
+  Object.assign(sh.uniforms, RELU);
+  sh.vertexShader = sh.vertexShader.replace("#include <common>", "#include <common>\nattribute float aV; attribute float aQ; varying float vV; varying float vQ;")
+    .replace("#include <begin_vertex>", "#include <begin_vertex>\nvV = aV; vQ = aQ;");
+  sh.fragmentShader = sh.fragmentShader.replace("#include <common>", "#include <common>\nvarying float vV; varying float vQ;")
+    .replace("#include <emissivemap_fragment>", `#include <emissivemap_fragment>
+      // contour lines every 0.1 V_B on the outside slope, a brighter line at the barrier top; fade toward the edge
+      float c = vV * 10.0, w = fwidth(c);
+      float ln = (1.0 - smoothstep(0.0, 1.3 * w, abs(fract(c + 0.5) - 0.5))) * step(0.04, vV) * step(vV, 0.995);
+      float top = 1.0 - smoothstep(0.0, 2.0 * fwidth(vV), abs(vV - 1.0));
+      float edge = 1.0 - smoothstep(${(0.6 * RELR).toFixed(1)}, ${RELR.toFixed(1)}, vQ);
+      totalEmissiveRadiance += (vec3(0.95, 0.62, 0.28) * 0.22 * ln + vec3(1.0, 0.72, 0.36) * 0.9 * top) * edge;`)
+    .replace("#include <color_fragment>", `#include <color_fragment>
+      diffuseColor.a *= 1.0 - smoothstep(${(0.62 * RELR).toFixed(1)}, ${RELR.toFixed(1)}, vQ);`);
+};
+relMat.customProgramCacheKey = () => "thmrelief";
+const relief = new THREE.Mesh(relGeo, relMat);
+relief.position.y = Y0; relief.receiveShadow = true; scene.add(relief);
+scene.add(WaveStage.floor(170, Y0 - 5.2, 30, 0.45));
+// distance rings on the relief: 10, 100, 1000 fm (they show the compression)
+const distRings = [10, 100, 1000].map((r) => {
+  const pts = []; for (let j = 0; j <= 160; j++) { const a = 2 * Math.PI * j / 160; pts.push(new THREE.Vector3(Math.cos(a), 0, Math.sin(a))); }
+  const l = new THREE.LineLoop(new THREE.BufferGeometry().setFromPoints(pts), new THREE.LineBasicMaterial({ color: "#56607a", transparent: true, opacity: 0.55, depthWrite: false }));
+  l.userData = { r, noAO: true }; l.scale.setScalar(comp(r)); scene.add(l); return l;
+});
+// the turning ring: where V_xA(r) = E_xA, outside the barrier
+const ring = new THREE.Mesh(new THREE.TorusGeometry(1, 0.08, 8, 240), new THREE.MeshBasicMaterial({ color: new THREE.Color("#8fd3ff").multiplyScalar(1.4), transparent: true, depthWrite: false }));
+let ringR = -1;
+function setRing(q) { if (Math.abs(q - ringR) < 1e-3) return; ringR = q; ring.geometry.dispose(); ring.geometry = new THREE.TorusGeometry(q, 0.075, 8, 240); }
+ring.rotation.x = Math.PI / 2; ring.renderOrder = 12; ring.userData.noAO = true; scene.add(ring);
+// tunnelling: a faint dotted path from the turning point to the nucleus
+const tunMat = new THREE.LineDashedMaterial({ color: "#8fd3ff", dashSize: 0.5, gapSize: 0.6, transparent: true, opacity: 0.0, depthWrite: false });
+const tunLine = new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3(1, 0, 0)]), tunMat);
+tunLine.userData.noAO = true; scene.add(tunLine);
+
+// ---------- trails
+function trail(color, n) {
+  const g = new THREE.BufferGeometry(), P = new Float32Array(3 * n), C = new Float32Array(3 * n);
+  g.setAttribute("position", new THREE.BufferAttribute(P, 3)); g.setAttribute("color", new THREE.BufferAttribute(C, 3));
+  const l = new THREE.Line(g, new THREE.LineBasicMaterial({ vertexColors: true, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending }));
+  l.userData = { n, col: new THREE.Color(color), noAO: true }; l.frustumCulled = false; l.renderOrder = 11; scene.add(l); return l;
+}
+// fill a trail from a position function over [t0, t1] (only where f returns a point)
+const _v = new THREE.Vector3();
+function setTrail(l, f, t0, t1, bright) {
+  const { n, col } = l.userData, P = l.geometry.attributes.position.array, C = l.geometry.attributes.color.array;
+  let k = 0;
+  for (let i = 0; i < n; i++) {
+    const t = t0 + (t1 - t0) * i / (n - 1);
+    if (!f(t, _v)) continue;
+    P[3 * k] = _v.x; P[3 * k + 1] = _v.y; P[3 * k + 2] = _v.z;
+    const a = Math.pow(i / (n - 1), 1.6) * (bright || 1);
+    C[3 * k] = col.r * a; C[3 * k + 1] = col.g * a; C[3 * k + 2] = col.b * a;
+    k++;
+  }
+  l.geometry.setDrawRange(0, k);
+  l.geometry.attributes.position.needsUpdate = true; l.geometry.attributes.color.needsUpdate = true;
+  l.visible = k > 1;
+}
+const TR = { d: trail("#8fd3ff", 90), a: trail("#e9c37a", 90), s: trail("#a8cdf2", 90), c: trail("#ffd08a", 90), C: trail("#ff9a7a", 90), x: trail("#ffb070", 30) };
+
+// ---------- the case: masses, kinematics, orbits, clusters
+const G = { A: null, x: null, s: null, xd: null, c: null, C: null };
+function rebuildClusters() {
+  for (const k in G) if (G[k]) scene.remove(G[k]);
+  const c = S.c;
+  G.A = cluster(c.A, 3, true); G.x = cluster(c.x, 5, true); G.s = cluster(c.s, 11);
+  G.xd = cluster(c.x, 5); G.c = cluster(c.c, 13); G.C = cluster(c.C, 17);
+  for (const k in G) scene.add(G[k]);
+}
+function caseKin() {
+  const c = S.c, m = { a: mass(c.a), A: mass(c.A), x: mass(c.x), s: mass(c.s), c: mass(c.c), C: mass(c.C) };
+  const ps = [S.ps * Math.sin(S.th * deg), 0, S.ps * Math.cos(S.th * deg)];
+  const n = [Math.sin(64 * deg), 0, Math.cos(64 * deg)];         // c leaves F* at 64 degrees to the beam (its frame)
+  const K = THM.kin({ m, beam: c.beam, Eb: c.Eb, ps, n });
+  const K0 = THM.kin({ m, beam: c.beam, Eb: c.Eb });
+  const muX = m.x * m.A / (m.x + m.A), muA = m.a * m.A / (m.a + m.A);
+  const bX = THM.barrier(c.x[0], c.x[1], c.A[0], c.A[1]), bA = THM.barrier(c.a[0], c.a[1], c.A[0], c.A[1]);
+  return { m, K, K0, muX, muA, bX, bA, gX: THM.gamow(c.x[0], c.A[0], muX, K.Exa), gA: THM.gamow(c.a[0], c.A[0], muA, K.Ecm),
+    // classical turning point only below the barrier top (above it the Coulomb formula would put it inside the barrier radius)
+    rc: K.Exa > 0 && K.Exa < bX.V ? THM.turning(c.x[0], c.A[0], K.Exa) : null, above: K.Exa >= bX.V };
+}
+
+/* Timeline. One loop = the direct phase (TD seconds) then the Trojan-horse phase (TH seconds), or one of them.
+   Each phase has its own clock (the direct particle is much slower than the horse; both are slowed by some 10^22).
+   Inside a phase, times follow the physics: Coulomb orbits from their energies, and after the break-up every
+   fragment moves with its velocity from the kinematics, all on the horse's clock. */
+const TD = 6.5, THo = 4.2, THpost = 5.8, TH = THo + THpost, GAP = 0.6;
+const P = { dir: null, hor: null };
+function buildPaths() {
+  const k = S.K, c = S.c;
+  // direct: x on a Coulomb orbit of the x + A relative motion at E_xA, impact parameter 0.3 of the turning distance
+  if (k.K.Exa > 0) {
+    const d0 = THM.turning(c.x[0], c.A[0], k.K.Exa);
+    const o = THM.orbit({ Z1: c.x[0], Z2: c.A[0], Ecm: k.K.Exa, mu: k.muX, b: 0.3 * d0, rmax: RMAXPHYS * 0.92, n: 600 });
+    const tt = o.t[o.t.length - 1];
+    P.dir = { o, scale: TD / tt, d0, tTurn: o.t[o.iMin] / tt * TD };
+  } else P.dir = null;
+  // the horse: Coulomb orbit of a + A down to the contact distance, where it breaks up
+  const Rc = 0.9 * k.bA.R;
+  const o = THM.orbit({ Z1: c.a[0], Z2: c.A[0], Ecm: k.K.Ecm, mu: k.muA, b: 1.2, rmax: 150, n: 700, rStop: Rc });
+  const tt = o.t[o.t.length - 1], sc = THo / tt;                    // animation seconds per fm/c
+  const last = o.pts[o.pts.length - 1], prev = o.pts[o.pts.length - 2];
+  const dir = Math.atan2(last[1] - prev[1], last[0] - prev[0]);     // direction of motion at break-up
+  // velocities (A frame, units of c) from the kinematics, beam along kin's z -> rotated onto the horse's direction
+  // in inverse kinematics the horse moves along -z in A's rest frame: turn by 180 degrees so that it moves along +z
+  const fl = c.beam === "A" ? -1 : 1;
+  const rot = (v) => [fl * (v[2] * Math.cos(dir) - v[0] * Math.sin(dir)), fl * (v[2] * Math.sin(dir) + v[0] * Math.cos(dir))];
+  const V = k.K.vA;
+  const ma = k.m.a, fx = k.m.s / ma, fs = k.m.x / ma;              // x and s sit on either side of a's centre
+  P.hor = { o, sc, tt, last, dir, vs: rot(V.s), vF: rot(V.F), vc: V.c ? rot(V.c) : null, vC: V.C ? rot(V.C) : null, fx, fs,
+    tMerge: 0.35, tLife: 1.15 };
+  // where the spectator cluster sits at the break-up, relative to the horse's centre (it starts from there)
+  const sep = SEP[c.names.a] || 2, ang = 1.2 + THo * 0.9;
+  P.hor.sOff = new THREE.Vector3(-Math.cos(ang) * sep * fs * 2, 0, -Math.sin(ang) * sep * fs * 2);
+}
+// physical position of the horse's centre on its orbit at physical time T (fm/c), interpolated
+function orbitAt(o, T) {
+  const t = o.t; if (T <= 0) return o.pts[0]; if (T >= t[t.length - 1]) return o.pts[o.pts.length - 1];
+  let lo = 0, hi = t.length - 1; while (hi - lo > 1) { const m = (lo + hi) >> 1; if (t[m] <= T) lo = m; else hi = m; }
+  const u = (T - t[lo]) / (t[hi] - t[lo]), a = o.pts[lo], b = o.pts[hi];
+  return [a[0] + (b[0] - a[0]) * u, a[1] + (b[1] - a[1]) * u];
+}
+// the half-separation of the horse's clusters, drawn (fm): about the size of the bound pair
+const SEP = { d: 1.9, "⁶Li": 2.3, "¹⁴N": 2.6 };
+// positions at phase time tau; each returns true and writes `out` if the object exists at that time
+const F = {
+  d(t, out) {                                   // direct: x alone
+    const p = P.dir; if (!p || t < 0 || t > TD) return false;
+    const q = orbitAt(p.o, t / p.scale); toScene(q[0], q[1], out); return true;
+  },
+  a(t, out) {                                   // the horse's centre before break-up
+    const h = P.hor; if (t < 0 || t > THo) return false;
+    const q = orbitAt(h.o, t / h.sc); toScene(q[0], q[1], out); return true;
+  },
+  // after break-up: physical displacement v * (t - THo) / sc from the break-up point
+  post(v, t, out) { const h = P.hor, T = (t - THo) / h.sc; return toScene(h.last[0] + v[0] * T, h.last[1] + v[1] * T, out); },
+  s(t, out) { if (t < THo || t > TH) return false; F.post(P.hor.vs, t, out); out.add(P.hor.sOff); return true; },
+  // F* = x + A starts where A sits (the origin) and drifts with V_F
+  Fst(t, out) { const h = P.hor; if (t < THo || t > THo + h.tMerge + h.tLife) return false; const T = (t - THo) / h.sc; toScene(h.vF[0] * T, h.vF[1] * T, out); return true; },
+  c(t, out) { const h = P.hor, t0 = THo + h.tMerge + h.tLife; if (!h.vc || t < t0 || t > TH) return false;
+    const T0 = (t0 - THo) / h.sc, T = (t - t0) / h.sc;
+    return !!toScene(h.vF[0] * T0 + h.vc[0] * T, h.vF[1] * T0 + h.vc[1] * T, out); },
+  C(t, out) { const h = P.hor, t0 = THo + h.tMerge + h.tLife; if (!h.vC || t < t0 || t > TH) return false;
+    const T0 = (t0 - THo) / h.sc, T = (t - t0) / h.sc;
+    return !!toScene(h.vF[0] * T0 + h.vC[0] * T, h.vF[1] * T0 + h.vC[1] * T, out); },
+};
+
+function loopLen() { return S.view === "both" ? TD + GAP + TH : S.view === "direct" ? TD : TH; }
+// split the loop time into (phase, tau)
+function phaseOf(t) {
+  if (S.view === "direct") return ["d", t];
+  if (S.view === "horse") return ["h", t];
+  return t < TD ? ["d", t] : t < TD + GAP ? ["g", t - TD] : ["h", t - TD - GAP];
+}
+
+// ---------- relief heights for the current case (schematic inside the barrier radius)
+function vNorm(r, RB) {
+  if (r >= RB) return RB / r;
+  const u = r / RB, s = Math.min(1, Math.max(0, (u - 0.25) / 0.75)), sm = s * s * (3 - 2 * s);
+  return -0.85 + 1.85 * Math.pow(sm, 1.6);
+}
+const hOf = (r) => HB * vNorm(r, S.K.bX.R);
+function buildRelief() {
+  const pos = relGeo.attributes.position, Q = relGeo.attributes.aQ.array, Va = relGeo.attributes.aV.array, col = relGeo.attributes.color.array;
+  const RB = S.K.bX.R, cLow = new THREE.Color("#163a46"), cMid = new THREE.Color("#1c2230"), cTop = new THREE.Color("#b07a3c"), cc = new THREE.Color();
+  for (let i = 0; i < Q.length; i++) {
+    const r = icomp(Q[i]), v = vNorm(r, RB);
+    pos.setY(i, HB * v); Va[i] = v;
+    if (v < 0) cc.copy(cLow).lerp(cMid, Math.max(0, 1 + v / 0.85) * 0.6);
+    else cc.copy(cMid).lerp(cTop, Math.pow(Math.min(1, v), 1.4));
+    col[3 * i] = cc.r; col[3 * i + 1] = cc.g; col[3 * i + 2] = cc.b;
+  }
+  pos.needsUpdate = true; relGeo.attributes.aV.needsUpdate = true; relGeo.attributes.color.needsUpdate = true;
+  relGeo.computeVertexNormals();
+  for (const l of distRings) { l.position.y = Y0 + hOf(l.userData.r) + 0.04; }
+}
+
+// ---------- labels over the scene
+const tagsEl = document.getElementById("tags"), TAG = {};
+function tag(id, cls) { const d = document.createElement("div"); d.className = "axlab" + (cls ? " " + cls : ""); tagsEl.appendChild(d); TAG[id] = d; return d; }
+["A", "a", "s", "F", "c", "C", "d", "ring", "tun", "r10", "r100", "r1000", "bar"].forEach((k) => tag(k, /^r1|bar/.test(k) ? "minor" : ""));
+const tmp = new THREE.Vector3();
+function place(id, v, html, color, dy) {
+  const el = TAG[id]; if (!v) { el.hidden = true; return; }
+  tmp.copy(v).project(camera);
+  const ok = tmp.z < 1 && Math.abs(tmp.x) < 0.98 && Math.abs(tmp.y) < 0.98;
+  el.hidden = !ok; if (!ok) return;
+  if (el.innerHTML !== html) el.innerHTML = html;
+  if (color) el.style.color = color;
+  el.style.left = (tmp.x * 0.5 + 0.5) * innerWidth + "px";
+  el.style.top = (-tmp.y * 0.5 + 0.5) * innerHeight - (dy || 14) + "px";
+}
+
+// ---------- per-frame scene state from the loop time
+const vA = new THREE.Vector3(), vB = new THREE.Vector3(), vC = new THREE.Vector3(), vS = new THREE.Vector3(), turnPt = new THREE.Vector3();
+const STAGES = { d: ["approach", "turning point", "back out"], h: ["approach", "break-up", "x + A react", "decay, spectator flies on"] };
+function stageText(ph, tau) {
+  const c = S.c, N = c.names, k = S.K;
+  if (ph === "d") {
+    if (!P.dir) return ["direct", `E<sub>xA</sub> is below the ${N.x} + ${N.A} threshold: no direct reaction at all`];
+    const tt = P.dir.tTurn;
+    if (k.above) return ["direct: " + N.x + " + " + N.A + " at " + fmtE(k.K.Exa), "above the barrier top: this energy needs no horse"];
+    return ["direct: " + N.x + " + " + N.A + " at " + fmtE(k.K.Exa), tau < tt - 0.4 ? "the Coulomb field slows it down" : tau < tt + 0.6 ? `turns at ${P.dir.d0 >= 100 ? P.dir.d0.toFixed(0) : P.dir.d0.toFixed(1)} fm, far outside the barrier` : `it tunnels in only with probability e<sup>−2πη</sup> ≈ ${supE(k.gX.P)}`];
+  }
+  if (ph === "g") return ["", ""];
+  const h = P.hor;
+  if (tau < THo - 0.3) return ["Trojan horse: " + N.a + " = " + N.x + " + " + N.s, `${fmtE(k.K.Ecm)} relative energy, above its ${fmtE(k.bA.V)} barrier`];
+  if (tau < THo + h.tMerge) return ["break-up inside the nuclear field", `${N.x} is delivered into ${N.A}`];
+  if (tau < THo + h.tMerge + h.tLife) return [`${N.x} + ${N.A} → ${N.F}`, `at E<sub>xA</sub> = ${fmtE(k.K.Exa)}, with no barrier left to cross`];
+  return [`${N.F} → ${N.c} + ${N.C}`, `the spectator ${N.s} flies on with its own momentum and is detected`];
+}
+function frame(t) {
+  const [ph, tau] = phaseOf(t), c = S.c, N = c.names, k = S.K, h = P.hor;
+  const show = (o, v) => { o.visible = v; };
+  // target A at the origin until it fuses; in the horse phase it becomes F*
+  let Avis = true;
+  G.A.position.set(0, 0, 0);
+  // defaults
+  for (const o of [G.x, G.s, G.xd, G.c, G.C]) o.visible = false;
+  shell.visible = false; flash.visible = false; hotGlow.visible = false;
+  for (const kk in halo) halo[kk].visible = false;
+  for (const kk in TR) TR[kk].visible = false;
+  ring.visible = false; tunMat.opacity = 0;
+  setHot(0);
+  if (ph === "d" && P.dir) {
+    if (F.d(tau, vA)) { G.xd.visible = true; G.xd.position.copy(vA); setTrail(TR.d, F.d, Math.max(0, tau - 2.2), tau, 1.3); halo.d.visible = true; halo.d.position.copy(vA); }
+    ring.visible = k.rc != null;
+    const tt = P.dir.tTurn;
+    if (tau > tt - 0.2 && !k.above) {
+      tunMat.opacity = Math.min(0.85, (tau - tt + 0.2) * 1.4);
+      const q = orbitAt(P.dir.o, tt / P.dir.scale); toScene(q[0], q[1], turnPt);
+      tunLine.geometry.setFromPoints([turnPt.clone(), new THREE.Vector3(0, 0, 0)]); tunLine.computeLineDistances();
+    }
+  } else if (ph === "d") {
+    ring.visible = false;
+  } else if (ph === "h") {
+    const tM = THo + h.tMerge, tD = tM + h.tLife;
+    if (tau <= THo) {
+      F.a(tau, vA);
+      // the two clusters on either side of the centre, the pair slowly turning in the reaction plane
+      const sep = SEP[N.a] || 2, ang = 1.2 + tau * 0.9, ox = Math.cos(ang) * sep, oz = Math.sin(ang) * sep;
+      G.x.visible = G.s.visible = true;
+      G.x.position.set(vA.x + ox * h.fx * 2, 0, vA.z + oz * h.fx * 2);
+      G.s.position.set(vA.x - ox * h.fs * 2, 0, vA.z - oz * h.fs * 2);
+      shell.visible = true; shell.position.copy(vA);
+      const L = sep * 1.15 + 2.2; shell.scale.set(L, 0.75 * L, 0.75 * L); shell.rotation.set(0, -ang, 0);
+      shellMat.uniforms.uA.value = 1;
+      setTrail(TR.a, F.a, Math.max(0, tau - 2.0), tau, 1.0);
+      halo.a.visible = true; halo.a.position.copy(vA);
+      // keep the turning ring of E_xA hidden until x is inside
+    } else {
+      // spectator
+      if (F.s(tau, vS)) { G.s.visible = true; G.s.position.copy(vS); setTrail(TR.s, F.s, THo, tau, 1.2); halo.s.visible = true; halo.s.position.copy(vS); }
+      // envelope bursts open
+      const u = (tau - THo) / 0.6;
+      if (u < 1) { shell.visible = true; toScene(h.last[0], h.last[1], shell.position); shell.scale.setScalar((SEP[N.a] || 2) * 1.4 * (1 + 0.9 * u)); shellMat.uniforms.uA.value = (1 - u) * 0.8; }
+      // flash at the break-up point
+      const uf = (tau - THo) / 0.5;
+      if (uf < 1) { toScene(h.last[0], h.last[1], vB); flash.visible = true; flash.position.copy(vB); flash.material.opacity = (1 - uf) * 0.9; flash.scale.setScalar(5 + 6 * uf); }
+      if (tau < tM) {
+        // x slides into A
+        const w = (tau - THo) / h.tMerge;
+        toScene(h.last[0], h.last[1], vB);
+        const xs = vB.clone().add(new THREE.Vector3(Math.cos(1.2 + THo * 0.9), 0, Math.sin(1.2 + THo * 0.9)).multiplyScalar((SEP[N.a] || 2) * h.fx * 2));
+        G.x.visible = true; G.x.position.copy(xs).lerp(vA.set(0, 0, 0), w * w);
+      }
+      if (tau < tD) {
+        // F* = A + x, hot, drifting with V_F
+        F.Fst(tau, vC);
+        G.A.position.copy(vC);
+        if (tau >= tM) { G.x.visible = true; G.x.position.copy(vC).add(vB.set(0.6, 0.3, 0.4)); }
+        const hw = Math.min(1, (tau - THo) / h.tMerge) * (1 - Math.max(0, (tau - tD + 0.3) / 0.3));
+        setHot(hw); hotGlow.visible = true; hotGlow.position.copy(vC); hotGlow.material.opacity = 0.75 * hw; hotGlow.scale.setScalar(9 + 2 * Math.sin(tau * 9));
+        ring.visible = k.rc != null && tau > THo + 0.2;
+      } else {
+        Avis = false;
+        if (F.c(tau, vA)) { G.c.visible = true; G.c.position.copy(vA); setTrail(TR.c, F.c, tD, tau, 1.2); halo.c.visible = true; halo.c.position.copy(vA); }
+        if (F.C(tau, vB)) { G.C.visible = true; G.C.position.copy(vB); setTrail(TR.C, F.C, tD, tau, 1.2); halo.C.visible = true; halo.C.position.copy(vB); }
+        const ud = (tau - tD) / 0.45;
+        if (ud < 1) { F.Fst(tD - 1e-6, vC); flash.visible = true; flash.position.copy(vC); flash.material.opacity = (1 - ud) * 0.8; flash.scale.setScalar(6 + 8 * ud); }
+      }
+    }
+  }
+  G.A.visible = Avis;
+  // turning ring geometry
+  if (k.rc != null) {
+    const q = comp(k.rc);
+    setRing(q); ring.position.set(0, Y0 + hOf(k.rc) + 0.05, 0);
+    ring.material.opacity = q > RELR ? 0 : 0.6;
+  }
+  // labels
+  const lab = (id, pos, html, col, dy) => place(id, pos, html, col, dy);
+  lab("A", G.A.visible ? vC.copy(G.A.position).setY(G.A.userData.R + 1.6) : null, ph === "h" && tau > THo ? N.F : N.A, "#c8cfdd", 6);
+  lab("a", ph === "h" && tau <= THo ? vA.clone().setY(3.4) : null, `${N.a} = ${N.x} + ${N.s}`, "#e9c37a");
+  lab("s", G.s.visible && ph === "h" && tau > THo ? G.s.position.clone().setY(2.4) : null, `${N.s}, spectator`, "#a8cdf2");
+  lab("c", G.c.visible ? G.c.position.clone().setY(2.6) : null, N.c, "#ffd08a");
+  lab("C", G.C.visible ? G.C.position.clone().setY(G.C.userData.R + 1.4) : null, N.C, "#ff9a7a");
+  lab("d", G.xd.visible ? G.xd.position.clone().setY(2.4) : null, N.x, "#8fd3ff");
+  lab("ring", ring.visible && k.rc ? new THREE.Vector3(comp(k.rc) * 0.7071, Y0 + hOf(k.rc) + 0.6, comp(k.rc) * 0.7071) : null,
+    `E<sub>xA</sub> = V(r) at ${k.rc >= 100 ? k.rc.toFixed(0) : k.rc ? k.rc.toFixed(1) : ""} fm`, "#8fd3ff");
+  lab("tun", tunMat.opacity > 0.2 ? vB.copy(turnPt).multiplyScalar(0.5).setY(1.4) : null,
+    `tunnelling: ${supE(k.gX.P)}`, "#8fd3ff");
+  for (const l of distRings) lab("r" + l.userData.r, new THREE.Vector3(-comp(l.userData.r) * 0.7071, Y0 + hOf(l.userData.r) + 0.5, comp(l.userData.r) * 0.7071), l.userData.r + " fm", "#6d7588", 4);
+  lab("bar", new THREE.Vector3(comp(k.bX.R) + 2.5, Y0 + HB + 0.3, -1.5), `barrier top ${fmtE(k.bX.V)}`, "#c99a5a", 0);
+  // phase caption
+  const [h1, h2] = stageText(ph, tau);
+  const el = document.getElementById("phase");
+  const html = h1 ? `${h1}<small>${h2}</small>` : "";
+  if (el.innerHTML !== html) el.innerHTML = html;
+}
+let hotNow = -1;
+function setHot(w) {
+  if (Math.abs(w - hotNow) < 1e-3) return; hotNow = w;
+  for (const g of [G.A, G.x]) { const m = g.userData.mats; for (const k of ["p", "n"]) { m[k].emissiveIntensity = 1 + 9 * w; } }
+}
+
+// ---------- side panel: the potential picture
+function setupCanvas(c) {
+  const d = Math.min(devicePixelRatio, 2), w = c.clientWidth, h = c.clientHeight;
+  c.width = w * d; c.height = h * d;
+  const x = c.getContext("2d"); x.setTransform(d, 0, 0, d, 0, 0);
+  return { x, w, h };
+}
+const L0 = 40, R0 = 10, T0 = 10, B0 = 20;
+function drawPot() {
+  const { x: ctx, w, h } = setupCanvas(document.getElementById("pot")), k = S.K, c = S.c, N = c.names;
+  const lr0 = 0, lr1 = Math.log10(RMAXPHYS);
+  const VA = (r) => (r >= k.bA.R ? THM.E2 * c.a[0] * c.A[0] / r : k.bA.V * vNorm(r, k.bA.R));
+  const VX = (r) => (r >= k.bX.R ? THM.E2 * c.x[0] * c.A[0] / r : k.bX.V * vNorm(r, k.bX.R));
+  const ymax = Math.max(k.bA.V, k.bX.V, k.K.Ecm) * 1.18, ymin = -0.55 * Math.max(k.bA.V, k.bX.V);
+  const X = (r) => L0 + (Math.log10(r) - lr0) / (lr1 - lr0) * (w - L0 - R0), Y = (v) => T0 + (ymax - v) / (ymax - ymin) * (h - T0 - B0);
+  ctx.font = "10px ui-monospace,Menlo,monospace"; ctx.lineWidth = 1;
+  // grid
+  ctx.strokeStyle = "#1e2432"; ctx.fillStyle = "#8a92a6";
+  const step = ymax > 10 ? 5 : ymax > 4 ? 1 : ymax > 2 ? 0.5 : 0.25;
+  ctx.textAlign = "right";
+  for (let v = Math.ceil(ymin / step) * step; v <= ymax; v += step) { ctx.beginPath(); ctx.moveTo(L0, Y(v)); ctx.lineTo(w - R0, Y(v)); ctx.stroke(); ctx.fillText(+v.toFixed(2), L0 - 4, Y(v) + 3); }
+  ctx.textAlign = "center";
+  for (const r of [1, 10, 100, 1000]) { if (Math.log10(r) > lr1) continue; ctx.beginPath(); ctx.moveTo(X(r), T0); ctx.lineTo(X(r), h - B0); ctx.stroke(); ctx.fillText(r + "", X(r), h - 6); }
+  ctx.textAlign = "right"; ctx.fillText("r (fm)", w - R0, h - B0 - 4);
+  // schematic interior, shaded
+  ctx.fillStyle = "rgba(138,146,166,.07)"; ctx.fillRect(X(1), T0, X(Math.max(k.bX.R, k.bA.R)) - X(1), h - T0 - B0);
+  const curve = (f, col, dash, lw) => {
+    ctx.save(); ctx.beginPath(); ctx.rect(L0, T0, w - L0 - R0, h - T0 - B0); ctx.clip();
+    ctx.strokeStyle = col; ctx.lineWidth = lw || 1.8; ctx.setLineDash(dash || []); ctx.beginPath();
+    for (let i = 0; i <= 300; i++) { const r = 10 ** (lr0 + (lr1 - lr0) * i / 300); const yy = Y(f(r)); if (i) ctx.lineTo(X(r), yy); else ctx.moveTo(X(r), yy); }
+    ctx.stroke(); ctx.restore();
+  };
+  curve(VA, "#c9a2ff", [5, 3], 1.4);
+  curve(VX, "#ffb347", [], 1.9);
+  // energies: a + A (above its barrier), and x + A at E_xA (allowed only outside r_c)
+  ctx.save(); ctx.beginPath(); ctx.rect(L0, T0, w - L0 - R0, h - T0 - B0); ctx.clip();
+  ctx.strokeStyle = "#e9c37a"; ctx.lineWidth = 1.5; ctx.setLineDash([]);
+  ctx.beginPath(); ctx.moveTo(X(1), Y(k.K.Ecm)); ctx.lineTo(w - R0, Y(k.K.Ecm)); ctx.stroke();
+  if (k.K.Exa > 0) {
+    const rc = k.rc;
+    ctx.strokeStyle = "#8fd3ff"; ctx.lineWidth = 1.6;
+    ctx.beginPath(); ctx.moveTo(X(Math.min(rc, RMAXPHYS)), Y(k.K.Exa)); ctx.lineTo(w - R0, Y(k.K.Exa)); ctx.stroke();
+    ctx.setLineDash([2, 3]); ctx.lineWidth = 1.2;
+    ctx.beginPath(); ctx.moveTo(X(1), Y(k.K.Exa)); ctx.lineTo(X(Math.min(rc, RMAXPHYS)), Y(k.K.Exa)); ctx.stroke();
+    ctx.setLineDash([]); ctx.fillStyle = "#8fd3ff"; ctx.beginPath(); ctx.arc(X(Math.min(rc, RMAXPHYS)), Y(k.K.Exa), 3, 0, 2 * Math.PI); ctx.fill();
+  }
+  ctx.restore();
+  ctx.fillStyle = "#e9c37a"; ctx.textAlign = "left";
+  ctx.fillText(`${N.a} + ${N.A}: ${fmtE(k.K.Ecm)}`, X(Math.max(k.bX.R, k.bA.R)) + 6, Y(k.K.Ecm) - 4);
+  if (k.K.Exa > 0) { ctx.fillStyle = "#8fd3ff"; ctx.textAlign = "right"; ctx.fillText(`${N.x} + ${N.A}: ${fmtE(k.K.Exa)}`, w - R0 - 2, Y(k.K.Exa) - 5); }
+  document.getElementById("potLeg").innerHTML =
+    `<span><i style="border-color:#ffb347"></i>${N.x} + ${N.A}, barrier ${fmtE(k.bX.V)}</span><span><i class="d" style="border-color:#c9a2ff"></i>${N.a} + ${N.A}, barrier ${fmtE(k.bA.V)}</span>` +
+    `<span style="flex-basis:100%">Coulomb Z<sub>1</sub>Z<sub>2</sub>e²/r outside the barrier radius 1.45(A<sub>1</sub><sup>1/3</sup> + A<sub>2</sub><sup>1/3</sup>) fm; the drop inside it (shaded) is schematic. The blue line is solid where ${N.x} at E<sub>xA</sub> may classically be.</span>`;
+}
+// spectator momentum distribution
+function drawMD() {
+  const { x: ctx, w, h } = setupCanvas(document.getElementById("md")), c = S.c, pmax = 200;
+  const X = (p) => L0 + p / pmax * (w - L0 - R0), Y = (v) => T0 + (1.08 - v) / 1.08 * (h - T0 - B0);
+  ctx.font = "10px ui-monospace,Menlo,monospace"; ctx.strokeStyle = "#1e2432"; ctx.fillStyle = "#8a92a6"; ctx.lineWidth = 1;
+  ctx.textAlign = "right";
+  for (const v of [0, 0.5, 1]) { ctx.beginPath(); ctx.moveTo(L0, Y(v)); ctx.lineTo(w - R0, Y(v)); ctx.stroke(); ctx.fillText(v, L0 - 4, Y(v) + 3); }
+  ctx.textAlign = "center";
+  for (let p = 0; p <= pmax; p += 50) { ctx.beginPath(); ctx.moveTo(X(p), T0); ctx.lineTo(X(p), h - B0); ctx.stroke(); ctx.fillText(p, X(p), h - 6); }
+  ctx.textAlign = "right"; ctx.fillText("|p_s| (MeV/c)", w - R0, h - B0 - 4);
+  // the quasi-free window kept by the analysis
+  ctx.fillStyle = "rgba(242,193,78,.13)"; ctx.fillRect(X(0), T0, X(c.cut) - X(0), h - T0 - B0);
+  if (c.hulthen) {
+    ctx.strokeStyle = "#a8cdf2"; ctx.lineWidth = 1.9; ctx.beginPath();
+    for (let i = 0; i <= 200; i++) { const p = pmax * i / 200, y = Y(THM.hulthen(p)); if (i) ctx.lineTo(X(p), y); else ctx.moveTo(X(p), y); }
+    ctx.stroke();
+  } else {
+    ctx.fillStyle = "#8a92a6"; ctx.textAlign = "center"; ctx.font = "11px ui-monospace,Menlo,monospace";
+    ctx.fillText("shape not drawn: see below", X(pmax * 0.6), Y(0.62));
+  }
+  ctx.strokeStyle = "#ffffff"; ctx.setLineDash([2, 3]); ctx.beginPath(); ctx.moveTo(X(S.ps), T0); ctx.lineTo(X(S.ps), h - B0); ctx.stroke(); ctx.setLineDash([]);
+  if (c.hulthen) { ctx.fillStyle = "#fff"; ctx.beginPath(); ctx.arc(X(S.ps), Y(THM.hulthen(S.ps)), 3.5, 0, 2 * Math.PI); ctx.fill(); }
+  document.getElementById("mdLeg").innerHTML = (c.hulthen ? `<span><i style="border-color:#a8cdf2"></i>|φ(p)|², Hulthén, p-n in the deuteron (normalised to 1)</span>` : "") +
+    `<span><i class="b"></i>window kept: ${c.cut} MeV/c</span>`;
+  document.getElementById("mdSrc").innerHTML = (c.hulthen ? "Hulthén parameters a = 0.2317, b = 1.202 fm<sup>−1</sup> as quoted by Spitaleri et al. 2014; full width at half maximum of this curve 57 MeV/c. " : "") +
+    c.widthNote + ". Window: " + c.cutNote + ".";
+}
+function drawRes() {
+  const c = S.c;
+  document.getElementById("res").innerHTML = c.res.map((r) => `<div><span class="k">${r.k}</span><span class="v">${r.v}</span><span class="r">${D.refs[r.ref]}</span></div>`).join("");
+}
+// numbers of this event
+function drawInfo() {
+  const k = S.K, c = S.c, N = c.names, K = k.K;
+  const rows = [
+    ["reaction measured", c.measured],
+    ["binary reaction", c.binary],
+    ["horse", `${N.a} = ${N.x} + ${N.s}, bound by ${fmtE(K.B)}`],
+    [`${N.a} + ${N.A}`, `${fmtE(K.Ecm)} (barrier ${fmtE(k.bA.V)})`],
+    ["quasi-free E<sub>xA</sub>", fmtE(k.K0.Exa) + " (p<sub>s</sub> = 0)"],
+    ["this E<sub>xA</sub>", K.Exa > 0 ? fmtE(K.Exa) : `${fmtE(K.Exa)}, below threshold`],
+    [`${N.x} + ${N.A} barrier`, fmtE(k.bX.V)],
+    ["direct, e<sup>−2πη</sup>", K.Exa > 0 ? `${supE(k.gX.P)} (2πη = ${k.gX.tpe.toFixed(1)})` : "no direct reaction"],
+    ["turning point", k.above ? "none: above the barrier top" : k.rc ? `${k.rc >= 100 ? k.rc.toFixed(0) : k.rc.toFixed(1)} fm (barrier at ${k.bX.R.toFixed(1)} fm)` : "none"],
+    [`Q of ${N.x} + ${N.A} → ${N.c} + ${N.C}`, fmtE(K.Q2)],
+    [`${N.s} kinetic energy, lab`, fmtE(K.Ts)],
+  ];
+  document.getElementById("info").innerHTML = rows.map(([a, b]) => `<dt>${a}</dt><dd>${b}</dd>`).join("");
+  document.getElementById("stamp").innerHTML = k.above
+    ? `<b>E<sub>xA</sub> = ${fmtE(K.Exa)}</b><small>above the ${fmtE(k.bX.V)} barrier: move |p<sub>s</sub>| or θ<sub>s</sub> to go below it</small>`
+    : K.Exa > 0
+    ? `<b>E<sub>xA</sub> = ${fmtE(K.Exa)}</b><small>reached from ${fmtE(K.Ecm)} above the barrier · directly: e<sup>−2πη</sup> ≈ ${supE(k.gX.P)}</small>`
+    : `<b>E<sub>xA</sub> = ${fmtE(K.Exa)}</b><small>below the ${N.x} + ${N.A} threshold: reachable only through the horse</small>`;
+}
+
+// ---------- text
+function drawText() {
+  document.getElementById("how").innerHTML = `
+  <p class="src">A nucleus a with a cluster structure a = x + s (the Trojan horse) hits the target A. The a + A relative energy is above their Coulomb barrier, so x is carried into the nuclear field of A without Coulomb suppression and without electron screening. The A + x reaction itself happens at the low, sub-Coulomb relative energy E<sub>xA</sub>, because most of a's energy goes into breaking a apart and leaves with the spectator s (Tumino et al. 2018, Methods; Lei 2026, Sec. II).</p>
+  <p class="src">In the quasi-free process s takes no part: it keeps the momentum it had inside a, its Fermi motion, and is detected. The measured momentum distribution of s, with the kinematic factor divided out, keeps the shape it has in the bound state only if the break-up is quasi-free; that agreement is the experimental signature (Tumino et al. 2018; Spitaleri et al. 2014). The spectator's momentum then fixes E<sub>xA</sub> event by event, so one beam energy scans a range of E<sub>xA</sub>: drag |p<sub>s</sub>| and θ<sub>s</sub> to see how fast it moves.</p>
+  <p class="src">x is virtual inside a: its energy and momentum do not satisfy the free-particle relation, so the binary reaction is half off the energy shell. For resonances the extraction uses a modified R-matrix with no entrance-channel penetration factor (Tumino et al. 2018, Methods).</p>`;
+  document.getElementById("what").innerHTML = `
+  <p class="src">The quantity extracted is the <b>bare-nucleus</b> S-factor, S(E) = E σ(E) e<sup>2πη</sup>, free of the electron screening that raises direct laboratory data at the lowest energies (Pizzone et al. 2014; Li et al. 2015). It comes in <b>arbitrary units</b>: its absolute scale is fixed by normalising to direct data at higher energies, where screening is negligible, or to a known resonance strength. Comparing the bare S(E) with the screened direct data then gives the screening potential U<sub>e</sub>. The values of the case on the right are as published.</p>
+  <p class="math">d³σ / dE dΩ<sub>s</sub> dΩ ∝ K<sub>F</sub> |Φ(p<sub>xs</sub>)|² (dσ/dΩ)<sup>HOES</sup></p>
+  <p class="src">The standard plane-wave impulse formula (Tumino et al. 2018, Eq. 2; Bertulani et al. 2018, Eq. 2): a kinematic factor, the momentum distribution of the x-s motion inside a, and the half-off-shell binary cross section.</p>`;
+  document.getElementById("lei").innerHTML = `
+  <p class="src">Lei (Phys. Rev. C 114, 034606 (2026), arXiv:2605.16890) derives the resonant, sub-Coulomb THM extraction from the Ichimura-Austern-Vincent (IAV) inclusive nonelastic breakup cross section, d²σ/dΩ<sub>s</sub>dE<sub>s</sub> = −(2/ħv<sub>a</sub>) ρ<sub>s</sub> ⟨ψ<sub>x</sub>|W<sub>x</sub>|ψ<sub>x</sub>⟩ (he writes b for the spectator). The only requirement on kinematics is that a enters above the a + A barrier; the quasi-free condition is not imposed there.</p>
+  <p class="src"><b>First reduction.</b> A diagonal isolated-pole ansatz for the absorptive x-A potential W<sub>x</sub>, controlled when four conditions hold: (1) W<sub>x</sub> is diagonal on the pole basis, |W<sub>nm</sub>|/|E<sub>n</sub> − E<sub>m</sub>| ≪ 1; (2) continuum decoupling, W<sub>x</sub> has negligible matrix elements with the smooth nonresonant x + A continuum; (3) pole isolation, Γ<sub>n</sub><sup>tot</sup>/2 small against the spacing to the nearest level; (4) normalisation of the pole basis, Z<sub>n</sub> ≃ 1 and max|S<sub>nm</sub>| ≪ 1. The inclusive cross section then becomes a sum of per-pole DWBA cross sections on the resonance states, with full entrance and exit distortions and the post-form interaction, weighted by a Lorentzian; in the isolated-resonance limit, by the branching ratio Γ<sub>c</sub>/Γ<sup>tot</sup>. That per-pole cross section is the operational quantity for the resonance strength, with no multiplicative correction factor. The absorptive width is half the nonelastic width, ξ<sub>n</sub> = Γ<sub>n</sub><sup>non-el</sup>/2 ≃ Γ<sub>n</sub><sup>tot</sup>/2, and the same one-level profile follows directly from the post-form transfer amplitude, so the extraction does not depend on the route.</p>
+  <p class="src"><b>Second reduction.</b> The factorized formula dσ/dΩ<sub>s</sub> = N<sub>kin</sub> |φ̃<sub>a</sub>(p<sub>sx</sub>)|² |T<sup>on</sup><sub>xA→n</sub>|² follows under three dynamical approximations and one simplification: (i) plane waves for the entrance and exit distorted waves; (ii) the s-x vertex reduced to its zero-range constant; (iii) the binary amplitude taken on shell; (iv) the post-form remnant U<sub>sA</sub> − U<sub>sB</sub> dropped. It sets aside the partial-wave coherence of the transfer amplitude and the remnant; the remnant is suppressed for heavy targets but not for a light one such as <sup>19</sup>F. The quasi-free cut p<sub>sx</sub> ≈ 0 is a kinematic event selection, not a dynamical approximation: once (i) to (iv) are taken the factorization holds at any p<sub>sx</sub>.</p>
+  <p class="src">Lei names the benchmark where this matters: for <sup>19</sup>F(p,αγ)<sup>16</sup>O a recent THM measurement of the 11 keV resonance strength (X. D. Su et al., Phys. Rev. Lett. 135, 182701 (2025), cited there) disagrees with the R-matrix evaluation by about a factor of six. The numerical size of the offset between the per-pole and the factorized strength is left to a follow-up application. The original proposal of the method is G. Baur, Phys. Lett. B 178, 135 (1986), cited there.</p>`;
+  document.getElementById("open").innerHTML = `
+  <p class="src"><b><sup>12</sup>C + <sup>12</sup>C.</b> Tumino et al. (2018) found resonances that raise the rate by more than 25 times at 0.5 GK. Mukhamedzhanov and Pang (arXiv:1806.08828, v4; Phys. Rev. C 99, 064618 (2019)) argue the low-energy rise is an artifact of an invalid plane-wave approximation; their renormalization lowers S* at 0.8 to 0.9 MeV by as much as about 10³. Mukhamedzhanov (arXiv:2609.04498, 2026) adds that reproducing the measured spectator momentum distribution does not by itself validate the plane-wave approximation, since Coulomb distortions change the energy dependence of the THM amplitude, and writes that the earlier rise was not confirmed by a later direct measurement. Li et al. (Phys. Lett. B 879, 140675 (2026), a <sup>16</sup>O = <sup>12</sup>C + α horse) report resonance features near 1.5 MeV, trends in agreement with Tumino et al. 2018 and different from the 2019 modified analysis. Wang et al. (arXiv:2609.27375, 2026, <sup>14</sup>N horse, DWBA) find S* rising toward low energy between 0.5 and 2 MeV, with two detector configurations that differ. Not settled.</p>
+  <p class="src"><b>How far the plane-wave formula can be trusted below the barrier.</b> Bertulani, Hussein and Typel (2018) show that the direct part of the inclusive nonelastic breakup cross section takes the THM form in a DWBA limit with further approximations; Lei (2026) makes the approximations explicit (above) and leaves their numerical size at a benchmark open.</p>
+  <p class="src"><b>Momentum-distribution widths.</b> Measured widths can be narrower than the free bound state predicts, 23 against 72 MeV/c for α in <sup>6</sup>Li (Li et al. 2015), a narrowing those authors relate to the momentum transfer.</p>`;
+  document.getElementById("verif").innerHTML = `
+  <p class="math">E<sub>xA</sub> = M(F*) − m<sub>x</sub> − m<sub>A</sub>,  M(F*)² = (P<sub>beam</sub> + P<sub>target</sub> − p<sub>s</sub>)²</p>
+  <p class="src">Four-vectors, exact: the relative energy follows from the detected spectator alone; it equals E<sub>cC</sub> − Q<sub>2</sub> for the detected pair, Q<sub>2</sub> = m<sub>x</sub> + m<sub>A</sub> − m<sub>c</sub> − m<sub>C</sub>. p<sub>s</sub> is the spectator momentum in the rest frame of a, at angle θ<sub>s</sub> to the beam. Masses: AME2020. In the nonrelativistic limit at p<sub>s</sub> = 0, E<sub>QF</sub> = (m<sub>x</sub>/m<sub>a</sub>) E<sub>a</sub> m<sub>A</sub>/(m<sub>x</sub> + m<sub>A</sub>) − B<sub>xs</sub> with a as the beam, E<sub>A</sub> m<sub>x</sub>/(m<sub>x</sub> + m<sub>A</sub>) − B<sub>xs</sub> with A as the beam; these limits are off by several keV (for <sup>10</sup>B at 24.5 MeV, between 10 and 15 keV depending on which masses enter, against the exact 10.3 keV), which matters next to a 10 keV resonance, so the page uses the exact form.</p>
+  <p class="math">V<sub>B</sub> = Z<sub>1</sub>Z<sub>2</sub>e² / [1.45 fm (A<sub>1</sub><sup>1/3</sup> + A<sub>2</sub><sup>1/3</sup>)]<br>2πη = 2π Z<sub>1</sub>Z<sub>2</sub> α (μc²/2E)<sup>1/2</sup>,  r<sub>turn</sub> = Z<sub>1</sub>Z<sub>2</sub>e²/E<br>|Φ(p)|² ∝ [1/(a² + k²) − 1/(b² + k²)]², k = p/ħc</p>
+  <p class="src">The barrier radius convention is the one Li et al. (2026) quote, 7.8 MeV for <sup>12</sup>C + <sup>12</sup>C; it is a rough height, with no nuclear attraction. tests/check_trojanhorse.js checks: the four-vector E<sub>xA</sub> against an independent route through the products' invariant mass (10<sup>−9</sup> MeV) and against the nonrelativistic formula (to the size of the relativistic correction); the quasi-free energies against hand values; Q-values against AME2020 mass excesses typed in by hand; 2πη against 31.29 Z<sub>1</sub>Z<sub>2</sub>(μ/E)<sup>1/2</sup> (μ in u, E in keV); the 12C + 12C barrier against 7.8 MeV; the Hulthén width; and that the page loads with no console errors in both rendering modes and at 500 px width.</p>`;
+}
+function drawRNote() {
+  document.getElementById("rnote").innerHTML = `
+  <p class="src">Nucleons are spheres of radius 0.8 fm (protons orange, neutrons blue), packed by hand: positions inside a nucleus and the size of the horse's two clusters are schematic. Beyond 10 fm from the target, distances are compressed logarithmically (rings at 10, 100 and 1000 fm), so a turning point hundreds of fm out fits on the screen.</p>
+  <p class="src">The relief under the scene is the Coulomb barrier of x + A drawn as a surface, height in units of its top V<sub>B</sub>: Z<sub>x</sub>Z<sub>A</sub>e²/r outside the barrier radius, a schematic drop into the nuclear well inside it. The blue ring is the classical turning point of x at E<sub>xA</sub>. Orbits are classical Coulomb orbits (only a picture: the wavelengths are comparable with the nuclei), the break-up is placed at 0.9 of the barrier radius, and the compound nucleus lives for an arbitrary second before it decays.</p>
+  <p class="src">Velocities are the ones from the kinematics, in the rest frame of A, with the products leaving at 64° to the beam in their own frame; within the horse phase all motions share one clock. Time is slowed by some 10<sup>22</sup>, and the direct phase runs on its own clock (x at E<sub>xA</sub> is much slower than the horse). Glow, bloom, materials and the gold shell around the horse are presentation.</p>`;
+}
+
+// ---------- case set-up
+function setCase(id, keep) {
+  S.c = CASES.find((q) => q.id === id) || CASES[0];
+  document.getElementById("caseNote").innerHTML = S.c.why + " Run as " + S.c.beamNote + ".";
+  for (const b of document.querySelectorAll("#chips button")) b.setAttribute("aria-pressed", b.dataset.id === S.c.id ? "true" : "false");
+  if (!keep) { S.ps = 0; S.th = 90; }
+  const psIn = document.getElementById("ps"); psIn.max = Math.max(60, Math.round(S.c.cut * 1.5));
+  rebuildClusters();
+  update(true);
+}
+function update(full) {
+  S.K = caseKin();
+  buildPaths();
+  if (full) buildRelief(); else buildRelief();
+  document.getElementById("ps").value = S.ps; document.getElementById("th").value = S.th;
+  document.getElementById("psOut").textContent = S.ps.toFixed(0) + " MeV/c";
+  document.getElementById("thOut").textContent = S.th.toFixed(0) + "°";
+  document.getElementById("psNote").innerHTML = `θ<sub>s</sub> is measured from the beam, in the rest frame of the horse. p<sub>s</sub> = 0 is the quasi-free point: the spectator keeps the horse's velocity. ${S.ps > S.c.cut ? "<b>Outside the window this experiment kept.</b>" : ""}`;
+  drawInfo(); drawPot(); drawMD(); drawRes(); setHash();
+}
+
+// ---------- hash: #10B@20,90~h (|p_s|, theta_s, view)
+function setHash() {
+  if (!S.c) return;
+  const v = S.view === "both" ? "" : S.view === "direct" ? "~d" : "~h";
+  const h = `#${S.c.id}@${S.ps},${S.th}${v}`;
+  if (location.hash !== h) history.replaceState(null, "", h);
+}
+function parseHash() {
+  const m = location.hash.slice(1).match(/^([0-9A-Za-z]+)(?:@([0-9.]+),([0-9.]+))?(~[dh])?$/);
+  if (!m || !CASES.some((c) => c.id === m[1])) return null;
+  const num = (s) => (s != null && isFinite(+s) ? +s : null);
+  return { id: m[1], ps: num(m[2]), th: num(m[3]), view: m[4] === "~d" ? "direct" : m[4] === "~h" ? "horse" : "both" };
+}
+
+// ---------- wiring
+document.getElementById("chips").innerHTML = CASES.map((c) => `<button data-id="${c.id}">${c.label}</button>`).join("");
+document.getElementById("chips").addEventListener("click", (e) => { const b = e.target.closest("button"); if (b) { S.t = 0; setCase(b.dataset.id); } });
+function setView(v) {
+  S.view = v; S.t = 0;
+  for (const b of document.querySelectorAll("#view button")) b.setAttribute("aria-pressed", b.dataset.v === v ? "true" : "false");
+  setHash();
+}
+document.getElementById("view").addEventListener("click", (e) => { const b = e.target.closest("button"); if (b) setView(b.dataset.v); });
+const playBtn = document.getElementById("play"), tlIn = document.getElementById("tl");
+function setPlaying(p) { S.playing = p; playBtn.textContent = p ? "pause" : "play"; playBtn.setAttribute("aria-label", p ? "pause" : "play"); }
+playBtn.addEventListener("click", () => setPlaying(!S.playing));
+tlIn.addEventListener("input", () => { setPlaying(false); S.t = +tlIn.value * loopLen(); });
+let pend = false;
+const psIn = document.getElementById("ps"), thIn = document.getElementById("th");
+function onP() { S.ps = +psIn.value; S.th = +thIn.value; if (pend) return; pend = true; requestAnimationFrame(() => { pend = false; update(false); }); }
+psIn.addEventListener("input", onP); thIn.addEventListener("input", onP);
+addEventListener("hashchange", () => {
+  const h = parseHash(); if (!h) return;
+  if (h.ps != null) S.ps = h.ps; if (h.th != null) S.th = h.th;
+  if (h.view !== S.view) setView(h.view);
+  if (h.id !== S.c.id) setCase(h.id, true); else update(false);
+});
+function frameCamera() {
+  // keep the scene centred in the space the panels leave free
+  const wide = innerWidth > 900;
+  const left = wide ? Math.min(330, innerWidth - 32) + 16 : 0, right = wide ? 372 + 16 : 0;
+  const off = (left - right) / 2;
+  if (wide) camera.setViewOffset(innerWidth, innerHeight, -off, 0, innerWidth, innerHeight); else camera.clearViewOffset();
+  camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix();
+}
+addEventListener("resize", () => {
+  renderer.setSize(innerWidth, innerHeight); composer.setSize(innerWidth, innerHeight);
+  frameCamera(); drawPot(); drawMD();
+});
+let quality = innerWidth < 700 ? "low" : "high";
+function applyQuality() {
+  const g = quality === "high" ? GROUND_PRE_ACES : GROUND;
+  scene.background.copy(g); scene.fog.color.copy(g);
+  renderer.shadowMap.enabled = quality === "high";
+  RIG.key.castShadow = quality === "high";
+  for (const b of document.querySelectorAll("#qmode button")) b.setAttribute("aria-pressed", b.dataset.v === quality ? "true" : "false");
+}
+document.getElementById("qmode").addEventListener("click", (e) => { const b = e.target.closest("button"); if (!b) return; quality = b.dataset.v; applyQuality(); });
+
+// ---------- start
+drawText(); drawRNote(); applyQuality();
+{
+  const h = parseHash();
+  if (h) { S.ps = h.ps != null ? h.ps : 0; S.th = h.th != null ? h.th : 90; setView(h.view); setCase(h.id, true); }
+  else { setView("both"); setCase("10B"); }
+  setPlaying(S.playing);
+}
+const CAM0 = new THREE.Vector3(-0.12, 0.70, 0.70).normalize(), TGT0 = new THREE.Vector3(2, -4, 2);
+camera.position.copy(CAM0).multiplyScalar(innerWidth < 700 ? 120 : 92).add(TGT0);
+controls.target.copy(TGT0);
+frameCamera();
+
+let last = performance.now();
+function animate(now) {
+  requestAnimationFrame(animate);
+  const dt = Math.min(0.1, Math.max(0, (now - last) / 1000)); last = now;
+  const L = loopLen();
+  if (S.playing) S.t = (S.t + dt) % L;
+  S.t = Math.min(S.t, L);
+  tlIn.value = S.t / L;
+  const [ph] = phaseOf(S.t);
+  document.getElementById("tlOut").textContent = ph === "d" ? "direct" : ph === "g" ? "" : "horse";
+  frame(S.t);
+  controls.update();
+  if (quality === "high") composer.render(); else renderer.render(scene, camera);
+}
+requestAnimationFrame(animate);
+</script>
+<script src="assets/glass.js"></script>
+</body>
+</html>

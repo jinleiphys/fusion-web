@@ -1,0 +1,901 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Shell gaps · nuclearjs</title>
+<link rel="stylesheet" href="assets/glass.css">
+<style>
+body{margin:0}
+:root{
+  color-scheme:dark;
+  --ground:#0b0d12; --line:#262c3a;
+  --ink:#e6e8ee; --muted:#8a92a6; --accent:#f2c14e;
+  --neu:#a8cdf2; --pro:#ff9656;
+  --sans:"Avenir Next","Futura","Helvetica Neue","PingFang SC","Noto Sans SC",system-ui,sans-serif;
+  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+}
+html,body{height:100%}
+body{background:var(--ground);color:var(--ink);font-family:var(--sans);overflow:hidden}
+#stage{position:fixed;inset:0}
+#stage canvas{display:block;touch-action:none}
+.panel{position:fixed;border-radius:18px;padding:16px 18px;display:flex;flex-direction:column;gap:12px;overflow:auto;box-sizing:border-box}
+.panel{z-index:2}
+.panel>*{flex-shrink:0}
+#ctl{left:16px;top:calc(16px + env(safe-area-inset-top,0px));width:min(320px,calc(100% - 32px));max-height:calc(100% - 32px)}
+#side{right:16px;top:calc(16px + env(safe-area-inset-top,0px));width:360px;max-height:calc(100% - 32px);gap:8px}
+h1{margin:0;font-size:22px;font-weight:600;letter-spacing:.01em}
+h1 sup{font-size:.6em}
+.sub{margin:2px 0 0;color:var(--muted);font-size:13px;line-height:1.45}
+.sub sup,.src sup,.claim sup,.cap sup{font-size:.7em}
+.grp{display:flex;flex-direction:column;gap:6px}
+.lab{font-size:11px;text-transform:uppercase;letter-spacing:.12em;color:var(--muted)}
+.seg{display:flex;border:1px solid var(--line);border-radius:4px;overflow:hidden}
+.seg button{flex:1;background:none;border:0;color:var(--muted);font:500 12px var(--mono);padding:6px 4px;cursor:pointer}
+.seg button+button{border-left:1px solid var(--line)}
+.seg button[aria-pressed="true"]{background:#1f2533;color:var(--ink)}
+button:focus-visible,input:focus-visible,summary:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+input[type=text]{background:#0f121a;border:1px solid var(--line);border-radius:4px;color:var(--ink);font:13px var(--mono);padding:6px 8px;width:100%;box-sizing:border-box}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chips button{background:#161a24;border:1px solid var(--line);border-radius:4px;color:var(--ink);font:12px var(--mono);padding:5px 8px;cursor:pointer}
+.chips button:hover{border-color:var(--muted)}
+.chips button[aria-pressed="true"]{border-color:var(--accent);color:var(--accent)}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:3px 10px;font:12px var(--mono);font-variant-numeric:tabular-nums}
+.kv dt{color:var(--muted)}.kv dd{margin:0}
+.kv .n{color:var(--neu)}.kv .p{color:var(--pro)}
+.est{color:var(--accent);font-weight:700}
+details summary{cursor:pointer;font-size:11px;text-transform:uppercase;letter-spacing:.12em;color:var(--muted);list-style:none}
+details summary::before{content:"▸ ";}
+details[open] summary::before{content:"▾ ";}
+details .grp{margin-top:8px}
+.home{font:12px var(--mono);color:var(--muted);text-decoration:none}.home:hover{color:var(--ink)}
+.go{font:12px var(--mono);color:var(--accent);text-decoration:none}.go:hover{text-decoration:underline}
+.src{font-size:11px;color:var(--muted);line-height:1.45}
+.src a{color:var(--muted)}
+.claim{margin:0;font-size:13px;line-height:1.5;color:#c9cdd8}
+.claim b{color:var(--ink);font-weight:600;font-variant-numeric:tabular-nums}
+.claim .ref{color:var(--muted);font-size:11.5px}
+.legend{display:flex;flex-direction:column;gap:5px;font:11px var(--mono);color:var(--muted)}
+.ramp{height:9px;border-radius:2px}
+.rampl{display:flex;justify-content:space-between}
+.plot{width:100%;height:150px;display:block;cursor:crosshair}
+.cap{display:flex;justify-content:space-between;align-items:baseline;font:11px var(--mono);color:var(--muted);gap:8px}
+.cap b{font:600 13px var(--sans);color:var(--ink)}
+.mag{position:fixed;font:500 11px var(--mono);color:var(--accent);pointer-events:none;transform:translate(-50%,-50%);opacity:.85;white-space:nowrap}
+.mag.new{color:#6fd0a4}
+#stamp{position:fixed;left:50%;bottom:calc(26px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);text-align:center;pointer-events:none}
+#stamp b{display:block;font:600 clamp(30px,4.6vw,54px)/1 var(--sans);letter-spacing:-.01em}
+#stamp b sup{font-size:.55em}
+#stamp small{display:block;font:500 12px var(--mono);color:var(--muted);margin-top:6px}
+.hint{position:fixed;right:16px;bottom:calc(14px + env(safe-area-inset-bottom,0px));font:11px var(--mono);color:var(--muted)}
+@media (max-width:1180px){#stamp{display:none}}
+#viewtools{position:fixed;z-index:4;left:50%;bottom:14px;transform:translateX(-50%);display:flex;border-radius:10px;overflow:hidden}
+#viewtools button{background:transparent;border:0;color:var(--muted);padding:8px 12px;cursor:pointer;font:11px var(--mono)}
+#viewtools button[aria-pressed="true"]{color:var(--accent);background:#1f2533}
+#selTag{position:fixed;z-index:1;pointer-events:none;transform:translate(-50%,-100%);text-align:center;border:1px solid #f2c14e66;border-radius:8px;background:#0b0d12dd;padding:6px 9px;font:11px var(--mono);color:var(--accent);white-space:nowrap;line-height:1.5}
+#selTag b{font:600 14px var(--sans);color:var(--ink)}
+#stamp{bottom:58px}
+body.scene-only .panel,body.scene-only .hint{display:none}
+body.scene-only #stamp{display:block;left:50%}
+body.scene-only .mag{display:block}
+@media (max-width:900px){
+  #ctl{max-height:42vh}
+  #side{left:16px;right:16px;width:auto;top:auto;bottom:calc(12px + env(safe-area-inset-bottom,0px));max-height:44vh}
+  #stamp,.hint,.mag{display:none}
+}
+@media (max-width:560px){.panel{padding:10px 12px;gap:9px}h1{font-size:18px}}
+</style>
+<script data-goatcounter="https://jinleiphys.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
+</head>
+<body>
+
+<div id="stage"></div>
+<div id="viewtools" class="glass"><button id="focusChain" aria-pressed="false">focus chain</button><button id="sceneOnly" aria-pressed="false" title="Hide or show panels (H)">hide panels · H</button></div>
+<div id="selTag"></div>
+<div id="mags"></div>
+
+<aside id="ctl" class="panel glass glass-deep" data-glass data-glass-bevel="22" data-glass-scale="42">
+  <div>
+    <a class="home" href="index.html">← nuclearjs</a> &nbsp; <a class="home" href="https://vibeinscience.com/nuclides.html">nuclide chart</a>
+    <h1>Magic numbers, read from masses</h1>
+    <p class="sub">Two extra neutrons bind strongly while they fill a shell, and weakly once they have to start the next one. The size of that drop, read off measured masses, is an empirical indicator of the shell gap, not the gap itself: a mass difference also carries pairing, deformation and other correlations, and it can even be negative (<sup>6</sup>He). A reduced peak can indicate a weakened closure, but pairing and deformation must be checked with spectroscopy; masses alone do not say which orbitals moved.</p>
+  </div>
+  <div class="grp">
+    <div class="lab">Height</div>
+    <div class="seg" id="hmode">
+      <button data-v="D2n" aria-pressed="true" title="S2n(Z,N) − S2n(Z,N+2)">Δ<sub>2n</sub></button>
+      <button data-v="D2p" aria-pressed="false" title="S2p(Z,N) − S2p(Z+2,N)">Δ<sub>2p</sub></button>
+      <button data-v="S2n" aria-pressed="false">S<sub>2n</sub></button>
+    </div>
+    <div class="legend" id="legend"></div>
+  </div>
+  <div class="grp">
+    <div class="lab">Where shells move</div>
+    <div class="chips" id="regions">
+      <button data-r="all">whole chart</button>
+      <button data-r="island">island of inversion</button>
+      <button data-r="n28">N = 28</button>
+      <button data-r="ca">Ca: N = 32, 34</button>
+      <button data-r="o">O: N = 16</button>
+      <button data-r="sn">Sn: 100, 132</button>
+      <button data-r="prot">Z = 50, 82</button>
+      <button data-r="pb">Pb: N = 126</button>
+    </div>
+    <p class="claim" id="claim"></p>
+  </div>
+  <div class="grp">
+    <label class="lab" for="find">Element chain or nucleus</label>
+    <input id="find" type="text" placeholder="Ca, 54Ca, Z=50, N=82" autocomplete="off" spellcheck="false">
+  </div>
+  <div class="grp">
+    <div class="lab" id="selLab">Selected</div>
+    <dl class="kv" id="info"></dl>
+    <a class="go" id="toNucleus" href="nucleus.html">open in the shell model →</a>
+  </div>
+  <div class="grp">
+    <div class="lab">Rendering</div>
+    <div class="seg" id="qmode">
+      <button data-v="high" title="glass, shadows and bloom">cinematic</button>
+      <button data-v="low">fast</button>
+    </div>
+    <p class="src">Column height and colour are the selected quantity on the legend's scale; the glass, the studio lighting, the shadows and the glow of the lit cores are illustration.</p>
+  </div>
+  <details>
+    <summary>Definitions</summary>
+    <div class="grp">
+      <p class="sub">B(Z,N) = Z Δ(<sup>1</sup>H) + N Δ(n) − Δ(Z,N) from the atomic mass excesses Δ.<br>
+      S<sub>2n</sub>(Z,N) = B(Z,N) − B(Z,N−2), S<sub>2p</sub>(Z,N) = B(Z,N) − B(Z−2,N).<br>
+      Δ<sub>2n</sub>(Z,N) = S<sub>2n</sub>(Z,N) − S<sub>2n</sub>(Z,N+2): the drop in S<sub>2n</sub> just after N. At a magic N it is large; between closures in heavy nuclei it is 0.3 to 1.1 MeV (tin, lead), and in light nuclei it is larger throughout. Δ<sub>2p</sub> likewise along Z.<br>
+      Δ<sup>(3)</sup><sub>n</sub>(N) = ½(−1)<sup>N+1</sup>[B(N−1) − 2B(N) + B(N+1)], the three-point odd-even staggering. It is quoted as a pairing indicator at odd N only: there it is dominated by pairing, though it also contains smooth mass curvature, polarization and, near N = Z, neutron-proton correlations; at even N it also carries the spacing between the last filled and first empty orbital (Satula, Dobaczewski, Nazarewicz, PRL 81, 3599 (1998)), so it spikes at closed shells. The five-point difference smooths further but averages the two parities together, which is why it is not used here.</p>
+      <p class="sub">Along N = Z the Wigner energy adds extra binding, so Δ<sub>2n</sub> peaks there too (<sup>24</sup>Mg, <sup>32</sup>S, <sup>40</sup>Ca): an N = Z ridge is not by itself a shell gap.</p>
+      <p class="sub">Uncertainties: for S<sub>n</sub>, S<sub>p</sub>, S<sub>2n</sub>, S<sub>2p</sub> the AME2020 tabulated ones, which include the correlations between masses; for Δ<sub>2n</sub>, Δ<sub>2p</sub>, Δ<sup>(3)</sup> the mass uncertainties added in quadrature, treating the masses as independent. <span class="est">#</span> marks a value that rests on at least one mass estimated from systematics rather than measured; on the chart those columns are drawn narrow and grey.</p>
+    </div>
+  </details>
+  <div class="src">
+    Data snapshot: AME2020, not a live mass evaluation. Statements about missing or estimated masses refer to this snapshot. Masses at full precision, Wang et al., Chin. Phys. C 45, 030003 (2021), <a href="https://www-nds.iaea.org/amdc/">IAEA AMDC</a> mass_1.mas20; spins and parities: NUBASE2020, Kondev et al., Chin. Phys. C 45, 030001 (2021). Separation energies built from measured masses agree with the AME2020 rct1/rct2 tables to 10<sup>−3</sup> keV; those resting on an estimated (#) mass agree to 1.4 keV, the precision AME prints such masses to.
+  </div>
+</aside>
+
+<aside id="side" class="panel glass glass-deep" data-glass data-glass-bevel="22" data-glass-scale="42">
+  <div class="cap"><b id="t1">S<sub>2n</sub></b><span id="u1">MeV</span></div>
+  <canvas id="p1" class="plot" style="height:190px"></canvas>
+  <div class="cap"><b id="t2">Δ<sub>2n</sub></b><span>MeV</span></div>
+  <canvas id="p2" class="plot"></canvas>
+  <div class="cap"><b id="t3">Odd-even staggering</b><span>MeV</span></div>
+  <canvas id="p3" class="plot" style="height:120px"></canvas>
+  <div class="src" id="plotNote"></div>
+</aside>
+
+<div id="stamp"></div>
+<div class="hint">drag to orbit · scroll to zoom · right-drag to pan · click a column</div>
+
+<script src="assets/three-bundle.js"></script>
+<script src="assets/three-post.js"></script>
+<script src="assets/hw-studio.js"></script>
+<script src="assets/nubase.js"></script>
+<script src="assets/shells-data.js"></script>
+<script src="assets/shells.js"></script>
+<script>
+"use strict";
+// ---------- data
+const T = SH.build(window.AME);
+const ELEM = {}, SYM = {}, JPI = {};
+for (const r of window.NUC) { ELEM[r[0]] = r[2]; SYM[r[2].toLowerCase()] = r[0]; if (r[7]) JPI[r[0] + "," + r[1]] = r[7]; }
+const NUCS = window.AME.filter((a) => a[0] + a[1] > 1).map((a) => [a[0], a[1]]);
+const n = NUCS.length;
+const IDX = new Map(NUCS.map((p, i) => [p[0] * 1000 + p[1], i]));
+const sup = (A) => `<sup>${A}</sup>`;
+const nm = (Z, N) => `${sup(Z + N)}${ELEM[Z]}`;
+const MAGIC = [2, 8, 20, 28, 50, 82, 126];
+
+// value with its uncertainty in last-digit units, and a # when a systematics mass enters
+function fmt(r, unit) {
+  if (!r) return "n/a";
+  const d = r.s < 0.0095 ? 3 : r.s < 0.95 ? 2 : 1;
+  const u = Math.round(r.s * 10 ** d);
+  const v = r.v.toFixed(d).replace("-", "−");
+  return `${v}${u >= 1 ? `(${u})` : ""}${r.est ? '<span class="est">#</span>' : ""}${unit ? " " + unit : ""}`;
+}
+const Q = { D2n: T.D2n, D2p: T.D2p, S2n: T.S2n, S2p: T.S2p, Sn: T.Sn, Sp: T.Sp, Dn3: T.Dn3, Dp3: T.Dp3 };
+// claim templates: {Q:Z:N} is replaced by the live number
+const tpl = (s) => s.replace(/\{(\w+):(\d+):(\d+)\}/g, (_, q, z, nn) => `<b>${fmt(Q[q](+z, +nn))}</b>`);
+
+function parseNucleus(s) {
+  s = s.trim().toLowerCase().replace(/^#/, "").replace(/[-\s]/g, "");
+  let m = s.match(/^(\d+)([a-z]+)$/) || s.match(/^([a-z]+)(\d+)$/);
+  if (!m) return null;
+  let A, el;
+  if (/^\d/.test(m[1])) { A = +m[1]; el = m[2]; } else { el = m[1]; A = +m[2]; }
+  const Z = SYM[el];
+  if (Z == null || A <= Z || A - Z >= 1000 || !Number.isSafeInteger(A)) return null;
+  return { Z, N: A - Z };
+}
+
+// ---------- regions: camera centre, chain, selection, plot window, claim
+const REG = {
+  all: { c: [84, 50], d: 172, chain: ["Z", 50], sel: [50, 82], win: null,
+    t: `Each column is one nucleus at (N, Z); its height is the selected quantity. Ridges of Δ<sub>2n</sub> run across the chart at N = 8, 20, 28, 50, 82, 126: two neutrons past a closed shell are bound much less than the two that closed it. Δ<sub>2n</sub> at N = 82 is {D2n:50:82} MeV in <sup>132</sup>Sn and at N = 126 {D2n:82:126} MeV in <sup>208</sup>Pb, against 0.3 to 1.1 MeV between the closures in tin and lead. Pick a region to see where the ridges break.` },
+  island: { c: [20, 12], d: 52, chain: ["Z", 12], sel: [12, 20], win: [8, 30],
+    t: `At N = 20 the step Δ<sub>2n</sub> is {D2n:18:20} MeV in Ar, {D2n:16:20} in S and {D2n:14:20} in <sup>34</sup>Si (in <sup>40</sup>Ca, {D2n:20:20}, the N = Z Wigner energy adds to it). Below silicon it collapses: {D2n:13:20} in Al, {D2n:12:20} in <sup>32</sup>Mg, {D2n:11:20} in Na, {D2n:10:20} in Ne. In magnesium the step at N = 20 is smaller than the one before it, {D2n:12:18} at N = 18: S<sub>2n</sub> runs through N = 20 without the extra drop of a closed shell. Shell-model binding energies place the lowest state with two neutrons lifted from the sd into the fp shell below the normal ground state for Z = 10 to 12, N = 20 to 22, the island of inversion <span class="ref">(Warburton, Becker, Brown, PRC 41, 1147 (1990))</span>.` },
+  n28: { c: [28, 16], d: 58, chain: ["Z", 16], sel: [16, 28], win: [16, 38],
+    t: `The N = 28 step falls from {D2n:20:28} MeV in <sup>48</sup>Ca to {D2n:19:28} in K and {D2n:18:28} in <sup>46</sup>Ar, all measured. Below argon the masses run out: {D2n:17:28} (Cl), {D2n:16:28} (<sup>44</sup>S) and {D2n:14:28} (<sup>42</sup>Si) rest on systematics, and the mass of <sup>42</sup>Si itself is an estimate. Masses alone therefore do not yet show the collapse at <sup>42</sup>Si; that evidence is spectroscopic, a first 2<sup>+</sup> state at 770(19) keV <span class="ref">(Bastin et al., PRL 99, 022503 (2007))</span>. In sulfur the measured local peak near N = 28 comes two neutrons early, {D2n:16:26} at N = 26 (larger steps at N = 16 and 20 belong to other closures).` },
+  ca: { c: [31, 20], d: 56, chain: ["Z", 20], sel: [20, 34], win: [16, 42],
+    t: `Calcium closes at N = 28 ({D2n:20:28} MeV). Two more steps stand out: {D2n:20:32} at N = 32 (<sup>52</sup>Ca), fixed by the <sup>53,54</sup>Ca masses <span class="ref">(Wienholtz et al., Nature 498, 346 (2013))</span>, and {D2n:20:34} at N = 34 (<sup>54</sup>Ca), fixed by the first masses of <sup>55,56,57</sup>Ca <span class="ref">(Michimasa et al., PRL 121, 022506 (2018))</span>, against {D2n:20:26} at N = 26 and {D2n:20:30} at N = 30. The level structure of <sup>54</sup>Ca points the same way <span class="ref">(Steppenbeck et al., Nature 502, 207 (2013))</span>. Past N = 34 the mass of <sup>58</sup>Ca is from systematics: {D2n:20:36}. The N = 34 step is unique to calcium: titanium and vanadium show no N = 34 two-neutron gap <span class="ref">(Iimura et al., PRL 130, 012501 (2023))</span>, so the dashed N = 34 lane is drawn for calcium only.` },
+  o: { c: [14, 8], d: 44, chain: ["Z", 8], sel: [8, 16], win: [4, 22],
+    t: `<sup>24</sup>O is the last bound oxygen isotope: S<sub>n</sub>(<sup>25</sup>O) = {Sn:8:17} MeV and S<sub>2n</sub>(<sup>26</sup>O) = {S2n:8:18} MeV, both negative: <sup>25</sup>O and <sup>26</sup>O fall apart. The step at N = 16 is {D2n:8:16} MeV, against {D2n:8:14} at N = 14 and {D2n:8:12} at N = 12: for oxygen N = 16, not 20, closes the shell. The last neutron of <sup>24</sup>O is almost purely 2s<sub>1/2</sub> <span class="ref">(Kanungo et al., PRL 102, 152501 (2009))</span>. Systematics put <sup>28</sup>O at S<sub>2n</sub> = {S2n:8:20} MeV.` },
+  sn: { c: [66, 50], d: 92, chain: ["Z", 50], sel: [50, 82], win: [48, 90],
+    t: `<sup>132</sup>Sn: Δ<sub>2n</sub> = {D2n:50:82} MeV at N = 82 against {D2n:50:80} at N = 80, and Δ<sub>2p</sub> = {D2p:50:82} MeV at Z = 50. <sup>100</sup>Sn: AME2020 lists its mass but not those of <sup>98</sup>Sn or <sup>102</sup>Te, so neither gap can yet be formed at <sup>100</sup>Sn itself. Its neighbours show both: N = 50 in <sup>96</sup>Pd, {D2n:46:50} against {D2n:46:52}; Z = 50 in <sup>102</sup>Sn, Δ<sub>2p</sub> = {D2p:50:52} against {D2p:48:52} in Cd. For <sup>100</sup>Sn as a doubly magic nucleus from its Gamow-Teller decay see <span class="ref">Hinke et al., Nature 486, 341 (2012)</span>.` },
+  prot: { c: [82, 52], d: 120, chain: ["N", 82], sel: [50, 82], win: [40, 76], h: "D2p",
+    t: `The proton side, read along isotones. At N = 82 S<sub>2p</sub> drops by Δ<sub>2p</sub> = {D2p:50:82} MeV across Z = 50 (<sup>132</sup>Sn), against {D2p:52:82} at Z = 52; at N = 126, by {D2p:82:126} across Z = 82 (<sup>208</sup>Pb), against {D2p:84:126} at Z = 84. The N = 82 neutron step persists away from tin: {D2n:54:82} MeV in <sup>136</sup>Xe, {D2n:60:82} in <sup>142</sup>Nd.` },
+  pb: { c: [124, 82], d: 80, chain: ["Z", 82], sel: [82, 126], win: [104, 136],
+    t: `<sup>208</sup>Pb: Δ<sub>2n</sub> = {D2n:82:126} MeV at N = 126 against {D2n:82:124} at N = 124 and {D2n:82:128} at N = 128; Δ<sub>2p</sub> = {D2p:82:126} MeV at Z = 82. The three-point staggering shows the same gap at even N, {Dn3:82:126} MeV, while at the odd neighbour <sup>207</sup>Pb, one hole in a closed shell with no partner to pair with, it is {Dn3:82:125}.` },
+};
+
+// ---------- state
+const S = { h: "D2n", chain: ["Z", 50], sel: [50, 82], win: null, region: "all" };
+
+// ---------- scene
+const stage = document.getElementById("stage");
+const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.setSize(innerWidth, innerHeight);
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.05;
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+stage.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(40, innerWidth / innerHeight, 0.5, 1200);
+function applyOffset() {
+  const a = document.getElementById("ctl").getBoundingClientRect(), b = document.getElementById("side").getBoundingClientRect();
+  const free = innerWidth > 900 && !document.body.classList.contains("scene-only") ? (a.right + b.left) / 2 : innerWidth / 2;
+  const dx = innerWidth / 2 - free;
+  if (Math.abs(dx) > 1) camera.setViewOffset(innerWidth, innerHeight, dx, 0, innerWidth, innerHeight); else camera.clearViewOffset();
+}
+applyOffset();
+// cinematic: scene, ambient occlusion where the columns stand on the floor and crowd each other,
+// bloom on the lit cores only, ACES output, SMAA
+const POST = HW.post(renderer, scene, camera, { bloom: [0.4, 0.45, 0.92], ao: { radius: 0.9, thickness: 1.5, scale: 1, distanceExponent: 1.5 }, aoIntensity: 0.85 });
+const composer = POST.composer, bloom = POST.bloom;
+// a photographic studio for the reflections on the glass: soft overhead key, strip lights
+scene.environment = HW.studioEnv(renderer, { intensity: 0.9 });
+scene.fog = new THREE.Fog("#0b0d12", 260, 620);
+// The ground colour #0b0d12 is drawn untouched on the direct path, but OutputPass runs it through
+// ACES, whose toe crushes it to black. On the bloom path the background and fog therefore take the
+// linear colour that ACES (exposure 1.05) maps back to exactly #0b0d12: found by Newton on the r160
+// shader formula, residual 1e-11, sRGB out (11, 13, 18).
+const GROUND = new THREE.Color("#0b0d12");
+const GROUND_PRE_ACES = new THREE.Color().setRGB(0.0115476, 0.0131218, 0.0174740, THREE.LinearSRGBColorSpace);
+scene.background = GROUND.clone();
+
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+controls.dampingFactor = 0.08;
+controls.screenSpacePanning = false;
+controls.maxPolarAngle = Math.PI * 0.47;
+controls.minDistance = 10;
+controls.maxDistance = 520;
+const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+scene.add(new THREE.HemisphereLight("#cfd8ff", "#1a1410", 0.9));
+const sun = new THREE.DirectionalLight("#fff3e0", 2.2);
+sun.position.set(-60, 120, 80);
+sun.shadow.mapSize.set(4096, 4096);
+Object.assign(sun.shadow.camera, { left: -150, right: 150, top: 130, bottom: -130, near: 10, far: 420 });
+sun.shadow.bias = -0.0004;
+sun.shadow.normalBias = 0.04;
+scene.add(sun, sun.target);
+const rim = new THREE.DirectionalLight("#7fa6ff", 0.6);
+rim.position.set(80, 40, -100);
+scene.add(rim);
+
+// layout: N across (x), Z into depth (−z), as on the nuclide chart
+const X = (N) => N, Zc = (Z) => -Z;
+// the floor carries the cell grid in its texture (not as lines), so the grid is seen through the glass
+// columns too: one cell per nucleus, lines on the half-integers, a slightly brighter line every ten
+const rnd = HW.rng(2020);
+const floorMap = HW.canvasTex(1024, 1024, (x, w, h) => {
+  x.fillStyle = "#151a26"; x.fillRect(0, 0, w, h);
+  for (let i = 0; i < 6000; i++) { const v = rnd() * 10 | 0; x.fillStyle = `rgba(${30 + v},${36 + v},${50 + v},0.35)`; x.fillRect(rnd() * w, rnd() * h, 2, 2); }
+  const c = w / 10;
+  x.strokeStyle = "#252c3d"; x.lineWidth = 2.2;
+  for (let k = 0; k <= 10; k++) { x.beginPath(); x.moveTo(k * c, 0); x.lineTo(k * c, h); x.stroke(); x.beginPath(); x.moveTo(0, k * c); x.lineTo(w, k * c); x.stroke(); }
+  x.strokeStyle = "#2f3850"; x.lineWidth = 3.2;
+  x.beginPath(); x.moveTo(0, 0); x.lineTo(w, 0); x.moveTo(0, 0); x.lineTo(0, h); x.stroke();
+}, [140, 140], true);
+floorMap.offset.set(0.05, 0.05);
+const floorRough = HW.canvasTex(256, 256, (x, w, h) => {
+  x.fillStyle = "#c8c8c8"; x.fillRect(0, 0, w, h);
+  for (let i = 0; i < 2500; i++) { const v = 150 + rnd() * 90 | 0; x.fillStyle = `rgb(${v},${v},${v})`; x.fillRect(rnd() * w, rnd() * h, 1, 1); }
+}, [300, 300]);
+const floor = new THREE.Mesh(new THREE.PlaneGeometry(1400, 1400),
+  new THREE.MeshStandardMaterial({ map: floorMap, roughnessMap: floorRough, roughness: 0.85, metalness: 0.05, envMapIntensity: 0.3 }));
+floor.rotation.x = -Math.PI / 2;
+floor.position.y = -0.02;
+floor.receiveShadow = true;
+scene.add(floor);
+const grid = new THREE.GridHelper(700, 700, "#252c3d", "#252c3d");
+grid.position.set(0.5, 0.004, 0.5);
+grid.material.transparent = true;
+grid.material.opacity = 0.5;
+grid.visible = false;                         // the floor texture carries the grid now
+scene.add(grid);
+
+// magic-number lanes, and the new ones (dashed, green) only where they have been reported
+const lanes = new THREE.Group();
+scene.add(lanes);
+// thin flat strips painted on the floor (opaque, so they show through the glass too); the new
+// magic numbers dashed. Same colours as before: amber and green blended into the floor
+const laneMat = new THREE.MeshBasicMaterial({ color: new THREE.Color("#151a26").lerp(new THREE.Color("#f2c14e"), 0.42) });
+const newMat = new THREE.MeshBasicMaterial({ color: new THREE.Color("#151a26").lerp(new THREE.Color("#6fd0a4"), 0.6) });
+const labels = [], laneGeo = { a: [], n: [] };
+function lane(a, b, mat) {
+  const A = new THREE.Vector3(...a), B = new THREE.Vector3(...b), L = A.distanceTo(B), d = B.clone().sub(A).normalize();
+  const strip = (p, q) => {
+    const g = new THREE.PlaneGeometry(q - p, 0.09); g.rotateX(-Math.PI / 2);
+    g.rotateY(-Math.atan2(d.z, d.x)); const c = A.clone().addScaledVector(d, (p + q) / 2); g.translate(c.x, c.y, c.z);
+    (mat === newMat ? laneGeo.n : laneGeo.a).push(g);
+  };
+  if (mat === newMat) for (let s = 0; s < L; s += 1.05) strip(s, Math.min(L, s + 0.6)); else strip(0, L);
+}
+for (const m of MAGIC) {
+  const zs = NUCS.filter((p) => p[1] === m).map((p) => p[0]);
+  if (zs.length) {
+    const lo = Math.min(...zs) - 2, hi = Math.max(...zs) + 2;
+    for (const s of [-0.5, 0.5]) lane([X(m) + s, 0.01, Zc(lo)], [X(m) + s, 0.01, Zc(hi)], laneMat);
+    labels.push({ txt: "N=" + m, p: new THREE.Vector3(X(m), 0, Zc(lo) + 3) });
+  }
+  const ns = NUCS.filter((p) => p[0] === m).map((p) => p[1]);
+  if (ns.length) {
+    const lo = Math.min(...ns) - 2, hi = Math.max(...ns) + 2;
+    for (const s of [-0.5, 0.5]) lane([X(lo), 0.01, Zc(m) + s], [X(hi), 0.01, Zc(m) + s], laneMat);
+    labels.push({ txt: "Z=" + m, p: new THREE.Vector3(X(lo) - 4, 0, Zc(m)) });
+  }
+}
+for (const [m, z0, z1] of [[16, 5, 13], [32, 17, 24], [34, 20, 20]]) {
+  for (const s of [-0.5, 0.5]) lane([X(m) + s, 0.012, Zc(z0)], [X(m) + s, 0.012, Zc(z1)], newMat);
+  labels.push({ txt: "N=" + m, p: new THREE.Vector3(X(m), 0, Zc(z0) + (m === 34 ? 5 : 2)), cls: "new" });
+}
+for (const [k, m] of [["a", laneMat], ["n", newMat]]) if (laneGeo[k].length) { const o = new THREE.Mesh(BufferGeometryUtils.mergeGeometries(laneGeo[k]), m); o.receiveShadow = false; o.userData.noAO = true; lanes.add(o); }
+const magDiv = document.getElementById("mags");
+for (const l of labels) {
+  l.el = document.createElement("div");
+  l.el.className = "mag" + (l.cls ? " " + l.cls : "");
+  l.el.textContent = l.txt;
+  magDiv.appendChild(l.el);
+}
+
+// glass columns, as on the nuclide chart; a lit core inside each column whose value marks a gap,
+// bright enough to pass the bloom threshold, so the shell closures glow
+const geo = new RoundedBoxGeometry(0.92, 1, 0.92, 3, 0.14);
+geo.translate(0, 0.5, 0);
+const mat = new THREE.MeshPhysicalMaterial({
+  transmission: 0.55, thickness: 0.9, ior: 1.46, roughness: 0.06, metalness: 0,
+  clearcoat: 1, clearcoatRoughness: 0.04, specularIntensity: 1, envMapIntensity: 0.8,
+  attenuationColor: "#ffffff", attenuationDistance: 3,
+});
+const mesh = new THREE.InstancedMesh(geo, mat, n);
+mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+mesh.castShadow = mesh.receiveShadow = true;
+scene.add(mesh);
+const coreGeo = new RoundedBoxGeometry(0.46, 1, 0.46, 2, 0.1);
+coreGeo.translate(0, 0.5, 0);
+const core = new THREE.InstancedMesh(coreGeo, new THREE.MeshBasicMaterial({ color: "#ffffff", toneMapped: false }), n);
+core.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+scene.add(core);
+
+// selection marker on the floor, and the rail along the chosen chain
+const ring = new THREE.Mesh(new THREE.RingGeometry(0.72, 0.9, 40),
+  new THREE.MeshBasicMaterial({ color: "#f2c14e", transparent: true, opacity: 0.95, side: THREE.DoubleSide, toneMapped: false }));
+ring.rotation.x = -Math.PI / 2;
+scene.add(ring);
+const RAILMAX = 400;
+const railGeo = new THREE.BufferGeometry();
+railGeo.setAttribute("position", new THREE.BufferAttribute(new Float32Array(RAILMAX * 3), 3));
+const rail = new THREE.Line(railGeo, new THREE.LineBasicMaterial({ color: "#f2c14e", transparent: true, opacity: 0.9 }));
+rail.frustumCulled = false;
+scene.add(rail);
+
+// ---------- height and colour
+const STOPS = ["#1c2a4a", "#265c8f", "#2f9ab0", "#6fd0a4", "#e4e98a", "#fff6d6"];
+const STOPC = STOPS.map((c) => new THREE.Color(c));
+function ramp(x, out) {
+  x = Math.min(1, Math.max(0, x)) * (STOPC.length - 1);
+  const i = Math.min(STOPC.length - 2, Math.floor(x));
+  return out.copy(STOPC[i]).lerp(STOPC[i + 1], x - i);
+}
+const MODE = {
+  D2n: { f: T.D2n, k: 1.0, top: 6, glow: 2.5, lab: "Δ<sub>2n</sub> = S<sub>2n</sub>(N) − S<sub>2n</sub>(N+2)" },
+  D2p: { f: T.D2p, k: 1.0, top: 6, glow: 2.5, lab: "Δ<sub>2p</sub> = S<sub>2p</sub>(Z) − S<sub>2p</sub>(Z+2)" },
+  S2n: { f: T.S2n, k: 0.3, top: 30, glow: Infinity, lab: "S<sub>2n</sub>, two-neutron separation energy" },
+};
+const VAL = new Array(n);
+const hCur = new Float32Array(n), hTo = new Float32Array(n);
+const cCur = NUCS.map(() => new THREE.Color()), cTo = NUCS.map(() => new THREE.Color());
+const gCur = new Float32Array(n), gTo = new Float32Array(n);
+const GREY = new THREE.Color("#59607a");
+function target(first) {
+  const M = MODE[S.h];
+  for (let i = 0; i < n; i++) {
+    const [Z, N] = NUCS[i], r = M.f(Z, N);
+    VAL[i] = r;
+    hTo[i] = r ? 0.12 + M.k * Math.min(Math.max(r.v, 0), M.top * 2) : 0;
+    ramp(r ? r.v / M.top : 0, cTo[i]);
+    if (r && r.est) cTo[i].lerp(GREY, 0.65);
+    gTo[i] = r && !r.est && r.v > M.glow ? Math.min(1, (r.v - M.glow) / 3) : 0;
+    if (first) { hCur[i] = hTo[i]; cCur[i].copy(cTo[i]); gCur[i] = gTo[i]; }
+  }
+  settling = true;
+}
+const dummy = new THREE.Object3D();
+const WHITE = new THREE.Color("#ffffff"), tmpC = new THREE.Color();
+let selIdx = -1, focusChain = false;
+const selectionGeo = new THREE.BoxGeometry(1, 1, 1); selectionGeo.translate(0, 0.5, 0);
+const selectionOutline = new THREE.LineSegments(new THREE.EdgesGeometry(selectionGeo), new THREE.LineBasicMaterial({ color: "#f2c14e", toneMapped: false, transparent: true, opacity: 0.9 }));
+selectionGeo.dispose(); scene.add(selectionOutline);
+function writeInstances() {
+  for (let i = 0; i < n; i++) {
+    const [Z, N] = NUCS[i], est = VAL[i] && VAL[i].est;
+    const h = hCur[i], fp = h < 1e-3 ? 0 : est ? 0.5 : 1;
+    dummy.position.set(X(N), 0, Zc(Z));
+    dummy.scale.set(fp, Math.max(1e-4, h), fp);
+    dummy.updateMatrix();
+    mesh.setMatrixAt(i, dummy.matrix);
+    const inChain = (S.chain[0] === "Z" ? Z : N) === S.chain[1];
+    tmpC.copy(cCur[i]); if (focusChain && !inChain) tmpC.multiplyScalar(0.18);
+    mesh.setColorAt(i, i === selIdx ? WHITE : tmpC);
+    const g = focusChain && !inChain ? 0 : gCur[i];
+    if (g > 0.01 && h > 0.3) {
+      dummy.scale.set(1, Math.max(1e-4, h - 0.16), 1);
+      dummy.position.y = 0.04;
+      dummy.updateMatrix();
+      core.setMatrixAt(i, dummy.matrix);
+      tmpC.copy(cCur[i]).multiplyScalar(0.55 + 1.25 * g);
+      core.setColorAt(i, tmpC);
+    } else {
+      dummy.matrix.makeScale(0, 0, 0);
+      core.setMatrixAt(i, dummy.matrix);
+      core.setColorAt(i, cCur[i]);
+    }
+  }
+  mesh.instanceMatrix.needsUpdate = true;
+  mesh.instanceColor.needsUpdate = true;
+  core.instanceMatrix.needsUpdate = true;
+  core.instanceColor.needsUpdate = true;
+  if (selIdx >= 0) {
+    const [Z, N] = S.sel, h = hCur[selIdx], fp = VAL[selIdx]?.est ? 0.5 : 1;
+    selectionOutline.visible = h > 1e-3; selectionOutline.position.set(X(N), 0, Zc(Z)); selectionOutline.scale.set(fp, h + 0.08, fp);
+  }
+  writeRail();
+}
+let settling = true;
+function settle(dt) {
+  const k = reduce ? 1 : 1 - Math.exp(-dt / 0.13);
+  let moving = false;
+  for (let i = 0; i < n; i++) {
+    const dh = hTo[i] - hCur[i], dg = gTo[i] - gCur[i];
+    if (Math.abs(dh) > 1e-3 || Math.abs(dg) > 1e-3) { hCur[i] += dh * k; gCur[i] += dg * k; moving = true; }
+    else { hCur[i] = hTo[i]; gCur[i] = gTo[i]; }
+    const c = cCur[i], t = cTo[i];
+    if (Math.abs(c.r - t.r) + Math.abs(c.g - t.g) + Math.abs(c.b - t.b) > 2e-3) { c.lerp(t, k); moving = true; } else c.copy(t);
+  }
+  writeInstances();
+  settling = moving;
+}
+function writeRail() {
+  const P = railGeo.attributes.position.array;
+  const [ax, fixed] = S.chain;
+  let k = 0;
+  for (let v = 0; v < RAILMAX && k < RAILMAX; v++) {
+    const Z = ax === "Z" ? fixed : v, N = ax === "Z" ? v : fixed;
+    const i = IDX.get(Z * 1000 + N);
+    if (i == null || hCur[i] < 1e-3) continue;
+    P[3 * k] = X(N); P[3 * k + 1] = hCur[i] + 0.25; P[3 * k + 2] = Zc(Z);
+    k++;
+  }
+  railGeo.setDrawRange(0, k);
+  railGeo.attributes.position.needsUpdate = true;
+}
+
+// ---------- 2D plots
+function setupCanvas(c) {
+  const d = Math.min(devicePixelRatio, 2), w = c.clientWidth, h = c.clientHeight;
+  c.width = w * d; c.height = h * d;
+  const x = c.getContext("2d");
+  x.setTransform(d, 0, 0, d, 0, 0);
+  return { x, w, h };
+}
+const NICE = [0.1, 0.2, 0.25, 0.5, 1, 2, 2.5, 5, 10, 20];
+function plot(cv, P) {
+  const { x: ctx, w, h } = setupCanvas(cv);
+  const L = 32, R = 8, Tp = 8, B = 18;
+  const [x0, x1] = P.xr;
+  let lo = Infinity, hi = -Infinity;
+  for (const s of P.series) for (const p of s.pts) { lo = Math.min(lo, p.v); hi = Math.max(hi, p.v); }
+  if (!isFinite(lo)) { lo = 0; hi = 1; }
+  if (P.zero) { lo = Math.min(lo, 0); hi = Math.max(hi, 0); }
+  const pad = 0.06 * (hi - lo || 1); lo -= pad; hi += pad;
+  const step = NICE.find((s) => (hi - lo) / s <= 5) || 50;
+  const Xp = (v) => L + (v - x0) / (x1 - x0) * (w - L - R);
+  const Yp = (v) => Tp + (hi - v) / (hi - lo) * (h - Tp - B);
+  ctx.font = "10px ui-monospace,Menlo,monospace";
+  ctx.lineWidth = 1;
+  for (let v = Math.ceil(lo / step) * step; v <= hi + 1e-9; v += step) {
+    ctx.strokeStyle = Math.abs(v) < 1e-9 ? "#3a4256" : "#1e2432";
+    ctx.beginPath(); ctx.moveTo(L, Yp(v)); ctx.lineTo(w - R, Yp(v)); ctx.stroke();
+    ctx.fillStyle = "#8a92a6"; ctx.textAlign = "right";
+    ctx.fillText((+v.toFixed(2)).toString().replace("-", "−"), L - 4, Yp(v) + 3);
+  }
+  const xs = (x1 - x0) > 60 ? 20 : (x1 - x0) > 24 ? 10 : 4;
+  ctx.textAlign = "center"; ctx.fillStyle = "#8a92a6";
+  for (let v = Math.ceil(x0 / xs) * xs; v <= x1; v += xs) if (Xp(v) < w - R - 22) ctx.fillText(v, Xp(v), h - 5);
+  ctx.textAlign = "right"; ctx.fillText(P.xl, w - R, h - 5);
+  // magic numbers (and the new ones in this window)
+  for (const m of P.magic) {
+    if (m.v < x0 || m.v > x1) continue;
+    ctx.strokeStyle = m.new ? "rgba(111,208,164,.55)" : "rgba(242,193,78,.45)";
+    ctx.setLineDash([3, 3]); ctx.beginPath(); ctx.moveTo(Xp(m.v), Tp); ctx.lineTo(Xp(m.v), h - B); ctx.stroke(); ctx.setLineDash([]);
+    ctx.fillStyle = m.new ? "#6fd0a4" : "#f2c14e"; ctx.textAlign = "left"; ctx.fillText(m.v, Xp(m.v) + 2, Tp + 9);
+  }
+  // selection
+  if (P.selX != null && P.selX >= x0 && P.selX <= x1) {
+    ctx.strokeStyle = "rgba(255,255,255,.35)"; ctx.beginPath(); ctx.moveTo(Xp(P.selX), Tp); ctx.lineTo(Xp(P.selX), h - B); ctx.stroke();
+  }
+  P.hits = [];
+  ctx.save(); ctx.beginPath(); ctx.rect(L, Tp, w - L - R, h - Tp - B); ctx.clip();
+  for (const s of P.series) {
+    const pts = s.pts.filter((p) => p.x >= x0 - 0.5 && p.x <= x1 + 0.5);
+    // line through the points of one parity (the plotted step is 2 in the chain variable when step=2)
+    ctx.strokeStyle = s.color; ctx.globalAlpha = s.main ? 0.9 : 0.4; ctx.lineWidth = s.main ? 1.4 : 1;
+    ctx.beginPath();
+    for (const parity of (s.join === 1 ? [null] : [0, 1])) {
+      let prev = null;
+      for (const p of pts) {
+        if (parity != null && p.x % 2 !== parity) continue;
+        if (s.skip && s.skip(p)) { prev = null; continue; }
+        if (prev && p.x - prev.x <= (s.join || 2)) { ctx.moveTo(Xp(prev.x), Yp(prev.v)); ctx.lineTo(Xp(p.x), Yp(p.v)); }
+        prev = p;
+      }
+    }
+    ctx.stroke();
+    for (const p of pts) {
+      if (Xp(p.x) >= L && Xp(p.x) <= w - R && Yp(p.v) >= Tp && Yp(p.v) <= h - B) P.hits.push({ px: Xp(p.x), py: Yp(p.v), x: p.x, fixed: s.fixed, main: s.main });
+      const r = s.main ? 2.6 : 1.9, open = p.est || (s.hollow && s.hollow(p));
+      if (s.main && p.s > 0) {
+        const e = Math.min(p.s, (hi - lo));
+        ctx.beginPath(); ctx.moveTo(Xp(p.x), Yp(p.v - e)); ctx.lineTo(Xp(p.x), Yp(p.v + e)); ctx.stroke();
+      }
+      ctx.beginPath(); ctx.arc(Xp(p.x), Yp(p.v), r, 0, 7);
+      if (open) { ctx.fillStyle = "#0b0d12"; ctx.fill(); ctx.stroke(); } else { ctx.fillStyle = s.color; ctx.fill(); }
+      if (s.main && p.x === P.selX) { ctx.save(); ctx.globalAlpha = 1; ctx.strokeStyle = "#f2c14e"; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(Xp(p.x), Yp(p.v), 5.2, 0, 2 * Math.PI); ctx.stroke(); ctx.restore(); }
+    }
+    ctx.globalAlpha = 1;
+    if (s.name && pts.length) {
+      const last = pts[pts.length - 1];
+      ctx.fillStyle = s.color; ctx.globalAlpha = s.main ? 1 : 0.6; ctx.textAlign = "right";
+      ctx.fillText(s.name, Math.min(w - R, Xp(last.x) + 2), Math.max(Tp + 18, Yp(last.v) - 6));
+      ctx.globalAlpha = 1;
+    }
+  }
+  ctx.restore();
+  P.map = { Xp, Yp, inv: (px) => x0 + (px - L) / (w - L - R) * (x1 - x0) };
+  cv._P = P;
+}
+function series(q, ax, fixed, x0, x1) {
+  const pts = [];
+  for (let v = x0; v <= x1; v++) {
+    const Z = ax === "Z" ? fixed : v, N = ax === "Z" ? v : fixed;
+    const r = Q[q](Z, N);
+    if (r) pts.push({ x: v, v: r.v, s: r.s, est: r.est });
+  }
+  return pts;
+}
+function chainRange(ax, fixed) {
+  let a = Infinity, b = -Infinity;
+  for (const [Z, N] of NUCS) { if ((ax === "Z" ? Z : N) === fixed) { const v = ax === "Z" ? N : Z; a = Math.min(a, v); b = Math.max(b, v); } }
+  return [a, b];
+}
+function drawPlots() {
+  const [ax, fixed] = S.chain;
+  const isZ = ax === "Z";
+  const [a, b] = chainRange(ax, fixed);
+  const xr = S.win ? S.win.slice() : [Math.max(0, a - 1), b + 1];
+  const q2 = isZ ? "S2n" : "S2p", qd = isZ ? "D2n" : "D2p", q3 = isZ ? "Dn3" : "Dp3";
+  const main = isZ ? "#a8cdf2" : "#ff9656", nb = "#8a92a6";
+  const name = (f) => (isZ ? ELEM[f] || "" : "N=" + f);
+  const magic = MAGIC.map((v) => ({ v }));
+  if (isZ) for (const [m, z0, z1] of [[16, 5, 13], [32, 17, 24], [34, 20, 20]]) if (fixed >= z0 && fixed <= z1) magic.push({ v: m, new: true });
+  const selX = isZ ? S.sel[1] : S.sel[0];
+  const xl = isZ ? "N" : "Z";
+  const nbs = [fixed - 2, fixed + 2].filter((f) => f > 0);
+  plot(document.getElementById("p1"), {
+    xr, xl, magic, selX, zero: true,
+    series: [...nbs.map((f) => ({ pts: series(q2, ax, f, xr[0], xr[1]), fixed: f, color: nb, name: name(f) })),
+      { pts: series(q2, ax, fixed, xr[0], xr[1]), fixed, color: main, main: true, name: name(fixed) }],
+  });
+  plot(document.getElementById("p2"), {
+    xr, xl, magic, selX, zero: true,
+    series: [...nbs.map((f) => ({ pts: series(qd, ax, f, xr[0], xr[1]), fixed: f, color: nb })),
+      { pts: series(qd, ax, fixed, xr[0], xr[1]), fixed, color: main, main: true }],
+  });
+  plot(document.getElementById("p3"), {
+    xr, xl, magic, selX, zero: true,
+    series: [{ pts: series(q3, ax, fixed, xr[0], xr[1]), fixed, color: "#f2c14e", main: true, join: 1, hollow: (p) => p.x % 2 === 0 }],
+  });
+  const sub = isZ ? "n" : "p", el = isZ ? `${ELEM[fixed]} (Z = ${fixed})` : `N = ${fixed}`;
+  document.getElementById("t1").innerHTML = `S<sub>2${sub}</sub> along ${el}`;
+  document.getElementById("t2").innerHTML = `Δ<sub>2${sub}</sub> = S<sub>2${sub}</sub>(${xl}) − S<sub>2${sub}</sub>(${xl}+2)`;
+  document.getElementById("t3").innerHTML = `Δ<sup>(3)</sup><sub>${sub}</sub>, odd-even staggering`;
+  document.getElementById("plotNote").innerHTML =
+    `Grey: ${isZ ? "the isotope chains" : "the isotone chains"} two ${isZ ? "protons" : "neutrons"} either side. Open circles rest on a systematics mass (<span class="est">#</span>); bars are 1σ. Bottom: filled at odd ${xl}, where Δ<sup>(3)</sup> is a pairing indicator; open at even ${xl}, where it also holds the shell gap and spikes at magic numbers. Top two plots connect each parity separately. Click a point, including a grey neighbour, to select its nucleus. Shell-gap and staggering error bars assume independent masses; separation-energy errors use AME covariance.`;
+}
+for (const id of ["p1", "p2", "p3"]) {
+  document.getElementById(id).addEventListener("click", (e) => {
+    const P = e.currentTarget._P; if (!P) return;
+    const r = e.currentTarget.getBoundingClientRect();
+    const px = e.clientX - r.left, py = e.clientY - r.top;
+    const hit = P.hits.map((p) => ({ ...p, d: Math.hypot(px - p.px, py - p.py) })).filter((p) => p.d <= 10).sort((a, b) => a.d - b.d || Number(b.main) - Number(a.main))[0];
+    if (!hit) return;
+    const [ax] = S.chain, Z = ax === "Z" ? hit.fixed : hit.x, N = ax === "Z" ? hit.x : hit.fixed;
+    if (IDX.has(Z * 1000 + N)) { S.chain = [ax, hit.fixed]; select(Z, N, false); }
+  });
+}
+
+// ---------- info, stamp, legend
+function drawInfo() {
+  const [Z, N] = S.sel, A = Z + N;
+  const B = T.B(Z, N);
+  const j = JPI[Z + "," + N];
+  const row = (k, cls, q) => `<dt class="${cls}">${k}</dt><dd>${fmt(Q[q](Z, N), "MeV")}</dd>`;
+  document.getElementById("selLab").innerHTML = `Selected: ${nm(Z, N)} (Z = ${Z}, N = ${N})`;
+  document.getElementById("info").innerHTML = `
+    <dt>J<sup>π</sup></dt><dd>${j ? j.replace(/-/g, "−") : "n/a"}</dd>
+    <dt>B</dt><dd>${fmt(B, "MeV")}</dd>
+    ${row("S<sub>n</sub>", "n", "Sn")}${row("S<sub>2n</sub>", "n", "S2n")}${row("Δ<sub>2n</sub>", "n", "D2n")}${row("Δ<sup>(3)</sup><sub>n</sub>", "n", "Dn3")}
+    ${row("S<sub>p</sub>", "p", "Sp")}${row("S<sub>2p</sub>", "p", "S2p")}${row("Δ<sub>2p</sub>", "p", "D2p")}${row("Δ<sup>(3)</sup><sub>p</sub>", "p", "Dp3")}`;
+  document.getElementById("toNucleus").href = `nucleus.html#${A}${ELEM[Z]}`;
+  const r = MODE[S.h].f(Z, N);
+  document.getElementById("stamp").innerHTML = `<b>${nm(Z, N)}</b><small>${S.h === "S2n" ? "S<sub>2n</sub>" : S.h === "D2n" ? "Δ<sub>2n</sub>" : "Δ<sub>2p</sub>"} = ${fmt(r, "MeV")}</small>`;
+  document.getElementById("selTag").innerHTML = `<b>${nm(Z, N)}</b> · ${S.h === "S2n" ? "S₂n" : S.h === "D2n" ? "Δ₂n" : "Δ₂p"} ${fmt(r, "MeV")}<br>${r ? r.est ? "includes estimated mass" : "measured masses" : "neighbouring masses missing"} · AME2020`;
+  document.title = `${A}${ELEM[Z]} shell gaps · nuclearjs`;
+}
+function drawLegend() {
+  const M = MODE[S.h];
+  const g = STOPS.join(",");
+  document.getElementById("legend").innerHTML = `<div>${M.lab}</div><div class="ramp" style="background:linear-gradient(90deg,${g})"></div>
+    <div class="rampl"><span>0</span><span>${M.top / 2}</span><span>≥ ${M.top} MeV</span></div>
+    <div>${isFinite(M.glow) ? `lit core: measured and above ${M.glow} MeV · ` : ""}narrow grey: rests on a # mass</div>
+    <div>height is clipped at ${2 * M.top} MeV; a negative value is drawn as a short stub (its number is in the panel)</div>`;
+}
+
+// ---------- camera moves
+// seen from the low-Z, low-N corner and high up, so the chart reads as the familiar N-Z plane with
+// the valley of stability rising across the screen, while the column heights stay readable
+const VIEW_DIR = new THREE.Vector3(-0.22, 1.45, 0.74).normalize();
+const camTo = { t: null, p: null };
+function viewFor(N, Z, d) {
+  const t = new THREE.Vector3(X(N), 2, Zc(Z));
+  return { t, p: t.clone().addScaledVector(VIEW_DIR, d) };
+}
+function fly(N, Z, d) {
+  const v = viewFor(N, Z, innerWidth < 700 ? d * 1.5 : d);
+  camTo.t = v.t; camTo.p = v.p;
+  if (reduce) { controls.target.copy(v.t); camera.position.copy(v.p); camTo.t = null; }
+}
+
+// ---------- actions
+function select(Z, N, chainToo) {
+  S.sel = [Z, N];
+  if (chainToo) S.chain = S.chain[0] === "Z" ? ["Z", Z] : ["N", N];
+  selIdx = IDX.get(Z * 1000 + N);
+  ring.position.set(X(N), 0.03, Zc(Z));
+  writeInstances();
+  drawInfo(); drawPlots();
+  const hash = `#${Z + N}${ELEM[Z]}`;
+  if (location.hash !== hash) history.replaceState(null, "", hash);
+}
+function setH(h) {
+  S.h = h;
+  for (const b of document.querySelectorAll("#hmode button")) b.setAttribute("aria-pressed", b.dataset.v === h ? "true" : "false");
+  target(false); drawLegend(); drawInfo();
+}
+function region(k, keepSel) {
+  const R = REG[k];
+  S.region = k; S.win = R.win; S.chain = R.chain.slice();
+  for (const b of document.querySelectorAll("#regions button")) b.setAttribute("aria-pressed", b.dataset.r === k ? "true" : "false");
+  document.getElementById("claim").innerHTML = tpl(R.t);
+  const h = R.h || (S.h === "D2p" && !R.h ? "D2n" : S.h);
+  if (h !== S.h) setH(h);
+  if (!keepSel) select(R.sel[0], R.sel[1], false); else drawPlots();
+  fly(R.c[0], R.c[1], R.d);
+}
+
+// ---------- UI wiring
+document.getElementById("hmode").addEventListener("click", (e) => {
+  const b = e.target.closest("button"); if (!b) return;
+  setH(b.dataset.v);
+  // the proton gap is read along isotones, the neutron quantities along isotopes
+  const [Z, N] = S.sel;
+  S.chain = b.dataset.v === "D2p" ? ["N", N] : ["Z", Z];
+  if (S.chain[0] !== (REG[S.region].chain[0])) S.win = null;
+  drawPlots(); writeRail();
+});
+document.getElementById("regions").addEventListener("click", (e) => {
+  const b = e.target.closest("button"); if (!b) return;
+  region(b.dataset.r);
+});
+const find = document.getElementById("find");
+find.addEventListener("keydown", (e) => {
+  if (e.key !== "Enter") return;
+  const s = find.value.trim().toLowerCase().replace(/\s/g, "");
+  let ok = false;
+  let m;
+  if ((m = s.match(/^([zn])=?(\d+)$/))) {
+    const ax = m[1].toUpperCase(), f = +m[2];
+    const [a] = chainRange(ax, f);
+    if (isFinite(a)) {
+      S.chain = [ax, f]; S.win = null;
+      // keep the selection on the chain: nearest member to the current one, else the most bound
+      const cand = NUCS.filter((p) => (ax === "Z" ? p[0] : p[1]) === f);
+      const best = cand.reduce((x, p) => (Math.abs(p[0] - S.sel[0]) + Math.abs(p[1] - S.sel[1]) < Math.abs(x[0] - S.sel[0]) + Math.abs(x[1] - S.sel[1]) ? p : x));
+      if (ax === "N" && S.h !== "D2p") setH("D2p");
+      if (ax === "Z" && S.h === "D2p") setH("D2n");
+      select(best[0], best[1], false); fly(best[1], best[0], 90); ok = true;
+    }
+  } else if (SYM[s] != null) {
+    const Z = SYM[s], [a, b] = chainRange("Z", Z);
+    if (isFinite(a)) {
+      if (S.h === "D2p") setH("D2n");
+      S.chain = ["Z", Z]; S.win = null;
+      const cand = NUCS.filter((p) => p[0] === Z && T.B(p[0], p[1]) && !T.B(p[0], p[1]).est);
+      const mid = cand.length ? cand.reduce((x, p) => (T.B(p[0], p[1]).v / (p[0] + p[1]) > T.B(x[0], x[1]).v / (x[0] + x[1]) ? p : x)) : [Z, a];
+      select(mid[0], mid[1], false); fly((a + b) / 2, Z, Math.max(50, (b - a) * 1.6)); ok = true;
+    }
+  } else {
+    const p = parseNucleus(s);
+    if (p && IDX.has(p.Z * 1000 + p.N)) {
+      if (S.h === "D2p") S.chain = ["N", p.N]; else S.chain = ["Z", p.Z];
+      S.win = null; select(p.Z, p.N, false); fly(p.N, p.Z, 60); ok = true;
+    }
+  }
+  if (!ok) { find.setCustomValidity("not in AME2020: try Ca, 54Ca, Z=50 or N=82"); find.reportValidity(); }
+  else {
+    find.setCustomValidity("");
+    for (const b of document.querySelectorAll("#regions button")) b.setAttribute("aria-pressed", "false");
+    S.region = "all"; document.getElementById("claim").innerHTML = tpl(REG.all.t);
+  }
+});
+find.addEventListener("input", () => find.setCustomValidity(""));
+
+// Click a column using its visible footprint and height; rounded corners are approximated by the box.
+const ray = new THREE.Raycaster(), ndc = new THREE.Vector2();
+let down = null;
+renderer.domElement.addEventListener("pointerdown", (e) => { down = e.button === 0 && e.isPrimary ? [e.clientX, e.clientY, e.pointerId] : null; });
+renderer.domElement.addEventListener("pointercancel", () => { down = null; });
+renderer.domElement.addEventListener("pointerup", (e) => {
+  const start = down; down = null;
+  if (!start || e.pointerId !== start[2] || e.button !== 0 || Math.hypot(e.clientX - start[0], e.clientY - start[1]) > 5) return;
+  ndc.set((e.clientX / innerWidth) * 2 - 1, -(e.clientY / innerHeight) * 2 + 1);
+  ray.setFromCamera(ndc, camera);
+  const o = ray.ray.origin, d = ray.ray.direction;
+  let best = -1, bt = Infinity;
+  for (let i = 0; i < n; i++) {
+    const h = hCur[i]; if (h < 1e-3) continue;
+    const [Z, N] = NUCS[i], cx = X(N), cz = Zc(Z);
+    let t0 = 0, t1 = bt;
+    const hw = VAL[i]?.est ? 0.23 : 0.46;
+    const lo = [cx - hw, 0, cz - hw], hi = [cx + hw, h, cz + hw], oo = [o.x, o.y, o.z], dd = [d.x, d.y, d.z];
+    let hit = true;
+    for (let a = 0; a < 3; a++) {
+      if (Math.abs(dd[a]) < 1e-12) { if (oo[a] < lo[a] || oo[a] > hi[a]) { hit = false; break; } continue; }
+      let ta = (lo[a] - oo[a]) / dd[a], tb = (hi[a] - oo[a]) / dd[a];
+      if (ta > tb) [ta, tb] = [tb, ta];
+      t0 = Math.max(t0, ta); t1 = Math.min(t1, tb);
+      if (t0 > t1) { hit = false; break; }
+    }
+    if (hit && t0 < bt) { bt = t0; best = i; }
+  }
+  if (best >= 0) {
+    const [Z, N] = NUCS[best];
+    S.chain = S.h === "D2p" ? ["N", N] : ["Z", Z];
+    if (S.win && !(S.chain[1] === REG[S.region].chain[1] && S.chain[0] === REG[S.region].chain[0])) S.win = null;
+    select(Z, N, false);
+  }
+});
+
+document.getElementById("focusChain").addEventListener("click", (e) => { focusChain = !focusChain; e.currentTarget.setAttribute("aria-pressed", String(focusChain)); writeInstances(); });
+document.getElementById("sceneOnly").addEventListener("click", (e) => {
+  const hidden = document.body.classList.toggle("scene-only"); e.currentTarget.setAttribute("aria-pressed", String(hidden)); e.currentTarget.textContent = hidden ? "show panels · H" : "hide panels · H"; dispatchEvent(new Event("resize"));
+});
+addEventListener("keydown", (e) => { if (e.code === "KeyH" && !e.repeat && !e.ctrlKey && !e.metaKey && !e.altKey && !e.target.closest("input,textarea,[contenteditable]")) { e.preventDefault(); document.getElementById("sceneOnly").click(); } });
+
+// rendering quality
+const narrow = innerWidth < 700;
+let quality = narrow ? "low" : "high";
+function applyQuality() {
+  const q = quality === "high";
+  renderer.shadowMap.enabled = q;
+  sun.castShadow = q;
+  mat.transmission = q ? 0.4 : 0;
+  mat.roughness = q ? 0.14 : 0.45;
+  mat.clearcoatRoughness = q ? 0.12 : 0.3;
+  mat.needsUpdate = true;
+  floor.material.needsUpdate = true;
+  const g = q ? GROUND_PRE_ACES : GROUND;
+  scene.background.copy(g); scene.fog.color.copy(g);
+  for (const b of document.querySelectorAll("#qmode button")) b.setAttribute("aria-pressed", b.dataset.v === quality ? "true" : "false");
+}
+document.getElementById("qmode").addEventListener("click", (e) => {
+  const b = e.target.closest("button"); if (!b) return;
+  quality = b.dataset.v; applyQuality();
+});
+applyQuality();
+
+addEventListener("resize", () => {
+  camera.aspect = innerWidth / innerHeight; applyOffset(); camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight);
+  composer.setSize(innerWidth, innerHeight);
+  drawPlots();
+});
+addEventListener("hashchange", () => {
+  const h = location.hash.slice(1).toLowerCase();
+  if (REG[h]) return region(h);
+  const p = parseNucleus(h);
+  if (p && IDX.has(p.Z * 1000 + p.N) && (p.Z !== S.sel[0] || p.N !== S.sel[1])) { S.win = null; S.chain = S.h === "D2p" ? ["N", p.N] : ["Z", p.Z]; select(p.Z, p.N, false); fly(p.N, p.Z, 60); }
+});
+
+// ---------- start
+target(true);
+drawLegend();
+{
+  const h = location.hash.slice(1).toLowerCase();
+  const p = parseNucleus(h);
+  if (REG[h]) region(h);
+  else {
+    region("all");
+    if (p && IDX.has(p.Z * 1000 + p.N)) { S.chain = ["Z", p.Z]; S.win = null; select(p.Z, p.N, false); fly(p.N, p.Z, 60); }
+  }
+  controls.target.copy(camTo.t); camera.position.copy(camTo.p); camTo.t = null;
+}
+writeInstances();
+
+// ---------- loop
+const tmp = new THREE.Vector3();
+let last = performance.now();
+function animate(now) {
+  requestAnimationFrame(animate);
+  // the first rAF timestamp can predate the performance.now() taken at start: never let dt go negative
+  const dt = Math.min(0.1, Math.max(0, (now - last) / 1000)); last = now;
+  if (settling) settle(dt);
+  if (camTo.t) {
+    const k = 1 - Math.exp(-dt / 0.35);
+    controls.target.lerp(camTo.t, k); camera.position.lerp(camTo.p, k);
+    if (camera.position.distanceTo(camTo.p) < 0.05) camTo.t = null;
+  }
+  controls.update();
+  const pulse = reduce ? 1 : 0.8 + 0.2 * Math.sin(now / 300);
+  ring.material.opacity = 0.95 * pulse;
+  if (quality === "high") composer.render(); else renderer.render(scene, camera);
+  if (selIdx >= 0) {
+    tmp.set(X(S.sel[1]), hCur[selIdx] + 1.8, Zc(S.sel[0])).project(camera);
+    const tag = document.getElementById("selTag"), x = (tmp.x * 0.5 + 0.5) * innerWidth, y = (-tmp.y * 0.5 + 0.5) * innerHeight;
+    const a = document.getElementById("ctl").getBoundingClientRect(), b = document.getElementById("side").getBoundingClientRect();
+    const covered = !document.body.classList.contains("scene-only") && [a,b].some(r => x > r.left - 90 && x < r.right + 90 && y > r.top && y < r.bottom + 35);
+    tag.style.display = !covered && tmp.z > -1 && tmp.z < 1 && x > 80 && x < innerWidth - 80 && y > 45 && y < innerHeight - 70 ? "block" : "none";
+    tag.style.left = x + "px"; tag.style.top = y + "px";
+  }
+  for (const l of labels) {
+    tmp.copy(l.p).project(camera);
+    const vis = tmp.z < 1 && Math.abs(tmp.x) < 1 && Math.abs(tmp.y) < 1;
+    l.el.style.display = vis ? "" : "none";
+    if (vis) { l.el.style.left = (tmp.x * 0.5 + 0.5) * innerWidth + "px"; l.el.style.top = (-tmp.y * 0.5 + 0.5) * innerHeight + "px"; }
+  }
+}
+requestAnimationFrame(animate);
+// stop the camera glide as soon as the user takes the controls
+controls.addEventListener("start", () => (camTo.t = null));
+</script>
+<script src="assets/glass.js"></script>
+</body>
+</html>

@@ -1,0 +1,837 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Giant resonances · nuclearjs</title>
+<link rel="stylesheet" href="assets/glass.css">
+<style>
+body{margin:0}
+:root{
+  color-scheme:dark;
+  --ground:#0b0d12; --line:#262c3a;
+  --ink:#e6e8ee; --muted:#8a92a6; --accent:#f2c14e; --pro:#ffb06a; --neu:#8fc4ff; --soft:#b9a6ff; --liv:#ffb26b; --sac:#7fd6c2;
+  --sans:"Avenir Next","Futura","Helvetica Neue","PingFang SC","Noto Sans SC",system-ui,sans-serif;
+  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+}
+html,body{height:100%}
+body{background:var(--ground);color:var(--ink);font-family:var(--sans);overflow:hidden}
+#stage{position:fixed;inset:0}
+#stage canvas{display:block;touch-action:none}
+.panel{position:fixed;border-radius:18px;padding:16px 18px;display:flex;flex-direction:column;gap:12px;overflow:auto;box-sizing:border-box;z-index:2}
+.panel>*{flex-shrink:0}
+#ctl{left:16px;top:calc(16px + env(safe-area-inset-top,0px));width:min(350px,calc(100% - 32px));max-height:calc(100% - 32px)}
+#side{right:16px;top:calc(16px + env(safe-area-inset-top,0px));width:400px;max-height:calc(100% - 32px);gap:8px}
+h1{margin:0;font-size:22px;font-weight:600;letter-spacing:.01em}
+.sub{margin:2px 0 0;color:var(--muted);font-size:13px;line-height:1.45}
+.sub sup,.src sup,.cap sup,.kv sup,.warn sup,.leg sup{font-size:.7em}
+.grp{display:flex;flex-direction:column;gap:6px}
+[hidden]{display:none !important}
+.lab{font-size:11px;text-transform:uppercase;letter-spacing:.12em;color:var(--muted)}
+.seg{display:flex;border:1px solid var(--line);border-radius:4px;overflow:hidden}
+.seg button{flex:1;background:none;border:0;color:var(--muted);font:500 12px var(--mono);padding:6px 4px;cursor:pointer}
+.seg button+button{border-left:1px solid var(--line)}
+.seg button[aria-pressed="true"]{background:#1f2533;color:var(--ink)}
+button:focus-visible,input:focus-visible,summary:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chips button{background:#161a24;border:1px solid var(--line);border-radius:4px;color:var(--ink);font:12px var(--mono);padding:5px 8px;cursor:pointer}
+.chips button:hover{border-color:var(--muted)}
+.chips button[aria-pressed="true"]{border-color:var(--accent);color:var(--accent)}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:3px 10px;font:12px var(--mono);font-variant-numeric:tabular-nums}
+.kv dt{color:var(--muted)}.kv dd{margin:0}
+.kv .hi{color:var(--accent)}
+.row{display:flex;gap:8px;align-items:center;font:12px var(--mono);color:var(--muted)}
+.row input[type=range]{flex:1;accent-color:var(--accent);min-width:0}
+.row output{min-width:70px;text-align:right;color:var(--ink);font-variant-numeric:tabular-nums}
+.tog{display:flex;gap:14px;flex-wrap:wrap;font:12px var(--mono);color:var(--muted)}
+.tog label{display:flex;gap:5px;align-items:center;cursor:pointer}
+.tog input{accent-color:var(--accent)}
+details summary{cursor:pointer;font-size:11px;text-transform:uppercase;letter-spacing:.12em;color:var(--muted);list-style:none}
+details summary::before{content:"▸ ";}
+details[open] summary::before{content:"▾ ";}
+details .grp{margin-top:8px}
+.home{font:12px var(--mono);color:var(--muted);text-decoration:none}.home:hover{color:var(--ink)}
+.src{font-size:11px;color:var(--muted);line-height:1.45}
+.src a{color:var(--muted)}
+.warn{font-size:12px;color:var(--accent);line-height:1.4}
+.quote{font-size:11px;color:#c3c8d4;line-height:1.45;border-left:2px solid #3a4256;padding-left:8px}
+.plot{width:100%;height:170px;display:block}
+.cap{display:flex;justify-content:space-between;align-items:baseline;font:11px var(--mono);color:var(--muted);gap:8px}
+.cap b{font:600 13px var(--sans);color:var(--ink)}
+.leg{display:flex;flex-wrap:wrap;gap:4px 10px;font:11px var(--mono);color:var(--muted)}
+.leg i{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:4px;vertical-align:-1px}
+.leg .ln{display:inline-block;width:14px;border-top:1.5px solid;margin-right:4px;vertical-align:3px}
+.leg .dl{border-top-style:dashed}
+#stamp{position:fixed;left:50%;bottom:calc(26px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);text-align:center;pointer-events:none}
+#stamp b{display:block;font:600 clamp(30px,4.6vw,54px)/1 var(--sans);letter-spacing:-.01em}
+#stamp b sup{font-size:.55em}
+#stamp small{display:block;font:500 12px var(--mono);color:var(--muted);margin-top:6px}
+.hint{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(6px + env(safe-area-inset-bottom,0px));font:11px var(--mono);color:var(--muted)}
+.axlab{position:fixed;font:500 11px var(--mono);pointer-events:none;transform:translate(-50%,-50%);opacity:.92;white-space:nowrap;text-shadow:0 0 6px #0b0d12}
+@media (max-width:1180px){#stamp{display:none}}
+@media (max-width:900px){
+  #ctl{max-height:42vh}
+  #side{left:16px;right:16px;width:auto;top:auto;bottom:calc(12px + env(safe-area-inset-bottom,0px));max-height:44vh}
+  #stamp,.hint,.axlab{display:none !important}
+}
+@media (max-width:560px){.panel{padding:10px 12px;gap:9px}h1{font-size:18px}}
+</style>
+<script data-goatcounter="https://jinleiphys.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
+</head>
+<body>
+
+<div id="stage"></div>
+
+<aside id="ctl" class="panel glass glass-deep" data-glass data-glass-bevel="22" data-glass-scale="42">
+  <div>
+    <a class="home" href="index.html">← nuclearjs</a> &nbsp; <a class="home" id="toColl" href="collective.html#208Pb~oct">surface vibrations →</a> &nbsp; <a class="home" href="gamma.html#208Pb">E1 rates</a>
+    <h1>Giant resonances</h1>
+    <p class="sub">A photon near the big peak in the plot on the right is absorbed by the nucleus as a whole: its electric field pushes the protons one way and the neutrons the other, and the two fluids swing against each other. This isovector giant dipole resonance (GDR) is a broad peak that holds most of the dipole sum rule. In a deformed nucleus the swing along the long axis is slower than across it, and the peak splits in two. In-phase (isoscalar) modes of all the nucleons, the breathing monopole and the quadrupole, photons barely excite them (E2 absorption is weak), and they are measured with inelastic α and deuteron scattering.</p>
+  </div>
+  <div class="grp">
+    <div class="lab">Mode</div>
+    <div class="seg" id="mode">
+      <button data-v="gt" title="isovector dipole, two rigid spheres (Goldhaber-Teller)">GDR, GT</button>
+      <button data-v="sj" title="isovector dipole, density wave in a fixed surface (Steinwedel-Jensen)">GDR, SJ</button>
+      <button data-v="gmr" title="isoscalar giant monopole (breathing)">monopole</button>
+      <button data-v="gqr" title="isoscalar giant quadrupole">quadrupole</button>
+    </div>
+    <div class="seg" id="kax" hidden>
+      <button data-v="0">K = 0, along</button><button data-v="1">K = 1, across</button><button data-v="b">both</button>
+    </div>
+    <p class="src" id="modeNote"></p>
+  </div>
+  <div class="grp" id="gGmr" hidden>
+    <div class="lab">Breathing mode and incompressibility</div>
+    <dl class="kv" id="gmrInfo"></dl>
+    <p class="src" id="gmrNote"></p>
+  </div>
+  <div class="grp">
+    <div class="lab">Nucleus</div>
+    <div class="chips" id="nucs"></div>
+    <div class="lab" id="setLab">Measurement</div>
+    <div class="chips" id="sets"></div>
+  </div>
+  <div class="grp">
+    <div class="lab" id="selLab">Selected</div>
+    <dl class="kv" id="info"></dl>
+    <div class="row"><span>∫σ dE up to</span><input id="emax" type="range" min="10" max="30" step="0.1" value="30" aria-label="upper end of the integral"><output id="emaxOut"></output></div>
+    <dl class="kv" id="intInfo"></dl>
+    <p class="warn" id="warn" hidden></p>
+  </div>
+  <div class="grp">
+    <div class="lab">TRK sum rule from the constants</div>
+    <div class="seg" id="mass"><button data-v="p">m = m<sub>p</sub></button><button data-v="avg">(m<sub>p</sub>+m<sub>n</sub>)/2</button><button data-v="u">m = u</button></div>
+    <dl class="kv" id="trkInfo"></dl>
+  </div>
+  <div class="grp">
+    <div class="lab">Rendering</div>
+    <div class="seg" id="qmode">
+      <button data-v="high" title="bloom">cinematic</button>
+      <button data-v="low">fast</button>
+    </div>
+    <p class="src" id="drawn"></p>
+  </div>
+  <details>
+    <summary>Model, exactly</summary>
+    <div class="grp src" id="model"></div>
+  </details>
+  <div class="src" id="srcs"></div>
+</aside>
+
+<aside id="side" class="panel glass glass-deep" data-glass data-glass-bevel="22" data-glass-scale="42">
+  <div class="cap"><b id="sxTitle">Photoabsorption</b><span>mb against MeV</span></div>
+  <canvas id="psx" class="plot" style="height:220px" aria-label="photonuclear cross section against photon energy"></canvas>
+  <div class="tog"><label><input type="checkbox" id="tQd" checked> quasi-deuteron term</label><label><input type="checkbox" id="tEv" checked> evaluated</label></div>
+  <div class="leg" id="sxLeg"></div>
+  <div class="src" id="sxNote"></div>
+  <div class="cap"><b>Strength against the TRK sum rule</b><span id="intCap"></span></div>
+  <canvas id="pint" class="plot" style="height:160px" aria-label="running integral of the cross section in units of the TRK sum rule"></canvas>
+  <div class="src" id="intNote"></div>
+  <div class="grp" id="gDef" hidden>
+    <div class="cap"><b>Two peaks, one shape</b><span>hydrodynamic ratio</span></div>
+    <dl class="kv" id="defInfo"></dl>
+    <div class="src" id="defNote"></div>
+  </div>
+  <div class="grp" id="gLab" hidden>
+    <div class="cap"><b>Livermore and Saclay</b><span>same nucleus, two laboratories</span></div>
+    <dl class="kv" id="labInfo"></dl>
+    <details><summary>What the evaluators say</summary><div class="grp"><p class="quote" id="qKawano"></p><p class="quote" id="qM0635"></p><p class="src" id="qNote"></p></div></details>
+  </div>
+  <div class="cap"><b>GDR energy against A</b><span>click a lit point</span></div>
+  <canvas id="pea" class="plot" style="height:190px;cursor:crosshair" aria-label="GDR energy against mass number"></canvas>
+  <div class="leg" id="eaLeg"></div>
+  <div class="src" id="eaNote"></div>
+</aside>
+
+<div id="lAx" class="axlab" hidden style="color:#c9d6ea">symmetry axis</div>
+<div id="lP" class="axlab" hidden style="color:var(--pro)">protons</div>
+<div id="lN" class="axlab" hidden style="color:var(--neu)">neutrons</div>
+<div id="stamp"></div>
+<div class="hint">drag to orbit · scroll to zoom</div>
+
+<script src="assets/three-bundle.js"></script>
+<script src="assets/three-post.js"></script>
+<script src="assets/hw-studio.js"></script>
+<script src="assets/collective-data.js"></script>
+<script src="assets/collective.js"></script>
+<script src="assets/giant-data.js"></script>
+<script src="assets/giant.js"></script>
+<script>
+"use strict";
+// ---------- data
+const D = window.GIANT_DATA, NU = D.nuc, KEYS = Object.keys(NU), CD = D.codata, CNU = window.COLLECTIVE_DATA.nuc;
+const nucHTML = (k) => { const m = k.match(/^(\d+)([A-Za-z]+)$/); return m ? `<sup>${m[1]}</sup>${m[2]}` : k; };
+function f(x, d) { return x == null || !isFinite(x) ? "n/a" : (+x.toFixed(d)).toFixed(d).replace("-", "−"); }
+const LAB_C = { Livermore: "#ffb26b", Saclay: "#7fd6c2" }, OTHER_C = "#b9a6ff", K0_C = "#ffd27a", K1_C = "#8fb8ff", EV_C = "#e6e8ee";
+const setColor = (s) => LAB_C[s.lab] || OTHER_C;
+const labName = (s) => (LAB_C[s.lab] ? s.lab : `EXFOR institute ${s.inst}`);
+const MASS = { p: CD.mp, avg: (CD.mp + CD.mn) / 2, u: CD.u };
+const MASS_L = { p: "m<sub>p</sub>", avg: "(m<sub>p</sub>+m<sub>n</sub>)/2", u: "u" };
+const XSJ = GIANT.sjRoot();                     // k R of the Steinwedel-Jensen mode, the first zero of j1'
+const HBAR = CD.hbar;                            // MeV s, read from the saved CODATA 2018 listing
+const REACT = { "g,sn": "σ(γ,sn), all photoneutron events", "g,abs": "σ(γ,abs), photoabsorption" };
+const isDef = (s) => s && s.fit.E2 != null;
+function firstAuthor(s) { const a = s.authors[0].replace(/^([A-Z][a-z]?\.)+/, ""); return `${a}${s.authors.length > 1 ? " et al." : ""}`; }
+
+// ---------- state
+const S = { nuc: "208Pb", mode: "gt", k: "b", set: 0, qd: true, ev: true, mass: "avg", emax: null };   // emax null: to the last data point
+const cur = () => NU[S.nuc];
+const curSet = () => cur().sets[Math.min(S.set, cur().sets.length - 1)];
+
+// ---------- scene
+const stage = document.getElementById("stage");
+const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.setSize(innerWidth, innerHeight);
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.05;
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+stage.appendChild(renderer.domElement);
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(34, innerWidth / innerHeight, 0.3, 1400);
+function applyOffset() {
+  const a = document.getElementById("ctl").getBoundingClientRect(), b = document.getElementById("side").getBoundingClientRect();
+  const free = innerWidth > 900 ? (a.right + b.left) / 2 : innerWidth / 2;
+  const dx = innerWidth / 2 - free;
+  if (Math.abs(dx) > 1) camera.setViewOffset(innerWidth, innerHeight, dx, 0, innerWidth, innerHeight); else camera.clearViewOffset();
+}
+applyOffset();
+const POST = HW.post(renderer, scene, camera, { bloom: [0.7, 0.55, 0.82], ao: { radius: 0.9, thickness: 1.5, scale: 1, distanceExponent: 1.5 }, aoIntensity: 0.7 });
+const composer = POST.composer;
+scene.environment = HW.studioEnv(renderer, { intensity: 1.0 });
+const GROUND = new THREE.Color("#0b0d12");
+// the linear colour that ACES (exposure 1.05) maps back to #0b0d12, for the bloom path (same as collective.html)
+const GROUND_PRE_ACES = new THREE.Color().setRGB(0.0115476, 0.0131218, 0.0174740, THREE.LinearSRGBColorSpace);
+scene.background = GROUND.clone();
+scene.fog = new THREE.Fog("#0b0d12", 120, 420);
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true; controls.dampingFactor = 0.08;
+controls.minDistance = 8; controls.maxDistance = 160;
+controls.maxPolarAngle = Math.PI * 0.62;
+const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+scene.add(new THREE.HemisphereLight("#cfd8ff", "#1a1410", 0.7));
+const sun = new THREE.DirectionalLight("#fff3e0", 2.2);
+sun.position.set(-20, 40, 25);
+sun.shadow.mapSize.set(2048, 2048); sun.shadow.bias = -0.0004; sun.shadow.normalBias = 0.04;
+for (const k of ["left", "bottom"]) sun.shadow.camera[k] = -22;
+for (const k of ["right", "top"]) sun.shadow.camera[k] = 22;
+scene.add(sun, sun.target);
+const rimL = new THREE.DirectionalLight("#7fa6ff", 0.8); rimL.position.set(60, 30, -80); scene.add(rimL);
+const rnd = HW.rng(1948);
+
+const RPB = 5.2;                                  // world radius of the 208Pb drawing; others scale as A^(1/3)
+const YF = -RPB * 1.9;                            // floor
+const NUC = new THREE.Group(); scene.add(NUC);
+// floor: a dark disc with rings (decoration)
+{
+  const tex = HW.canvasTex(1024, 1024, (x, w, h) => {
+    const g = x.createRadialGradient(w / 2, h / 2, 0, w / 2, h / 2, w / 2);
+    g.addColorStop(0, "#1a2030"); g.addColorStop(0.6, "#121621"); g.addColorStop(1, "#0b0d12");
+    x.fillStyle = g; x.fillRect(0, 0, w, h);
+    x.strokeStyle = "rgba(120,140,180,0.10)"; x.lineWidth = 2;
+    for (let r = 1; r <= 9; r++) { x.beginPath(); x.arc(w / 2, h / 2, r * w / 20, 0, 2 * Math.PI); x.stroke(); }
+  }, null, true);
+  const fl = new THREE.Mesh(new THREE.CircleGeometry(60, 96), new THREE.MeshStandardMaterial({ map: tex, roughness: 0.6, metalness: 0.2, envMapIntensity: 0.25 }));
+  fl.rotation.x = -Math.PI / 2; fl.position.y = YF; fl.receiveShadow = true; NUC.add(fl);
+}
+// the two fluids: rim-lit shells (fresnel glow, no depth write), one per species; and the equilibrium surface as a faint cage
+const shellMat = (col) => new THREE.ShaderMaterial({
+  uniforms: { uC: { value: new THREE.Color(col) }, uI: { value: 1 } },
+  vertexShader: `varying vec3 vN; varying vec3 vV; void main(){ vec4 mv = modelViewMatrix * vec4(position,1.0); vN = normalize(normalMatrix * normal); vV = normalize(-mv.xyz); gl_Position = projectionMatrix * mv; }`,
+  fragmentShader: `uniform vec3 uC; uniform float uI; varying vec3 vN; varying vec3 vV; void main(){ float r = 1.0 - abs(dot(normalize(vN), normalize(vV))); float a = (pow(r, 2.6) * 1.1 + 0.035) * uI; gl_FragColor = vec4(uC * a * 1.6, a);
+    #include <tonemapping_fragment>
+    #include <colorspace_fragment>
+  }`,
+  transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.FrontSide,
+});
+const SPH = new THREE.SphereGeometry(1, 96, 64);
+const shellP = new THREE.Mesh(SPH, shellMat("#ffb06a")), shellN = new THREE.Mesh(SPH, shellMat("#8fc4ff"));
+shellP.renderOrder = shellN.renderOrder = 5;
+// a solid, faintly glassy core so the scene casts a shadow on the floor (decoration)
+const coreMat = new THREE.MeshPhysicalMaterial({ color: "#ffe8cc", roughness: 0.25, transmission: 0.0, transparent: true, opacity: 0.06, depthWrite: false, envMapIntensity: 0.4 });
+const core = new THREE.Mesh(SPH, coreMat);
+// a soft contact shadow on the floor (decoration): a radial gradient, scaled with the nucleus
+const blob = new THREE.Mesh(new THREE.CircleGeometry(1, 64), new THREE.MeshBasicMaterial({ transparent: true, depthWrite: false, map: HW.canvasTex(256, 256, (x, w, h) => {
+  const g = x.createRadialGradient(w / 2, h / 2, 0, w / 2, h / 2, w / 2); g.addColorStop(0, "rgba(0,0,0,0.55)"); g.addColorStop(0.6, "rgba(0,0,0,0.25)"); g.addColorStop(1, "rgba(0,0,0,0)");
+  x.fillStyle = g; x.fillRect(0, 0, w, h); }, null, true) }));
+blob.rotation.x = -Math.PI / 2; blob.position.y = YF + 0.02;
+const cage = (() => {
+  const p = [], ring = (fn) => { for (let i = 0; i < 128; i++) p.push(fn(2 * Math.PI * i / 128), fn(2 * Math.PI * (i + 1) / 128)); };
+  for (const th of [30, 60, 90, 120, 150]) { const t = th * Math.PI / 180; ring((u) => new THREE.Vector3(Math.cos(t), Math.sin(t) * Math.cos(u), Math.sin(t) * Math.sin(u))); }
+  for (let k = 0; k < 6; k++) { const ph = k * Math.PI / 6; ring((u) => new THREE.Vector3(Math.cos(u), Math.sin(u) * Math.cos(ph), Math.sin(u) * Math.sin(ph))); }
+  return new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints(p), new THREE.LineBasicMaterial({ color: "#c9d6ea", transparent: true, opacity: 0.13, depthWrite: false }));
+})();
+NUC.add(shellP, shellN, core, cage, blob);
+// the symmetry axis (world x) of a deformed nucleus
+const symAxis = (() => {
+  const g = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(-1, 0, 0), new THREE.Vector3(1, 0, 0)]);
+  const l = new THREE.Line(g, new THREE.LineDashedMaterial({ color: "#c9d6ea", transparent: true, opacity: 0.6, dashSize: 0.02, gapSize: 0.015 }));
+  l.computeLineDistances(); return l;
+})();
+NUC.add(symAxis);
+// nucleons: Z warm and N cool glowing points, uniform in the unit ball (positions are random: decoration)
+const MAXP = 260;
+const ptPos = new Float32Array(MAXP * 3), ptCol = new Float32Array(MAXP * 3), U = [];
+for (let i = 0; i < MAXP; i++) { let x, y, z; do { x = 2 * rnd() - 1; y = 2 * rnd() - 1; z = 2 * rnd() - 1; } while (x * x + y * y + z * z > 1); U.push([x * 0.93, y * 0.93, z * 0.93, rnd()]); }
+const ptGeo = new THREE.BufferGeometry();
+ptGeo.setAttribute("position", new THREE.BufferAttribute(ptPos, 3));
+ptGeo.setAttribute("color", new THREE.BufferAttribute(ptCol, 3));
+const cloud = new THREE.Points(ptGeo, new THREE.ShaderMaterial({
+  uniforms: { uPx: { value: renderer.getPixelRatio() }, uS: { value: 1 } },
+  vertexShader: `attribute vec3 color; uniform float uPx; uniform float uS; varying vec3 vC; void main(){ vC = color; vec4 mv = modelViewMatrix * vec4(position, 1.0); gl_PointSize = uPx * uS * 520.0 / -mv.z; gl_Position = projectionMatrix * mv; }`,
+  fragmentShader: `varying vec3 vC; void main(){ vec2 q = gl_PointCoord - 0.5; float r2 = dot(q, q) * 4.0; if (r2 > 1.0) discard; float core = exp(-r2 * 9.0), halo = exp(-r2 * 2.5); vec3 c = vC * (core * 1.3 + halo * 0.35); gl_FragColor = vec4(c, core + 0.3 * halo);
+    #include <tonemapping_fragment>
+    #include <colorspace_fragment>
+  }`,
+  transparent: true, depthWrite: false, depthTest: false, blending: THREE.AdditiveBlending,
+}));
+cloud.frustumCulled = false; cloud.renderOrder = 7;
+NUC.add(cloud);
+// a slice through the centre (the plane of the screen at the start) showing the density change of the mode:
+// isovector modes warm where protons are in excess, cool where neutrons are; isoscalar modes gold where denser, blue where thinner
+const sliceMat = new THREE.ShaderMaterial({
+  uniforms: { uMode: { value: 0 }, uAB: { value: new THREE.Vector2(1, 1) }, uDp: { value: new THREE.Vector2() }, uDn: { value: new THREE.Vector2() },
+    uZf: { value: 0.4 }, uSJ: { value: new THREE.Vector2() }, uK: { value: XSJ }, uEps: { value: 0 }, uGain: { value: 1 } },
+  vertexShader: `varying vec2 vP; void main(){ vP = position.xy; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }`,
+  fragmentShader: `
+    uniform int uMode; uniform vec2 uAB; uniform vec2 uDp; uniform vec2 uDn; uniform float uZf; uniform vec2 uSJ; uniform float uK; uniform float uEps; uniform float uGain;
+    varying vec2 vP;
+    float inside(vec2 p, vec2 c, vec2 ab){ vec2 q = (p - c) / ab; return smoothstep(1.0, 0.985, length(q)); }
+    float j1(float x){ if (x < 1e-3) return x / 3.0; return sin(x) / (x * x) - cos(x) / x; }
+    void main(){
+      vec2 ab = uAB; float v = 0.0;
+      if (uMode == 0) {           // GT: proton and neutron drops displaced; isovector density relative to rest
+        v = uZf * inside(vP, uDp, ab) - (1.0 - uZf) * inside(vP, uDn, ab) - (2.0 * uZf - 1.0) * inside(vP, vec2(0.0), ab);
+        v *= 2.2;
+      } else if (uMode == 1) {    // SJ: j1(k r) times the direction cosine, along each oscillation axis
+        vec2 q = vP / ab; float r = length(q);
+        if (r < 1.0) { float j = j1(uK * r) / max(r, 1e-4); v = j * (uSJ.x * q.x + uSJ.y * q.y) * 2.4; }
+        v *= smoothstep(1.0, 0.985, r);
+      } else if (uMode == 2) {    // breathing: uniform density inside R(1+eps)
+        float inN = inside(vP, vec2(0.0), ab * (1.0 + uEps)), in0 = inside(vP, vec2(0.0), ab);
+        v = inN / pow(1.0 + uEps, 3.0) - in0; v *= 2.2;
+      } else {                    // quadrupole: the stretched surface against the rest
+        vec2 s = vec2(1.0 - 0.5 * uEps, 1.0 + uEps);
+        v = (inside(vP, vec2(0.0), ab * s) - inside(vP, vec2(0.0), ab)) * 0.8;
+      }
+      v *= uGain;
+      vec3 cP = uMode < 2 ? vec3(1.0, 0.55, 0.22) : vec3(1.0, 0.82, 0.35);
+      vec3 cN = uMode < 2 ? vec3(0.35, 0.65, 1.0) : vec3(0.25, 0.45, 0.95);
+      vec3 c = v > 0.0 ? cP : cN; float a = clamp(abs(v), 0.0, 1.0) * 0.85;
+      float rim = smoothstep(0.03, 0.0, abs(length(vP / ab) - 1.0)) * 0.10;
+      gl_FragColor = vec4(c * a + vec3(0.6, 0.7, 0.85) * rim, a + rim);
+      #include <tonemapping_fragment>
+      #include <colorspace_fragment>
+    }`,
+  transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide,
+});
+const slice = new THREE.Mesh(new THREE.PlaneGeometry(3.2, 3.2), sliceMat);
+slice.renderOrder = 4; NUC.add(slice);
+// a double arrow beside the nucleus along each oscillation axis
+const arrowMat = new THREE.MeshBasicMaterial({ color: new THREE.Color("#f2c14e").multiplyScalar(1.4), toneMapped: false, transparent: true, opacity: 0.85 });
+function dblArrow() {
+  const g = new THREE.Group(), sh = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 1.6, 10), arrowMat);
+  const t1 = new THREE.Mesh(new THREE.ConeGeometry(0.12, 0.34, 18), arrowMat), t2 = t1.clone();
+  t1.position.y = 0.95; t2.position.y = -0.95; t2.rotation.z = Math.PI; g.add(sh, t1, t2); return g;
+}
+const arrA = dblArrow(), arrB = dblArrow();
+NUC.add(arrA, arrB);
+
+// ---------- per-nucleus drawing parameters
+let GEO = null;     // { R, a, b, ab, def, E: [E along, E across] }
+function shapeOf(k) {
+  const n = NU[k], s = curSet(), R = RPB * Math.cbrt(n.A / 208);
+  if (!isDef(s)) return { R, a: R, b: R, ab: 1, def: false };
+  // prolate by assumption (E1 < E2: the lower peak along the axis), axis ratio from the hydrodynamic relation
+  const ab = GIANT.abFromRatio(s.fit.E2 / s.fit.E1, D.sys.danos);
+  return { R, a: R * Math.pow(ab, 2 / 3), b: R * Math.pow(ab, -1 / 3), ab, def: true };
+}
+function setupNucleus() {
+  GEO = shapeOf(S.nuc);
+  const n = cur();
+  for (let i = 0; i < MAXP; i++) {
+    const proton = i < n.Z, on = i < n.A;
+    const c = new THREE.Color(proton ? "#ffb06a" : "#8fc4ff"), g = on ? 0.62 + 0.38 * (1 - Math.hypot(U[i][0], U[i][1], U[i][2])) : 0;
+    ptCol[3 * i] = c.r * g; ptCol[3 * i + 1] = c.g * g; ptCol[3 * i + 2] = c.b * g;
+  }
+  ptGeo.setDrawRange(0, n.A);
+  ptGeo.attributes.color.needsUpdate = true;
+  cloud.material.uniforms.uS.value = Math.sqrt(GEO.R / RPB) * 1.05;
+  cage.scale.set(GEO.a, GEO.b, GEO.b); core.scale.set(GEO.a, GEO.b, GEO.b); blob.scale.set(GEO.a * 1.5, GEO.b * 1.5, 1);
+  symAxis.visible = GEO.def; symAxis.scale.setScalar(GEO.a * 1.55);
+  slice.scale.setScalar(GEO.a * 1.0);
+  sliceMat.uniforms.uAB.value.set(1, GEO.b / GEO.a);            // the slice is scaled by a: the surface sits at x = 1, y = b/a
+  sliceMat.uniforms.uZf.value = n.Z / n.A;
+  NUC.position.y = 0;
+}
+
+// ---------- the modes (drawn amplitudes are illustrative; frequencies scale with the energies, slowed down)
+const VIS = 2 * Math.PI * 0.07;     // drawn angular frequency per MeV (rad/s): 14 MeV is about one swing per second
+const AMP = { gt: 0.2, sj: 0.16, gmr: 0.07, gqr: 0.16 };
+function modeEnergies() {
+  const s = curSet();
+  if (S.mode === "gt" || S.mode === "sj") {
+    if (!isDef(s)) return [s.fit.E1, s.fit.E1];
+    return [s.fit.E1, s.fit.E2];                  // along, across
+  }
+  if (S.mode === "gmr") { const g = cur().gmr; return g && g.length ? [g[0].Ec[0], g[0].Ec[0]] : [null, null]; }
+  return [null, null];
+}
+function step(t) {
+  const n = cur(), { a, b } = GEO, mode = S.mode, [Ea, Eb] = modeEnergies();
+  const wa = (Ea || 14) * VIS, wb = (Eb || 14) * VIS;
+  const kOn = GEO.def ? S.k : "0";
+  // amplitude along (x) and across (y) the symmetry axis
+  let ca = 0, cb = 0;
+  if (mode === "gt" || mode === "sj") {
+    const A0 = AMP[mode];
+    if (GEO.def) { if (kOn !== "1") ca = A0 * Math.sin(wa * t); if (kOn !== "0") cb = A0 * Math.sin(wb * t + 0.6); if (kOn === "b") { ca *= 0.75; cb *= 0.75; } }
+    else ca = A0 * Math.sin(wa * t);
+  }
+  const zf = n.Z / n.A, nf = 1 - zf;
+  const pos = ptPos;
+  if (mode === "gt") {
+    // two rigid drops, centre of mass fixed: protons move by N/A of the relative displacement, neutrons by -Z/A
+    const dpx = ca * nf * 2 * a, dpy = cb * nf * 2 * b, dnx = -ca * zf * 2 * a, dny = -cb * zf * 2 * b;
+    for (let i = 0; i < n.A; i++) {
+      const u = U[i], p = i < n.Z;
+      pos[3 * i] = u[0] * a + (p ? dpx : dnx); pos[3 * i + 1] = u[1] * b + (p ? dpy : dny); pos[3 * i + 2] = u[2] * b;
+    }
+    shellP.position.set(dpx, dpy, 0); shellN.position.set(dnx, dny, 0);
+    shellP.scale.set(a, b, b); shellN.scale.set(a, b, b);
+    sliceMat.uniforms.uMode.value = 0;
+    sliceMat.uniforms.uDp.value.set(dpx / a, dpy / a); sliceMat.uniforms.uDn.value.set(dnx / a, dny / a);
+  } else if (mode === "sj") {
+    // displacement along grad(j1(k r) cos) in the scaled frame, protons +N/A, neutrons -Z/A; zero normal flow at the surface
+    for (let i = 0; i < n.A; i++) {
+      const u = U[i], p = i < n.Z, x = u[0], y = u[1], z = u[2], [gx, gy, gz] = GIANT.sjGrad(x, y, z, ca, cb, XSJ);
+      const s = (p ? nf : -zf) * 1.6;
+      pos[3 * i] = (x + s * gx) * a; pos[3 * i + 1] = (y + s * gy) * b; pos[3 * i + 2] = (z + s * gz) * b;
+    }
+    shellP.position.set(0, 0, 0); shellN.position.set(0, 0, 0);
+    shellP.scale.set(a, b, b); shellN.scale.set(a * 1.004, b * 1.004, b * 1.004);
+    sliceMat.uniforms.uMode.value = 1; sliceMat.uniforms.uSJ.value.set(ca / AMP.sj, cb / AMP.sj);
+  } else if (mode === "gmr") {
+    const e = AMP.gmr * Math.sin(wa * t);
+    for (let i = 0; i < n.A; i++) { const u = U[i]; pos[3 * i] = u[0] * a * (1 + e); pos[3 * i + 1] = u[1] * b * (1 + e); pos[3 * i + 2] = u[2] * b * (1 + e); }
+    shellP.position.set(0, 0, 0); shellN.position.set(0, 0, 0);
+    shellP.scale.set(a * (1 + e), b * (1 + e), b * (1 + e)); shellN.scale.copy(shellP.scale).multiplyScalar(1.004);
+    sliceMat.uniforms.uMode.value = 2; sliceMat.uniforms.uEps.value = e;
+  } else {
+    // quadrupole, volume kept to first order: stretch along y (vertical) by 1+e, squeeze x, z by 1-e/2
+    const e = AMP.gqr * Math.sin(wa * t), sx = 1 - e / 2, sy = 1 + e;
+    for (let i = 0; i < n.A; i++) { const u = U[i]; pos[3 * i] = u[0] * a * sx; pos[3 * i + 1] = u[1] * b * sy; pos[3 * i + 2] = u[2] * b * sx; }
+    shellP.position.set(0, 0, 0); shellN.position.set(0, 0, 0);
+    shellP.scale.set(a * sx, b * sy, b * sx); shellN.scale.copy(shellP.scale).multiplyScalar(1.004);
+    sliceMat.uniforms.uMode.value = 3; sliceMat.uniforms.uEps.value = e;
+    sliceMat.uniforms.uAB.value.set(1, b / a);
+  }
+  ptGeo.attributes.position.needsUpdate = true;
+  const iso = mode === "gt" || mode === "sj";
+  shellP.material.uniforms.uI.value = iso ? 1 : 0.8; shellN.material.uniforms.uI.value = iso ? 1 : 0.0;
+  if (!iso) shellP.material.uniforms.uC.value.set("#ffe2b0"); else shellP.material.uniforms.uC.value.set("#ffb06a");
+  // arrows: along x (K = 0 or spherical), across in y (K = 1)
+  arrA.visible = iso && (!GEO.def || kOn !== "1"); arrB.visible = iso && GEO.def && kOn !== "0";
+  arrA.rotation.set(0, 0, Math.PI / 2); arrA.position.set(0, -b - 0.9, 0); arrA.scale.setScalar(Math.max(0.9, a * 0.36));
+  arrB.rotation.set(0, 0, 0); arrB.position.set(a + 1.0, 0, 0); arrB.scale.setScalar(Math.max(0.9, b * 0.36));
+}
+
+// ---------- panels
+const $ = (id) => document.getElementById(id);
+function integrals(s) {
+  const n = cur(), t60 = GIANT.trk(n.Z, n.A, D.trk), pts = s.pts;
+  const lo = pts[0][0], end = pts[pts.length - 1][0], hi = S.emax == null ? end : Math.min(end, Math.max(lo, S.emax));
+  const all = GIANT.trapz(pts, null, hi), fr = GIANT.trapz(pts, s.fit.range[0], s.fit.range[1]);
+  const lor = (e) => GIANT.gdr(e, n.Z, n.A, s.fit, D.trk) + (S.qd ? GIANT.qd(e, n.Z, n.A, D.qd) : 0);
+  const lorFr = GIANT.simpson(lor, s.fit.range[0], s.fit.range[1], 4000);
+  return { t60, lo, hi, end, all, fr, lorFr, frac: all / t60 };
+}
+function drawInfo() {
+  const n = cur(), s = curSet(), fit = s.fit, I = integrals(s);
+  $("selLab").innerHTML = `Selected: ${nucHTML(S.nuc)} (Z = ${n.Z}, N = ${n.N})`;
+  const rows = [];
+  rows.push(["data", `${labName(s)}, ${firstAuthor(s)}, ${s.ref}`]);
+  rows.push(["EXFOR", `${s.id}: ${REACT[s.rea] || s.rea}`]);
+  const pm = (v, d, dd) => `${f(v, dd)}${d != null ? " ± " + f(d, dd) : ""}`;
+  if (isDef(s)) {
+    rows.push(["Lorentzian 1", `E = ${pm(fit.E1, fit.dE1, 2)}, Γ = ${pm(fit.G1, fit.dG1, 2)} MeV, s = ${pm(fit.S1, fit.dS1, 3)}`]);
+    rows.push(["Lorentzian 2", `E = ${pm(fit.E2, fit.dE2, 2)}, Γ = ${pm(fit.G2, fit.dG2, 2)} MeV, s = ${pm(fit.S2, fit.dS2, 3)}`]);
+  } else rows.push(["Lorentzian", `E = ${pm(fit.E1, fit.dE1, 2)} MeV, Γ = ${pm(fit.G1, fit.dG1, 2)} MeV`]);
+  rows.push(["strength s", `<span class="hi">${pm(fit.S, fit.dS, 3)}</span> TRK (fit over ${f(fit.range[0], 1)} to ${f(fit.range[1], 1)} MeV)`]);
+  const pk = [GIANT.peak(n.Z, n.A, fit.S1, fit.G1, D.trk)]; if (isDef(s)) pk.push(GIANT.peak(n.Z, n.A, fit.S2, fit.G2, D.trk));
+  rows.push(["peak σ", pk.map((v) => f(v, 1)).join(", ") + " mb"]);
+  rows.push([`σ<sub>TRK</sub> = ${D.trk} NZ/A`, `${f(I.t60, 1)} mb MeV`]);
+  $("info").innerHTML = rows.map(([a, b]) => `<dt>${a}</dt><dd>${b}</dd>`).join("");
+  const em = $("emax"); em.min = (Math.ceil(Math.max(I.lo, s.fit.range[1]) * 10) / 10).toFixed(1); em.max = I.end.toFixed(2); em.value = I.hi;
+  $("emaxOut").textContent = `${f(I.hi, 1)} MeV`;
+  const r2 = [
+    ["∫σ dE", `${f(I.all, 0)} mb MeV, ${f(I.lo, 1)} to ${f(I.hi, 1)} MeV${I.hi === I.end ? " (all data)" : ""}`],
+    ["in TRK units", `<span class="hi">${f(I.frac, 3)}</span> over ${f(I.lo, 1)} to ${f(I.hi, 1)} MeV`],
+    ["∫σ dE/σ<sub>TRK</sub> − 1", `${f(I.frac - 1, 3)} over this window: not an extracted E1 enhancement κ (${s.rea === "g,sn" ? "photoneutron events only, " : ""}strength outside the window missing, quasi-deuteron absorption inside it)`],
+    ["over the fit range", `data ${f(I.fr, 0)}, Lorentzian${S.qd ? " + QD" : ""} ${f(I.lorFr, 0)} mb MeV`],
+  ];
+  $("intInfo").innerHTML = r2.map(([a, b]) => `<dt>${a}</dt><dd>${b}</dd>`).join("");
+  const w = [];
+  if (/CURVE/.test(s.status)) w.push(`EXFOR status CURVE: these points were digitized from a figure of the paper.`);
+  if (fit.S > 1 + D.delta[1]) w.push(`The fitted strength s = ${f(fit.S, 3)} exceeds 1 + Δ with Δ ≈ ${D.delta[0]} to ${D.delta[1]}, the bound Plujko et al. state for the energy-weighted sum (their Eq. (11)); shown as published.`);
+  if (s.rea === "g,sn") w.push("σ(γ,sn) counts photoneutron events only; Plujko et al. take it for the photoabsorption when photoproton emission is small, and call that poor for light nuclei, where photo-charged-particle reactions are important.");
+  if (n.A < 40) w.push("Plujko et al. call the one- or two-Lorentzian description appropriate for rather heavy (A ≳ 40) spherical and axially deformed nuclei near the GDR energy; this nucleus is lighter.");
+  $("warn").hidden = !w.length; $("warn").innerHTML = w.join(" ");
+  for (const b of document.querySelectorAll("#nucs button")) b.setAttribute("aria-pressed", b.dataset.k === S.nuc ? "true" : "false");
+  $("sets").innerHTML = n.sets.map((x, i) => `<button data-i="${i}" aria-pressed="${i === S.set}" style="${i === S.set ? "" : `color:${setColor(x)}`}">${LAB_C[x.lab] ? x.lab : firstAuthor(x).replace(" et al.", "")} ${x.short.slice(0, 4)}</button>`).join("");
+  $("toColl").href = CNU[S.nuc] ? `collective.html#${S.nuc}` : "collective.html#208Pb~oct";
+}
+function drawTrk() {
+  const n = cur(), m = MASS[S.mass], c = GIANT.trkConst(CD, m), nz = n.N * n.Z / n.A;
+  const rows = [
+    ["2π²α(ħc)²/(mc²)", `<span class="hi">${f(c, 2)}</span> mb MeV, m = ${MASS_L[S.mass]} = ${f(m, 3)} MeV`],
+    ["Plujko et al. print", `${D.trk} mb MeV (${f(100 * (D.trk / c - 1), 2)} % above)`],
+    [`NZ/A for ${nucHTML(S.nuc)}`, `${f(nz, 3)}: σ<sub>TRK</sub> = ${f(c * nz, 1)} mb MeV`],
+  ];
+  $("trkInfo").innerHTML = rows.map(([a, b]) => `<dt>${a}</dt><dd>${b}</dd>`).join("");
+  for (const b of document.querySelectorAll("#mass button")) b.setAttribute("aria-pressed", b.dataset.v === S.mass ? "true" : "false");
+}
+function drawGmr() {
+  const n = cur(), g = n.gmr || [], show = S.mode === "gmr";
+  $("gGmr").hidden = !show;
+  if (!show) return;
+  const m = MASS[S.mass], rows = [], hc = CD.hbarc;
+  const rpp = n.rch ? GIANT.rPointProton(n.rch[0], CD.rp, n.N, n.Z, D.nMsr) : null;
+  if (!g.length) rows.push(["ISGMR", "no entry for this nucleus in Garg and Colò's Table 1"]);
+  for (const x of g) {
+    const e = x.Ec, unc = e[1] === e[2] ? `± ${e[1]}` : `+${e[1]} −${e[2]}`, ew = x.ewsr;
+    rows.push([`√(m<sub>1</sub>/m<sub>−1</sub>) ${x.probe}${x.mark === "dagger" ? " †" : ""}`, `${e[0]} ${unc} MeV (${x.ref})`]);
+    rows.push(["EWSR fraction", ew ? `${ew[0]}${ew[1] != null ? (ew[1] === ew[2] ? ` ± ${ew[1]}` : ` +${ew[1]} −${ew[2]}`) : ""} %` : "not given"]);
+    if (rpp) rows.push(["K<sub>A</sub>, point-proton r", `<span class="hi">${f(GIANT.kA(e[0], rpp, m, hc), 1)}</span> MeV (with r<sub>ch</sub>: ${f(GIANT.kA(e[0], n.rch[0], m, hc), 1)})`]);
+  }
+  if (n.rch) {
+    rows.push(["r<sub>ch</sub> (charge, rms)", `${f(n.rch[0], 4)} ± ${n.rch[1]} fm`]);
+    rows.push(["r<sub>pp</sub> (point protons)", `${f(rpp, 4)} fm: K<sub>A</sub> with r<sub>ch</sub> is ${f(100 * ((n.rch[0] / rpp) ** 2 - 1), 1)} % higher`]);
+    if (n.N > n.Z) rows.push(["neutron skin", `not removed: 0.1 fm of skin raises the matter rms radius by about (N/A)·0.1 = ${f(0.1 * n.N / n.A, 3)} fm, K<sub>A</sub> by ${f(100 * 2 * 0.1 * (n.N / n.A) / rpp, 1)} %`]);
+  }
+  $("gmrInfo").innerHTML = rows.map(([a, b]) => `<dt>${a}</dt><dd>${b}</dd>`).join("");
+  $("gmrNote").innerHTML = `Garg and Colò give E<sub>ISGMR</sub> = √(ħ²AK<sub>A</sub>/(m⟨r²⟩<sub>0</sub>)) with ⟨r²⟩<sub>0</sub> the ground-state value of Σ<sub>i</sub>r<sub>i</sub>², i.e. A⟨r²⟩, "if we assume that the matter radius is known". Their preceding equation, K<sub>A</sub> = m⟨r²⟩<sub>0</sub>²m<sub>1</sub>/(Aħ²m<sub>−1</sub>), has one power of ⟨r²⟩ too many (its dimension is energy × length²); the page uses the per-nucleon form K<sub>A</sub> = m⟨r²⟩E²/ħ² that follows from their definition (m as chosen in the TRK row). The matter radius is not on this page: it takes the point-proton radius r<sub>pp</sub>² = r<sub>ch</sub>² − r<sub>p</sub>² − (N/Z)⟨r²⟩<sub>n</sub> (CODATA 2018 r<sub>p</sub> = ${CD.rp} fm; ⟨r²⟩<sub>n</sub> = ${D.nMsr} fm², the neutron row of the same radius table, included; no Darwin-Foldy term) as a stand-in, which ignores the neutron skin. K<sub>A</sub> goes as r². K<sub>A</sub> of a finite nucleus is not the nuclear-matter K<sub>∞</sub>. † multimodal strength, main peak only (their caption).`;
+}
+function drawDef() {
+  const s = curSet(), show = isDef(s);
+  $("gDef").hidden = !show;
+  if (!show) return;
+  const fit = s.fit, Dr = fit.E2 / fit.E1, ab = GIANT.abFromRatio(Dr, D.sys.danos), a2 = GIANT.alpha2FromAb(ab);
+  const rows = [
+    ["E<sub>a</sub> along (K = 0)", `${f(fit.E1, 2)} MeV, s = ${f(fit.S1, 3)}`],
+    ["E<sub>b</sub> across (K = 1)", `${f(fit.E2, 2)} MeV, s = ${f(fit.S2, 3)}`],
+    ["E<sub>b</sub>/E<sub>a</sub>", `${f(Dr, 4)}`],
+    [`a/b from ${D.sys.danos[0]} a/b + ${D.sys.danos[1]}`, `<span class="hi">${f(ab, 3)}</span> (α<sub>2</sub> = ${f(a2, 3)})`],
+    ["s<sub>2</sub>/s<sub>1</sub>", `${f(fit.S2 / fit.S1, 2)} (2 for two equal transverse modes)`],
+  ];
+  const c = CNU[S.nuc];
+  if (c && c.be2 && !c.be2[4]) {
+    const beta = COLL.beta2(c.Z, c.Z + c.N, c.be2[0]);
+    rows.push(["|β<sub>2</sub>| from B(E2)↑", `${f(beta, 3)} (B(E2) = ${c.be2[0]} e²b², collective page data)`]);
+    rows.push(["a/b of R<sub>0</sub>(1 + βY<sub>20</sub>)", `<span class="hi">${f(GIANT.abFromBeta(beta), 3)}</span>`]);
+  } else rows.push(["B(E2)", "no adopted B(E2; 0<sup>+</sup>→2<sup>+</sup>) on file for this nucleus (odd A or none)"]);
+  $("defInfo").innerHTML = rows.map(([a, b]) => `<dt>${a}</dt><dd>${b}</dd>`).join("");
+  $("defNote").innerHTML = `Prolate is assumed, so the lower peak is the vibration along the symmetry axis (K = 0) and the upper one the two vibrations across it (K = 1); that also expects s<sub>2</sub> ≈ 2s<sub>1</sub> (Plujko et al., Eq. (13)). The hydrodynamic ratio E<sub>b</sub>/E<sub>a</sub> = ${D.sys.danos[0]} a/b + ${D.sys.danos[1]} is Danos's (1958), as written in the RIPL-4 systematics readme with a/b = (1 + α<sub>2</sub>)/(1 − α<sub>2</sub>/2). The second axis ratio is that of the sharp surface with |β<sub>2</sub>| from B(E2) (Pritychenko et al. 2016 convention, as on the collective page); two different deformation measures, compared, not combined. The drawn spheroid takes a/b from the GDR.`;
+}
+function drawLabs() {
+  const n = cur(), L = n.sets.find((s) => s.lab === "Livermore"), Sa = n.sets.find((s) => s.lab === "Saclay");
+  $("gLab").hidden = !(L && Sa);
+  if (!(L && Sa)) return;
+  const lo = Math.max(L.pts[0][0], Sa.pts[0][0]), hi = Math.min(L.pts[L.pts.length - 1][0], Sa.pts[Sa.pts.length - 1][0]);
+  const iL = GIANT.trapz(L.pts, lo, hi), iS = GIANT.trapz(Sa.pts, lo, hi), t = GIANT.trk(n.Z, n.A, D.trk);
+  const rows = [
+    ["common range", `${f(lo, 2)} to ${f(hi, 2)} MeV`],
+    [`Livermore ${L.short}`, `${f(iL, 0)} mb MeV = ${f(iL / t, 3)} TRK; fit s = ${f(L.fit.S, 3)}`],
+    [`Saclay ${Sa.short}`, `${f(iS, 0)} mb MeV = ${f(iS / t, 3)} TRK; fit s = ${f(Sa.fit.S, 3)}`],
+    ["Saclay / Livermore", `<span class="hi">${f(iS / iL, 3)}</span> (σ(γ,sn), trapezoid over the common range)`],
+  ];
+  rows.push(["Livermore sums", L.reaction.replace(/^\([^)]*\)\)?\s*/, "").replace(/^.*?(The sum|the sum)/, "$1")]);
+  rows.push(["Saclay sums", Sa.reaction.replace(/^.*?(The sum|the sum)/, "$1")]);
+  if (S.nuc === "197Au") {
+    const x = D.au3n, i3 = GIANT.trapz(x.pts, lo, hi);
+    rows.push(["(γ,3n), Saclay", `in the Saclay sum only: EXFOR ${x.id} gives ${f(i3, 1)} mb MeV from ${f(x.pts[0][0], 2)} MeV to ${f(hi, 2)} MeV, ${f(100 * i3 / iS, 2)} % of the Saclay integral over the common range; the (γ,2n+p) term has no separate subentry in the saved file`]);
+  }
+  $("labInfo").innerHTML = rows.map(([a, b]) => `<dt>${a}</dt><dd>${b}</dd>`).join("");
+  $("qKawano").innerHTML = `“${D.kawano}” (Kawano et al. 2020, Sec. on the evaluation of experimental data)`;
+  $("qM0635").innerHTML = `“${D.m0635}” (EXFOR M0635, Varlamov et al. 2003, ANALYSIS)`;
+  $("qNote").innerHTML = `Both quotes concern the partial (γ,1n) and (γ,2n) cross sections and the neutron yield σ(γ,xn); the page shows the total photoneutron σ(γ,sn) = σ(γ,1n) + σ(γ,2n) + …, in which the multiplicity sorting partly cancels. The two laboratories also differ in photon flux and detector efficiency. Neither data set is corrected here.`;
+}
+function drawSceneInfo() {
+  const n = cur(), s = curSet(), [Ea, Eb] = modeEnergies(), def = GEO && GEO.def;
+  $("kax").hidden = !(def && (S.mode === "gt" || S.mode === "sj"));
+  for (const b of document.querySelectorAll("#kax button")) b.setAttribute("aria-pressed", b.dataset.v === S.k ? "true" : "false");
+  for (const b of document.querySelectorAll("#mode button")) b.setAttribute("aria-pressed", b.dataset.v === S.mode ? "true" : "false");
+  const notes = {
+    gt: "Goldhaber-Teller: the protons and the neutrons are two rigid, interpenetrating drops whose centres swing apart; the pull back acts where the two no longer overlap, at the surface.",
+    sj: `Steinwedel-Jensen: the surface stays put and the proton and neutron densities slosh inside it as a standing wave, δρ<sub>p</sub> − δρ<sub>n</sub> ∝ j<sub>1</sub>(kr) cos θ, with no flow through the surface: j<sub>1</sub>′(kR) = 0, kR = ${f(XSJ, 4)}.`,
+    gmr: "Isoscalar giant monopole: all nucleons move in and out together, so the mode measures how hard nuclear matter is to compress (the incompressibility below).",
+    gqr: "Isoscalar giant quadrupole: protons and neutrons together stretch and squeeze the shape; drawn as a volume-keeping Y<sub>20</sub> oscillation. No energy on this page (no saved source).",
+  };
+  $("modeNote").innerHTML = notes[S.mode];
+  const per = (E) => (E ? `${(2 * Math.PI * HBAR / E * 1e22).toFixed(2)}×10<sup>−22</sup> s` : "n/a");
+  let line = "";
+  if (S.mode === "gt" || S.mode === "sj") line = def ? `E<sub>a</sub> = ${f(Ea, 2)}, E<sub>b</sub> = ${f(Eb, 2)} MeV · periods ${per(Ea)}, ${per(Eb)}` : `E = ${f(Ea, 2)} MeV · one period ${per(Ea)}`;
+  else if (S.mode === "gmr") line = Ea ? `E = ${f(Ea, 2)} MeV · one period ${per(Ea)}` : "no ISGMR energy for this nucleus on this page";
+  else line = "drawn frequency illustrative";
+  $("stamp").innerHTML = `<b>${nucHTML(S.nuc)}</b><small>${{ gt: "GDR, Goldhaber-Teller", sj: "GDR, Steinwedel-Jensen", gmr: "giant monopole", gqr: "giant quadrupole" }[S.mode]} · ${line}</small>`;
+  const slow = Ea ? (Ea / HBAR) / (Ea * VIS) : null;
+  $("drawn").innerHTML = `What is drawn: ${n.Z} warm points (protons) and ${n.N} cool points (neutrons) at random places inside the nucleus, radius ∝ A<sup>1/3</sup>${def ? `, a prolate spheroid with the axis ratio ${f(GEO.ab, 3)} that the two GDR peaks give through the hydrodynamic ratio (lower peak along the dashed symmetry axis)` : ""}; the glowing rims are the proton and neutron surfaces; the slice through the centre shows the density change (isovector modes: warm where protons are in excess, cool where neutrons are; isoscalar modes: gold denser, blue thinner). Amplitudes are exaggerated, chosen to be seen. Frequencies are in the ratio of the energies${slow ? `, slowed down by ${(slow / 1e21).toFixed(2)}×10<sup>21</sup>` : ""}.`;
+}
+
+// ---------- plots
+function setupCanvas(c) {
+  const d = Math.min(devicePixelRatio, 2), w = c.clientWidth, h = c.clientHeight;
+  c.width = Math.max(1, w * d); c.height = Math.max(1, h * d);
+  const x = c.getContext("2d"); x.setTransform(d, 0, 0, d, 0, 0);
+  return { x, w, h };
+}
+const NICE = [0.05, 0.1, 0.2, 0.25, 0.5, 1, 2, 2.5, 5, 10, 20, 25, 50, 100, 200, 250, 500, 1000];
+function axes(ctx, w, h, P) {
+  const { L, R, T, B, x0, x1, y0, y1 } = P;
+  const Xp = (v) => L + (v - x0) / (x1 - x0) * (w - L - R), Yp = (v) => T + (y1 - v) / (y1 - y0) * (h - T - B);
+  ctx.font = "10px ui-monospace,Menlo,monospace"; ctx.lineWidth = 1;
+  const ys = NICE.find((s) => (y1 - y0) / s <= 5) || 2000;
+  for (let v = Math.ceil(y0 / ys) * ys; v <= y1 + 1e-9; v += ys) {
+    ctx.strokeStyle = "#1e2432"; ctx.beginPath(); ctx.moveTo(L, Yp(v)); ctx.lineTo(w - R, Yp(v)); ctx.stroke();
+    ctx.fillStyle = "#8a92a6"; ctx.textAlign = "right"; ctx.fillText(String(+v.toFixed(3)), L - 4, Yp(v) + 3);
+  }
+  const xs = NICE.find((s) => (x1 - x0) / s <= 7) || 2000;
+  ctx.textAlign = "center";
+  for (let v = Math.ceil(x0 / xs) * xs; v <= x1 + 1e-9; v += xs) if (Xp(v) < w - R - 7 * P.xl.length - 10) ctx.fillText(String(+v.toFixed(3)), Xp(v), h - 5);
+  ctx.textAlign = "right"; ctx.fillText(P.xl, w - R, h - 5);
+  ctx.textAlign = "left"; ctx.fillText(P.yl, L + 3, T + 9);
+  return { Xp, Yp };
+}
+function xRange() { const n = cur(); return n.A < 60 ? [10, 36] : n.A < 120 ? [9, 30] : [6, 28]; }
+function drawSigma() {
+  const c = $("psx"), { x: ctx, w, h } = setupCanvas(c), n = cur(), [x0, x1] = xRange();
+  $("sxTitle").innerHTML = `Photonuclear cross section of ${nucHTML(S.nuc)}`;
+  let ymax = 0;
+  for (const s of n.sets) for (const p of s.pts) if (p[0] >= x0 && p[0] <= x1) ymax = Math.max(ymax, p[1] + Math.min(p[2] || 0, 0.3 * p[1]));
+  const ev = n.eval.pts.filter((p) => p[0] >= x0 && p[0] <= x1);
+  if (S.ev) for (const p of ev) ymax = Math.max(ymax, p[1]);
+  const P = { L: 38, R: 8, T: 8, B: 18, x0, x1, y0: 0, y1: ymax * 1.08, xl: "E MeV", yl: "" };
+  const { Xp, Yp } = axes(ctx, w, h, P);
+  ctx.save(); ctx.beginPath(); ctx.rect(P.L, P.T, w - P.L - P.R, h - P.T - P.B); ctx.clip();
+  const act = curSet(), lor = (s, e, which) => GIANT.gdr(e, n.Z, n.A, s.fit, D.trk, which) + (S.qd && !which ? GIANT.qd(e, n.Z, n.A, D.qd) : 0);
+  // K components of the active fit, shaded
+  if (isDef(act)) for (const [which, col] of [[1, K0_C], [2, K1_C]]) {
+    ctx.beginPath(); ctx.moveTo(Xp(x0), Yp(0));
+    for (let e = x0; e <= x1; e += 0.05) ctx.lineTo(Xp(e), Yp(lor(act, e, which)));
+    ctx.lineTo(Xp(x1), Yp(0)); ctx.closePath(); ctx.fillStyle = col + "30"; ctx.fill(); ctx.strokeStyle = col + "aa"; ctx.lineWidth = 1; ctx.stroke();
+  }
+  // fit range of the active set
+  ctx.fillStyle = "rgba(242,193,78,0.06)"; ctx.fillRect(Xp(act.fit.range[0]), P.T, Xp(act.fit.range[1]) - Xp(act.fit.range[0]), h - P.T - P.B);
+  // evaluated
+  if (S.ev && ev.length) { ctx.strokeStyle = EV_C; ctx.globalAlpha = 0.5; ctx.lineWidth = 1.2; ctx.beginPath(); ev.forEach((p, i) => (i ? ctx.lineTo(Xp(p[0]), Yp(p[1])) : ctx.moveTo(Xp(p[0]), Yp(p[1])))); ctx.stroke(); ctx.globalAlpha = 1; }
+  // data: bars and points; then the Lorentzian of each set
+  for (const s of n.sets) {
+    const col = setColor(s), on = s === act;
+    ctx.globalAlpha = on ? 1 : 0.45;
+    ctx.strokeStyle = col; ctx.lineWidth = 1;
+    for (const p of s.pts) { if (p[0] < x0 || p[0] > x1 || !p[2]) continue; ctx.beginPath(); ctx.moveTo(Xp(p[0]), Yp(p[1] - p[2])); ctx.lineTo(Xp(p[0]), Yp(p[1] + p[2])); ctx.stroke(); }
+    ctx.fillStyle = col;
+    for (const p of s.pts) { if (p[0] < x0 || p[0] > x1) continue; ctx.beginPath(); ctx.arc(Xp(p[0]), Yp(p[1]), on ? 2.2 : 1.8, 0, 2 * Math.PI); ctx.fill(); }
+    ctx.lineWidth = on ? 2 : 1.2; ctx.setLineDash(on ? [] : [5, 3]); ctx.strokeStyle = col; ctx.beginPath();
+    for (let e = x0; e <= x1; e += 0.05) { const v = lor(s, e); if (e === x0) ctx.moveTo(Xp(e), Yp(v)); else ctx.lineTo(Xp(e), Yp(v)); }
+    ctx.stroke(); ctx.setLineDash([]); ctx.globalAlpha = 1;
+  }
+  ctx.restore();
+  const leg = n.sets.map((s) => `<span><i style="background:${setColor(s)}"></i>${labName(s)}, ${firstAuthor(s)} ${s.short.slice(0, 4)}</span>`);
+  leg.push(`<span style="color:${EV_C}"><b class="ln" style="border-color:${EV_C}"></b>evaluated</span>`);
+  if (isDef(act)) leg.push(`<span style="color:${K0_C}"><i style="background:${K0_C}99"></i>K = 0 component</span><span style="color:${K1_C}"><i style="background:${K1_C}99"></i>K = 1 component</span>`);
+  $("sxLeg").innerHTML = leg.join("");
+  const e = n.eval;
+  $("sxNote").innerHTML = `Points: EXFOR ${n.sets.map((s) => s.id).join(", ")} (${n.sets.map((s) => REACT[s.rea] || s.rea).filter((v, i, a) => a.indexOf(v) === i).join("; ")}), error bars as compiled. Curves: the SLO Lorentzian${isDef(act) ? "s" : ""} Plujko et al. fitted to each set over the shaded range${S.qd ? ", plus their quasi-deuteron term" : ""} (solid: selected set). Evaluated: ENDF/B-VIII.1 ${e.file}, MF3 MT${e.mt}; header “${e.line5}”. Kawano et al.'s appendix table lists this nuclide as IAEA 1999: ${e.kawano[0] || "none"}, IAEA 2019: ${e.kawano[1] === "=" ? "= (the 1999 file carried over)" : e.kawano[1]}; ${e.isPD2019 ? "so this file is the IAEA 2019 one" : `so this file (${e.lab}) is not the IAEA 2019 one`}.${S.nuc === "16O" ? " Their own <sup>16</sup>O subsection, however, describes a new evaluation of σ<sub>abs</sub> that drops the older resonance near 13 MeV, which contradicts their \"=\" entry; flagged, not resolved." : ""}`;
+}
+let IP = [];
+function drawInt() {
+  const c = $("pint"), { x: ctx, w, h } = setupCanvas(c), n = cur(), t = GIANT.trk(n.Z, n.A, D.trk), [x0, x1] = xRange();
+  const runs = n.sets.map((s) => ({ s, r: GIANT.running(s.pts) }));
+  let ymax = 1 + D.delta[1];
+  for (const { r } of runs) for (const p of r) if (p[0] <= x1) ymax = Math.max(ymax, p[1] / t);
+  const P = { L: 34, R: 8, T: 8, B: 18, x0, x1, y0: 0, y1: ymax * 1.1, xl: "E MeV", yl: "" };
+  const { Xp, Yp } = axes(ctx, w, h, P);
+  ctx.save(); ctx.beginPath(); ctx.rect(P.L, P.T, w - P.L - P.R, h - P.T - P.B); ctx.clip();
+  ctx.fillStyle = "rgba(185,166,255,0.08)"; ctx.fillRect(P.L, Yp(1 + D.delta[1]), w - P.L - P.R, Yp(1 + D.delta[0]) - Yp(1 + D.delta[1]));
+  ctx.strokeStyle = "#c9d6ea"; ctx.setLineDash([5, 3]); ctx.beginPath(); ctx.moveTo(P.L, Yp(1)); ctx.lineTo(w - P.R, Yp(1)); ctx.stroke(); ctx.setLineDash([]);
+  const act = curSet();
+  for (const { s, r } of runs) {
+    ctx.strokeStyle = setColor(s); ctx.lineWidth = s === act ? 2 : 1.2; ctx.globalAlpha = s === act ? 1 : 0.5;
+    ctx.beginPath(); r.forEach((p, i) => (i ? ctx.lineTo(Xp(p[0]), Yp(p[1] / t)) : ctx.moveTo(Xp(p[0]), Yp(p[1] / t)))); ctx.stroke(); ctx.globalAlpha = 1;
+  }
+  // the Lorentzian (+ QD) of the active set, integrated from the first data point
+  const e0 = act.pts[0][0], lor = (e) => GIANT.gdr(e, n.Z, n.A, act.fit, D.trk) + (S.qd ? GIANT.qd(e, n.Z, n.A, D.qd) : 0);
+  ctx.strokeStyle = setColor(act); ctx.setLineDash([4, 3]); ctx.lineWidth = 1.2; ctx.beginPath();
+  let acc = 0, prev = lor(e0); ctx.moveTo(Xp(e0), Yp(0));
+  for (let e = e0 + 0.05; e <= x1; e += 0.05) { const v = lor(e); acc += 0.5 * (v + prev) * 0.05; prev = v; ctx.lineTo(Xp(e), Yp(acc / t)); }
+  ctx.stroke(); ctx.setLineDash([]);
+  const I0 = integrals(act);
+  if (I0.hi <= x1) { ctx.strokeStyle = "#f2c14e"; ctx.globalAlpha = 0.7; ctx.beginPath(); ctx.moveTo(Xp(I0.hi), P.T); ctx.lineTo(Xp(I0.hi), h - P.B); ctx.stroke(); ctx.globalAlpha = 1;
+    ctx.fillStyle = "#f2c14e"; ctx.beginPath(); ctx.arc(Xp(I0.hi), Yp(I0.frac), 3.5, 0, 2 * Math.PI); ctx.fill(); }
+  ctx.restore();
+  ctx.font = "10px ui-monospace,Menlo,monospace"; ctx.fillStyle = "#c9d6ea"; ctx.textAlign = "left"; ctx.fillText("TRK", P.L + 4, Yp(1) - 3);
+  ctx.fillStyle = "#b9a6ff"; ctx.fillText(`1 + Δ`, P.L + 34, Yp(1 + D.delta[1]) - 3);
+  const I = integrals(act);
+  $("intNote").innerHTML = `Running ∫σ dE from the lowest data point, in units of ${D.trk} NZ/A = ${f(t, 1)} mb MeV; dashed: the selected Lorentzian${S.qd ? " with the quasi-deuteron term" : ""}. Band: 1 + Δ, Δ ≈ ${D.delta[0]} to ${D.delta[1]}, which Plujko et al. attribute to velocity-dependent and exchange forces. The selected data reach ${f(I.frac, 3)} TRK by ${f(I.hi, 1)} MeV (amber mark; the slider on the left moves it)${I.end > x1 + 0.5 ? `; they run on to ${f(I.end, 0)} MeV, beyond this frame` : ""}. Above the GDR a running integral keeps climbing (quasi-deuteron absorption, and higher up meson production), so the ratio depends on where the integral stops. Fits on this page above 1 + ${D.delta[1]}: ${KEYS.flatMap((k) => NU[k].sets.filter((x) => x.fit.S > 1 + D.delta[1]).map((x) => `${nucHTML(k)} ${labName(x) === x.lab ? x.lab : firstAuthor(x)} ${x.short.slice(0, 4)} s = ${f(x.fit.S, 3)}`)).join(", ")}.`;
+}
+let EA = [];
+function drawEA() {
+  const c = $("pea"), { x: ctx, w, h } = setupCanvas(c);
+  const rec = D.rec.filter((r) => r[1] > 0);
+  const P = { L: 30, R: 8, T: 8, B: 18, x0: 0, x1: 250, y0: 8, y1: 36, xl: "A", yl: "MeV" };
+  const { Xp, Yp } = axes(ctx, w, h, P);
+  ctx.save(); ctx.beginPath(); ctx.rect(P.L, P.T, w - P.L - P.R, h - P.T - P.B); ctx.clip();
+  // curves: E_BF, E_SJ (functions of A), and the RIPL-4 systematics at each measured (Z, A)
+  const curve = (fn, col, dash) => { ctx.strokeStyle = col; ctx.setLineDash(dash); ctx.lineWidth = 1.3; ctx.beginPath(); for (let A = 4; A <= 250; A += 1) { const v = fn(A); if (A === 4) ctx.moveTo(Xp(A), Yp(v)); else ctx.lineTo(Xp(A), Yp(v)); } ctx.stroke(); ctx.setLineDash([]); };
+  curve((A) => GIANT.bf(A, D.bf), "#f2c14e", []);
+  curve((A) => GIANT.sj(A, D.sj), "#b9a6ff", [5, 3]);
+  const sorted = rec.slice().sort((a, b) => a[1] - b[1]);
+  ctx.strokeStyle = "#c9d6ea"; ctx.globalAlpha = 0.55; ctx.lineWidth = 1; ctx.beginPath();
+  sorted.forEach((r, i) => { const v = GIANT.sysE(r[0], r[1], D.sys); if (i) ctx.lineTo(Xp(r[1]), Yp(v)); else ctx.moveTo(Xp(r[1]), Yp(v)); });
+  ctx.stroke(); ctx.globalAlpha = 1;
+  EA = [];
+  for (const r of rec) {
+    const fit = { E1: r[2], S1: r[4], E2: r[5], S2: r[7] }, E = GIANT.avgE(fit), A = r[1];
+    if (r[5] != null) { ctx.strokeStyle = "rgba(201,214,234,0.35)"; ctx.beginPath(); ctx.moveTo(Xp(A), Yp(r[2])); ctx.lineTo(Xp(A), Yp(r[5])); ctx.stroke(); }
+    ctx.fillStyle = "#7d869b"; ctx.beginPath(); ctx.arc(Xp(A), Yp(E), 2.2, 0, 2 * Math.PI); ctx.fill();
+  }
+  for (const k of KEYS) {
+    const n = NU[k], r = rec.find((q) => q[0] === n.Z && q[1] === n.A); if (!r) continue;
+    const E = GIANT.avgE({ E1: r[2], S1: r[4], E2: r[5], S2: r[7] }), X0 = Xp(n.A), Y0 = Yp(E);
+    ctx.fillStyle = k === S.nuc ? "#ffffff" : "#f2c14e"; ctx.beginPath(); ctx.arc(X0, Y0, k === S.nuc ? 4.2 : 3.2, 0, 2 * Math.PI); ctx.fill();
+    if (k === S.nuc) { ctx.strokeStyle = "#fff"; ctx.beginPath(); ctx.arc(X0, Y0, 7, 0, 2 * Math.PI); ctx.stroke(); }
+    EA.push({ x: X0, y: Y0, k });
+  }
+  ctx.restore();
+  // rms of the recommended energies against the systematics and against E_BF
+  let s1 = 0, s2 = 0, nn = 0;
+  for (const r of rec) { const E = GIANT.avgE({ E1: r[2], S1: r[4], E2: r[5], S2: r[7] }); s1 += (E - GIANT.sysE(r[0], r[1], D.sys)) ** 2; s2 += (E - GIANT.bf(r[1], D.bf)) ** 2; nn++; }
+  $("eaLeg").innerHTML = `<span><i style="background:#7d869b"></i>Plujko et al., recommended</span><span><i style="background:#f2c14e"></i>this page's nuclei</span><span style="color:#f2c14e"><b class="ln" style="border-color:#f2c14e"></b>E<sub>BF</sub></span><span style="color:#b9a6ff"><b class="ln dl" style="border-color:#b9a6ff"></b>E<sub>SJ</sub></span><span style="color:#c9d6ea"><b class="ln" style="border-color:#c9d6ea"></b>RIPL-4 systematics</span>`;
+  $("eaNote").innerHTML = `${nn} isotopes (natural-element entries left out); for two Lorentzians the point is the strength-weighted mean (E<sub>1</sub>s<sub>1</sub> + E<sub>2</sub>s<sub>2</sub>)/s, the bar joins E<sub>1</sub> and E<sub>2</sub>. E<sub>BF</sub> = ${D.bf[0]} A<sup>−1/3</sup> + ${D.bf[1]} A<sup>−1/6</sup> MeV (Berman and Fultz, as quoted by Ait Ben Mennana et al.), the A<sup>−1/3</sup> term the Steinwedel-Jensen and the A<sup>−1/6</sup> term the Goldhaber-Teller scaling; E<sub>SJ</sub> = ${D.sj} A<sup>−1/3</sup> MeV. RIPL-4: E = ${D.sys.e1}(4NZ/A²)<sup>1/2</sup>A<sup>−1/3</sup>/(1 + ${D.sys.e2}A<sup>−1/3</sup>)<sup>1/2</sup>, drawn through the measured (Z, A). rms deviation of the points: ${f(Math.sqrt(s1 / nn), 2)} MeV from RIPL-4, which is that systematics' fit residual (it was least-squares fitted to these recommended parameters), and ${f(Math.sqrt(s2 / nn), 2)} MeV from E<sub>BF</sub>, which was not fitted to them; the two numbers are not a fair contest.`;
+}
+function drawPlots() { drawSigma(); drawInt(); drawEA(); }
+function hit(list, e, c) { const b = c.getBoundingClientRect(), x = e.clientX - b.left, y = e.clientY - b.top; let best = null, bd = 12; for (const p of list) { const d = Math.hypot(p.x - x, p.y - y); if (d < bd) { bd = d; best = p; } } return best; }
+$("pea").addEventListener("click", (e) => { const p = hit(EA, e, $("pea")); if (p) select(p.k); });
+
+// ---------- actions
+function drawAll() { setupNucleus(); drawInfo(); drawTrk(); drawGmr(); drawDef(); drawLabs(); drawSceneInfo(); drawPlots(); writeHash(); }
+function writeHash() {
+  const s = curSet(), parts = [S.nuc];
+  if (S.mode !== "gt") parts.push(S.mode);
+  if (GEO && GEO.def && S.k !== "b" && (S.mode === "gt" || S.mode === "sj")) parts.push("k" + S.k);
+  let h = "#" + parts.join("~");
+  if (S.set > 0) h += "@" + s.id;
+  if (location.hash !== h) history.replaceState(null, "", h);
+}
+function select(k) { if (!NU[k]) return; S.nuc = k; S.set = 0; S.emax = null; drawAll(); }
+function parseKey(s) {
+  const m = String(s).trim().toLowerCase().match(/^(\d+)([a-z]+)$/) || String(s).trim().toLowerCase().match(/^([a-z]+)(\d+)$/);
+  if (!m) return null;
+  const [A, el] = /^\d/.test(m[1]) ? [m[1], m[2]] : [m[2], m[1]];
+  return KEYS.find((k) => k.toLowerCase() === A + el) || null;
+}
+// hash: #208Pb, #165Ho~sj, #165Ho~gt~k0, #208Pb~gmr, #197Au@L0021010
+function readHash(h) {
+  let s = ""; try { s = decodeURIComponent(String(h || "").replace(/^#/, "")); } catch (e) { return false; }
+  const [main, setId] = s.split("@"), parts = main.split("~"), k = parseKey(parts[0]);
+  if (!k) return false;
+  let mode = "gt", kk = "b";
+  for (const p of parts.slice(1).map((x) => x.toLowerCase())) {
+    if (["gt", "sj", "gmr", "gqr"].includes(p)) mode = p;
+    else if (/^k[01b]$/.test(p)) kk = p[1];
+  }
+  S.nuc = k; S.mode = mode; S.k = kk; S.set = 0;
+  if (setId) { const i = NU[k].sets.findIndex((x) => x.id.toLowerCase() === setId.toLowerCase()); if (i >= 0) S.set = i; }
+  drawAll();
+  return true;
+}
+
+// ---------- UI wiring
+$("nucs").innerHTML = KEYS.map((k) => `<button data-k="${k}">${nucHTML(k)}</button>`).join("");
+$("nucs").addEventListener("click", (e) => { const b = e.target.closest("button"); if (b) select(b.dataset.k); });
+$("sets").addEventListener("click", (e) => { const b = e.target.closest("button"); if (!b) return; S.set = +b.dataset.i; S.emax = null; drawAll(); });
+$("emax").addEventListener("input", (e) => { const v = +e.target.value, s = curSet(); S.emax = v >= s.pts[s.pts.length - 1][0] - 1e-9 ? null : v; drawInfo(); drawInt(); });
+$("mode").addEventListener("click", (e) => { const b = e.target.closest("button"); if (!b) return; S.mode = b.dataset.v; drawAll(); });
+$("kax").addEventListener("click", (e) => { const b = e.target.closest("button"); if (!b) return; S.k = b.dataset.v; drawSceneInfo(); writeHash(); });
+$("mass").addEventListener("click", (e) => { const b = e.target.closest("button"); if (!b) return; S.mass = b.dataset.v; drawTrk(); drawGmr(); });
+$("tQd").addEventListener("change", (e) => { S.qd = e.target.checked; drawInfo(); drawPlots(); });
+$("tEv").addEventListener("change", (e) => { S.ev = e.target.checked; drawSigma(); });
+let quality = innerWidth < 700 ? "low" : "high";
+function applyQuality() {
+  const q = quality === "high";
+  renderer.shadowMap.enabled = q; sun.castShadow = q;
+  const g = q ? GROUND_PRE_ACES : GROUND; scene.background.copy(g); scene.fog.color.copy(g);
+  for (const b of document.querySelectorAll("#qmode button")) b.setAttribute("aria-pressed", b.dataset.v === quality ? "true" : "false");
+}
+$("qmode").addEventListener("click", (e) => { const b = e.target.closest("button"); if (!b) return; quality = b.dataset.v; applyQuality(); });
+applyQuality();
+addEventListener("resize", () => { camera.aspect = innerWidth / innerHeight; applyOffset(); camera.updateProjectionMatrix(); renderer.setSize(innerWidth, innerHeight); composer.setSize(innerWidth, innerHeight); drawPlots(); });
+addEventListener("hashchange", () => readHash(location.hash));
+$("intCap").textContent = `∫σ dE / (${D.trk} NZ/A)`;
+$("model").innerHTML = [
+  `Measured cross sections: EXFOR subentries as compiled (the ones Plujko et al. fitted, matched through their Table 3), error bars as given. σ(γ,sn) is the total photoneutron cross section, σ(γ,1n) + σ(γ,2n) + …, each event counted once; σ(γ,abs) the photoabsorption.`,
+  `Lorentzian (standard Lorentzian, SLO; Plujko et al. 2018 Eqs. (5), (6), (10)): σ(E) = σ<sub>TRK</sub> Σ<sub>j</sub> s<sub>j</sub> (2/π) E²Γ<sub>j</sub>/((E² − E<sub>j</sub>²)² + E²Γ<sub>j</sub>²), σ<sub>TRK</sub> = ${D.trk} NZ/A mb MeV. The shape integrates to 1 over all E, so s = s<sub>1</sub> + s<sub>2</sub> is the energy-weighted strength in TRK units; the peak is (2/π)σ<sub>TRK</sub>s<sub>j</sub>/Γ<sub>j</sub>. Their fits add the quasi-deuteron term σ<sub>QD</sub> = ${D.qd.c} (NZ/A)(E − ${D.qd.Ed})<sup>3/2</sup>/E³ φ(E) (Eqs. (3), (4)); the printed polynomial for φ between ${D.qd.lo[0]} and ${D.qd.hi[0]} MeV repeats a minus sign at a line break, read as one minus because only then does it join exp(−${D.qd.lo[1]}/E) and exp(−${D.qd.hi[1]}/E) at both ends. The parameters shown are theirs (the RIPL-4 file of Dec 2018), never refitted here.`,
+  `TRK sum rule: ∫σ<sub>E1</sub> dE = (2π²e²ħ/(mc)) NZ/A = 2π²α(ħc)²/(mc²) NZ/A (e² = αħc), 1 fm² = 10 mb; this classical closed form is the textbook Thomas-Reiche-Kuhn result and is not in the page's saved sources, which give only its rounded value 60 NZ/A mb MeV (Plujko et al. Eq. (6)). With CODATA 2018 the constant depends on which mass is the nucleon mass in the third digit. The measured integral is a trapezoid over the data points, negative points included, from the first point up to E<sub>max</sub> (the slider; by default the last point, linear interpolation at a cut); the page shows ∫σ dE/σ<sub>TRK</sub> − 1 over that window (60 NZ/A convention). It is not the E1 sum-rule enhancement factor κ (Ait Ben Mennana et al. relate κ to the isovector effective mass, κ = (m<sub>1</sub>*/m)<sup>−1</sup> − 1; Plujko et al. bound the strength by 1 + Δ, Δ ≈ ${D.delta[0]} to ${D.delta[1]}): the window misses strength above and below it, σ(γ,sn) misses photoproton emission, and the quasi-deuteron absorption inside the window is counted.`,
+  `Deformed nuclei: two Lorentzians. With a prolate shape the lower one is the vibration along the symmetry axis (K = 0) and the upper the two across it (K = 1). The axis ratio follows from E<sub>b</sub>/E<sub>a</sub> = ${D.sys.danos[0]} a/b + ${D.sys.danos[1]} (Danos 1958, as written in the RIPL-4 readme), a/b = (1 + α<sub>2</sub>)/(1 − α<sub>2</sub>/2).`,
+  `Systematics: E = e<sub>1</sub>(4NZ/A²)<sup>1/2</sup>A<sup>−1/3</sup>/(1 + e<sub>2</sub>A<sup>−1/3</sup>)<sup>1/2</sup>, e<sub>1</sub> = ${D.sys.e1}, e<sub>2</sub> = ${D.sys.e2} (SLO; RIPL-4), for the mean energy of deformed nuclei. E<sub>BF</sub> and E<sub>SJ</sub> from Ait Ben Mennana et al. 2020, Eqs. (15), (14).`,
+  `Giant monopole: E<sub>ISGMR</sub> = √(m<sub>1</sub>/m<sub>−1</sub>) (the constrained energy, Garg and Colò), K<sub>A</sub> = m⟨r²⟩E²/ħ² per nucleon (their printed K<sub>A</sub> equation has one ⟨r²⟩ too many), with the point-proton radius from the charge radius standing in for the matter radius (neutron skin not removed).`,
+  `Scene: Goldhaber-Teller drops displaced by (N/A)d and −(Z/A)d (centre of mass fixed); Steinwedel-Jensen displacement along ∇(j<sub>1</sub>(kr) cos θ) with j<sub>1</sub>′(kR) = 0; breathing r → r(1 + ε); quadrupole (x, y, z) → (x(1 − ε/2), y(1 + ε), z(1 − ε/2)). All amplitudes illustrative.`,
+].map((t) => `<span>${t}</span>`).join("");
+$("srcs").innerHTML = `Sources: ${D.src.exfor}; ${D.src.ripl}; ${D.src.sys}; ${D.src.endf}; ${D.src.bf}; ${D.src.gmr}; ${D.src.codata}; ${D.src.radii}. The IAEA photonuclear and RIPL web sites refused automated access (Cloudflare); their GitHub copies and ENDF/B-VIII.1 were used. Surface vibrations at low energy: <a href="collective.html#208Pb~oct">collective.html</a>.`;
+
+// ---------- start
+if (!readHash(location.hash)) select("208Pb");
+const camHome = () => { const r = GEO.R; controls.target.set(0, -0.4, 0); camera.position.set(0.22 * 40, 0.3 * 40, 40).multiplyScalar(Math.max(0.55, r / RPB) * (innerWidth < 700 ? 1.45 : 1)); };
+camHome();
+let lastNuc = S.nuc;
+
+// ---------- loop
+const tmp = new THREE.Vector3();
+function label(el, p, show) {
+  if (!show) { el.hidden = true; return; }
+  tmp.copy(p).project(camera);
+  const ok = tmp.z < 1 && Math.abs(tmp.x) < 1 && Math.abs(tmp.y) < 1;
+  el.hidden = !ok; if (ok) { el.style.left = (tmp.x * 0.5 + 0.5) * innerWidth + "px"; el.style.top = (-tmp.y * 0.5 + 0.5) * innerHeight + "px"; }
+}
+const T0 = performance.now();
+function animate(now) {
+  requestAnimationFrame(animate);
+  const t = window.FREEZE_T != null ? window.FREEZE_T : reduce ? 0.35 : (now - T0) / 1000;     // FREEZE_T: a fixed instant (tests, screenshots)
+  if (lastNuc !== S.nuc) { lastNuc = S.nuc; camHome(); }
+  step(t);
+  // the slice faces the camera's start direction (the x-y plane), so both oscillation axes lie in it
+  controls.update();
+  if (quality === "high") composer.render(); else renderer.render(scene, camera);
+  label($("lAx"), tmp.set(GEO.a * 1.62, 0.35, 0), GEO.def);
+  const iso = S.mode === "gt";
+  label($("lP"), new THREE.Vector3(shellP.position.x + GEO.a * 0.62, shellP.position.y + GEO.b * 0.95, 0), iso);
+  label($("lN"), new THREE.Vector3(shellN.position.x - GEO.a * 0.62, shellN.position.y + GEO.b * 0.95, 0), iso);
+}
+requestAnimationFrame(animate);
+</script>
+<script src="assets/glass.js"></script>
+</body>
+</html>

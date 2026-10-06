@@ -1,0 +1,1212 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>ΔE–E Telescope · nuclearjs</title>
+<link rel="stylesheet" href="assets/glass.css">
+<style>
+body{margin:0}
+:root{
+  color-scheme:dark;
+  --ground:#0b0d12; --line:#262c3a;
+  --ink:#e6e8ee; --muted:#8a92a6; --accent:#f2c14e;
+  --sans:"Avenir Next","Futura","Helvetica Neue","PingFang SC","Noto Sans SC",system-ui,sans-serif;
+  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+}
+html,body{height:100%}
+body{background:var(--ground);color:var(--ink);font-family:var(--sans);overflow:hidden}
+#stage{position:fixed;inset:0}
+#stage canvas{display:block;touch-action:none}
+.panel{position:fixed;border-radius:18px;padding:16px 18px;display:flex;flex-direction:column;gap:12px;overflow:auto;box-sizing:border-box}
+.panel{z-index:2}
+.panel>*{flex-shrink:0}
+[hidden]{display:none!important}
+#ctl{left:16px;top:calc(16px + env(safe-area-inset-top,0px));width:min(310px,calc(100% - 32px));max-height:calc(100% - 32px)}
+#side{right:16px;top:calc(16px + env(safe-area-inset-top,0px));width:390px;max-height:calc(100% - 32px);gap:8px}
+h1{margin:0;font-size:22px;font-weight:600;letter-spacing:.01em}
+.sub{margin:2px 0 0;color:var(--muted);font-size:13px;line-height:1.45}
+.sub sup,.src sup{font-size:.7em}
+.grp{display:flex;flex-direction:column;gap:6px}
+.lab{font-size:11px;text-transform:uppercase;letter-spacing:.12em;color:var(--muted)}
+.seg{display:flex;border:1px solid var(--line);border-radius:4px;overflow:hidden}
+.seg button{flex:1;background:none;border:0;color:var(--muted);font:500 12px var(--mono);padding:6px 4px;cursor:pointer}
+.seg button+button{border-left:1px solid var(--line)}
+.seg button[aria-pressed="true"]{background:#1f2533;color:var(--ink)}
+button:focus-visible,input:focus-visible,summary:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chips button{background:#161a24;border:1px solid var(--line);border-radius:4px;color:var(--ink);font:12px var(--mono);padding:5px 8px;cursor:pointer}
+.chips button:hover{border-color:var(--muted)}
+.chips button[aria-pressed="true"]{background:#1f2533;border-color:#4a5468}
+.chips button[aria-pressed="false"]{opacity:.45}
+.chips.sp button i{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px;vertical-align:0}
+.row{display:flex;gap:8px;align-items:center;font:12px var(--mono);color:var(--muted)}
+.row input[type=range]{flex:1;accent-color:var(--accent);min-width:0}
+.row output{min-width:70px;text-align:right;color:var(--ink);font-variant-numeric:tabular-nums}
+.row span{min-width:44px}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:3px 10px;font:12px var(--mono);font-variant-numeric:tabular-nums}
+.kv dt{color:var(--muted)}.kv dd{margin:0}
+table.th{border-collapse:collapse;font:12px var(--mono);font-variant-numeric:tabular-nums;width:100%;table-layout:fixed}
+table.th th{font-weight:400;color:var(--muted);text-align:right;padding:2px 4px;font-size:11px}
+table.th td{text-align:right;padding:2px 4px}
+table.th td:first-child,table.th th:first-child{text-align:left}
+.home{font:12px var(--mono);color:var(--muted);text-decoration:none}.home:hover{color:var(--ink)}
+.src{font-size:11px;color:var(--muted);line-height:1.45}
+.src a{color:var(--muted)}
+.warn{font-size:12px;color:var(--accent);line-height:1.4}
+.plot{width:100%;height:300px;display:block;cursor:crosshair}
+.plot.s{height:130px;cursor:default}
+.cap{display:flex;justify-content:space-between;align-items:baseline;font:11px var(--mono);color:var(--muted)}
+.cap b{font:600 13px var(--sans);color:var(--ink)}
+.linkbtn{background:none;border:0;color:var(--muted);font:12px var(--mono);padding:0;cursor:pointer;text-decoration:underline;align-self:flex-start}
+#readout{font:11px var(--mono);color:var(--muted);min-height:14px}
+#stamp{position:fixed;left:50%;bottom:calc(26px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);text-align:center;pointer-events:none}
+#stamp b{display:block;font:600 clamp(28px,4.2vw,50px)/1 var(--sans);letter-spacing:-.01em}
+#stamp small{display:block;font:500 12px var(--mono);color:var(--muted);margin-top:6px}
+.tag{position:fixed;font:500 11px var(--mono);color:var(--accent);pointer-events:none;transform:translate(-50%,-50%);opacity:.85;white-space:nowrap}
+.tag.dim{color:var(--muted)}
+.hint{position:fixed;left:50%;transform:translateX(-50%);top:calc(14px + env(safe-area-inset-top,0px));font:11px var(--mono);color:var(--muted)}
+@media (max-width:900px){
+  #ctl{max-height:42vh}
+  #side{left:16px;right:16px;width:auto;top:auto;bottom:calc(12px + env(safe-area-inset-bottom,0px));max-height:44vh}
+  #stamp,.hint,.tag{display:none}
+}
+@media (max-width:560px){.panel{padding:10px 12px;gap:9px}h1{font-size:18px}.plot{height:240px}table.th{font-size:11px}}
+</style>
+<script data-goatcounter="https://jinleiphys.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
+</head>
+<body>
+
+<div id="stage"></div>
+
+<aside id="ctl" class="panel glass glass-deep" data-glass data-glass-bevel="22" data-glass-scale="42">
+  <div>
+    <a class="home" href="https://vibeinscience.com/nuclides.html">← nuclide chart</a> &nbsp; <a class="home" href="scatter.html">elastic scattering →</a>
+    <h1>ΔE–E telescope</h1>
+    <p class="sub">Two silicon detectors in a row. The thin one samples the energy loss, which grows as z²/v²; the thick one stops the particle and takes the rest. Each species falls on its own band.</p>
+  </div>
+  <div class="grp">
+    <div class="lab">Detectors (silicon)</div>
+    <div class="row"><span>ΔE</span><input id="t1" type="range" min="0" max="1" step="0.001"><output id="t1o"></output></div>
+    <div class="row"><span>E</span><input id="t2" type="range" min="0" max="1" step="0.001"><output id="t2o"></output></div>
+    <div class="row"><span>FWHM</span><input id="fw" type="range" min="0" max="200" step="5"><output id="fwo"></output></div>
+    <div class="seg" id="strag"><button data-v="1">straggling on</button><button data-v="0">off</button></div>
+  </div>
+  <div class="grp">
+    <div class="lab">Source</div>
+    <div class="seg" id="srcmode"><button data-v="flat">flat</button><button data-v="alpha">α source</button><button data-v="reac">reaction</button></div>
+    <div class="chips sp" id="spchips"></div>
+    <div id="flatgrp" class="grp">
+      <div class="row"><span>E max</span><input id="emax" type="range" min="2" max="200" step="1"><output id="emaxo"></output></div>
+      <p class="sub">Every species uniform in energy from 0 to E max: the whole band, from particles that stop in ΔE to particles that pass through E.</p>
+    </div>
+    <div id="alphagrp" class="grp" hidden>
+      <p class="sub">Mixed <sup>239</sup>Pu, <sup>241</sup>Am, <sup>244</sup>Cm source, equal activities, every α line above 1 % (ENSDF). Use it with a thin ΔE: these α stop in about 28 µm of silicon.</p>
+    </div>
+    <div id="reacgrp" class="grp" hidden>
+      <div class="seg" id="proj"><button data-v="p">p</button><button data-v="d">d</button><button data-v="3He">³He</button><button data-v="4He">α</button></div>
+      <div class="chips" id="tgt"><button data-v="12C">¹²C</button><button data-v="16O">¹⁶O</button><button data-v="27Al">²⁷Al</button><button data-v="58Ni">⁵⁸Ni</button></div>
+      <div class="row"><span>E beam</span><input id="eb" type="range" min="4" max="100" step="0.5"><output id="ebo"></output></div>
+      <div class="row"><span>θ lab</span><input id="th" type="range" min="5" max="170" step="1"><output id="tho"></output></div>
+      <div class="seg" id="cont"><button data-v="1">lines + continuum</button><button data-v="0">lines only</button></div>
+      <p class="sub" id="reacnote"></p>
+    </div>
+  </div>
+  <div class="grp">
+    <div class="row"><span>events</span><input id="nev" type="range" min="2000" max="60000" step="1000"><output id="nevo"></output></div>
+  </div>
+  <div class="grp">
+    <div class="lab">Rendering</div>
+    <div class="seg" id="qmode"><button data-v="high" title="shadows, ambient occlusion and bloom">cinematic</button><button data-v="low">fast</button></div>
+    <p class="src">To scale along the beam axis: the two silicon thicknesses and the 1 mm ruler. Not to scale: the gap between the detectors, the detector faces, the circuit boards, collimator, chamber and all distances; the hardware is generic, not a particular make. The silicon is drawn see-through so the tracks inside it show. Each track's brightness and width follow the computed dE/dx along it and it stops at the computed range; its speed is slowed for display, in proportion to the true velocity.</p>
+  </div>
+  <div class="src">
+    Stopping powers: NIST PSTAR and ASTAR for silicon (Berger, Coursey, Zucker, Chang; ICRU Report 49 (1993); NISTIR 4999), ρ = 2.33 g/cm³. d and t from the proton table at the same velocity, S(E) = S<sub>p</sub>(E m<sub>p</sub>/m); <sup>3</sup>He from the α table the same way; <sup>6,7</sup>Li from the α table at the same velocity times the squared ratio of Pierce–Blann mean charges, Phys. Rev. 173, 390 (1968). CSDA range integrated live; for p and α it reproduces the NIST range table to 0.04 % above 0.1 MeV.<br>
+    Straggling: Bohr variance 4πe⁴z²N<sub>e</sub> per unit length, carried through the slowing down to first order (Tschalär, Nucl. Instrum. Methods 61, 141 (1968)). Gaussian throughout: no Landau tail, no dead layers, no pulse-height defect, normal incidence. Each layer is sampled as a Gaussian residual range, which equals the first-order exit-energy Gaussian away from the stopping edge; near the edge an exit-energy Gaussian would be wider than the mean exit energy and the transmitted fraction would jump from 0 to ½ at the CSDA threshold, while the range form passes through it smoothly (½ exactly at the threshold, falling with the range straggling, about 0.9 µm for protons through 50 µm). That edge is still first order: the energies of the few particles that just get through (keV) are not modelled beyond it, and the Bohr width is too large below about 1 MeV/u.<br>
+    Masses AME2020, levels and α lines ENSDF, via the IAEA LiveChart.
+  </div>
+</aside>
+
+<aside id="side" class="panel glass glass-deep" data-glass data-glass-bevel="22" data-glass-scale="42">
+  <div class="cap"><b>ΔE against E</b><span><button class="linkbtn" id="axes" type="button">log axes</button></span></div>
+  <canvas id="pid" class="plot" aria-label="Delta E against E scatter plot"></canvas>
+  <div id="readout"></div>
+  <div class="cap"><b>Particle identification</b><span id="pilab"></span></div>
+  <canvas id="pih" class="plot s" aria-label="particle identification histogram"></canvas>
+  <div class="row"><span>b</span><input id="bexp" type="range" min="1.5" max="1.9" step="0.01"><output id="bexpo"></output></div>
+  <p class="src">PI = (E + ΔE)<sup>b</sup> − E<sup>b</sup>. A power-law range R ≈ k E<sup>b</sup>/(m<sup>b−1</sup>z²) gives PI = t m<sup>b−1</sup>z²/k, the same for every energy: one peak per species. Events that stop in E only.</p>
+  <div class="cap"><b>Thresholds</b><span>MeV, normal incidence</span></div>
+  <table class="th" id="thr"></table>
+  <p class="warn" id="warn" hidden></p>
+</aside>
+
+<div id="tagDE" class="tag">ΔE</div>
+<div id="tagE" class="tag">E</div>
+<div id="tagSrc" class="tag dim">target</div>
+<div id="tagBeam" class="tag dim">beam →</div>
+<div id="tagRule" class="tag dim">1 mm</div>
+<div id="stamp"></div>
+<div class="hint">drag to orbit · scroll to zoom · depth axis to scale, faces and distances not</div>
+
+<script src="assets/three-bundle.js"></script>
+<script src="assets/three-post.js"></script>
+<script src="assets/hw-studio.js"></script>
+<script src="assets/stopping-data.js"></script>
+<script src="assets/stopping.js"></script>
+<script>
+"use strict";
+const ST = window.STOPPING, DAT = window.STOPPING_DATA;
+const SPS = ["p", "d", "t", "3He", "4He", "6Li", "7Li"];
+// Okabe-Ito hues (colour-blind safe), lightened for a dark ground; Li in vermillion and grey
+const COL = { p: "#56b4e9", d: "#1fbf8f", t: "#f0e442", "3He": "#e69f00", "4He": "#e58fc4", "6Li": "#ff6a3d", "7Li": "#c9ced8" };
+const LAB = { p: "p", d: "d", t: "t", "3He": "³He", "4He": "α", "6Li": "⁶Li", "7Li": "⁷Li" };
+const SUP = (s) => s.replace(/^(\d+)([A-Z][a-z]?)$/, (m, a, e) => a.split("").map((c) => "⁰¹²³⁴⁵⁶⁷⁸⁹"[+c]).join("") + e);
+const PROJKEY = { p: "1H", d: "2H", "3He": "3He", "4He": "4He" };
+const NAMEOF = {};
+for (const k in DAT.masses) { const m = DAT.masses[k]; NAMEOF[m[0] + "," + m[1]] = k; }
+
+// ---------- state
+const S = {
+  t1: 50, t2: 1000, fw: 40, strag: true, src: "flat",
+  on: { p: true, d: true, t: true, "3He": true, "4He": true, "6Li": false, "7Li": false },
+  Emax: 60, proj: "d", tgt: "12C", Eb: 30, th: 30, cont: true,
+  N: innerWidth < 700 ? 8000 : 24000, log: false, b: 1.73,
+};
+const T1 = [10, 1000], T2 = [100, 5000];
+const lg = (v, r) => (Math.log(v) - Math.log(r[0])) / (Math.log(r[1]) - Math.log(r[0]));
+const ex = (u, r) => r[0] * Math.pow(r[1] / r[0], u);
+const nice = (v) => (v < 30 ? Math.round(v) : v < 300 ? Math.round(v / 5) * 5 : Math.round(v / 10) * 10);
+
+// ---------- event sample
+let EV = null;   // {n, sp(Uint8), E0, dE, E, where}
+let rnd2 = null;
+function gauss() {
+  if (rnd2 !== null) { const r = rnd2; rnd2 = null; return r; }
+  let u = 0, v = 0;
+  while (u === 0) u = Math.random();
+  v = Math.random();
+  const m = Math.sqrt(-2 * Math.log(u));
+  rnd2 = m * Math.sin(2 * Math.PI * v);
+  return m * Math.cos(2 * Math.PI * v);
+}
+// the source as a list of components: discrete lines {sp, E, w} or flat pieces {sp, E0, E1, w}
+let LINES = [];
+function components() {
+  const C = [];
+  LINES = [];
+  if (S.src === "flat") {
+    for (const sp of SPS) if (S.on[sp]) C.push({ sp, E0: 0, E1: S.Emax, w: 1 });
+  } else if (S.src === "alpha") {
+    // equal activities: each nuclide's lines carry its own branching (sum over lines >= 1 %)
+    for (const [nuc, E, I] of DAT.alphaLines) C.push({ sp: "4He", E: E / 1000, w: I / 100, lab: nuc });
+  } else {
+    const a = DAT.masses[PROJKEY[S.proj]], A = DAT.masses[S.tgt];
+    const ma = ST.massMeV(PROJKEY[S.proj]), mA = ST.massMeV(S.tgt), th = S.th * Math.PI / 180;
+    const lines = [], cont = [];
+    for (const sp of SPS) {
+      if (!S.on[sp]) continue;
+      const b = DAT.masses[ST.SPECIES[sp].key];
+      const zr = a[0] + A[0] - b[0], nr = a[1] + A[1] - b[1], rn = NAMEOF[zr + "," + nr];
+      if (!rn) continue;
+      const mb = ST.massMeV(ST.SPECIES[sp].key), mB = ST.massMeV(rn);
+      const lev = DAT.levels[rn] || [[0, ""]];
+      let gs = 0;
+      for (const [ex, jp] of lev) {
+        for (const T of ST.twoBody(ma, mA, mb, mB + ex / 1000, S.Eb, th)) {
+          if (T < 0.05) continue;
+          lines.push({ sp, E: T, w: 1, lab: `${SUP(rn)}${ex > 0 ? ` ${(ex / 1000).toFixed(2)}` : " g.s."}` });
+          gs = Math.max(gs, T);
+        }
+      }
+      if (gs > 0) cont.push({ sp, E0: 0, E1: gs });
+      LINES.push(...lines.filter((l) => l.sp === sp));
+    }
+    // lines carry 60 % of the events, a flat continuum under each open channel the other 40 %
+    const wl = S.cont && cont.length ? 0.6 : 1;
+    for (const l of lines) C.push({ ...l, w: wl / lines.length });
+    if (S.cont) for (const c of cont) C.push({ ...c, w: 0.4 / cont.length });
+  }
+  return C;
+}
+function simulate() {
+  const C = components(), n = C.length ? S.N : 0;
+  const cw = []; let s = 0;
+  for (const c of C) { s += c.w; cw.push(s); }
+  const ev = { n, sp: new Uint8Array(n), E0: new Float32Array(n), dE: new Float32Array(n), E: new Float32Array(n), where: new Uint8Array(n) };
+  const sr = S.fw / 1000 / 2.3548;
+  for (let i = 0; i < n; i++) {
+    const x = Math.random() * s;
+    let k = 0; while (k < C.length - 1 && cw[k] < x) k++;
+    const c = C[k], sp = c.sp;
+    const E0 = c.E != null ? c.E : c.E0 + (c.E1 - c.E0) * Math.random();
+    let dE, Ed, where;
+    // straggling sampled as a residual range: continuous through the stopping threshold (assets/stopping.js)
+    const pass = (E, t) => { if (S.strag) return ST.layerSample(sp, E, t, gauss()); const l = ST.layer(sp, E, t); return l.stop ? 0 : l.Eout; };
+    const E1 = pass(E0, S.t1);
+    if (E1 <= 0) { dE = E0; Ed = 0; where = 0; }
+    else {
+      const E2 = pass(E1, S.t2);
+      dE = E0 - E1;
+      if (E2 <= 0) { Ed = E1; where = 1; } else { Ed = E1 - E2; where = 2; }
+    }
+    // electronic noise of each detector; no E signal when nothing reached it
+    dE = Math.max(0, dE + sr * gauss());
+    if (where > 0) Ed = Math.max(0, Ed + sr * gauss());
+    ev.sp[i] = SPS.indexOf(sp); ev.E0[i] = E0; ev.dE[i] = dE; ev.E[i] = Ed; ev.where[i] = where;
+  }
+  EV = ev;
+}
+
+// ---------- mean loci (no fluctuations): the line each band scatters around
+function loci() {
+  const out = {};
+  let Emax = 0;
+  if (S.src === "flat") Emax = S.Emax;
+  else if (S.src === "alpha") Emax = 6.2;
+  else for (let i = 0; i < EV.n; i++) Emax = Math.max(Emax, EV.E0[i]);
+  for (const sp of SPS) {
+    if (S.src === "alpha" ? sp !== "4He" : !S.on[sp]) continue;
+    const pts = [];
+    const e0 = ST.energyToCross(sp, S.t1) * 1.0005;
+    if (e0 >= Emax) { out[sp] = pts; continue; }
+    for (let k = 0; k <= 320; k++) {
+      const E = e0 * Math.pow(Emax / e0, k / 320);
+      const r = ST.telescope(sp, E, S.t1, S.t2);
+      pts.push([r.E, r.dE, r.where]);
+    }
+    out[sp] = pts;
+  }
+  return out;
+}
+
+// ---------- 2D plots
+function setupCanvas(c) {
+  const d = Math.min(devicePixelRatio, 2), w = c.clientWidth, h = c.clientHeight;
+  c.width = w * d; c.height = h * d;
+  const x = c.getContext("2d");
+  x.setTransform(d, 0, 0, d, 0, 0);
+  return { x, w, h };
+}
+function pct(arr, n, q, pred) {
+  const v = [];
+  for (let i = 0; i < n; i++) if (!pred || pred(i)) v.push(arr[i]);
+  if (!v.length) return 1;
+  v.sort((a, b) => a - b);
+  return v[Math.min(v.length - 1, Math.floor(q * v.length))];
+}
+function ticks(lo, hi, log) {
+  const t = [];
+  if (log) {
+    for (let e = Math.floor(Math.log10(lo)); e <= Math.ceil(Math.log10(hi)); e++)
+      for (const m of [1, 2, 5]) { const v = m * Math.pow(10, e); if (v >= lo * 0.999 && v <= hi * 1.001) t.push(v); }
+    return t;
+  }
+  const raw = (hi - lo) / 5, p = Math.pow(10, Math.floor(Math.log10(raw))), st = [1, 2, 5, 10].map((m) => m * p).find((s) => s >= raw);
+  for (let v = Math.ceil(lo / st) * st; v <= hi + 1e-9; v += st) t.push(+v.toPrecision(6));
+  return t;
+}
+const fmtT = (v) => (v >= 1 ? String(+v.toPrecision(3)) : String(+v.toPrecision(2)));
+let PLOT = null, LOCI = null;
+function drawPID() {
+  const cv = document.getElementById("pid");
+  const { x: ctx, w, h } = setupCanvas(cv);
+  const L = 40, R = 8, T = 8, B = 22;
+  const n = EV.n;
+  let xm = 1.08 * pct(EV.E, n, 0.999, (i) => EV.where[i] > 0);
+  let ym = 1.08 * pct(EV.dE, n, 0.998);
+  for (const sp in LOCI) for (const p of LOCI[sp]) if (p[2] > 0) { xm = Math.max(xm, Math.min(p[0] * 1.05, xm * 1.6)); }
+  xm = Math.max(xm, 0.5); ym = Math.max(ym, 0.1);
+  let xl = S.log ? Math.max(0.05, xm / 2000) : 0, yl = S.log ? Math.max(0.01, ym / 2000) : 0;
+  // a line source fills a small corner of the plane: zoom onto it
+  if (S.src === "alpha" && !S.log) {
+    const x0 = pct(EV.E, n, 0.002, (i) => EV.where[i] > 0), y0 = pct(EV.dE, n, 0.002);
+    xm = pct(EV.E, n, 0.998, (i) => EV.where[i] > 0); ym = pct(EV.dE, n, 0.998);
+    const px = 0.25 * (xm - x0) + 0.05, py = 0.25 * (ym - y0) + 0.05;
+    xl = Math.max(0, x0 - px); xm += px; yl = Math.max(0, y0 - py); ym += py;
+  }
+  const X = S.log ? (v) => L + Math.log(Math.max(v, xl) / xl) / Math.log(xm / xl) * (w - L - R) : (v) => L + (v - xl) / (xm - xl) * (w - L - R);
+  const Y = S.log ? (v) => h - B - Math.log(Math.max(v, yl) / yl) / Math.log(ym / yl) * (h - T - B) : (v) => h - B - (v - yl) / (ym - yl) * (h - T - B);
+  PLOT = { X, Y, L, R, T, B, w, h, xm, ym, xl, yl };
+  ctx.fillStyle = "rgba(10,12,18,0.35)"; ctx.fillRect(L, T, w - L - R, h - T - B);
+  ctx.font = "10px ui-monospace,Menlo,monospace"; ctx.lineWidth = 1;
+  for (const v of ticks(xl, xm, S.log)) {
+    ctx.strokeStyle = "#1e2432"; ctx.beginPath(); ctx.moveTo(X(v), T); ctx.lineTo(X(v), h - B); ctx.stroke();
+    ctx.fillStyle = "#8a92a6"; ctx.textAlign = "center"; ctx.fillText(fmtT(v), X(v), h - B + 12);
+  }
+  for (const v of ticks(yl, ym, S.log)) {
+    ctx.strokeStyle = "#1e2432"; ctx.beginPath(); ctx.moveTo(L, Y(v)); ctx.lineTo(w - R, Y(v)); ctx.stroke();
+    ctx.fillStyle = "#8a92a6"; ctx.textAlign = "right"; ctx.fillText(fmtT(v), L - 4, Y(v) + 3);
+  }
+  ctx.textAlign = "right"; ctx.fillText("E (MeV)", w - R, h - 2);
+  ctx.save(); ctx.translate(10, T + 2); ctx.rotate(-Math.PI / 2); ctx.textAlign = "right"; ctx.fillText("ΔE (MeV)", 0, 0); ctx.restore();
+  // events: additive dots, so the dense band centres come out bright
+  ctx.save();
+  ctx.beginPath(); ctx.rect(L, T, w - L - R, h - T - B); ctx.clip();
+  ctx.globalCompositeOperation = "lighter";
+  const a = Math.min(0.55, Math.max(0.12, 3500 / n));
+  for (let s = 0; s < SPS.length; s++) {
+    ctx.fillStyle = COL[SPS[s]]; ctx.globalAlpha = a;
+    for (let i = 0; i < n; i++) {
+      if (EV.sp[i] !== s) continue;
+      ctx.fillRect(X(EV.E[i]) - 0.75, Y(EV.dE[i]) - 0.75, 1.5, 1.5);
+    }
+  }
+  ctx.globalCompositeOperation = "source-over"; ctx.globalAlpha = 1;
+  // mean loci, and the punch-through point where each band turns back
+  for (const sp in LOCI) {
+    const P = LOCI[sp];
+    ctx.strokeStyle = COL[sp]; ctx.globalAlpha = 0.9; ctx.lineWidth = 1; ctx.setLineDash([3, 3]);
+    ctx.beginPath(); let st = false;
+    for (const p of P) { if (p[2] === 0) continue; if (!st) { ctx.moveTo(X(p[0]), Y(p[1])); st = true; } else ctx.lineTo(X(p[0]), Y(p[1])); }
+    ctx.stroke(); ctx.setLineDash([]);
+    const k = P.findIndex((p) => p[2] === 2);
+    if (k > 0) {
+      const p = P[k - 1];
+      ctx.globalAlpha = 1; ctx.fillStyle = "#0b0d12"; ctx.strokeStyle = COL[sp]; ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.arc(X(p[0]), Y(p[1]), 3.5, 0, 2 * Math.PI); ctx.fill(); ctx.stroke();
+    }
+    // label at the top of the band, where the particle just reaches E
+    const q = P.find((p) => p[2] === 1 && X(p[0]) > L + 6);
+    if (q) { ctx.globalAlpha = 1; ctx.fillStyle = COL[sp]; ctx.font = "600 12px ui-monospace,Menlo,monospace"; ctx.textAlign = "left"; ctx.fillText(LAB[sp], X(q[0]) + 6, Math.max(T + 10, Y(q[1]) - 4)); }
+  }
+  ctx.restore();
+  ctx.strokeStyle = "#3a4256"; ctx.strokeRect(L + 0.5, T + 0.5, w - L - R - 1, h - T - B - 1);
+}
+function drawPI() {
+  const { x: ctx, w, h } = setupCanvas(document.getElementById("pih"));
+  const L = 40, R = 8, T = 6, B = 20, n = EV.n, b = S.b;
+  const pi = new Float32Array(n);
+  let lo = Infinity, hi = 0;
+  for (let i = 0; i < n; i++) {
+    if (EV.where[i] !== 1 || EV.E[i] <= 0) { pi[i] = -1; continue; }
+    const v = Math.pow(EV.E[i] + EV.dE[i], b) - Math.pow(EV.E[i], b);
+    pi[i] = v;
+    if (v > 0) { lo = Math.min(lo, v); hi = Math.max(hi, v); }
+  }
+  if (!(hi > 0)) { ctx.fillStyle = "#8a92a6"; ctx.font = "11px ui-monospace,Menlo,monospace"; ctx.fillText("no event stops in E", L, h / 2); return; }
+  // log axis: the peaks sit at t m^(b-1) z^2, so species ratios are fixed distances apart
+  const v1 = pct(pi, n, 0.003, (i) => pi[i] > 0) / 1.5, v2 = pct(pi, n, 0.997, (i) => pi[i] > 0) * 1.5;
+  const NB = 220, lv1 = Math.log(v1), lv2 = Math.log(v2);
+  const H = SPS.map(() => new Float32Array(NB));
+  for (let i = 0; i < n; i++) {
+    if (pi[i] <= 0) continue;
+    const k = Math.floor((Math.log(pi[i]) - lv1) / (lv2 - lv1) * NB);
+    if (k >= 0 && k < NB) H[EV.sp[i]][k]++;
+  }
+  let m = 1;
+  for (const hh of H) for (const c of hh) m = Math.max(m, c);
+  const X = (k) => L + k / NB * (w - L - R), Y = (c) => h - B - c / m * (h - T - B);
+  ctx.font = "10px ui-monospace,Menlo,monospace";
+  for (const v of ticks(v1, v2, true)) {
+    const k = (Math.log(v) - lv1) / (lv2 - lv1) * NB;
+    ctx.strokeStyle = "#1e2432"; ctx.beginPath(); ctx.moveTo(X(k), T); ctx.lineTo(X(k), h - B); ctx.stroke();
+    ctx.fillStyle = "#8a92a6"; ctx.textAlign = "center"; ctx.fillText(fmtT(v), X(k), h - B + 12);
+  }
+  ctx.textAlign = "right"; ctx.fillText("counts", L - 4, T + 8);
+  ctx.globalCompositeOperation = "lighter";
+  H.forEach((hh, s) => {
+    let sum = 0; for (const c of hh) sum += c;
+    if (!sum) return;
+    ctx.beginPath(); ctx.moveTo(X(0), Y(0));
+    for (let k = 0; k < NB; k++) { ctx.lineTo(X(k), Y(hh[k])); ctx.lineTo(X(k + 1), Y(hh[k])); }
+    ctx.lineTo(X(NB), Y(0)); ctx.closePath();
+    ctx.fillStyle = COL[SPS[s]]; ctx.globalAlpha = 0.35; ctx.fill();
+    ctx.globalAlpha = 0.95; ctx.strokeStyle = COL[SPS[s]]; ctx.lineWidth = 1; ctx.stroke();
+    let kb = 0; for (let k = 1; k < NB; k++) if (hh[k] > hh[kb]) kb = k;
+    ctx.globalCompositeOperation = "source-over"; ctx.globalAlpha = 1;
+    ctx.fillStyle = COL[SPS[s]]; ctx.font = "600 11px ui-monospace,Menlo,monospace"; ctx.textAlign = "center";
+    ctx.fillText(LAB[SPS[s]], X(kb + 0.5), Math.max(T + 9, Y(hh[kb]) - 3));
+    ctx.globalCompositeOperation = "lighter";
+  });
+  ctx.globalCompositeOperation = "source-over"; ctx.globalAlpha = 1;
+}
+// thresholds: energy that just reaches E, and the punch-through energy
+function drawThresholds() {
+  let html = '<tr><th style="width:3.2em"></th><th>reaches E</th><th>exits E</th><th>R at 10 MeV/u</th></tr>';
+  for (const sp of SPS) {
+    if (S.src === "alpha" ? sp !== "4He" : !S.on[sp]) continue;
+    const e1 = ST.energyToCross(sp, S.t1), e2 = ST.energyToCross(sp, S.t1 + S.t2);
+    const r = ST.rangeUm(sp, 10 * ST.SPECIES[sp].m);
+    html += `<tr><td style="color:${COL[sp]}">${LAB[sp]}</td><td>${e1.toFixed(2)}</td><td>${e2.toFixed(2)}</td><td>${r < 1e4 ? r.toFixed(0) + " µm" : (r / 1e3).toFixed(1) + " mm"}</td></tr>`;
+  }
+  document.getElementById("thr").innerHTML = html;
+}
+
+// ---------- scene
+const stage = document.getElementById("stage");
+const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.setSize(innerWidth, innerHeight);
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.05;
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+stage.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(36, innerWidth / innerHeight, 0.1, 800);
+// cinematic: scene, ambient occlusion on the hardware, restrained bloom (only the track heads and
+// the beam are bright enough), ACES output, SMAA
+const POST = HW.post(renderer, scene, camera, { bloom: [0.55, 0.45, 0.86], ao: { radius: 1.6, thickness: 2, scale: 1.1 }, aoIntensity: 0.9 });
+const composer = POST.composer, bloom = POST.bloom;
+scene.environment = HW.studioEnv(renderer);
+scene.fog = new THREE.Fog("#0b0d12", 140, 340);
+// The ground colour #0b0d12 is drawn untouched on the direct path, but OutputPass runs it through
+// ACES, whose toe crushes it to black. On the bloom path the background and fog therefore take the
+// linear colour that ACES (exposure 1.05) maps back to exactly #0b0d12: found by Newton on the r160
+// shader formula, residual 1e-11, sRGB out (11, 13, 18).
+const GROUND = new THREE.Color("#0b0d12");
+const GROUND_PRE_ACES = new THREE.Color().setRGB(0.0115476, 0.0131218, 0.0174740, THREE.LinearSRGBColorSpace);
+scene.background = GROUND.clone();
+
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+controls.dampingFactor = 0.08;
+controls.minDistance = 6;
+controls.addEventListener("start", () => (fitTime = 0));
+controls.maxDistance = 300;
+const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+// light: a soft sky, one shadow-casting key from above the open chamber, a cool rim from behind
+scene.add(new THREE.HemisphereLight("#cfd8ff", "#1a1410", 0.45));
+const sun = new THREE.DirectionalLight("#fff3e0", 2.4);
+sun.position.set(-26, 70, 34);
+sun.shadow.mapSize.set(2048, 2048);
+Object.assign(sun.shadow.camera, { left: -62, right: 62, top: 62, bottom: -62, near: 10, far: 200 });
+sun.shadow.bias = -0.0003;
+sun.shadow.normalBias = 0.03;
+scene.add(sun, sun.target);
+const rim = new THREE.DirectionalLight("#7fa6ff", 0.8);
+rim.position.set(40, 16, -50);
+scene.add(rim);
+
+const FACE = 14, D0 = 26, GAP = 3;          // face size, target distance, gap: scene units, not to scale
+const PT = -FACE / 2 - 4.4;                  // top of the chamber's base plate
+const RC = 50, HC = 25;                      // chamber inner radius and wall height (illustrative)
+const grid = new THREE.GridHelper(400, 200, "#252c3d", "#1b2130");
+grid.material.transparent = true; grid.material.opacity = 0.55;
+grid.position.y = PT - 3;
+scene.add(grid);
+
+// ---------- procedural textures (no image files); generic laboratory hardware, not one vendor's part
+const rnd = HW.rng(20261003);
+// FR4 board: green solder mask, gold (ENIG) traces and pads, white silkscreen, plated mounting holes.
+// Board coordinates: W x HB scene units, window of half-size WIN at the origin, tab with the connector on top.
+const BW = FACE + 8, BB = -(FACE / 2 + 2.6), BT_ = FACE / 2 + 7.2, BH = BT_ - BB, BTH = 0.32, BORDER = 0.9, WIN = FACE / 2 + BORDER + 0.08;
+const LEMO_X = 3.4;
+function pcbDraw(mode) {
+  return (x, w, h) => {
+    const sx = w / BW, sy = h / BH;
+    const P = (bx, by) => [(bx + BW / 2) * sx, (BT_ - by) * sy];         // board -> canvas px
+    const gold = mode === "map" ? "#d9b056" : mode === "rough" ? "#3a3a3a" : "#ffffff";
+    x.fillStyle = mode === "map" ? "#22693c" : mode === "rough" ? "#8a8a8a" : "#7a7a7a"; x.fillRect(0, 0, w, h);
+    if (mode === "map") {   // glass-weave mottling under the mask
+      for (let i = 0; i < 2600; i++) { x.fillStyle = `rgba(${20 + rnd() * 30 | 0},${80 + rnd() * 40 | 0},${40 + rnd() * 20 | 0},0.18)`; x.fillRect(rnd() * w, rnd() * h, 2 + rnd() * 3, 2 + rnd() * 3); }
+      // copper pour under the mask reads as a slightly lighter green
+      x.fillStyle = "rgba(90,150,80,0.16)";
+      x.fillRect(P(-BW / 2 + 0.6, 0)[0], P(0, BT_ - 0.6)[1], (BW - 1.2) * sx, (BH - 1.2) * sy);
+    }
+    // the window the wafer sits in (cut out of the board geometry); a gold seal ring around it
+    const [wx0, wy0] = P(-WIN - 0.35, WIN + 0.35);
+    x.strokeStyle = gold; x.lineWidth = 0.22 * sx; x.strokeRect(wx0, wy0, (2 * WIN + 0.7) * sx, (2 * WIN + 0.7) * sy);
+    // bond pads above the window, traces up to the connector pads on the tab
+    x.lineCap = "round"; x.lineJoin = "round";
+    const pads = [[-0.9, "SIG"], [0.9, "GR"]];
+    for (const [px, lab] of pads) {
+      const [a, b] = P(px - 0.45, WIN + 1.1); x.fillStyle = gold; x.fillRect(a, b, 0.9 * sx, 0.6 * sy);
+      x.strokeStyle = gold; x.lineWidth = 0.18 * sx;
+      x.beginPath(); x.moveTo(...P(px, WIN + 1.1)); x.lineTo(...P(px, WIN + 2.1 + (px > 0 ? 0.6 : 0)));
+      x.lineTo(...P(LEMO_X + (px > 0 ? 1.6 : 0), WIN + 2.1 + (px > 0 ? 0.6 : 0))); x.lineTo(...P(LEMO_X + (px > 0 ? 1.6 : 0), BT_ - 1.4)); x.stroke();
+      if (mode === "map") { x.fillStyle = "#e9eef2"; x.font = `${0.55 * sy}px ui-monospace,Menlo,monospace`; x.fillText(lab, P(px - 0.5, WIN + 1.25)[0], P(0, WIN + 1.9)[1]); }
+    }
+    // ground return: a wide trace around three sides of the window
+    x.strokeStyle = gold; x.lineWidth = 0.32 * sx;
+    x.beginPath(); x.moveTo(...P(-WIN - 1.3, WIN + 1.6)); x.lineTo(...P(-WIN - 1.3, -WIN - 1.3)); x.lineTo(...P(WIN + 1.3, -WIN - 1.3)); x.lineTo(...P(WIN + 1.3, WIN + 1.6)); x.stroke();
+    // connector footprint and three small passives (bias filter) on the tab
+    for (const [cx, cy, r] of [[LEMO_X, BT_ - 1.1, 0.95], [LEMO_X + 1.6, BT_ - 1.1, 0.35]]) { x.fillStyle = gold; x.beginPath(); x.arc(...P(cx, cy), r * sx, 0, 7); x.fill(); }
+    for (const [cx, cy] of [[-3.2, BT_ - 1.6], [-1.6, BT_ - 1.6], [0, BT_ - 1.6]]) { x.fillStyle = gold; x.fillRect(P(cx - 0.55, 0)[0], P(0, cy + 0.2)[1], 0.3 * sx, 0.4 * sy); x.fillRect(P(cx + 0.25, 0)[0], P(0, cy + 0.2)[1], 0.3 * sx, 0.4 * sy); }
+    // plated mounting holes at the corners (the standoff rods pass through them)
+    for (const [cx, cy] of [[-BW / 2 + 1.1, BB + 1.1], [BW / 2 - 1.1, BB + 1.1], [-BW / 2 + 1.1, WIN + 1.6], [BW / 2 - 1.1, WIN + 1.6]]) {
+      x.fillStyle = gold; x.beginPath(); x.arc(...P(cx, cy), 0.62 * sx, 0, 7); x.fill();
+      x.fillStyle = mode === "map" ? "#0d0f12" : mode === "rough" ? "#ffffff" : "#000000"; x.beginPath(); x.arc(...P(cx, cy), 0.36 * sx, 0, 7); x.fill();
+    }
+    if (mode === "map") {   // silkscreen
+      x.fillStyle = "#e9eef2"; x.font = `600 ${0.8 * sy}px ui-monospace,Menlo,monospace`;
+      x.fillText("Si  DET", P(-BW / 2 + 1.0, 0)[0], P(0, BB + 0.7)[1]);
+      x.font = `${0.55 * sy}px ui-monospace,Menlo,monospace`;
+      x.fillText("R1  R2  C1", P(-3.9, 0)[0], P(0, BT_ - 2.4)[1]);
+      x.fillText("J1", P(LEMO_X - 0.4, 0)[0], P(0, BT_ - 2.4)[1]);
+      x.strokeStyle = "#e9eef2"; x.lineWidth = 0.06 * sx; x.strokeRect(...P(-BW / 2 + 0.35, BT_ - 0.35), (BW - 0.7) * sx, (BH - 0.7) * sy);
+    }
+  };
+}
+const pcbTex = (mode) => {
+  const t = HW.canvasTex(1024, Math.round(1024 * BH / BW), pcbDraw(mode), null, mode === "map");
+  // cap UVs of an extruded shape are the board coordinates; mirror u so the print reads from the target side
+  t.repeat.set(-1 / BW, 1 / BH); t.offset.set(0.5, -BB / BH);
+  return t;
+};
+// lapped aluminium: fine isotropic grain (the front contact, the guard ring, frames)
+const grain = HW.canvasTex(256, 256, (x, w, h) => {
+  x.fillStyle = "#808080"; x.fillRect(0, 0, w, h);
+  for (let i = 0; i < 5000; i++) { const v = 100 + rnd() * 60 | 0; x.fillStyle = `rgba(${v},${v},${v},0.35)`; x.fillRect(rnd() * w, rnd() * h, 1, 1); }
+}, [3, 3]);
+// brushed stainless (chamber), streaks along the circumference
+const brushed = HW.canvasTex(512, 256, (x, w, h) => {
+  x.fillStyle = "#808080"; x.fillRect(0, 0, w, h);
+  for (let i = 0; i < 1400; i++) { const v = 95 + rnd() * 80 | 0; x.strokeStyle = `rgba(${v},${v},${v},0.32)`; x.lineWidth = 0.7; const y = rnd() * h; x.beginPath(); x.moveTo(0, y); x.lineTo(w, y + (rnd() - 0.5) * 3); x.stroke(); }
+}, [6, 2]);
+// tooling plate: milled aluminium with a grid of tapped holes
+const plateMap = HW.canvasTex(256, 256, (x, w, h) => {
+  x.fillStyle = "#9da2a8"; x.fillRect(0, 0, w, h);
+  for (let i = 0; i < 2600; i++) { const v = 140 + rnd() * 50 | 0; x.fillStyle = `rgba(${v},${v},${v + 3},0.22)`; x.fillRect(rnd() * w, rnd() * h, 2, 1); }
+  for (let i = 0; i < 2; i++) for (let j = 0; j < 2; j++) {
+    const cx = (i + 0.5) * w / 2, cy = (j + 0.5) * h / 2;
+    x.fillStyle = "#c9ccd0"; x.beginPath(); x.arc(cx, cy, 11, 0, 7); x.fill();
+    x.fillStyle = "#26292e"; x.beginPath(); x.arc(cx, cy, 8, 0, 7); x.fill();
+  }
+}, [1, 1], true);
+plateMap.repeat.set(26, 26);
+// knurl for connector nuts
+const knurl = HW.canvasTex(128, 32, (x, w, h) => {
+  x.fillStyle = "#808080"; x.fillRect(0, 0, w, h);
+  for (let i = 0; i < w; i += 4) { x.fillStyle = "#5a5a5a"; x.fillRect(i, 0, 2, h); }
+}, [6, 1]);
+
+const MT = {
+  // silicon: dark blue-grey, mirror-polished, with a strong specular sheen. Drawn see-through so the
+  // tracks inside the wafer show (real silicon is opaque).
+  si: new THREE.MeshPhysicalMaterial({ color: "#313b50", metalness: 0.45, roughness: 0.1, transparent: true, opacity: 0.6,
+    clearcoat: 1, clearcoatRoughness: 0.05, specularIntensity: 1, envMapIntensity: 1.2, side: THREE.DoubleSide, depthWrite: false }),
+  siEdge: new THREE.MeshPhysicalMaterial({ color: "#2a3140", metalness: 0.4, roughness: 0.18, clearcoat: 0.8, clearcoatRoughness: 0.08, envMapIntensity: 1.1 }),
+  // the aluminium front contact is a few hundred nm thick: a faint satin veil over the active area
+  contact: new THREE.MeshStandardMaterial({ color: "#c7ccd4", metalness: 0.9, roughness: 0.42, bumpMap: grain, bumpScale: 0.002, transparent: true, opacity: 0.22, depthWrite: false, side: THREE.DoubleSide }),
+  alu: new THREE.MeshStandardMaterial({ color: "#c9ced6", metalness: 0.95, roughness: 0.3, bumpMap: grain, bumpScale: 0.003 }),
+  pcb: new THREE.MeshPhysicalMaterial({ map: pcbTex("map"), roughnessMap: pcbTex("rough"), bumpMap: pcbTex("bump"), bumpScale: 0.006, roughness: 1, metalness: 0.08, clearcoat: 0.55, clearcoatRoughness: 0.35 }),
+  pcbEdge: new THREE.MeshStandardMaterial({ color: "#b9b48c", roughness: 0.75, metalness: 0 }),
+  gold: new THREE.MeshStandardMaterial({ color: "#e6b85a", metalness: 1, roughness: 0.22 }),
+  chrome: new THREE.MeshStandardMaterial({ color: "#e3e6ea", metalness: 1, roughness: 0.14 }),
+  nut: new THREE.MeshStandardMaterial({ color: "#d9dce0", metalness: 1, roughness: 0.3, bumpMap: knurl, bumpScale: 0.01 }),
+  black: new THREE.MeshStandardMaterial({ color: "#16171a", metalness: 0.1, roughness: 0.55 }),
+  cable: new THREE.MeshPhysicalMaterial({ color: "#1b1c1f", metalness: 0, roughness: 0.45, clearcoat: 0.4, clearcoatRoughness: 0.3 }),
+  smd: new THREE.MeshStandardMaterial({ color: "#2a2622", roughness: 0.6 }),
+  smdEnd: new THREE.MeshStandardMaterial({ color: "#cfd2d6", metalness: 1, roughness: 0.3 }),
+  brass: new THREE.MeshStandardMaterial({ color: "#c79d5a", metalness: 1, roughness: 0.32, bumpMap: grain, bumpScale: 0.002 }),
+  steel: new THREE.MeshStandardMaterial({ color: "#c3c8cf", metalness: 0.9, roughness: 0.3, bumpMap: brushed, bumpScale: 0.004 }),
+  wall: new THREE.MeshStandardMaterial({ color: "#737980", metalness: 0.85, roughness: 0.42, bumpMap: brushed, bumpScale: 0.005, envMapIntensity: 0.35 }),
+  flange: new THREE.MeshStandardMaterial({ color: "#8c929a", metalness: 0.9, roughness: 0.38, bumpMap: brushed, bumpScale: 0.003, envMapIntensity: 0.4 }),
+  plate: new THREE.MeshStandardMaterial({ map: plateMap, color: "#8a9099", metalness: 0.7, roughness: 0.5, envMapIntensity: 0.4 }),
+  dark: new THREE.MeshStandardMaterial({ color: "#2a2f3b", metalness: 0.85, roughness: 0.35 }),
+  window: new THREE.MeshPhysicalMaterial({ color: "#cfe0ff", metalness: 0, roughness: 0.04, transmission: 0, transparent: true, opacity: 0.28, clearcoat: 1, envMapIntensity: 1.4, depthWrite: false }),
+  foil: new THREE.MeshStandardMaterial({ color: "#c9b27a", metalness: 0.9, roughness: 0.25 }),
+  viewer: new THREE.MeshStandardMaterial({ color: "#e9e4d2", metalness: 0, roughness: 0.6 }),
+};
+const V3 = (x, y, z) => new THREE.Vector3(x, y, z);
+function mesh(g, m, x, y, z) { const o = new THREE.Mesh(g, m); o.position.set(x || 0, y || 0, z || 0); o.castShadow = o.receiveShadow = true; return o; }
+// a cylinder along local z
+function zcyl(r, len, m, x, y, z, seg) { const g = new THREE.CylinderGeometry(r, r, len, seg || 24); g.rotateX(Math.PI / 2); return mesh(g, m, x, y, z); }
+function tube(pts, r, m, seg) { return mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), seg || 48, r, 8, false), m); }
+
+// ---------- the vacuum chamber (illustrative size): base plate, a wall cut away toward the viewer,
+// flanged ports, the target ladder on a central post and a turntable carrying the detector arm
+const chamber = new THREE.Group();
+scene.add(chamber);
+{
+  const base = mesh(new THREE.CylinderGeometry(RC + 4, RC + 4, 3, 96), [MT.flange, MT.plate, MT.flange], 0, PT - 1.5, 0);
+  chamber.add(base);
+  const turn = mesh(new THREE.CylinderGeometry(6, 6.4, 0.8, 64), MT.alu, 0, PT + 0.4, 0); chamber.add(turn);
+  chamber.add(mesh(new THREE.CylinderGeometry(4.2, 4.2, 0.4, 48), MT.dark, 0, PT + 0.95, 0));
+}
+// the wall: the arc toward the camera is cut away each frame (wallG turns with the view; ports on the
+// cut side are hidden), so the inside stays visible
+const CUT = THREE.MathUtils.degToRad(150);
+const wallG = new THREE.Group();
+scene.add(wallG);
+{
+  const lathe = (pr, m) => { const g = new THREE.LatheGeometry(pr.map(([r, y]) => new THREE.Vector2(r, y)), 120, CUT / 2, 2 * Math.PI - CUT); return mesh(g, m); };
+  const ring = (r0, r1, y0, y1) => [[r0, y0], [r1, y0], [r1, y1], [r0, y1], [r0, y0]];
+  const w = lathe(ring(RC, RC + 1.1, PT, PT + HC), MT.wall); w.castShadow = false; wallG.add(w);
+  wallG.add(lathe(ring(RC - 0.2, RC + 3.4, PT + HC - 1.4, PT + HC), MT.flange));
+  wallG.add(lathe(ring(RC - 0.2, RC + 3.4, PT, PT + 1.4), MT.flange));
+  // cut faces
+  for (const s of [-1, 1]) {
+    const a = s * CUT / 2;
+    const cap = mesh(new THREE.BoxGeometry(1.1, HC, 0.12), MT.steel, 0, PT + HC / 2, 0);
+    cap.position.set((RC + 0.55) * Math.sin(a), PT + HC / 2, (RC + 0.55) * Math.cos(a)); cap.rotation.y = a - Math.PI / 2;
+    cap.castShadow = false; wallG.add(cap);
+  }
+  // bolt heads on the top flange
+  const bolts = [];
+  for (let i = 0; i < 72; i++) {
+    const a = CUT / 2 + (2 * Math.PI - CUT) * (i + 0.5) / 72;
+    const b = new THREE.CylinderGeometry(0.45, 0.45, 0.5, 6); b.translate((RC + 2.2) * Math.sin(a), PT + HC + 0.25, (RC + 2.2) * Math.cos(a));
+    bolts.push(b);
+  }
+  wallG.add(mesh(BufferGeometryUtils.mergeGeometries(bolts), MT.chrome));
+}
+// ports at fixed azimuths (radians, measured like the wall: direction (sin a, 0, cos a))
+const PORTS = [];
+function port(az, y, kind) {
+  const g = new THREE.Group();
+  const r0 = kind === "beam" ? 2.2 : 3.2, L = 5;
+  g.add(zcyl(r0, L, MT.steel, 0, 0, RC + L / 2));
+  g.add(zcyl(r0 + 2.1, 1.1, MT.steel, 0, 0, RC + L + 0.55, 48));
+  const bolts = [];
+  for (let i = 0; i < 12; i++) { const a = 2 * Math.PI * i / 12, b = new THREE.CylinderGeometry(0.28, 0.28, 0.5, 6); b.rotateX(Math.PI / 2); b.translate((r0 + 1.5) * Math.cos(a), (r0 + 1.5) * Math.sin(a), RC + L + 1.3); bolts.push(b); }
+  g.add(mesh(BufferGeometryUtils.mergeGeometries(bolts), MT.chrome));
+  if (kind === "view") { const wdw = zcyl(r0 - 0.2, 0.3, MT.window, 0, 0, RC + L + 1.2, 48); wdw.castShadow = false; g.add(wdw); }
+  else if (kind === "feed") {
+    g.add(zcyl(r0 + 2.1, 0.5, MT.steel, 0, 0, RC + L + 1.35, 48));
+    for (const [x, yy] of [[-1.4, 0.8], [1.4, 0.8], [-1.4, -1.2], [1.4, -1.2]]) { g.add(zcyl(0.55, 1.6, MT.chrome, x, yy, RC + L + 2.3)); g.add(zcyl(0.68, 0.5, MT.nut, x, yy, RC + L + 1.9)); }
+  } else if (kind === "beam") g.add(zcyl(r0, 70, MT.steel, 0, 0, RC + L + 36));
+  else g.add(zcyl(r0 + 2.1, 0.5, MT.steel, 0, 0, RC + L + 1.35, 48));
+  g.position.y = y; g.rotation.y = az;
+  scene.add(g); PORTS.push({ g, az });
+  return g;
+}
+port(Math.PI, 0, "beam");                         // beam in along +z
+port(0, 0, "blank");                              // beam out to the dump
+port(THREE.MathUtils.degToRad(-115), 9, "view");
+port(THREE.MathUtils.degToRad(75), 12, "view");
+const FEED_AZ = THREE.MathUtils.degToRad(128), FEED_Y = PT + HC * 0.62;
+port(FEED_AZ, FEED_Y, "feed");                    // signal feedthrough the detector cables go to
+for (const P of PORTS) HW.mergeByMaterial(P.g);
+// target ladder: a post from the base plate, three frames (empty, the foil, a scintillating viewer)
+const ladder = new THREE.Group();
+scene.add(ladder);
+{
+  ladder.add(mesh(new THREE.CylinderGeometry(0.4, 0.4, -7 - PT + 0.3, 20), MT.steel, 0, (PT - 7.3) / 2 + 0.15, 0));
+  for (const x of [-2.6, 2.6]) ladder.add(mesh(new THREE.BoxGeometry(0.5, 17, 0.5), MT.alu, x, 1.2, 0));
+  ladder.add(mesh(new THREE.BoxGeometry(5.7, 0.6, 0.5), MT.alu, 0, 9.4, 0));
+  ladder.add(mesh(new THREE.BoxGeometry(5.7, 0.6, 0.5), MT.alu, 0, -7.0, 0));
+  for (const y of [-4.8, 4.8]) {
+    const sh = new THREE.Shape(); sh.moveTo(-2.4, -2.2); sh.lineTo(2.4, -2.2); sh.lineTo(2.4, 2.2); sh.lineTo(-2.4, 2.2); sh.lineTo(-2.4, -2.2);
+    const hole = new THREE.Path(); hole.absarc(0, 0, 1.6, 0, 2 * Math.PI, true); sh.holes.push(hole);
+    const g = new THREE.ExtrudeGeometry(sh, { depth: 0.25, bevelEnabled: false, curveSegments: 32 }); g.translate(0, 0, -0.125);
+    ladder.add(mesh(g, MT.alu, 0, y, 0));
+  }
+  const vw = mesh(new THREE.CylinderGeometry(1.6, 1.6, 0.1, 40), MT.viewer, 0, 4.8, 0); vw.rotation.x = Math.PI / 2; ladder.add(vw);
+  // the active position's frame: two plates either side of the foil
+  for (const [x, y, w, h] of [[0, 2.15, 4.8, 0.7], [0, -2.15, 4.8, 0.7], [-2.15, 0, 0.7, 3.6], [2.15, 0, 0.7, 3.6]]) ladder.add(mesh(new THREE.BoxGeometry(w, h, 0.25), MT.alu, x, y, 0));
+  HW.mergeByMaterial(ladder);
+}
+
+// target foil or source disc at the origin, beam along +z
+const target = new THREE.Mesh(new THREE.CylinderGeometry(1.6, 1.6, 0.08, 48), MT.foil);
+target.rotation.x = Math.PI / 2;
+target.castShadow = true;
+scene.add(target);
+const tframe = new THREE.Mesh(new THREE.TorusGeometry(1.75, 0.16, 12, 48), MT.dark);
+scene.add(tframe);
+const beam = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.09, 60, 12),
+  new THREE.MeshBasicMaterial({ color: new THREE.Color("#f2c14e").multiplyScalar(1.6), transparent: true, opacity: 0.85 }));
+beam.rotation.x = Math.PI / 2; beam.position.z = -30;
+scene.add(beam);
+
+// ---------- the telescope: built along local +z, the depth axis
+const tel = new THREE.Group();
+scene.add(tel);
+const cables = new THREE.Group();
+scene.add(cables);
+const edgeMat = new THREE.LineBasicMaterial({ color: "#9fb6dd", transparent: true, opacity: 0.35 });
+let SD = 0.01, Z1 = 0, Z2B = 0;                 // depth scale (units per um), back of dE, front of E
+const NVEC = new THREE.Vector3();
+const PLUGS = [];                               // cable start points, telescope-local
+// one detector: wafer (to scale in depth), front contact, guard ring, bond pads and wire bonds,
+// the FR4 frame board it is glued into, the connector on the board's tab
+function detector(z0, d, parent) {
+  const WS = FACE + 2 * BORDER;
+  const si = mesh(new THREE.BoxGeometry(WS, WS, Math.max(d, 0.004)), MT.si, 0, 0, z0 + d / 2);
+  si.castShadow = false; si.renderOrder = 1; si.userData.keep = true; parent.add(si);
+  const e = new THREE.LineSegments(new THREE.EdgesGeometry(si.geometry), edgeMat); e.position.copy(si.position); parent.add(e);
+  // front contact over the active area, a hair in front of the silicon
+  const ct = new THREE.Mesh(new THREE.PlaneGeometry(FACE, FACE), MT.contact); ct.position.z = z0 - 0.004; ct.renderOrder = 2; ct.userData.keep = true; parent.add(ct);
+  // guard ring (opaque aluminium band) and the dead border's two bond pads
+  const sh = new THREE.Shape(); const o = FACE / 2 + 0.55, i = FACE / 2 + 0.22;
+  sh.moveTo(-o, -o); sh.lineTo(o, -o); sh.lineTo(o, o); sh.lineTo(-o, o); sh.lineTo(-o, -o);
+  const hp = new THREE.Path(); hp.moveTo(-i, -i); hp.lineTo(-i, i); hp.lineTo(i, i); hp.lineTo(i, -i); hp.lineTo(-i, -i); sh.holes.push(hp);
+  const gr = new THREE.ExtrudeGeometry(sh, { depth: 0.012, bevelEnabled: false }); gr.translate(0, 0, z0 - 0.014);
+  parent.add(mesh(gr, MT.alu));
+  for (const px of [-0.9, 0.9]) parent.add(mesh(new THREE.BoxGeometry(0.7, 0.5, 0.012), MT.alu, px, FACE / 2 + 0.72, z0 - 0.008));
+  // the board: a frame with a window the wafer sits in; front face a little behind the wafer's front
+  const zc = z0 + Math.min(d / 2, 0.5) + 0.02, zf = zc - BTH / 2;
+  const bs = new THREE.Shape(); bs.moveTo(-BW / 2, BB); bs.lineTo(BW / 2, BB); bs.lineTo(BW / 2, BT_); bs.lineTo(-BW / 2, BT_); bs.lineTo(-BW / 2, BB);
+  const wh = new THREE.Path(); wh.moveTo(-WIN, -WIN); wh.lineTo(-WIN, WIN); wh.lineTo(WIN, WIN); wh.lineTo(WIN, -WIN); wh.lineTo(-WIN, -WIN); bs.holes.push(wh);
+  for (const [cx, cy] of [[-BW / 2 + 1.1, BB + 1.1], [BW / 2 - 1.1, BB + 1.1], [-BW / 2 + 1.1, WIN + 1.6], [BW / 2 - 1.1, WIN + 1.6]]) { const h = new THREE.Path(); h.absarc(cx, cy, 0.36, 0, 2 * Math.PI, true); bs.holes.push(h); }
+  const bg = new THREE.ExtrudeGeometry(bs, { depth: BTH, bevelEnabled: false, curveSegments: 16 }); bg.translate(0, 0, zf);
+  const board = new THREE.Mesh(bg, [MT.pcb, MT.pcbEdge]); board.castShadow = board.receiveShadow = true; board.userData.keep = true; parent.add(board);
+  // wire bonds: 25 um gold wire, drawn much thicker; two per pad, looping toward the target
+  for (const px of [-0.9, 0.9]) for (const dx of [-0.16, 0.16]) {
+    const a = V3(px + dx, FACE / 2 + 0.72, z0 - 0.02), b = V3(px + dx, WIN + 1.35, zf - 0.005);
+    parent.add(tube([a, V3(px + dx, (a.y + b.y) / 2 - 0.1, Math.min(a.z, b.z) - 0.45), b], 0.022, MT.gold, 16));
+  }
+  // connector (a coaxial push-pull receptacle) and the plug with its cable on the tab, two passives
+  const ty = BT_;
+  // (the print is mirrored so it reads from the target side: a footprint at board x sits at -x here)
+  const LX = -LEMO_X;
+  parent.add(mesh(new THREE.CylinderGeometry(0.55, 0.6, 1.4, 32), MT.chrome, LX, ty + 0.7, zc));
+  parent.add(mesh(new THREE.CylinderGeometry(0.78, 0.78, 0.55, 32), MT.nut, LX, ty + 0.5, zc));
+  parent.add(mesh(new THREE.CylinderGeometry(0.62, 0.62, 1.8, 32), MT.chrome, LX, ty + 2.3, zc));
+  parent.add(mesh(new THREE.CylinderGeometry(0.66, 0.62, 0.14, 32), MT.black, LX, ty + 1.45, zc));
+  parent.add(mesh(new THREE.CylinderGeometry(0.42, 0.62, 1.6, 24), MT.black, LX, ty + 4.0, zc));
+  PLUGS.push(V3(LX, ty + 4.8, zc));
+  for (const cx of [-3.2, -1.6, 0]) {
+    parent.add(mesh(new THREE.BoxGeometry(0.5, 0.36, 0.2), MT.smd, -(cx - 0.15), ty - 1.4, zf - 0.1));
+    for (const s of [-1, 1]) parent.add(mesh(new THREE.BoxGeometry(0.12, 0.38, 0.22), MT.smdEnd, -(cx - 0.15 + s * 0.3), ty - 1.4, zf - 0.11));
+  }
+  return { zc, zf };
+}
+function buildTelescope() {
+  for (const c of [...tel.children]) { tel.remove(c); c.traverse((o) => { if (o.geometry) o.geometry.dispose(); }); }
+  PLUGS.length = 0;
+  // depth axis to scale: 1 unit = 125 um while the stack fits in 8 units, else squeezed to fit
+  SD = Math.min(0.008, 8 / (S.t1 + S.t2));
+  const d1 = S.t1 * SD, d2 = S.t2 * SD;
+  Z1 = d1; Z2B = d1 + GAP;
+  const b1 = detector(0, d1, tel), b2 = detector(Z2B, d2, tel);
+  const zb = b2.zc + BTH / 2;
+  // collimator in front of the ΔE detector: a brass plate with a square aperture (0.74 of the face;
+  // the drawn tracks aim within 0.7 of it)
+  const ZCOL = -1.8;
+  {
+    const sh = new THREE.Shape(); const o = BW / 2, a = 0.37 * FACE;
+    sh.moveTo(-o, BB); sh.lineTo(o, BB); sh.lineTo(o, WIN + 2.4); sh.lineTo(-o, WIN + 2.4); sh.lineTo(-o, BB);
+    const hp = new THREE.Path(); hp.moveTo(-a, -a); hp.lineTo(-a, a); hp.lineTo(a, a); hp.lineTo(a, -a); hp.lineTo(-a, -a); sh.holes.push(hp);
+    for (const [cx, cy] of [[-BW / 2 + 1.1, BB + 1.1], [BW / 2 - 1.1, BB + 1.1], [-BW / 2 + 1.1, WIN + 1.6], [BW / 2 - 1.1, WIN + 1.6]]) { const h = new THREE.Path(); h.absarc(cx, cy, 0.36, 0, 2 * Math.PI, true); sh.holes.push(h); }
+    const g = new THREE.ExtrudeGeometry(sh, { depth: 0.45, bevelEnabled: true, bevelThickness: 0.05, bevelSize: 0.05, bevelSegments: 2 }); g.translate(0, 0, ZCOL - 0.45);
+    tel.add(mesh(g, MT.brass));
+  }
+  // four threaded standoff rods through the corner holes, with nuts at every plate
+  for (const [x, y] of [[-BW / 2 + 1.1, BB + 1.1], [BW / 2 - 1.1, BB + 1.1], [-BW / 2 + 1.1, WIN + 1.6], [BW / 2 - 1.1, WIN + 1.6]]) {
+    const z0 = ZCOL - 1.2, z1 = zb + 1.0;
+    tel.add(zcyl(0.3, z1 - z0, MT.steel, x, y, (z0 + z1) / 2, 12));
+    for (const z of [ZCOL - 0.75, ZCOL + 0.3, b1.zf - 0.25, b1.zf + BTH + 0.25, b2.zf - 0.25, b2.zf + BTH + 0.25]) tel.add(zcyl(0.62, 0.36, MT.chrome, x, y, z, 6));
+  }
+  // detector arm from the turntable to beyond the stack, with a rail and two carriages holding the rods
+  const zA = -D0 + 3, zE = zb + 4, ya = PT + 0.4;
+  tel.add(mesh(new THREE.BoxGeometry(4.4, 0.8, zE - zA), MT.alu, 0, ya, (zA + zE) / 2));
+  tel.add(mesh(new THREE.BoxGeometry(1.6, 0.9, zE - zA - 1), MT.dark, 0, ya + 0.85, (zA + zE) / 2));
+  const cy0 = ya + 1.3, cy1 = BB + 1.7;
+  for (const z of [ZCOL - 1.1, zb + 0.5]) tel.add(mesh(new THREE.BoxGeometry(BW, cy1 - cy0, 1.0), MT.alu, 0, (cy0 + cy1) / 2, z));
+  // ruler under the stack: 1 mm with 100 um ticks, on the depth scale
+  const L = 1000 * SD, pts = [new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, 0, L)];
+  for (let k = 0; k <= 10; k++) { const z = k * 100 * SD, hh = k % 5 ? 0.35 : 0.7; pts.push(new THREE.Vector3(0, 0, z), new THREE.Vector3(0, hh, z)); }
+  const ruler = new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints(pts), new THREE.LineBasicMaterial({ color: "#f2c14e", transparent: true, opacity: 0.8 }));
+  ruler.position.set(BW / 2 + 1.6, -FACE / 2 - 1.2, 0);
+  tel.add(ruler);
+  HW.mergeByMaterial(tel);
+  placeTelescope();
+}
+function placeTelescope() {
+  const th = (S.src === "reac" ? S.th : 32) * Math.PI / 180;
+  NVEC.set(Math.sin(th), 0, Math.cos(th));
+  tel.position.copy(NVEC).multiplyScalar(D0);
+  tel.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), NVEC);
+  target.rotation.set(Math.PI / 2, 0, 0);
+  tframe.rotation.set(0, 0, 0);
+  if (S.src !== "reac") { tframe.lookAt(NVEC); target.quaternion.copy(tframe.quaternion); target.rotateX(Math.PI / 2); }
+  ladder.quaternion.copy(tframe.quaternion);
+  beam.visible = S.src === "reac";
+  // cables: from each plug up, over, and down to the feedthrough on the chamber wall
+  for (const c of [...cables.children]) { cables.remove(c); c.geometry.dispose(); }
+  tel.updateMatrixWorld(true);
+  const fa = FEED_AZ, F = (r, y) => V3(r * Math.sin(fa), y, r * Math.cos(fa));
+  PLUGS.forEach((p, i) => {
+    const a = tel.localToWorld(p.clone()), up = tel.localToWorld(p.clone().add(V3(0, 4 + i, 0)));
+    const off = V3(Math.cos(fa), 0, -Math.sin(fa)).multiplyScalar((i - 0.5) * 2.8);
+    const end = F(RC + 3.5, FEED_Y + (i ? 0.8 : -1.2)).add(off.clone().multiplyScalar(0.5));
+    const mid = a.clone().lerp(end, 0.45); mid.y = Math.max(a.y, end.y) + 4;
+    const c = tube([a, up, mid, F(RC - 4, FEED_Y + 2.5).add(off), F(RC - 0.5, FEED_Y + 0.3).add(off), end], 0.3, MT.cable, 120);
+    cables.add(c);
+  });
+  setFit();
+}
+
+// ---------- tracks. A track is a string of points along the ray; each point carries its time of
+// passage (from the CSDA energy at that depth) and its brightness and width from dE/dx there.
+// Drawn as a thin screen-facing ribbon (the ionisation trail, which fades) plus a bright head where
+// the particle is now.
+const NTR = 90, KP = 420, NSEG = KP - 1;
+const tPos = new Float32Array(NTR * KP * 3), tCol = new Float32Array(NTR * KP * 3);
+const tT = new Float32Array(NTR * KP).fill(1e9), tSize = new Float32Array(NTR * KP), tTau = new Float32Array(NTR * KP).fill(1);
+const trGeo = new THREE.BufferGeometry();
+trGeo.setAttribute("position", new THREE.BufferAttribute(tPos, 3));
+trGeo.setAttribute("color", new THREE.BufferAttribute(tCol, 3));
+trGeo.setAttribute("aT", new THREE.BufferAttribute(tT, 1));
+trGeo.setAttribute("aSize", new THREE.BufferAttribute(tSize, 1));
+trGeo.setAttribute("aTau", new THREE.BufferAttribute(tTau, 1));
+for (const k of ["position", "color", "aT", "aSize", "aTau"]) trGeo.attributes[k].setUsage(THREE.DynamicDrawUsage);
+// heads: a soft point lit only for ~0.1 s after the particle passes it
+const trMat = new THREE.ShaderMaterial({
+  uniforms: { uTime: { value: 0 }, uPix: { value: 600 }, uGain: { value: 1 } },
+  vertexShader: `
+    attribute vec3 color; attribute float aT; attribute float aSize; attribute float aTau;
+    uniform float uTime, uPix, uGain;
+    varying vec3 vC; varying float vA;
+    void main(){
+      vec4 mv = modelViewMatrix * vec4(position, 1.0);
+      gl_Position = projectionMatrix * mv;
+      float age = uTime - aT;
+      if (age < 0.0 || age > 0.4) { vA = 0.0; gl_PointSize = 0.0; return; }
+      vA = exp(-age / 0.045);
+      vC = color * uGain * 2.4;
+      gl_PointSize = max(1.5, aSize * 3.2 * uPix / -mv.z);
+    }`,
+  fragmentShader: `
+    varying vec3 vC; varying float vA;
+    void main(){
+      if (vA < 0.004) discard;
+      vec2 d = gl_PointCoord - 0.5;
+      float r2 = dot(d, d);
+      if (r2 > 0.25) discard;
+      float a = (exp(-r2 * 30.0) + 0.25 * exp(-r2 * 9.0)) * vA;
+      gl_FragColor = vec4(vC * a, a);
+      #include <tonemapping_fragment>
+      #include <colorspace_fragment>
+    }`,
+  transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
+});
+const tracks = new THREE.Points(trGeo, trMat);
+tracks.frustumCulled = false; tracks.renderOrder = 6;
+scene.add(tracks);
+// trails: segment k of a track joins its points k and k+1; four vertices per segment
+const NV = NTR * NSEG * 4;
+const rP0 = new Float32Array(NV * 3), rP1 = new Float32Array(NV * 3), rCol = new Float32Array(NV * 3), rT = new Float32Array(NV * 2).fill(1e9), rW = new Float32Array(NV * 2);
+const rEnd = new Float32Array(NV), rSide = new Float32Array(NV), rIdx = new Uint32Array(NTR * NSEG * 6);
+for (let s = 0; s < NTR * NSEG; s++) {
+  for (let q = 0; q < 4; q++) { rEnd[4 * s + q] = q >> 1; rSide[4 * s + q] = q & 1 ? 1 : -1; }
+  rIdx.set([4 * s, 4 * s + 1, 4 * s + 2, 4 * s + 1, 4 * s + 3, 4 * s + 2], 6 * s);
+}
+const rbGeo = new THREE.BufferGeometry();
+rbGeo.setAttribute("position", new THREE.BufferAttribute(rP0, 3));
+rbGeo.setAttribute("aP1", new THREE.BufferAttribute(rP1, 3));
+rbGeo.setAttribute("color", new THREE.BufferAttribute(rCol, 3));
+rbGeo.setAttribute("aT", new THREE.BufferAttribute(rT, 2));
+rbGeo.setAttribute("aW", new THREE.BufferAttribute(rW, 2));
+rbGeo.setAttribute("aEnd", new THREE.BufferAttribute(rEnd, 1));
+rbGeo.setAttribute("aSide", new THREE.BufferAttribute(rSide, 1));
+rbGeo.setIndex(new THREE.BufferAttribute(rIdx, 1));
+for (const k of ["position", "aP1", "color", "aT", "aW"]) rbGeo.attributes[k].setUsage(THREE.DynamicDrawUsage);
+const rbMat = new THREE.ShaderMaterial({
+  uniforms: { uTime: { value: 0 }, uPix: { value: 600 }, uRes: { value: new THREE.Vector2(1, 1) }, uGain: { value: 1 } },
+  vertexShader: `
+    attribute vec3 aP1; attribute vec3 color; attribute vec2 aT; attribute vec2 aW; attribute float aEnd, aSide;
+    uniform float uTime, uPix, uGain; uniform vec2 uRes;
+    varying vec3 vC; varying float vAge, vTau, vS;
+    void main(){
+      vec4 m0 = modelViewMatrix * vec4(position, 1.0), m1 = modelViewMatrix * vec4(aP1, 1.0);
+      vec4 c0 = projectionMatrix * m0, c1 = projectionMatrix * m1;
+      vec4 c = aEnd < 0.5 ? c0 : c1;
+      vec2 s0 = c0.xy / c0.w * uRes, s1 = c1.xy / c1.w * uRes;
+      vec2 dir = s1 - s0; float L = length(dir);
+      dir = L > 1e-4 ? dir / L : vec2(1.0, 0.0);
+      float depth = aEnd < 0.5 ? -m0.z : -m1.z;
+      float wpx = max(1.4, aW.x * uPix / max(depth, 0.1));          // never thinner than ~1 px
+      vec2 off = vec2(-dir.y, dir.x) * aSide * (wpx + 1.5) / uRes;
+      gl_Position = c + vec4(off * c.w, 0.0, 0.0);
+      vAge = uTime - (aEnd < 0.5 ? aT.x : aT.y);
+      vTau = aW.y; vS = aSide * (wpx + 1.5) / wpx;
+      vC = color * uGain;
+    }`,
+  fragmentShader: `
+    varying vec3 vC; varying float vAge, vTau, vS;
+    void main(){
+      if (vAge < 0.0) discard;
+      float a = exp(-vAge / vTau);
+      if (a < 0.003) discard;
+      float head = exp(-vAge / 0.08);
+      float x = abs(vS);
+      float prof = exp(-x * x * 1.6) + 0.35 * exp(-x * x * 0.35);   // bright core, soft skirt
+      float k = 1.6 * a * prof * (1.0 + 2.0 * head);
+      gl_FragColor = vec4(vC * k, k);
+      #include <tonemapping_fragment>
+      #include <colorspace_fragment>
+    }`,
+  transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide,
+});
+const trails = new THREE.Mesh(rbGeo, rbMat);
+trails.frustumCulled = false; trails.renderOrder = 5;
+scene.add(trails);
+
+const tmpC = new THREE.Color(), V = new THREE.Vector3(), HIT = new THREE.Vector3(), DIR = new THREE.Vector3();
+let slot = 0, clock = 0;
+function betaOf(sp, E) { const m = ST.SPECIES[sp].m * ST.U, g = 1 + E / m; return Math.sqrt(1 - 1 / (g * g)); }
+const LS0 = Math.log(20), LS1 = Math.log(1500);
+function spawnTrack(sp, E0) {
+  const base = slot * KP;
+  let k = 0;
+  const put = (p, c, gain, size, t, tau) => {
+    if (k >= KP) return;
+    const i = base + k++;
+    tPos[3 * i] = p.x; tPos[3 * i + 1] = p.y; tPos[3 * i + 2] = p.z;
+    tCol[3 * i] = c.r * gain; tCol[3 * i + 1] = c.g * gain; tCol[3 * i + 2] = c.b * gain;
+    tSize[i] = size; tT[i] = t; tTau[i] = tau;
+  };
+  tmpC.set(COL[sp]);
+  // aim at a random point of the front face; the track is the straight ray through it
+  // (within 7 degrees of the axis, so the depth along the ray differs from the axial depth by < 1 %)
+  HIT.set((Math.random() - 0.5) * 0.7 * FACE, (Math.random() - 0.5) * 0.7 * FACE, 0);
+  tel.localToWorld(HIT);
+  DIR.copy(HIT).normalize();
+  const cosA = DIR.dot(NVEC), dist = HIT.length();
+  const b0 = betaOf(sp, E0);
+  const tf = Math.min(0.9, Math.max(0.14, 0.04 / b0));
+  const nf = 90;
+  for (let j = 0; j < nf; j++) { const s = 1.8 + (dist - 1.8) * j / (nf - 1); put(V.copy(DIR).multiplyScalar(s), tmpC, 0.2, 0.018, clock + tf * j / (nf - 1), 0.4); }
+  // in silicon: the CSDA energy at each depth, brightness and width from dE/dx there
+  const R0 = ST.rangeG(sp, E0), Rum = R0 / ST.RHO * 1e4, tot = S.t1 + S.t2;
+  // one point per ~0.04 scene units
+  const dEnd = Math.min(Rum, tot), ns = Math.max(6, Math.min(KP - nf - 70, Math.round(dEnd * SD / 0.04)));
+  let t = clock + tf, dPrev = 0, bPrev = b0;
+  const VS = 120;                           // scene units per unit beta: visual speed in silicon
+  for (let j = 0; j <= ns; j++) {
+    const dd = dEnd * Math.pow(j / ns, 0.85);  // a little denser near the start, where E is high
+    const E = ST.energyAtRange(sp, Math.max(R0 - dd * 1e-4 * ST.RHO, 1e-9));
+    const bb = betaOf(sp, Math.max(E, 1e-4)), Sx = ST.dedx(sp, Math.max(E, 1e-3)).t;
+    const zz = dd * SD + (dd > S.t1 ? GAP : 0);
+    if (dPrev <= S.t1 && dd > S.t1) {
+      // the gap between the detectors: no material, the particle coasts at its exit speed
+      const bg = betaOf(sp, ST.energyAtRange(sp, R0 - S.t1 * 1e-4 * ST.RHO));
+      t += (S.t1 - dPrev) * SD / (VS * bg);
+      put(V.copy(DIR).multiplyScalar(dist + S.t1 * SD / cosA), tmpC, 0.25, 0.02, t, 0.6);
+      for (let g = 1; g <= 10; g++) put(V.copy(DIR).multiplyScalar(dist + (S.t1 * SD + GAP * g / 11) / cosA), tmpC, 0.25, 0.02, t + GAP * g / 11 / (VS * bg), 0.6);
+      t += GAP / (VS * bg) + (dd - S.t1) * SD / (VS * bb);
+    } else t += (dd - dPrev) * SD / (VS * Math.max(0.5 * (bb + bPrev), 0.004));
+    dPrev = dd; bPrev = bb;
+    const u = Math.min(1, Math.max(0, (Math.log(Sx) - LS0) / (LS1 - LS0)));
+    put(V.copy(DIR).multiplyScalar(dist + zz / cosA), tmpC, 0.45 + 1.7 * u, 0.03 + 0.075 * u, t, 2.6);
+  }
+  if (Rum <= tot) {
+    put(V, tmpC, 1.8, 0.12, t, 0.5);       // where it stops
+  } else {
+    const E = ST.energyAtRange(sp, R0 - tot * 1e-4 * ST.RHO), bb = betaOf(sp, E), zz = tot * SD + GAP;
+    for (let j = 1; j <= 50; j++) put(V.copy(DIR).multiplyScalar(dist + (zz + 10 * j / 50) / cosA), tmpC, 0.3, 0.02, t + j * 10 / 50 / (VS * bb), 0.5);
+  }
+  const used = k;
+  for (; k < KP; k++) { tT[base + k] = 1e9; const i = base + k, l = base + used - 1; tPos[3 * i] = tPos[3 * l]; tPos[3 * i + 1] = tPos[3 * l + 1]; tPos[3 * i + 2] = tPos[3 * l + 2]; }
+  for (const key of ["position", "color", "aT", "aSize", "aTau"]) {
+    const a = trGeo.attributes[key];
+    a.clearUpdateRanges(); a.addUpdateRange(base * a.itemSize, KP * a.itemSize); a.needsUpdate = true;
+  }
+  // trail segments: the colour and width of the far end, a gap in the trail where the speed jumps
+  const sb = slot * NSEG;
+  for (let j = 0; j < NSEG; j++) {
+    const i0 = base + j, i1 = i0 + 1, live = j + 1 < used;
+    for (let q = 0; q < 4; q++) {
+      const v = 4 * (sb + j) + q;
+      rP0[3 * v] = tPos[3 * i0]; rP0[3 * v + 1] = tPos[3 * i0 + 1]; rP0[3 * v + 2] = tPos[3 * i0 + 2];
+      rP1[3 * v] = tPos[3 * i1]; rP1[3 * v + 1] = tPos[3 * i1 + 1]; rP1[3 * v + 2] = tPos[3 * i1 + 2];
+      rCol[3 * v] = tCol[3 * i1]; rCol[3 * v + 1] = tCol[3 * i1 + 1]; rCol[3 * v + 2] = tCol[3 * i1 + 2];
+      rT[2 * v] = live ? tT[i0] : 1e9; rT[2 * v + 1] = live ? tT[i1] : 1e9;
+      rW[2 * v] = tSize[i1]; rW[2 * v + 1] = tTau[i1];
+    }
+  }
+  for (const key of ["position", "aP1", "color", "aT", "aW"]) {
+    const a = rbGeo.attributes[key];
+    a.clearUpdateRanges(); a.addUpdateRange(4 * sb * a.itemSize, 4 * NSEG * a.itemSize); a.needsUpdate = true;
+  }
+  slot = (slot + 1) % NTR;
+}
+
+// ---------- labels
+const tags = { DE: document.getElementById("tagDE"), E: document.getElementById("tagE"), Src: document.getElementById("tagSrc"), Beam: document.getElementById("tagBeam"), Rule: document.getElementById("tagRule") };
+function place(el, p) {
+  V.copy(p).project(camera);
+  const vis = V.z < 1 && Math.abs(V.x) < 1 && Math.abs(V.y) < 1;
+  el.style.display = vis ? "" : "none";
+  if (vis) { el.style.left = (V.x * 0.5 + 0.5) * innerWidth + "px"; el.style.top = (-V.y * 0.5 + 0.5) * innerHeight + "px"; }
+}
+const LP = new THREE.Vector3();
+function placeTags() {
+  place(tags.DE, tel.localToWorld(LP.set(0, FACE / 2 + 2.6, Z1 / 2)));
+  place(tags.E, tel.localToWorld(LP.set(0, FACE / 2 + 2.6, Z2B + S.t2 * SD / 2)));
+  place(tags.Src, LP.set(0, -3.2, 0));
+  if (beam.visible) place(tags.Beam, LP.set(0, 2.4, -3)); else tags.Beam.style.display = "none";
+  place(tags.Rule, tel.localToWorld(LP.set(BW / 2 + 1.6, -FACE / 2 - 2.4, 500 * SD)));
+}
+
+// ---------- camera framing
+let fitTarget = new THREE.Vector3(), fitDist = 0, fitTime = 0;
+function setFit() {
+  const L = D0 + Z2B + S.t2 * SD;
+  fitTarget.copy(NVEC).multiplyScalar(0.6 * L);
+  fitDist = (1.45 * L + 34) * Math.pow(Math.max(1, 1.3 / camera.aspect), 0.75);   // narrow screens step back
+  fitTime = 1.5;                            // seconds of easing; afterwards the user owns the view
+}
+
+// ---------- text
+function drawText() {
+  for (const sp of ["t1", "t2"]) document.getElementById(sp + "o").textContent = S[sp] + " µm";
+  document.getElementById("fwo").textContent = S.fw + " keV";
+  document.getElementById("emaxo").textContent = S.Emax + " MeV";
+  document.getElementById("ebo").textContent = S.Eb.toFixed(1) + " MeV";
+  document.getElementById("tho").textContent = S.th + "°";
+  document.getElementById("nevo").textContent = S.N.toLocaleString("en-US");
+  document.getElementById("bexpo").textContent = S.b.toFixed(2);
+  document.getElementById("axes").textContent = S.log ? "linear axes" : "log axes";
+  document.getElementById("pilab").textContent = `PI in MeV^${S.b.toFixed(2)}, log axis`;
+  tags.DE.textContent = `ΔE · ${S.t1} µm`;
+  tags.E.textContent = `E · ${S.t2} µm`;
+  tags.Src.textContent = S.src === "reac" ? `${SUP(S.tgt)} target` : S.src === "alpha" ? "α source" : "source";
+  tags.Rule.textContent = "1 mm (depth to scale)";
+  // stamp: the protons' punch-through, the number people ask for first
+  const ep = ST.energyToCross("p", S.t1 + S.t2), ea = ST.energyToCross("4He", S.t1);
+  document.getElementById("stamp").innerHTML = `<b>${S.t1} + ${S.t2} µm Si</b><small>protons punch through above ${ep.toFixed(2)} MeV · α need ${ea.toFixed(2)} MeV to reach E</small>`;
+  const w = [];
+  if (S.on["6Li"] || S.on["7Li"]) w.push("Li bands: effective-charge scaling. Against measured ⁷Li stopping in Si the model is 14 % high at 0.05 to 0.2 MeV/u, 5 % high at 0.2 to 0.5, 4.5 % low at 0.5 to 1 MeV/u, and has one point above 1 MeV/u; ⁶Li is the same scaling, untested.");
+  if (S.src === "reac") {
+    const nl = LINES.length;
+    document.getElementById("reacnote").textContent = nl
+      ? `${nl} two-body lines (ground and low-lying states, ENSDF, sharp). Equal weights: these are not cross sections. No energy loss in the target.`
+      : "No open channel for the selected ejectiles at this energy.";
+  }
+  if (EV && EV.n) {
+    let pun = 0; for (let i = 0; i < EV.n; i++) if (EV.where[i] === 2) pun++;
+    if (pun / EV.n > 0.3) w.push(`${Math.round(100 * pun / EV.n)} % of the events pass through E: their bands turn back toward the origin.`);
+  }
+  const W = document.getElementById("warn"); W.hidden = !w.length; W.textContent = w.join(" ");
+}
+function drawChips() {
+  const c = document.getElementById("spchips");
+  c.innerHTML = SPS.map((sp) => `<button data-sp="${sp}" aria-pressed="${S.on[sp]}"><i style="background:${COL[sp]}"></i>${LAB[sp]}</button>`).join("");
+  c.style.display = S.src === "alpha" ? "none" : "";
+  for (const id of ["flat", "alpha", "reac"]) document.getElementById(id + "grp").hidden = S.src !== id;
+  const seg = (id, v) => { for (const b of document.querySelectorAll(`#${id} button`)) b.setAttribute("aria-pressed", b.dataset.v === String(v) ? "true" : "false"); };
+  seg("srcmode", S.src); seg("proj", S.proj); seg("cont", S.cont ? 1 : 0); seg("strag", S.strag ? 1 : 0);
+  for (const b of document.querySelectorAll("#tgt button")) b.setAttribute("aria-pressed", b.dataset.v === S.tgt ? "true" : "false");
+}
+
+// ---------- updates
+let dirty = 0;   // 1: redraw plots, 2: resimulate, 3: rebuild geometry
+function request(level) {
+  if (!dirty) requestAnimationFrame(flush);
+  dirty = Math.max(dirty, level);
+}
+function flush() {
+  const lv = dirty; dirty = 0;
+  if (lv >= 3) buildTelescope();
+  if (lv >= 2) { simulate(); LOCI = loci(); drawThresholds(); }
+  drawChips(); drawText(); drawPID(); drawPI();
+}
+
+// ---------- UI wiring
+const slider = (id, key, toS, toV, level) => {
+  const el = document.getElementById(id);
+  el.value = toV(S[key]);
+  el.addEventListener("input", () => { S[key] = toS(+el.value); request(level); });
+};
+slider("t1", "t1", (u) => nice(ex(u, T1)), (v) => lg(v, T1), 3);
+slider("t2", "t2", (u) => nice(ex(u, T2)), (v) => lg(v, T2), 3);
+slider("fw", "fw", (v) => v, (v) => v, 2);
+slider("emax", "Emax", (v) => v, (v) => v, 2);
+slider("eb", "Eb", (v) => v, (v) => v, 2);
+slider("th", "th", (v) => v, (v) => v, 3);
+slider("nev", "N", (v) => v, (v) => v, 2);
+slider("bexp", "b", (v) => v, (v) => v, 1);
+const segClick = (id, fn) => document.getElementById(id).addEventListener("click", (e) => { const b = e.target.closest("button"); if (b) fn(b.dataset.v); });
+segClick("strag", (v) => { S.strag = v === "1"; request(2); });
+segClick("srcmode", (v) => {
+  S.src = v;
+  if (v === "alpha") { S.t1 = Math.min(S.t1, 15); document.getElementById("t1").value = lg(S.t1, T1); }
+  request(3);
+});
+segClick("proj", (v) => { S.proj = v; request(2); });
+segClick("tgt", (v) => { S.tgt = v; request(2); });
+segClick("cont", (v) => { S.cont = v === "1"; request(2); });
+document.getElementById("spchips").addEventListener("click", (e) => {
+  const b = e.target.closest("button"); if (!b) return;
+  S.on[b.dataset.sp] = !S.on[b.dataset.sp]; request(2);
+});
+document.getElementById("axes").addEventListener("click", () => { S.log = !S.log; request(1); });
+// hover readout on the scatter plot
+document.getElementById("pid").addEventListener("mousemove", (e) => {
+  if (!PLOT) return;
+  const r = e.currentTarget.getBoundingClientRect(), px = e.clientX - r.left, py = e.clientY - r.top;
+  const P = PLOT, fx = (px - P.L) / (P.w - P.L - P.R), fy = (P.h - P.B - py) / (P.h - P.T - P.B);
+  if (fx < 0 || fx > 1 || fy < 0 || fy > 1) { document.getElementById("readout").textContent = ""; return; }
+  const E = S.log ? P.xl * Math.pow(P.xm / P.xl, fx) : P.xl + fx * (P.xm - P.xl), dE = S.log ? P.yl * Math.pow(P.ym / P.yl, fy) : P.yl + fy * (P.ym - P.yl);
+  document.getElementById("readout").textContent = `E = ${E.toFixed(2)} MeV · ΔE = ${dE.toFixed(3)} MeV · ΔE + E = ${(E + dE).toFixed(2)} MeV`;
+});
+
+let quality = innerWidth < 700 ? "low" : "high";
+function applyQuality() {
+  const g = quality === "high" ? GROUND_PRE_ACES : GROUND;
+  scene.background.copy(g); scene.fog.color.copy(g);
+  renderer.shadowMap.enabled = quality === "high";
+  sun.castShadow = quality === "high";
+  scene.traverse((o) => { if (o.material && !Array.isArray(o.material) && o.material.isMeshStandardMaterial) o.material.needsUpdate = true; });
+  for (const m of [MT.pcb, MT.pcbEdge, MT.wall, MT.plate, MT.steel]) m.needsUpdate = true;
+  for (const b of document.querySelectorAll("#qmode button")) b.setAttribute("aria-pressed", b.dataset.v === quality ? "true" : "false");
+}
+segClick("qmode", (v) => { quality = v; applyQuality(); });
+applyQuality();
+
+addEventListener("resize", () => {
+  camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight);
+  composer.setSize(innerWidth, innerHeight);
+  request(1);
+});
+
+// ---------- start
+{
+  const h = location.hash.replace("#", "");
+  if (h === "alpha") { S.src = "alpha"; S.t1 = 15; }
+  else if (h === "reaction") S.src = "reac";
+  document.getElementById("t1").value = lg(S.t1, T1);
+}
+buildTelescope();
+simulate(); LOCI = loci(); drawThresholds();
+drawChips(); drawText(); drawPID(); drawPI();
+{
+  const side = new THREE.Vector3(-NVEC.z, 0, NVEC.x);
+  controls.target.copy(fitTarget);
+  // looking across the flight path: target on the left of the screen, telescope on the right
+  camera.position.copy(fitTarget).addScaledVector(side, 0.84 * fitDist).add(new THREE.Vector3(0, 0.42 * fitDist, 0)).addScaledVector(NVEC, -0.3 * fitDist);
+}
+// a few tracks already in flight on the first frame
+for (let i = 0; i < 14 && EV.n; i++) { const j = (Math.random() * EV.n) | 0; clock -= 0.25; spawnTrack(SPS[EV.sp[j]], EV.E0[j]); }
+clock += 14 * 0.25;
+
+// ---------- loop
+let last = performance.now(), nextSpawn = 0;
+function animate(now) {
+  requestAnimationFrame(animate);
+  // the first rAF timestamp can predate the performance.now() taken at start: never let dt go negative
+  const dt = Math.min(0.1, Math.max(0, (now - last) / 1000)); last = now;
+  clock += reduce ? dt * 0.4 : dt;
+  if (EV && EV.n && clock >= nextSpawn) {
+    const j = (Math.random() * EV.n) | 0;
+    spawnTrack(SPS[EV.sp[j]], EV.E0[j]);
+    nextSpawn = clock + 0.1 + 0.1 * Math.random();
+  }
+  // ease the view toward the telescope when its length or angle changes
+  if (fitTime > 0) {
+    fitTime -= dt;
+    const k = reduce ? 1 : 1 - Math.exp(-dt / 0.3);
+    const off = V.copy(camera.position).sub(controls.target);
+    const dist = off.length();
+    controls.target.lerp(fitTarget, k);
+    off.multiplyScalar((dist + (fitDist - dist) * k) / dist);
+    camera.position.copy(controls.target).add(off);
+  }
+  controls.update();
+  trMat.uniforms.uTime.value = clock;
+  trMat.uniforms.uPix.value = renderer.domElement.height / (2 * Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2));
+  trMat.uniforms.uGain.value = quality === "high" ? 1 : 1.25;
+  rbMat.uniforms.uTime.value = clock;
+  rbMat.uniforms.uPix.value = trMat.uniforms.uPix.value;
+  rbMat.uniforms.uRes.value.set(renderer.domElement.width / 2, renderer.domElement.height / 2);
+  rbMat.uniforms.uGain.value = trMat.uniforms.uGain.value;
+  // the chamber wall is cut away on the side facing the camera; ports on that side are hidden
+  const az = Math.atan2(camera.position.x, camera.position.z);
+  wallG.rotation.y = az;
+  for (const P of PORTS) { let d = Math.abs(((P.az - az) % (2 * Math.PI) + 3 * Math.PI) % (2 * Math.PI) - Math.PI); P.g.visible = d > CUT / 2 + 0.12; }
+  if (quality === "high") composer.render(); else renderer.render(scene, camera);
+  placeTags();
+}
+requestAnimationFrame(animate);
+</script>
+<script src="assets/glass.js"></script>
+</body>
+</html>

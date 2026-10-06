@@ -1,0 +1,1197 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Gamma decay · nuclearjs</title>
+<link rel="stylesheet" href="assets/glass.css">
+<style>
+body{margin:0}
+:root{
+  color-scheme:dark;
+  --ground:#0b0d12; --line:#262c3a;
+  --ink:#e6e8ee; --muted:#8a92a6; --accent:#f2c14e;
+  --sans:"Avenir Next","Futura","Helvetica Neue","PingFang SC","Noto Sans SC",system-ui,sans-serif;
+  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+}
+html,body{height:100%}
+body{background:var(--ground);color:var(--ink);font-family:var(--sans);overflow:hidden}
+#stage{position:fixed;inset:0}
+#stage canvas{display:block;touch-action:none}
+.panel{position:fixed;border-radius:18px;padding:16px 18px;display:flex;flex-direction:column;gap:12px;overflow:auto;box-sizing:border-box}
+.panel{z-index:2}
+.panel>*{flex-shrink:0}
+#ctl{left:16px;top:calc(16px + env(safe-area-inset-top,0px));width:min(330px,calc(100% - 32px));max-height:calc(100% - 60px)}
+#side{right:16px;top:calc(16px + env(safe-area-inset-top,0px));width:400px;max-height:calc(100% - 32px);gap:9px}
+h1{margin:0;font-size:22px;font-weight:600;letter-spacing:.01em}
+h1 sup{font-size:.6em}
+.sub{margin:2px 0 0;color:var(--muted);font-size:13px;line-height:1.45}
+.sub sup,.src sup{font-size:.7em}
+.grp{display:flex;flex-direction:column;gap:6px}
+[hidden]{display:none !important}
+.lab{font-size:11px;text-transform:uppercase;letter-spacing:.12em;color:var(--muted)}
+.seg{display:flex;border:1px solid var(--line);border-radius:4px;overflow:hidden}
+.seg button{flex:1;background:none;border:0;color:var(--muted);font:500 12px var(--mono);padding:6px 4px;cursor:pointer}
+.seg button+button{border-left:1px solid var(--line)}
+.seg button[aria-pressed="true"]{background:#1f2533;color:var(--ink)}
+button:focus-visible,input:focus-visible,summary:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+input[type=text]{background:#0f121a;border:1px solid var(--line);border-radius:4px;color:var(--ink);font:13px var(--mono);padding:5px 7px;width:100%;box-sizing:border-box}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chips button{background:#161a24;border:1px solid var(--line);border-radius:4px;color:var(--ink);font:12px var(--mono);padding:5px 8px;cursor:pointer}
+.chips button:hover{border-color:var(--muted)}
+.chips button[aria-pressed="true"]{border-color:var(--accent);color:var(--accent)}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:3px 10px;font:12px var(--mono);font-variant-numeric:tabular-nums}
+.kv dt{color:var(--muted)}.kv dd{margin:0}
+.kv .hi{color:var(--accent)}
+.row{display:flex;gap:8px;align-items:center;font:12px var(--mono);color:var(--muted)}
+.row input[type=range]{flex:1;accent-color:var(--accent);min-width:0}
+.row output{min-width:72px;text-align:right;color:var(--ink);font-variant-numeric:tabular-nums}
+.row span{min-width:20px}
+details summary{cursor:pointer;font-size:11px;text-transform:uppercase;letter-spacing:.12em;color:var(--muted);list-style:none}
+details summary::before{content:"▸ ";}
+details[open] summary::before{content:"▾ ";}
+details .grp{margin-top:8px}
+.home{font:12px var(--mono);color:var(--muted);text-decoration:none}.home:hover{color:var(--ink)}
+.src{font-size:11px;color:var(--muted);line-height:1.45}
+.src a{color:var(--muted)}
+.warn{font-size:12px;color:var(--accent);line-height:1.4}
+.plot{width:100%;height:158px;display:block;cursor:crosshair}
+#pl{height:290px}
+.cap{display:flex;justify-content:space-between;align-items:baseline;font:11px var(--mono);color:var(--muted)}
+.cap b{font:600 13px var(--sans);color:var(--ink)}
+.leg{display:flex;flex-wrap:wrap;gap:4px 10px;font:11px var(--mono);color:var(--muted)}
+.leg i{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:4px;vertical-align:0}
+table.wt{border-collapse:collapse;font:11px var(--mono);font-variant-numeric:tabular-nums;width:100%}
+table.wt th{color:var(--muted);font-weight:400;text-align:right;padding:1px 4px}
+table.wt td{text-align:right;padding:1px 4px}
+table.wt tr.cur td{color:var(--accent)}
+.iso{display:flex;flex-direction:column;gap:6px}
+.iso button{all:unset;cursor:pointer;display:block;border:1px solid var(--line);border-radius:6px;padding:6px 8px;font:12px var(--sans);line-height:1.4;color:var(--muted)}
+.iso button:hover{border-color:var(--muted)}
+.iso button[aria-pressed="true"]{border-color:var(--accent)}
+.iso button b{color:var(--ink);font-weight:600}
+.iso button .n{font:11px var(--mono);color:var(--ink)}
+.axlab{position:fixed;font:500 11px var(--mono);color:var(--accent);pointer-events:none;transform:translate(-50%,-50%);opacity:.85;white-space:nowrap;text-shadow:0 0 6px #0b0d12}
+#stamp{position:fixed;left:50%;bottom:calc(26px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);text-align:center;pointer-events:none}
+#stamp b{display:block;font:600 clamp(30px,4.6vw,54px)/1 var(--sans);letter-spacing:-.01em}
+#stamp b sup{font-size:.55em}
+#stamp small{display:block;font:500 12px var(--mono);color:var(--muted);margin-top:6px}
+.hint{position:fixed;left:16px;bottom:calc(14px + env(safe-area-inset-bottom,0px));font:11px var(--mono);color:var(--muted)}
+@media (max-width:900px){
+  #ctl{max-height:42vh}
+  #side{left:16px;right:16px;width:auto;top:auto;bottom:calc(12px + env(safe-area-inset-bottom,0px));max-height:44vh}
+  #stamp,.hint,.axlab{display:none}
+}
+@media (max-width:560px){.panel{padding:10px 12px;gap:9px}h1{font-size:18px}}
+</style>
+<script data-goatcounter="https://jinleiphys.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
+</head>
+<body>
+
+<div id="stage"></div>
+
+<aside id="ctl" class="panel glass glass-deep" data-glass data-glass-bevel="22" data-glass-scale="42">
+  <div>
+    <a class="home" href="index.html">← nuclearjs</a> &nbsp; <a class="home" id="toNuc" href="nucleus.html#60Ni">shell model →</a> &nbsp; <a class="home" href="https://vibeinscience.com/nuclides.html">chart</a>
+    <h1 id="title">Gamma decay</h1>
+    <p class="sub">An excited nucleus sheds energy as a photon. The photon carries away angular momentum L, so it leaves in a pattern set by L and its projection M, and the rate falls steeply with L: at 150 keV and A = 99 the single-particle estimate runs from femtoseconds for E1 to years for M4 (table below).</p>
+  </div>
+  <div class="grp">
+    <div class="lab">Level scheme (ENSDF)</div>
+    <div class="chips" id="nucs"></div>
+  </div>
+  <div class="grp">
+    <div class="lab">Scene</div>
+    <div class="seg" id="mode">
+      <button data-v="pattern">radiation pattern</button>
+      <button data-v="corr">γγ correlation</button>
+    </div>
+  </div>
+  <div class="grp" id="gPat">
+    <div class="lab">Multipole</div>
+    <div class="seg" id="sig"><button data-v="E">electric E</button><button data-v="M">magnetic M</button></div>
+    <div class="seg" id="Ls"><button data-v="1">L = 1</button><button data-v="2">2</button><button data-v="3">3</button><button data-v="4">4</button><button data-v="5">5</button></div>
+    <div class="seg" id="Ms"></div>
+    <p class="src" id="patNote"></p>
+  </div>
+  <div class="grp" id="gCorr" hidden>
+    <div class="lab">Cascade J<sub>i</sub> → J → J<sub>f</sub>, pure multipoles</div>
+    <div class="chips" id="cascs"></div>
+    <div class="row"><span>θ</span><input id="th" type="range" min="0" max="180" step="1" value="90"><output id="thout"></output></div>
+    <dl class="kv" id="corrInfo"></dl>
+  </div>
+  <div class="grp">
+    <div class="lab">Selected transition</div>
+    <dl class="kv" id="info"></dl>
+    <p class="warn" id="warn" hidden></p>
+  </div>
+  <div class="grp">
+    <div class="lab">Weisskopf estimate, partial γ half-life</div>
+    <div class="row"><span>E<sub>γ</sub></span><input id="es" type="range" min="0" max="4" step="0.005" value="3"><output id="eout"></output></div>
+    <div class="row"><span>A</span><input id="as" type="range" min="4" max="260" step="1" value="60"><output id="aout"></output></div>
+    <table class="wt" id="wt"></table>
+    <div class="row" style="flex-wrap:wrap">B(E2) <input id="be2a" type="text" style="width:88px" value="100"> e²fm⁴ = <input id="be2b" type="text" style="width:70px"> W.u.</div>
+  </div>
+  <div class="grp">
+    <div class="lab">Rendering</div>
+    <div class="seg" id="qmode">
+      <button data-v="high" title="bloom">cinematic</button>
+      <button data-v="low">fast</button>
+    </div>
+    <p class="src">What is drawn. Radiation pattern: the glowing surface is the polar plot of the photon intensity per solid angle, |X<sub>LM</sub>(θ)|², radius proportional to intensity, with the quantization axis z vertical; it is the same for E and M of the same L and M. The short white strokes on it show the direction of the electric field of the outgoing wave over one period (E ∝ n × X<sub>LM</sub> for EL, E ∝ X<sub>LM</sub> for ML: the strokes of E and M are turned by 90°). The shells are wavefronts, bright where the intensity is high. Photons leave in directions drawn at random from the pattern, each trailing a wiggle along its own field direction (wavelength and speed are not to scale). The nucleus: for EL its surface oscillates as Re Y<sub>LM</sub> e<sup>−iωt</sup>, the oscillating charge multipole, amplitude exaggerated; for ML it keeps its shape and only a tint follows the same function, a reminder that magnetic radiation comes from currents and spins. Correlation: the first photon leaves along z (the beam), the surface is W(θ) of the second, the faint sphere is W = 1 (no correlation); the two detectors are at the angle θ of the slider. Materials, glow and floor are decoration.</p>
+  </div>
+  <details>
+    <summary>Model, exactly</summary>
+    <div class="grp src">
+      <span>Rate of a transition of multipolarity σL between nuclear states, long-wavelength limit: λ(σL) = 8π(L+1) / (L[(2L+1)!!]²) · (1/ħ)(E<sub>γ</sub>/ħc)<sup>2L+1</sup> B(σL), with B(EL) in e²fm<sup>2L</sup> (e² = αħc) and B(ML) in μ<sub>N</sub>²fm<sup>2L−2</sup>.</span>
+      <span>Weisskopf units, radius R = 1.2 A<sup>1/3</sup> fm: B<sub>W</sub>(EL) = (1/4π)[3/(L+3)]² R<sup>2L</sup> e²fm<sup>2L</sup>, B<sub>W</sub>(ML) = (10/π)[3/(L+3)]² R<sup>2L−2</sup> μ<sub>N</sub>²fm<sup>2L−2</sup> (B<sub>W</sub>(E2) = 0.059404 A<sup>4/3</sup> e²fm⁴, B<sub>W</sub>(M1) = 1.790 μ<sub>N</sub>²). This is the convention of the W.u. values ENSDF prints. ENSDF prints 184 such values for the gammas in the page's data, 159 as equalities. The page computes 150 of these 159 from the printed half-lives, intensities, conversion coefficients and mixing ratios: all within 2σ, 148 within 1σ; 4 of the 150 are bounds on the page (¹⁶O 6917 and 7117 keV levels), because another gamma of the level has an intensity limit, and the bound is within 0.01% of the value. The other 9 belong to levels where a gamma has no intensity (8) or no half-life is measured (1). Of the 25 limits and approximate values, 18 are computed with the same relation (&lt;, &gt;, ≈) and within 5%; the 7 others are the minor component of a mixed transition, whose limit depends on the range of δ, not propagated here. The B(E2) table's W.u. column uses the rounded unit 0.0594 A<sup>1.3333</sup>, below this one by 1.5×10<sup>−4</sup> (A = 10) to 2.6×10<sup>−4</sup> (A = 252).</span>
+      <span>The partial γ half-life of one gamma out of a level: t<sub>γ</sub> = T<sub>½</sub> × Σ<sub>j</sub> I<sub>γ,j</sub>(1 + α<sub>j</sub>) / I<sub>γ</sub>, divided by the isomeric-transition fraction when the level also decays otherwise. α is the total conversion coefficient as printed in ENSDF; this page computes none. Its source is per evaluation: BrIcc where the evaluation names it (⁶⁰Ni, ⁹⁹Tc and the isomer files of ¹⁸⁰Ta, ²²⁹Th, ²⁴²Am), measured for some E0-admixed transitions (¹⁵²Sm, ²³⁸U, stated in a comment and shown with the transition), and for ²²⁹ᵐTh derived from an assumed B(M1). Limits in ENSDF (a half-life or an intensity given as &lt;, &gt; or ≈) are carried through: B is then a limit, the partial half-life and the hindrance the opposite limit; a limit on another branch of the level makes the others bounds too, within that branch's share of the decays (shown). A limit on δ leaves the photon rate alone and bounds the two components in opposite directions. A pure E0 branch emits no photon: its (electron) intensity enters the branching, it gets no B. "M1,E2" in ENSDF means M1 or E2, not determined: no B. A mixed transition with mixing ratio δ splits as 1/(1+δ²) to the lower multipole and δ²/(1+δ²) to the higher. B in W.u. = λ / λ<sub>W</sub>; the hindrance is its inverse, t<sub>γ</sub>/t<sub>W</sub>.</span>
+      <span>Radiation pattern of a pure multipole (L, M): |X<sub>LM</sub>|² = [M² Y<sub>LM</sub>²/sin²θ + (∂Y<sub>LM</sub>/∂θ)²] / L(L+1), normalised to 1 over the sphere, X<sub>LM</sub> = <b>L</b>Y<sub>LM</sub>/√(L(L+1)) the vector spherical harmonic. A real source is an incoherent mixture of all M (a nucleus with no preferred axis): their sum is isotropic. An oriented nucleus (polarised or aligned) populates the M substates unequally and radiates the weighted sum of their patterns; detecting the first gamma of a cascade along z aligns the intermediate state in this way, which is where W(θ) comes from.</span>
+      <span>γγ angular correlation, pure multipoles, no perturbation of the intermediate state: W(θ) = Σ<sub>k even</sub> A<sub>k</sub> P<sub>k</sub>(cos θ), A<sub>k</sub> = F<sub>k</sub>(L<sub>1</sub>L<sub>1</sub>J<sub>i</sub>J) F<sub>k</sub>(L<sub>2</sub>L<sub>2</sub>J<sub>f</sub>J), F<sub>k</sub>(LL′J<sub>f</sub>J<sub>i</sub>) = (−1)<sup>J<sub>f</sub>+J<sub>i</sub>−1</sup>[(2k+1)(2L+1)(2L′+1)(2J<sub>i</sub>+1)]<sup>½</sup> (L L′ k; 1 −1 0){L L′ k; J<sub>i</sub> J<sub>i</sub> J<sub>f</sub>} (Frauenfelder and Steffen), 3j and 6j by Racah's formulas. An independent sum over magnetic substates (Clebsch-Gordan coefficients from diagonalising J², Wigner d from the matrix exponential) agrees to 10<sup>−13</sup> for 16 cascades. k runs to 6 (L ≤ 3 on the page). Finite detector size, mixing ratios and hyperfine perturbation are left out.</span>
+    </div>
+  </details>
+  <div class="src" id="srcs"></div>
+</aside>
+
+<aside id="side" class="panel glass glass-deep" data-glass data-glass-bevel="22" data-glass-scale="42">
+  <div class="cap"><b id="lsTitle">Level scheme</b><span>click an arrow</span></div>
+  <canvas id="pl" class="plot" aria-label="level scheme"></canvas>
+  <div class="leg" id="legm"></div>
+  <div class="src" id="lsNote"></div>
+  <div class="cap"><b>Weisskopf estimates</b><span>log<sub>10</sub> t<sub>½</sub>/s vs E<sub>γ</sub>, A = <span id="wA">60</span></span></div>
+  <canvas id="pw" class="plot" aria-label="Weisskopf half-lives" style="height:230px"></canvas>
+  <div class="src">Solid: EL, dashed: ML, L = 1 to 5. Dots: the measured partial γ half-lives of the isomers below and of the selected transition (ring); limits are not drawn. The curves are for the A of the slider: for a filled dot (its A equals the slider's) the vertical gap to its line is the hindrance in decades; hollow dots have another A, select one to set A to it.</div>
+  <div class="cap"><b>Isomers</b><span>ENSDF, partial γ</span></div>
+  <div class="iso" id="isos"></div>
+  <div class="cap"><b>γγ angular correlation</b><span id="wcap">W(θ)</span></div>
+  <canvas id="pc" class="plot" aria-label="angular correlation"></canvas>
+  <div class="cap"><b>Collectivity</b><span>B(E2; 2<sup>+</sup><sub>1</sub> → 0<sup>+</sup>) in W.u., even-even</span></div>
+  <canvas id="pb" class="plot" aria-label="B(E2) systematics" style="height:180px"></canvas>
+  <div class="src" id="bNote"></div>
+</aside>
+
+<div id="lZ" class="axlab" hidden>z</div>
+<div id="lD" class="axlab" hidden></div>
+<div id="lG" class="axlab" hidden>γ₁</div>
+<div id="stamp"></div>
+<div class="hint">drag to orbit · scroll to zoom · click an arrow or a point</div>
+
+<script src="assets/three-bundle.js"></script>
+<script src="assets/three-post.js"></script>
+<script src="assets/wave-stage.js"></script>
+<script src="assets/gamma-data.js"></script>
+<script src="assets/gammadecay.js"></script>
+<script>
+"use strict";
+// ---------- data
+const D = window.GAMMA_DATA;
+const SCH = D.schemes;
+const NUCS = ["16O", "60Ni", "99Tc", "132Sn", "152Sm", "166Er", "208Pb", "238U"];
+const sup = (A) => `<sup>${A}</sup>`;
+const nucHTML = (k) => { const m = k.match(/^(\d+)([A-Za-z]+)$/); return m ? `${sup(m[1])}${m[2]}` : k; };
+// multipolarity colours, shared by the 3D scene, the level scheme and the plots
+const MC = { E1: "#ff9656", M1: "#a8cdf2", E2: "#f2c14e", M2: "#b79cff", E3: "#ff6f91", M3: "#6fe0c8", E4: "#ffd2a6", M4: "#8fa8ff", E5: "#ff5a5a", M5: "#9be37a", E0: "#d0d4dc", "?": "#6b7385" };
+const CORR_C = "#7de3b5";
+// the cascades offered: [label, J_i, J, J_f, L1, L2, note]
+const CASCS = [
+  ["4→2→0", 4, 2, 0, 2, 2, "E2, E2: <sup>60</sup>Co → <sup>60</sup>Ni, 1173 and 1332 keV"],
+  ["2→2→0", 2, 2, 0, 2, 2, "pure E2, E2 (a real 2→2 is usually M1 + E2)"],
+  ["0→2→0", 0, 2, 0, 2, 2, "E2, E2"],
+  ["0→1→0", 0, 1, 0, 1, 1, "E1, E1 (or M1, M1)"],
+  ["1→1→0", 1, 1, 0, 1, 1, "dipole, dipole"],
+  ["2→1→0", 2, 1, 0, 1, 1, "dipole, dipole"],
+  ["3→2→0", 3, 2, 0, 1, 2, "dipole, quadrupole"],
+  ["5→2→0", 5, 2, 0, 3, 2, "octupole, quadrupole"],
+];
+
+// a half-life in words, from seconds
+function fmtT(s) {
+  if (!(s > 0) || !isFinite(s)) return "n/a";
+  const lg = Math.log10(s), y = 365.2422 * 86400;            // the year of ENSDF and NUBASE
+  const u = [[1e-18, "as"], [1e-15, "fs"], [1e-12, "ps"], [1e-9, "ns"], [1e-6, "µs"], [1e-3, "ms"], [1, "s"], [60, "min"], [3600, "h"], [86400, "d"], [y, "y"], [1e3 * y, "ky"], [1e6 * y, "My"], [1e9 * y, "Gy"]];
+  if (s < 1e-18) return `10<sup>${lg.toFixed(1)}</sup> s`;
+  if (s >= 1e12 * y) return `${(s / y / Math.pow(10, Math.floor(Math.log10(s / y)))).toFixed(1)}×10<sup>${Math.floor(Math.log10(s / y))}</sup> y`;
+  let k = 0;
+  for (let i = 0; i < u.length; i++) if (s >= u[i][0]) k = i;
+  if (u[k][1] === "d" && s >= 1.5 * y) k++;
+  if (s / u[k][0] >= 999.5 && k + 1 < u.length && u[k + 1][0] / u[k][0] === 1000) k++;
+  const v = s / u[k][0];
+  return `${v < 10 ? v.toPrecision(2) : v.toFixed(0)} ${u[k][1]}`;
+}
+function fmtNum(x, d = 3) {
+  if (x == null || !isFinite(x)) return "n/a";
+  if (x === 0) return "0";
+  const a = Math.abs(x);
+  if (a >= Math.max(1e4, Math.pow(10, d)) || a < 1e-2) { const e = Math.floor(Math.log10(a)); return `${(x / Math.pow(10, e)).toPrecision(d)}×10<sup>${e}</sup>`; }
+  const t = x.toPrecision(d);
+  return t.includes("e") ? String(+t) : t;        // keep significant trailing zeros (12.0), avoid "2.1e+2"
+}
+const keV = (E) => (E === 0 ? "0 keV" : E < 1 ? `${(E * 1000).toPrecision(5)} eV` : `${+E.toFixed(E < 10 ? 4 : E < 1000 ? 3 : 2)} keV`);
+const Jh = (J) => (J ? J.replace(/([+-])/g, "<sup>$1</sup>") : "?");
+// ENSDF comment text made readable: its escape codes for Greek letters, superscripts and uncertainties
+const ensTxt = (t) => t.replace(/\$.*/, "").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/\{I\+?([0-9+-]+)\}/g, "($1)").replace(/\{\+(\d+)\}/g, "$1")
+  .replace(/\|g/g, "γ").replace(/\|a/g, "α").replace(/\|e/g, "ε").replace(/\|b/g, "β").replace(/\|\^/g, "↑").replace(/\|d/g, "δ");
+const fmtPct = (f) => `${+(100 * f).toPrecision(2)} %`;
+// ENSDF limit flags as relations: of a printed quantity (LT: below), and of B ("~" approximate, "none": no bound)
+const REL = { "=": "", ">": "&gt; ", "<": "&lt; ", "~": "≈ ", none: "" };
+const relOf = (f) => (f === "LT" || f === "LE" ? "<" : f === "GT" || f === "GE" ? ">" : f === "AP" ? "~" : "=");
+// photon intensity of a gamma: RI, or TI / (1 + alpha) when ENSDF gives only the total (gamma + electrons)
+const photonI = (g) => { const pm = GAMMA.parseMult(g.M); if (pm && pm.e0 && !pm.list.length) return 0; return g.RI != null ? g.RI : g.TI != null ? g.TI / (1 + (g.CC || 0)) : 0; };
+function multKey(g) {
+  const pm = GAMMA.parseMult(g.M);
+  if (!pm) return "?";
+  if (!pm.list.length) return pm.e0 ? "E0" : "?";
+  // the dominant component: the lower multipole unless delta^2 > 1
+  if (pm.list.length === 2 && g.MR != null && g.MR * g.MR > 1) {
+    const lo = pm.list[0].L <= pm.list[1].L ? pm.list[0] : pm.list[1], hi = lo === pm.list[0] ? pm.list[1] : pm.list[0];
+    return hi.sig + hi.L;
+  }
+  const lo = pm.list.length === 2 && pm.list[1].L < pm.list[0].L ? pm.list[1] : pm.list[0];
+  return lo.sig + lo.L;
+}
+
+// ---------- state
+const S = { mode: "pattern", sig: "E", L: 2, M: 0, nuc: "60Ni", sel: null, iso: null, casc: 0, th: 90, Eg: 1332.5, A: 60 };
+
+// ---------- scene
+const stage = document.getElementById("stage");
+const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.setSize(innerWidth, innerHeight);
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.05;
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+stage.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(38, innerWidth / innerHeight, 0.1, 600);
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+const SKY = WaveStage.skyGLSL(new THREE.Vector3(-0.55, 0.78, 0.42));
+scene.environment = WaveStage.environment(renderer, SKY);
+scene.fog = new THREE.Fog("#0b0d12", 90, 220);
+// as on alpha.html: the linear colour that ACES (exposure 1.05) maps back to exactly #0b0d12 on the bloom path
+const GROUND = new THREE.Color("#0b0d12");
+const GROUND_PRE_ACES = new THREE.Color().setRGB(0.0115476, 0.0131218, 0.0174740, THREE.LinearSRGBColorSpace);
+scene.background = GROUND.clone();
+
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+controls.dampingFactor = 0.08;
+controls.minDistance = 10;
+controls.maxDistance = 160;
+const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+controls.autoRotate = !reduce;
+controls.autoRotateSpeed = 0.3;
+controls.addEventListener("start", () => (controls.autoRotate = false));
+const RIG = WaveStage.rig(scene, SKY, 120, 30);
+
+const RS = 11;            // world radius of the pattern maximum
+const RN = 1.6;           // nucleus radius
+const FLOOR = -15;
+scene.add(WaveStage.floor(90, FLOOR, 16, 0.55));
+
+// physics (x, y, z) with z the quantization axis -> world (x, z, -y): a proper rotation, so helicities keep their sense
+const dirW = (th, ph, out) => out.set(Math.sin(th) * Math.cos(ph), Math.cos(th), -Math.sin(th) * Math.sin(ph));
+const thW = (th, ph, out) => out.set(Math.cos(th) * Math.cos(ph), -Math.sin(th), -Math.cos(th) * Math.sin(ph));
+const phW = (ph, out) => out.set(-Math.sin(ph), 0, -Math.cos(ph));
+
+// the quantization axis
+{
+  const g = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, FLOOR + 0.05, 0), new THREE.Vector3(0, 19, 0)]);
+  const ax = new THREE.Line(g, new THREE.LineDashedMaterial({ color: "#c9d6ea", transparent: true, opacity: 0.35, dashSize: 0.5, gapSize: 0.35 }));
+  ax.computeLineDistances();
+  scene.add(ax);
+}
+
+// the nucleus: glossy, its surface displaced by Re[Y_LM e^{-i w t}] (EL), or only tinted by it (ML)
+const NY = 129;
+const NUCU = { uY: { value: new Float32Array(NY) }, uM: { value: 0 }, uWt: { value: 0 }, uAmp: { value: 0.16 }, uTint: { value: new THREE.Color("#f2c14e") } };
+const nucMat = new THREE.MeshPhysicalMaterial({ color: "#d8c6a8", roughness: 0.32, metalness: 0.05, clearcoat: 1.0, clearcoatRoughness: 0.1, envMapIntensity: 1.1, sheen: 0.4, sheenColor: new THREE.Color("#ffe2b8") });
+nucMat.onBeforeCompile = (sh) => {
+  Object.assign(sh.uniforms, NUCU);
+  const decl = `uniform float uY[${NY}]; uniform float uM, uWt, uAmp; varying float vS;
+    float yTheta(float th){ float t = clamp(th / 3.14159265, 0.0, 1.0) * ${NY - 1}.0; int i = int(min(floor(t), ${NY - 2}.0)); float f = t - float(i); return mix(uY[i], uY[i + 1], f); }`;
+  sh.vertexShader = sh.vertexShader.replace("#include <common>", `#include <common>\n${decl}`)
+    .replace("#include <begin_vertex>", `#include <begin_vertex>
+      vec3 nn = normalize(position);
+      float th = acos(clamp(nn.y, -1.0, 1.0)), ph = atan(-nn.z, nn.x);
+      float s = yTheta(th) * cos(uM * ph - uWt);
+      vS = s;
+      transformed *= 1.0 + uAmp * s;`);
+  sh.fragmentShader = sh.fragmentShader.replace("#include <common>", "#include <common>\nvarying float vS; uniform vec3 uTint;")
+    .replace("#include <emissivemap_fragment>", `#include <emissivemap_fragment>
+      totalEmissiveRadiance += uTint * (0.10 + 0.55 * max(vS, 0.0)) ;
+      diffuseColor.rgb *= 0.85 - 0.25 * min(vS, 0.0);`);
+};
+nucMat.customProgramCacheKey = () => "gammanuc";
+const nucleus = new THREE.Mesh(new THREE.SphereGeometry(RN, 128, 96), nucMat);
+nucleus.castShadow = true;
+scene.add(nucleus);
+
+// the radiation pattern: polar surface r(theta) = RS F(theta) / F_max, a glowing shell with latitude rings
+const NT = 160, NP = 128;
+const lobeGeo = new THREE.BufferGeometry();
+{
+  const idx = [];
+  for (let i = 0; i < NT; i++) for (let j = 0; j < NP; j++) {
+    const a = i * (NP + 1) + j, b = a + NP + 1;
+    idx.push(a, b, a + 1, a + 1, b, b + 1);
+  }
+  lobeGeo.setIndex(idx);
+  lobeGeo.setAttribute("position", new THREE.BufferAttribute(new Float32Array((NT + 1) * (NP + 1) * 3), 3));
+  lobeGeo.setAttribute("aT", new THREE.BufferAttribute(new Float32Array((NT + 1) * (NP + 1)), 1));
+  lobeGeo.setAttribute("aF", new THREE.BufferAttribute(new Float32Array((NT + 1) * (NP + 1)), 1));
+}
+const lobeMat = new THREE.ShaderMaterial({
+  uniforms: { uC: { value: new THREE.Color("#f2c14e") }, uGain: { value: 1 }, uKey: { value: SKY.key.clone() } },
+  vertexShader: `attribute float aT; attribute float aF; varying float vT; varying float vF; varying vec3 vW; varying vec3 vN;
+    void main(){ vT = aT; vF = aF; vec4 w = modelMatrix * vec4(position, 1.0); vW = w.xyz; vN = normalize(mat3(modelMatrix) * normal); gl_Position = projectionMatrix * viewMatrix * w; }`,
+  fragmentShader: `
+    uniform vec3 uC, uKey; uniform float uGain; varying float vT; varying float vF; varying vec3 vW; varying vec3 vN;
+    void main(){
+      vec3 v = normalize(cameraPosition - vW), n = normalize(vN);
+      float ndv = abs(dot(n, v));
+      float rim = pow(1.0 - ndv, 2.2);
+      // latitude rings every 15 degrees, and the intensity contours at 25, 50, 75 % of the maximum
+      float t = vT * 12.0, lat = 1.0 - smoothstep(0.0, 1.5 * fwidth(t), abs(fract(t - 0.5) - 0.5));
+      float f = vF * 4.0, iso = 1.0 - smoothstep(0.0, 1.2 * fwidth(f), abs(fract(f - 0.5) - 0.5));
+      if (vF < 0.02) iso = 0.0;
+      float glint = pow(max(dot(n * sign(dot(n, v)), normalize(uKey + v)), 0.0), 50.0);
+      vec3 col = uC * (0.10 + 0.95 * rim + 0.35 * vF) + uC * 0.55 * iso + vec3(0.85, 0.9, 1.0) * 0.12 * lat + vec3(1.0) * glint * 0.35;
+      float a = clamp(0.10 + 0.6 * rim + 0.25 * iso + 0.08 * lat, 0.0, 1.0);
+      gl_FragColor = vec4(col * uGain * a, a);
+      #include <tonemapping_fragment>
+      #include <colorspace_fragment>
+    }`,
+  transparent: true, depthWrite: false, side: THREE.DoubleSide, blending: THREE.AdditiveBlending,
+});
+lobeMat.extensions = { derivatives: true };
+const lobe = new THREE.Mesh(lobeGeo, lobeMat);
+lobe.renderOrder = 3;
+scene.add(lobe);
+// the W = 1 reference sphere of the correlation view
+const isoSphere = (() => {
+  const p = [];
+  const ring = (f) => { for (let i = 0; i < 96; i++) { const a = f(2 * Math.PI * i / 96), b = f(2 * Math.PI * (i + 1) / 96); p.push(a, b); } };
+  for (const th of [30, 60, 90, 120, 150]) { const t = th * Math.PI / 180; ring((u) => new THREE.Vector3(Math.sin(t) * Math.cos(u), Math.cos(t), Math.sin(t) * Math.sin(u))); }
+  for (let k = 0; k < 6; k++) { const ph = k * Math.PI / 6; ring((u) => new THREE.Vector3(Math.sin(u) * Math.cos(ph), Math.cos(u), Math.sin(u) * Math.sin(ph))); }
+  return new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints(p), new THREE.LineBasicMaterial({ color: "#c9d6ea", transparent: true, opacity: 0.22, depthWrite: false }));
+})();
+scene.add(isoSphere);
+
+// shells: wavefronts leaving the nucleus, bright where the pattern is
+const NF = 129;
+const SHU = { uF: { value: new Float32Array(NF) } };
+const shells = [];
+{
+  const g = new THREE.SphereGeometry(1, 96, 64);
+  for (let i = 0; i < 4; i++) {
+    const m = new THREE.ShaderMaterial({
+      uniforms: { uF: SHU.uF, uC: { value: new THREE.Color("#f2c14e") }, uA: { value: 0 } },
+      vertexShader: `varying vec3 vP; varying vec3 vW; varying vec3 vN; void main(){ vP = normalize(position); vec4 w = modelMatrix * vec4(position, 1.0); vW = w.xyz; vN = normalize(mat3(modelMatrix) * normal); gl_Position = projectionMatrix * viewMatrix * w; }`,
+      fragmentShader: `uniform float uF[${NF}]; uniform vec3 uC; uniform float uA; varying vec3 vP; varying vec3 vW; varying vec3 vN;
+        void main(){
+          float th = acos(clamp(vP.y, -1.0, 1.0)), t = th / 3.14159265 * ${NF - 1}.0;
+          int i = int(min(floor(t), ${NF - 2}.0)); float F = mix(uF[i], uF[i + 1], t - float(i));
+          vec3 v = normalize(cameraPosition - vW);
+          float rim = 0.35 + 0.65 * pow(1.0 - abs(dot(normalize(vN), v)), 1.5);
+          float a = uA * F * rim;
+          gl_FragColor = vec4(uC * a, a);
+          #include <tonemapping_fragment>
+          #include <colorspace_fragment>
+        }`,
+      transparent: true, depthWrite: false, side: THREE.DoubleSide, blending: THREE.AdditiveBlending,
+    });
+    const s = new THREE.Mesh(g, m);
+    s.renderOrder = 2;
+    shells.push(s); scene.add(s);
+  }
+}
+
+// field strokes on the lobe surface: the electric field direction of the outgoing wave at that direction
+const STH = 13, SPH = 26, NSTK = STH * SPH;
+const stkPos = new Float32Array(NSTK * 6), stkCol = new Float32Array(NSTK * 6);
+const stkGeo = new THREE.BufferGeometry();
+stkGeo.setAttribute("position", new THREE.BufferAttribute(stkPos, 3));
+stkGeo.setAttribute("color", new THREE.BufferAttribute(stkCol, 3));
+const strokes = new THREE.LineSegments(stkGeo, new THREE.LineBasicMaterial({ vertexColors: true, transparent: true, opacity: 0.9, blending: THREE.AdditiveBlending, depthWrite: false }));
+strokes.frustumCulled = false; strokes.renderOrder = 4;
+scene.add(strokes);
+let STK = [];        // per stroke: centre, the field at phase 0 and at a quarter period (world vectors), weight
+
+// photons: glowing points with a tail that wiggles along the photon's own field direction
+const NPH = 220, NTAIL = 16;
+const phPos = new Float32Array(NPH * 3), phA = new Float32Array(NPH), phC = new Float32Array(NPH * 3);
+const phGeo = new THREE.BufferGeometry();
+phGeo.setAttribute("position", new THREE.BufferAttribute(phPos, 3));
+phGeo.setAttribute("aA", new THREE.BufferAttribute(phA, 1));
+phGeo.setAttribute("aC", new THREE.BufferAttribute(phC, 3));
+const phMat = new THREE.ShaderMaterial({
+  uniforms: { uPx: { value: renderer.getPixelRatio() } },
+  vertexShader: `attribute float aA; attribute vec3 aC; uniform float uPx; varying float vA; varying vec3 vC;
+    void main(){ vA = aA; vC = aC; vec4 mv = modelViewMatrix * vec4(position, 1.0); gl_PointSize = uPx * 120.0 / -mv.z; gl_Position = projectionMatrix * mv; }`,
+  fragmentShader: `varying float vA; varying vec3 vC;
+    void main(){ vec2 q = gl_PointCoord - 0.5; float r2 = dot(q, q) * 4.0; if (r2 > 1.0) discard;
+      float core = exp(-r2 * 14.0), halo = exp(-r2 * 3.5);
+      vec3 col = (vec3(1.0, 0.98, 0.92) * core * 1.4 + vC * halo * 0.8) * vA;
+      gl_FragColor = vec4(col, vA);
+      #include <tonemapping_fragment>
+      #include <colorspace_fragment>
+    }`,
+  transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
+});
+const photons = new THREE.Points(phGeo, phMat);
+photons.frustumCulled = false; photons.renderOrder = 5;
+scene.add(photons);
+const tlPos = new Float32Array(NPH * (NTAIL - 1) * 6), tlCol = new Float32Array(NPH * (NTAIL - 1) * 6);
+const tlGeo = new THREE.BufferGeometry();
+tlGeo.setAttribute("position", new THREE.BufferAttribute(tlPos, 3));
+tlGeo.setAttribute("color", new THREE.BufferAttribute(tlCol, 3));
+const tails = new THREE.LineSegments(tlGeo, new THREE.LineBasicMaterial({ vertexColors: true, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false }));
+tails.frustumCulled = false; tails.renderOrder = 5;
+scene.add(tails);
+// photon state: alive, r, direction n, field quadratures e0, e1 (world), colour, kind (0 pattern, 1 gamma_1, 2 gamma_2)
+const PH = [];
+for (let i = 0; i < NPH; i++) PH.push({ on: false, r: 0, n: new THREE.Vector3(), e0: new THREE.Vector3(), e1: new THREE.Vector3(), c: new THREE.Color(), delay: 0 });
+
+// correlation view: the first gamma's beam, two detectors and the angle between them
+const corrGroup = new THREE.Group();
+scene.add(corrGroup);
+const RD = 14;
+const beam = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.07, RD - RN, 12, 1, true).translate(0, (RD + RN) / 2, 0),
+  new THREE.MeshBasicMaterial({ color: "#ffffff", transparent: true, opacity: 0.35, blending: THREE.AdditiveBlending, depthWrite: false }));
+corrGroup.add(beam);
+function detector() {
+  const g = new THREE.Group();
+  const body = new THREE.Mesh(new THREE.CylinderGeometry(1.05, 1.05, 2.6, 48), new THREE.MeshStandardMaterial({ color: "#2e323a", metalness: 1.0, roughness: 0.35, envMapIntensity: 1.0 }));
+  const face = new THREE.Mesh(new THREE.CircleGeometry(0.95, 48).rotateX(Math.PI / 2).translate(0, -1.31, 0), new THREE.MeshPhysicalMaterial({ color: "#9fd8ff", roughness: 0.1, transmission: 0.0, emissive: "#3a8fd0", emissiveIntensity: 0.35, clearcoat: 1 }));
+  body.castShadow = true;
+  g.add(body, face);
+  return g;
+}
+const det1 = detector(), det2 = detector();
+corrGroup.add(det1, det2);
+const arc = new THREE.Line(new THREE.BufferGeometry(), new THREE.LineBasicMaterial({ color: "#f2c14e", transparent: true, opacity: 0.7 }));
+corrGroup.add(arc);
+const ray2 = new THREE.Line(new THREE.BufferGeometry(), new THREE.LineDashedMaterial({ color: "#f2c14e", transparent: true, opacity: 0.5, dashSize: 0.4, gapSize: 0.3 }));
+corrGroup.add(ray2);
+
+const POST = WaveStage.post(renderer, scene, camera, [0.55, 0.55, 0.62], { intensity: 0.7, radius: 3, thickness: 2 });
+const composer = POST.composer;
+
+// ---------- the current angular distribution (pattern or correlation) and everything built from it
+let CUR = { F: null, Fmax: 1, kind: "pattern", color: "#f2c14e" };
+function patF(th) { return CUR.kind === "pattern" ? GAMMA.pattern(S.L, S.M, th) : GAMMA.corrW(CUR.A, th); }
+
+function buildLobe() {
+  // sample F on a fine theta grid; the surface is a body of revolution about z
+  const F = new Float32Array(NT + 1);
+  let mx = 0;
+  for (let i = 0; i <= NT; i++) { F[i] = patF(Math.PI * i / NT); mx = Math.max(mx, F[i]); }
+  CUR.F = F; CUR.Fmax = mx;
+  const pos = lobeGeo.attributes.position.array, aT = lobeGeo.attributes.aT.array, aF = lobeGeo.attributes.aF.array, v = new THREE.Vector3();
+  let k = 0;
+  for (let i = 0; i <= NT; i++) {
+    const th = Math.PI * i / NT, r = RS * F[i] / mx;
+    for (let j = 0; j <= NP; j++) {
+      dirW(th, 2 * Math.PI * j / NP, v).multiplyScalar(r);
+      pos[3 * k] = v.x; pos[3 * k + 1] = v.y; pos[3 * k + 2] = v.z;
+      aT[k] = th / Math.PI; aF[k] = F[i] / mx; k++;
+    }
+  }
+  lobeGeo.attributes.position.needsUpdate = true; lobeGeo.attributes.aT.needsUpdate = true; lobeGeo.attributes.aF.needsUpdate = true;
+  lobeGeo.computeVertexNormals();
+  lobeGeo.computeBoundingSphere();
+  const c = new THREE.Color(CUR.color);
+  lobeMat.uniforms.uC.value.copy(c);
+  // shells read the same F, normalised
+  for (let i = 0; i < NF; i++) SHU.uF.value[i] = patF(Math.PI * i / (NF - 1)) / mx;
+  for (const s of shells) s.material.uniforms.uC.value.copy(c);
+  // nucleus: Y_LM theta part normalised to its maximum
+  let ym = 0;
+  for (let i = 0; i < NY; i++) { const y = GAMMA.ylmTheta(S.L, S.M, Math.PI * i / (NY - 1)); NUCU.uY.value[i] = y; ym = Math.max(ym, Math.abs(y)); }
+  for (let i = 0; i < NY; i++) NUCU.uY.value[i] /= ym;
+  NUCU.uM.value = S.M;
+  NUCU.uAmp.value = CUR.kind === "pattern" && S.sig === "E" ? 0.16 : 0;
+  NUCU.uTint.value.copy(c).multiplyScalar(CUR.kind === "pattern" ? 1 : 0.4);
+  isoSphere.visible = CUR.kind === "corr";
+  isoSphere.scale.setScalar(RS * 1 / mx);
+  buildStrokes();
+  // photons in flight belong to the old pattern
+  for (const p of PH) p.on = false;
+}
+
+// field strokes: centres on the lobe, the field quadratures at phase 0 and a quarter period
+function buildStrokes() {
+  STK = [];
+  const n = new THREE.Vector3(), t = new THREE.Vector3(), p = new THREE.Vector3();
+  for (let i = 0; i < STH; i++) for (let j = 0; j < SPH; j++) {
+    const th = Math.PI * (i + 0.5) / STH, ph = 2 * Math.PI * (j + (i % 2) * 0.5) / SPH;
+    const F = patF(th) / CUR.Fmax;
+    if (CUR.kind !== "pattern" || F < 0.04) { STK.push(null); continue; }
+    const c = dirW(th, ph, new THREE.Vector3()).multiplyScalar(RS * F + 0.15);
+    const q = [0, Math.PI / 2].map((wt) => {
+      const e = GAMMA.field(S.sig, S.L, S.M, th, ph, wt), s = Math.sqrt(GAMMA.pattern(S.L, S.M, th)) || 1;
+      return thW(th, ph, t).multiplyScalar(e[0] / s).add(phW(ph, p).multiplyScalar(e[1] / s)).clone();
+    });
+    STK.push({ c, e0: q[0], e1: q[1], w: Math.sqrt(F) });
+  }
+}
+
+// a direction drawn from F (rejection sampling on theta with the sin(theta) measure; phi uniform)
+function sampleDir(out) {
+  for (let k = 0; k < 400; k++) {
+    const u = 2 * Math.random() - 1, th = Math.acos(u);
+    const f = CUR.F[Math.round(th / Math.PI * NT)] / CUR.Fmax;
+    if (Math.random() < f) return [th, 2 * Math.PI * Math.random()];
+  }
+  return [Math.PI / 2, 2 * Math.PI * Math.random()];
+}
+function photonField(p, th, ph, sig, L, M) {
+  // the field quadratures along the emission direction (unit length on average)
+  const t = new THREE.Vector3(), q = new THREE.Vector3();
+  const s = Math.sqrt(Math.max(GAMMA.pattern(L, M, th), 1e-9) / 2);
+  const a = GAMMA.field(sig, L, M, th, ph, 0), b = GAMMA.field(sig, L, M, th, ph, Math.PI / 2);
+  p.e0.copy(thW(th, ph, t).multiplyScalar(a[0] / s)).add(phW(ph, q).multiplyScalar(a[1] / s));
+  p.e1.copy(thW(th, ph, t).multiplyScalar(b[0] / s)).add(phW(ph, q).multiplyScalar(b[1] / s));
+}
+let emitAcc = 0;
+function emit() {
+  const free = PH.filter((p) => !p.on);
+  if (CUR.kind === "pattern") {
+    const p = free[0]; if (!p) return;
+    const [th, ph] = sampleDir();
+    dirW(th, ph, p.n); photonField(p, th, ph, S.sig, S.L, S.M);
+    p.c.set(CUR.color); p.r = RN; p.on = true; p.delay = 0;
+  } else {
+    if (free.length < 2) return;
+    // gamma 1 along +z, gamma 2 from W(theta) a moment later (the intermediate state's lifetime, not to scale)
+    const c = CASCS[S.casc], p1 = free[0], p2 = free[1];
+    p1.n.set(0, 1, 0); p1.e0.set(1, 0, 0); p1.e1.set(0, 0, 1).multiplyScalar(0);
+    p1.c.set(MC["E" + c[4]]); p1.r = RN; p1.on = true; p1.delay = 0;
+    const [th, ph] = sampleDir();
+    dirW(th, ph, p2.n); thW(th, ph, p2.e0); p2.e1.set(0, 0, 0);
+    p2.c.set(CORR_C); p2.r = RN; p2.on = true; p2.delay = 0.35;
+  }
+}
+const _v = new THREE.Vector3(), _w = new THREE.Vector3();
+let tAnim = 0;
+function updatePhotons(dt) {
+  const speed = 7.5, kw = 2 * Math.PI / 1.4, amp = 0.38, len = 3.2, rmax = 36;
+  emitAcc += S.none ? 0 : dt * (CUR.kind === "pattern" ? 38 : 9);
+  while (emitAcc > 1) { emit(); emitAcc -= 1; }
+  let q = 0;
+  for (let i = 0; i < NPH; i++) {
+    const p = PH[i];
+    if (p.on) { if (p.delay > 0) p.delay -= dt; else p.r += speed * dt; if (p.r > rmax) p.on = false; }
+    const vis = p.on && p.delay <= 0;
+    const fade = vis ? Math.min(1, (rmax - p.r) / 8) * Math.min(1, (p.r - RN) / 1.5 + 0.2) : 0;
+    _v.copy(p.n).multiplyScalar(p.r);
+    phPos[3 * i] = _v.x; phPos[3 * i + 1] = _v.y; phPos[3 * i + 2] = _v.z; phA[i] = fade;
+    phC[3 * i] = p.c.r; phC[3 * i + 1] = p.c.g; phC[3 * i + 2] = p.c.b;
+    // the tail: points behind the photon, displaced along Re[E e^{i(ks - wt)}]
+    for (let k = 0; k < NTAIL - 1; k++) for (let e = 0; e < 2; e++) {
+      const s = (k + e) / (NTAIL - 1) * len, r = Math.max(RN, p.r - s), a = kw * (p.r - s) - 5 * tAnim;
+      _w.copy(p.e0).multiplyScalar(Math.cos(a)).addScaledVector(p.e1, Math.sin(a)).multiplyScalar(amp * (1 - s / len));
+      _v.copy(p.n).multiplyScalar(r).add(_w);
+      tlPos[q * 3] = _v.x; tlPos[q * 3 + 1] = _v.y; tlPos[q * 3 + 2] = _v.z;
+      const b = fade * (1 - s / len) * 0.9;
+      tlCol[q * 3] = p.c.r * b; tlCol[q * 3 + 1] = p.c.g * b; tlCol[q * 3 + 2] = p.c.b * b;
+      q++;
+    }
+  }
+  phGeo.attributes.position.needsUpdate = true; phGeo.attributes.aA.needsUpdate = true; phGeo.attributes.aC.needsUpdate = true;
+  tlGeo.attributes.position.needsUpdate = true; tlGeo.attributes.color.needsUpdate = true;
+}
+function updateStrokes() {
+  const wt = 2 * Math.PI * tAnim / 1.6, c = Math.cos(wt), s = Math.sin(wt);
+  for (let i = 0; i < NSTK; i++) {
+    const k = STK[i], o = 6 * i;
+    if (!k) { for (let j = 0; j < 6; j++) { stkPos[o + j] = 0; stkCol[o + j] = 0; } continue; }
+    // Re[(e0 + i e1) e^{-i wt}] = e0 cos wt + e1 sin wt, as returned by GAMMA.field at the two phases
+    _w.copy(k.e0).multiplyScalar(c).addScaledVector(k.e1, s).multiplyScalar(0.55);
+    stkPos[o] = k.c.x - _w.x; stkPos[o + 1] = k.c.y - _w.y; stkPos[o + 2] = k.c.z - _w.z;
+    stkPos[o + 3] = k.c.x + _w.x; stkPos[o + 4] = k.c.y + _w.y; stkPos[o + 5] = k.c.z + _w.z;
+    const b = 0.35 + 0.65 * k.w;
+    for (let j = 0; j < 6; j++) stkCol[o + j] = b;
+  }
+  stkGeo.attributes.position.needsUpdate = true; stkGeo.attributes.color.needsUpdate = true;
+}
+function updateShells() {
+  for (let i = 0; i < shells.length; i++) {
+    const u = ((tAnim / 2.4 + i / shells.length) % 1), r = RN + 2 + u * 30;
+    shells[i].scale.setScalar(r);
+    shells[i].material.uniforms.uA.value = 0.11 * Math.sin(Math.PI * u) * (CUR.kind === "pattern" ? 1 : 0.6);
+  }
+}
+
+// ---------- selection: a multipole, a cascade, a transition
+// an E0 or a gamma without assigned multipolarity: no pattern is drawn, the nucleus alone remains
+function setNoPhoton(on) {
+  S.none = on;
+  lobe.visible = strokes.visible = !on;
+  for (const sh of shells) sh.visible = !on;
+  if (on) for (const p of PH) p.on = false;
+}
+function setPattern(sig, L, M, keepSel) {
+  setNoPhoton(false);
+  S.sig = sig; S.L = L; S.M = Math.max(0, Math.min(L, M));
+  if (!keepSel) { S.sel = null; S.iso = null; }
+  CUR.kind = "pattern"; CUR.color = MC[sig + L];
+  buildLobe();
+  syncButtons(); drawInfo(); drawLevels(); drawWeiss(); drawIsos(); drawStamp();
+}
+function setCascade(i) {
+  setNoPhoton(false);
+  S.casc = i;
+  const c = CASCS[i];
+  CUR.kind = "corr"; CUR.A = GAMMA.correlation(c[1], c[2], c[3], c[4], c[5]); CUR.color = CORR_C;
+  buildLobe();
+  syncButtons(); drawCorr(); drawCorrInfo(); drawStamp(); placeDetectors();
+}
+function setMode(m) {
+  S.mode = m;
+  document.getElementById("gPat").hidden = m !== "pattern";
+  document.getElementById("gCorr").hidden = m !== "corr";
+  corrGroup.visible = m === "corr";
+  strokes.visible = m === "pattern";
+  if (m === "corr") setCascade(S.casc); else setPattern(S.sig, S.L, S.M, true);
+  syncButtons();
+}
+// a transition of the level scheme: { lev, gi } in the current scheme
+function selectGamma(levIdx, gi) {
+  const sc = SCH[S.nuc], lev = sc.levels[levIdx], g = lev.g[gi];
+  const k = multKey(g);
+  S.sel = { levIdx, gi }; S.iso = null;
+  if (S.mode !== "pattern") setMode("pattern");
+  if (/^[EM][1-5]$/.test(k)) setPattern(k[0], +k[1], S.M, true);
+  else { setNoPhoton(true); drawInfo(); drawLevels(); drawWeiss(); drawIsos(); drawStamp(); }
+  S.Eg = g.E; S.A = sc.A; syncSliders();
+  writeHash();
+}
+function selectIsomer(i) {
+  const iso = D.isomers[i];
+  S.iso = i; S.sel = null;
+  if (S.mode !== "pattern") setMode("pattern");
+  const g = iso.g.slice().sort((a, b) => photonI(b) - photonI(a))[0];
+  const A = +iso.key.match(/\d+/)[0];
+  if (g) { S.Eg = Math.max(1, g.E); S.A = A; syncSliders(); }
+  const k = g ? multKey(g) : "?";
+  if (/^[EM][1-5]$/.test(k)) setPattern(k[0], +k[1], S.M, true);
+  else { setNoPhoton(true); drawInfo(); drawWeiss(); drawIsos(); drawStamp(); }
+}
+function setNucleus(key, keepSel) {
+  if (!SCH[key]) return false;
+  S.nuc = key;
+  if (!keepSel) S.sel = null;
+  const sc = SCH[key];
+  S.A = sc.A; syncSliders();
+  document.getElementById("toNuc").href = `nucleus.html#${key}`;
+  document.getElementById("lsTitle").innerHTML = `Level scheme of ${nucHTML(key)}`;
+  for (const b of document.querySelectorAll("#nucs button")) b.setAttribute("aria-pressed", b.dataset.n === key ? "true" : "false");
+  drawLevels(); drawInfo(); drawB(); drawWeiss();
+  writeHash();
+  return true;
+}
+function writeHash() {
+  let h = "#" + S.nuc;
+  if (S.sel) h += "/" + SCH[S.nuc].levels[S.sel.levIdx].g[S.sel.gi].E;
+  if (location.hash !== h) history.replaceState(null, "", h);
+}
+// "#60Ni" or "#60Ni/1173.2": the nucleus and the gamma nearest to that energy; anything else is ignored
+function readHash(h) {
+  let s;
+  try { s = decodeURIComponent(h || "").replace(/^#/, ""); } catch (e) { return false; }
+  const m = s.match(/^(\d+[A-Za-z]+)(?:\/(\d+(?:\.\d+)?))?$/);
+  if (!m) return false;
+  const key = Object.keys(SCH).find((k) => k.toLowerCase() === m[1].toLowerCase());
+  if (!key) return false;
+  setNucleus(key);
+  if (m[2]) {
+    const E = +m[2];
+    let best = null, bd = 5;
+    SCH[key].levels.forEach((l, li) => l.g.forEach((g, gi) => { if (g.Ef != null && Math.abs(g.E - E) < bd) { bd = Math.abs(g.E - E); best = [li, gi]; } }));
+    if (best) selectGamma(best[0], best[1]);
+  }
+  return true;
+}
+
+// ---------- info panels
+function strengths(lev, A) { return GAMMA.levelStrengths(lev, A); }
+function drawInfo() {
+  const el = document.getElementById("info"), W = document.getElementById("warn");
+  const warn = [];
+  let lev, g, A, head, gi;
+  if (S.sel) {
+    const sc = SCH[S.nuc]; lev = sc.levels[S.sel.levIdx]; gi = S.sel.gi; g = lev.g[gi]; A = sc.A;
+    const lf = sc.levels.find((l) => l.E === g.Ef);
+    head = `<dt>nucleus</dt><dd>${nucHTML(S.nuc)}</dd><dt>levels</dt><dd>${keV(lev.E)} ${Jh(lev.J)} → ${lf ? keV(lf.E) + " " + Jh(lf.J) : "?"}</dd>`;
+  } else if (S.iso != null) {
+    const iso = D.isomers[S.iso]; lev = iso; A = +iso.key.match(/\d+/)[0];
+    gi = lev.g.length ? lev.g.indexOf(lev.g.slice().sort((a, b) => photonI(b) - photonI(a))[0]) : -1; g = lev.g[gi];
+    head = `<dt>isomer</dt><dd>${nucHTML(iso.key)}<sup>m</sup> ${keV(iso.E)} ${Jh(iso.J)}${g ? " → " + Jh(g.Jf) : ""}</dd>`;
+  }
+  if (!lev || !g) {
+    el.innerHTML = lev ? head + `<dt>decay</dt><dd>none observed</dd>` : `<dt></dt><dd style="color:var(--muted)">none: click an arrow in the level scheme or an isomer</dd>`;
+    W.hidden = true; return;
+  }
+  const r = strengths(lev, A), row = r.rows ? r.rows[gi] : null;
+  const pm = GAMMA.parseMult(g.M);
+  const bricc = S.sel ? SCH[S.nuc].bricc : D.isomers[S.iso].bricc;
+  const ccSrc = g.CCnote ? `ENSDF comment: ${ensTxt(g.CCnote)}` : bricc ? "this evaluation names BrIcc" : "source not stated in the record";
+  let h = head + `<dt>E<sub>γ</sub></dt><dd>${keV(g.E)}${g.RI != null ? ` · I<sub>γ</sub> ${REL[relOf(g.RIlim)] || ""}${g.RI}` : g.TI != null ? ` · I<sub>tot</sub> ${g.TI}` : ""}</dd>
+    <dt>multipolarity</dt><dd>${g.M ? g.M + (pm && pm.alt ? " (one of these, not determined)" : /\[/.test(g.M) ? " (assumed)" : "") : "not assigned"}${g.MRtxt ? ` · ${g.MRsrc === "comment" ? g.MRtxt.replace("delta", "δ") + " (ENSDF comment)" : "δ = " + g.MRtxt}` : ""}</dd>
+    <dt>α (ENSDF)</dt><dd>${row && row.e0only ? "no photon (E0)" : g.CC != null ? `${fmtNum(g.CC, 3)} <span style="color:var(--muted)">(${ccSrc})</span>` : "not printed"}</dd>
+    <dt>level T<sub>½</sub></dt><dd>${lev.T > 0 ? `${REL[relOf(lev.Tlim)] || ""}${fmtT(lev.T)} <span style="color:var(--muted)">(ENSDF ${lev.Ttxt.replace(/\s+/g, " ")})</span>` : lev.T === -1 ? "stable" : "not measured"}${lev.IT != null && lev.IT < 100 ? ` · IT ${lev.IT}%` : ""}</dd>`;
+  if (row && row.e0only) {
+    h += `<dt>B</dt><dd style="color:var(--muted)">none: no photon</dd>`;
+    warn.push(`E0: an electric monopole carries no angular momentum and no single photon can be emitted; the transition goes by conversion electrons${g.E > 1022 ? " or, above 1022 keV, electron-positron pairs" : ""}. ENSDF's intensity for it is a total (electrons) intensity, which enters the branching of the level but gives no photon.`);
+  } else if (row) {
+    const rt = REL[GAMMA.flipRel(row.rel)] || "";
+    const win = row.within != null ? ` <span style="color:var(--muted)">(within ${fmtPct(row.within)})</span>` : "";
+    h += `<dt>partial t<sub>γ</sub></dt><dd>${row.rel === "none" ? "no bound (limits in both directions)" : rt + fmtT(row.t) + win}</dd>`;
+    for (const p of row.parts) {
+      const pr = g.BW[p.sig + p.L], ens = pr ? ` <span style="color:var(--muted)">ENSDF ${pr[2].replace(/^B[EM]\dW\s*=?\s*/, "")}</span>` : "";
+      if (p.rel === "none" || p.deltaDependent) {
+        h += `<dt class="hi">B(${p.sig}${p.L})</dt><dd class="hi">${p.rel === "none" ? "no bound" : "limit depends on the range of δ"}${ens}</dd>`;
+        continue;
+      }
+      h += `<dt class="hi">B(${p.sig}${p.L})</dt><dd class="hi">${REL[p.rel] || ""}${fmtNum(p.Bwu, 3)} W.u.${p.rel === row.rel ? win : ""}${p.frac < 1 ? ` <span style="color:var(--muted)">(${(100 * p.frac).toPrecision(3)}%)</span>` : ""}${ens}</dd>
+        <dt>Weisskopf t<sub>½</sub></dt><dd>${fmtT(p.tW)} · hindrance ${REL[GAMMA.flipRel(p.rel)] || ""}${fmtNum(1 / p.Bwu, 2)}</dd>`;
+    }
+    if (row.rel !== "=") warn.push(row.rel === "none" ? "Limits in opposite directions on the half-life and the intensities: no bound on B." :
+      `ENSDF gives ${[lev.Tlim && "the level half-life", g.RIlim && "this intensity"].filter(Boolean).join(" and ") || "another branch's intensity"} as a ${row.rel === "~" ? "rough value" : "limit"}, so B is ${row.rel === ">" ? "a lower limit" : row.rel === "<" ? "an upper limit" : "approximate"}${row.within != null ? `; that branch carries at most ${fmtPct(row.within)} of the decays, so the bound is within that of the value` : ""}.`);
+    if (row.parts.some((p) => p.rel !== row.rel) && g.MRlim) warn.push(`δ is a limit (${g.MRtxt}): the lower multipole's share of the photon rate is bounded one way and the higher's the other, as marked.`);
+    if (row.e0) warn.push(`A J → J transition without parity change with an E0 component besides M1 + E2: the E0 part emits no photon and goes by conversion (it is inside ENSDF's α); the photon part is split by δ.${row.deltaFromComment ? " δ is not in the δ field of the record but in an ENSDF comment, used here." : ""}`);
+    if (lev.Tnote && /B\(E\d\)|B\(M\d\)/.test(lev.Tnote)) warn.push(`ENSDF comment on the level half-life (first line): "${ensTxt(lev.Tnote)}". The half-life comes from a measured B, so the B here restates that measurement through the half-life; it is not an independent value.`);
+    if (row.fromBW) warn.push(`ENSDF assigns no multipolarity to this gamma but prints B(${Object.keys(g.BW)[0]})W, which implies ${Object.keys(g.BW)[0]}; taken as such.`);
+    if (row.mixedNoDelta) warn.push("Mixed multipolarity without a measured mixing ratio: no B can be split off.");
+    if (row.alt) warn.push("ENSDF writes the multipolarity with a comma: one of these, not determined, so no B.");
+    if (!row.parts.length && !row.e0 && !row.alt && !row.mixedNoDelta) warn.push("Multipolarity not assigned in ENSDF: no B value.");
+  } else {
+    h += `<dt>B</dt><dd style="color:var(--muted)">${r.why === "no half-life" ? "level half-life not measured" : "branching incomplete (a gamma of this level has no intensity)"}</dd>`;
+  }
+  // the first 2+ of an even-even nucleus: the B(E2) table's value beside ENSDF's
+  if (S.sel) {
+    const sc = SCH[S.nuc], lf = sc.levels.find((l) => l.E === g.Ef), first2 = sc.levels.find((l) => /^2\+/.test(l.J));
+    const bt = BE2.find((b) => b.Z === sc.Z && b.Z + b.N === sc.A);
+    if (bt && lf && lf.E === 0 && first2 === lev) h += `<dt>B(E2) table</dt><dd>${bt.ul ? "&lt; " : ""}${bt.wu.toFixed(1)} W.u. <span style="color:var(--muted)">(${bt.src ? "Pritychenko et al. 2016" : "Raman et al. 2001"}, an evaluation of all measurements)</span></dd>`;
+  }
+  if (pm && pm.tentative && !(pm.alt)) warn.push("Multipolarity in brackets or parentheses in ENSDF: assumed or tentative.");
+  if (S.iso != null && D.isomers[S.iso].key === "229Th") warn.push(`229mTh: ENSDF derives this α from an assumed B(M1) (its comment: "${D.isomers[S.iso].notes[1].replace(/^229TH cG CC\$/, "").replace(/\|n/g, "ν").replace(/&gt;/g, ">")} ..."), so the B shown is that assumption returned, not a measurement. The radiative half-life is measured in crystals (2024Ti04, as quoted by ENSDF), where the host also changes the rate.`);
+  el.innerHTML = h;
+  W.hidden = !warn.length; W.textContent = warn.join(" ");
+}
+function drawCorrInfo() {
+  const c = CASCS[S.casc], A = GAMMA.correlation(c[1], c[2], c[3], c[4], c[5]), pf = GAMMA.powerForm(A), w = GAMMA.corrW(A, S.th * Math.PI / 180), w90 = GAMMA.corrW(A, Math.PI / 2);
+  const f = (x) => (x >= 0 ? "+" : "−") + Math.abs(x).toFixed(4);
+  document.getElementById("corrInfo").innerHTML = `
+    <dt>cascade</dt><dd>${c[1]} →(L=${c[4]}) ${c[2]} →(L=${c[5]}) ${c[3]}</dd>
+    <dt></dt><dd style="color:var(--muted)">${c[6]}</dd>
+    <dt>A<sub>2</sub>, A<sub>4</sub></dt><dd>${f(A[1] || 0)}, ${f(A[2] || 0)}${A[3] ? `, A<sub>6</sub> ${f(A[3])}` : ""}</dd>
+    <dt class="hi">W(θ)/W(90°)</dt><dd class="hi">1 ${f(pf.a2)} cos²θ ${f(pf.a4)} cos⁴θ${Math.abs(pf.a6) > 1e-12 ? ` ${f(pf.a6)} cos⁶θ` : ""}</dd>
+    <dt>at θ = ${S.th}°</dt><dd>W/W(90°) = ${(w / w90).toFixed(4)}</dd>
+    <dt>W(180°)/W(90°)</dt><dd>${(GAMMA.corrW(A, Math.PI) / w90).toFixed(4)}</dd>`;
+  document.getElementById("thout").textContent = `${S.th}°`;
+  document.getElementById("wcap").innerHTML = `${c[0]}, normalised at 90°`;
+}
+function drawStamp() {
+  const st = document.getElementById("stamp");
+  if (S.mode === "corr") {
+    const c = CASCS[S.casc];
+    st.innerHTML = `<b>${c[0]}</b><small>γγ angular correlation · W(θ) of the second photon relative to the first, along z</small>`;
+    document.getElementById("title").innerHTML = "Gamma decay";
+    return;
+  }
+  if (S.none && S.iso != null) {
+    const iso = D.isomers[S.iso];
+    st.innerHTML = `<b>${nucHTML(iso.key)}<sup>m</sup></b><small>${keV(iso.E)} ${Jh(iso.J)} · no decay observed</small>`;
+    document.getElementById("title").innerHTML = `${nucHTML(iso.key)}<sup>m</sup>`;
+    return;
+  }
+  if (S.none && S.sel) {
+    const g = SCH[S.nuc].levels[S.sel.levIdx].g[S.sel.gi];
+    st.innerHTML = `<b>${multKey(g) === "E0" ? "E0" : "no multipolarity"}</b><small>${nucHTML(S.nuc)} ${keV(g.E)} · ${multKey(g) === "E0" ? "0 → 0 carries no angular momentum, and a photon must carry at least 1: no single-photon pattern" : "ENSDF assigns no multipolarity: no pattern drawn"}</small>`;
+    document.getElementById("title").innerHTML = `${nucHTML(S.nuc)}, ${keV(g.E)}`;
+    return;
+  }
+  let sub = `|X<sub>LM</sub>|², M = ${S.M}`;
+  let t = `${S.sig}${S.L}`;
+  if (S.sel) { const g = SCH[S.nuc].levels[S.sel.levIdx].g[S.sel.gi]; sub = `${nucHTML(S.nuc)} ${keV(g.E)} ${g.M || ""} · drawn: ${S.sig}${S.L}, M = ${S.M}`; }
+  else if (S.iso != null) { const iso = D.isomers[S.iso]; sub = `${nucHTML(iso.key)}<sup>m</sup> ${keV(iso.E)} · drawn: ${S.sig}${S.L}, M = ${S.M}`; }
+  st.innerHTML = `<b>${t}</b><small>${sub} · ${S.sig === "E" ? "electric: E ∝ n × X<sub>LM</sub>, parity (−1)<sup>L</sup>" : "magnetic: E ∝ X<sub>LM</sub>, parity (−1)<sup>L+1</sup>"}</small>`;
+  document.getElementById("title").innerHTML = S.sel ? `${nucHTML(S.nuc)}, ${keV(SCH[S.nuc].levels[S.sel.levIdx].g[S.sel.gi].E)}` : S.iso != null ? `${nucHTML(D.isomers[S.iso].key)}<sup>m</sup>` : "Gamma decay";
+}
+
+// ---------- the Weisskopf calculator
+function syncSliders() {
+  document.getElementById("es").value = Math.log10(Math.max(1, Math.min(1e4, S.Eg)));
+  document.getElementById("as").value = S.A;
+  drawWtable();
+}
+function drawWtable() {
+  const E = S.Eg / 1000, A = S.A;
+  document.getElementById("eout").textContent = S.Eg >= 1000 ? `${(S.Eg / 1000).toFixed(3)} MeV` : `${S.Eg.toPrecision(4)} keV`;
+  document.getElementById("aout").textContent = A;
+  document.getElementById("wA").textContent = A;
+  let h = `<tr><th>L</th><th>t<sub>½</sub>(EL)</th><th>t<sub>½</sub>(ML)</th><th>B<sub>W</sub>(EL) e²fm<sup>2L</sup></th></tr>`;
+  for (let L = 1; L <= 5; L++) h += `<tr${L === S.L ? ' class="cur"' : ""}><td>${L}</td><td>${fmtT(GAMMA.weisskopfT("E", L, E, A))}</td><td>${fmtT(GAMMA.weisskopfT("M", L, E, A))}</td><td>${fmtNum(GAMMA.weisskopfB("E", L, A), 3)}</td></tr>`;
+  document.getElementById("wt").innerHTML = h;
+  convertBE2("a");
+  drawWeiss();
+}
+function convertBE2(from) {
+  const a = document.getElementById("be2a"), b = document.getElementById("be2b"), BW = GAMMA.weisskopfB("E", 2, S.A);
+  if (from === "a") { const v = parseFloat(a.value); b.value = isFinite(v) ? (v / BW).toPrecision(4) : ""; }
+  else { const v = parseFloat(b.value); a.value = isFinite(v) ? (v * BW).toPrecision(4) : ""; }
+}
+
+// ---------- plots
+function setupCanvas(c) {
+  const dpr = Math.min(devicePixelRatio, 2), w = c.clientWidth, h = c.clientHeight;
+  c.width = w * dpr; c.height = h * dpr;
+  const x = c.getContext("2d");
+  x.setTransform(dpr, 0, 0, dpr, 0, 0);
+  return { x, w, h };
+}
+function axes(ctx, w, h, xr, yr, xs, ys, xl, yl, xfmt, yfmt, Rm) {
+  const L = 34, R = Rm || 6, T = 6, B = 18;
+  const X = (v) => L + (v - xr[0]) / (xr[1] - xr[0]) * (w - L - R);
+  const Y = (v) => T + (yr[1] - v) / (yr[1] - yr[0]) * (h - T - B);
+  ctx.font = "10px ui-monospace,Menlo,monospace"; ctx.lineWidth = 1;
+  ctx.strokeStyle = "#1e2432"; ctx.fillStyle = "#8a92a6";
+  for (let v = Math.ceil(yr[0] / ys) * ys; v <= yr[1] + 1e-9; v += ys) {
+    ctx.beginPath(); ctx.moveTo(L, Y(v)); ctx.lineTo(w - R, Y(v)); ctx.stroke();
+    ctx.textAlign = "right"; ctx.fillText(yfmt ? yfmt(v) : +v.toFixed(2), L - 4, Y(v) + 3);
+  }
+  ctx.textAlign = "center";
+  for (let v = Math.ceil(xr[0] / xs) * xs; v <= xr[1] + 1e-9; v += xs) {
+    ctx.beginPath(); ctx.moveTo(X(v), T); ctx.lineTo(X(v), h - B); ctx.stroke();
+    ctx.fillText(xfmt ? xfmt(v) : +v.toFixed(2), X(v), h - 5);
+  }
+  if (xl) { ctx.textAlign = "right"; ctx.fillText(xl, w - R - 2, h - B - 4); }
+  if (yl) { ctx.textAlign = "left"; ctx.fillText(yl, L + 4, T + 10); }
+  return { X, Y, L, R, T, B };
+}
+function dot(ctx, x, y, r, c, fill = true) {
+  ctx.beginPath(); ctx.arc(x, y, r, 0, 2 * Math.PI);
+  if (fill) { ctx.fillStyle = c; ctx.fill(); } else { ctx.strokeStyle = c; ctx.lineWidth = 1.3; ctx.stroke(); }
+}
+const HIT = { pl: [], pb: [], pw: [] };
+
+// level scheme: energies to scale, pushed apart where labels would collide, then refitted to the canvas
+function drawLevels() {
+  const c = document.getElementById("pl"), { x: ctx, w, h } = setupCanvas(c);
+  const sc = SCH[S.nuc], lv = sc.levels, n = lv.length;
+  const T = 10, B = 12, xl = 46, xr = w - 58;
+  const Emax = lv[n - 1].E || 1;
+  const gap = Math.min(13, (h - T - B) / Math.max(1, n - 1));
+  let ys = lv.map((l) => (l.E / Emax) * (h - T - B));
+  for (let i = 1; i < n; i++) ys[i] = Math.max(ys[i], ys[i - 1] + gap);
+  const top = ys[n - 1] || 1;
+  ys = ys.map((y) => h - B - y * (h - T - B) / top);
+  // arrows: one slot each, ordered by initial level then by gamma energy
+  const arrows = [];
+  lv.forEach((l, li) => l.g.forEach((g, gi) => { if (g.Ef != null) arrows.push({ li, gi, g, fi: lv.findIndex((q) => q.E === g.Ef) }); }));
+  const na = arrows.length, dx = Math.min(14, (xr - xl - 16) / Math.max(1, na));
+  const x0 = (xl + xr) / 2 - dx * (na - 1) / 2;
+  ctx.font = "10px ui-monospace,Menlo,monospace";
+  lv.forEach((l, i) => {
+    ctx.strokeStyle = l.T > 0 ? "#f2c14e99" : "#c9d6ea66"; ctx.lineWidth = l.T > 0 ? 1.6 : 1;
+    ctx.beginPath(); ctx.moveTo(xl, ys[i]); ctx.lineTo(xr, ys[i]); ctx.stroke();
+    ctx.fillStyle = "#c9d6ea"; ctx.textAlign = "right"; ctx.fillText(l.J, xl - 3, ys[i] + 3);
+    ctx.textAlign = "left"; ctx.fillStyle = "#8a92a6"; ctx.fillText(l.E === 0 ? "0" : l.E < 1 ? (l.E * 1000).toFixed(2) + " eV" : (+l.E.toFixed(1)).toString(), xr + 3, ys[i] + 3);
+  });
+  HIT.pl = [];
+  // strongest branch out of each level drawn brightest
+  arrows.forEach((a, k) => {
+    const x = x0 + k * dx, y1 = ys[a.li], y2 = ys[a.fi];
+    const l = lv[a.li], mx = Math.max(...l.g.map(photonI)) || 1;
+    const rel = photonI(a.g) / mx;
+    const key = multKey(a.g), col = MC[key] || MC["?"];
+    const sel = S.sel && S.sel.levIdx === a.li && S.sel.gi === a.gi;
+    ctx.globalAlpha = sel ? 1 : 0.35 + 0.65 * Math.sqrt(Math.max(rel, 0.02));
+    ctx.strokeStyle = sel ? "#ffffff" : col; ctx.fillStyle = ctx.strokeStyle; ctx.lineWidth = sel ? 2.4 : 1.4;
+    ctx.beginPath(); ctx.moveTo(x, y1); ctx.lineTo(x, y2 - 4); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(x - 3, y2 - 5); ctx.lineTo(x + 3, y2 - 5); ctx.lineTo(x, y2); ctx.closePath(); ctx.fill();
+    ctx.globalAlpha = 1;
+    HIT.pl.push([x, y1, y2, a.li, a.gi]);
+  });
+  // legend: the multipolarities present
+  const keys = [...new Set(arrows.map((a) => multKey(a.g)))].sort();
+  document.getElementById("legm").innerHTML = keys.map((k) => `<span><i style="background:${MC[k] || MC["?"]}"></i>${k === "?" ? "not assigned" : k}</span>`).join("") +
+    `<span><i style="background:#f2c14e"></i>level with a half-life in ENSDF, value or limit (bold amber)</span>`;
+  const hidden = lv.reduce((s, l) => s + l.g.filter((g) => g.Ef == null).length, 0);
+  document.getElementById("lsNote").innerHTML = `ENSDF adopted levels with J<sup>π</sup> up to ${sc.emax >= 1000 ? (sc.emax / 1000).toFixed(1) + " MeV" : sc.emax + " keV"} (${n} levels, energy axis stretched where labels would collide). Colour: the dominant multipolarity (ENSDF); brightness: the photon branch within its level.${hidden ? ` ${hidden} gamma${hidden > 1 ? "s" : ""} to levels without J<sup>π</sup> are not drawn but enter the branching.` : ""}`;
+}
+// Weisskopf chart: log t vs log E, the isomers and the selected transition
+function partialPoint(lev, gi, A) {
+  const r = GAMMA.levelStrengths(lev, A);
+  if (!r.rows || !r.rows[gi]) return null;
+  return { t: r.rows[gi].t, parts: r.rows[gi].parts, rel: r.rows[gi].rel };
+}
+function drawWeiss() {
+  const c = document.getElementById("pw"); if (!c) return;
+  const { x: ctx, w, h } = setupCanvas(c);
+  const ax = axes(ctx, w, h, [0, 4], [-18, 18], 1, 6, "", "", (v) => ["1 keV", "10", "100", "1 MeV", "10 MeV"][v] || "", (v) => v, 26);
+  const labsR = [];
+  const A = S.A;
+  for (const sig of ["E", "M"]) for (let L = 1; L <= 5; L++) {
+    ctx.strokeStyle = MC[sig + L]; ctx.lineWidth = sig + L === S.sig + S.L && S.mode === "pattern" ? 2.2 : 1.2;
+    ctx.setLineDash(sig === "M" ? [4, 3] : []);
+    ctx.beginPath();
+    let started = false, last = null;
+    for (let i = 0; i <= 80; i++) {
+      const lx = 4 * i / 80, lt = Math.log10(GAMMA.weisskopfT(sig, L, Math.pow(10, lx) / 1000, A));
+      if (lt > 18 || lt < -18) { started = false; continue; }
+      if (started) ctx.lineTo(ax.X(lx), ax.Y(lt)); else { ctx.moveTo(ax.X(lx), ax.Y(lt)); started = true; }
+      last = [lx, lt];
+    }
+    ctx.stroke(); ctx.setLineDash([]);
+    if (last) labsR.push([ax.Y(last[1]), sig + L]);
+  }
+  // line labels at 10 MeV, pushed apart so they do not overlap
+  labsR.sort((a, b) => a[0] - b[0]);
+  for (let i = 1; i < labsR.length; i++) labsR[i][0] = Math.max(labsR[i][0], labsR[i - 1][0] + 9);
+  const over = labsR.length ? labsR[labsR.length - 1][0] - (h - ax.B) : 0;
+  if (over > 0) for (const l of labsR) l[0] -= over;
+  ctx.textAlign = "left";
+  for (const [y, k] of labsR) { ctx.fillStyle = MC[k]; ctx.fillText(k, w - 24, y + 3); }
+  // the E_gamma of the calculator
+  const le = Math.log10(Math.max(1, Math.min(1e4, S.Eg)));
+  ctx.strokeStyle = "#ffffff44"; ctx.beginPath(); ctx.moveTo(ax.X(le), ax.Y(18)); ctx.lineTo(ax.X(le), ax.Y(-18)); ctx.stroke();
+  HIT.pw = [];
+  D.isomers.forEach((iso, ii) => {
+    const A2 = +iso.key.match(/\d+/)[0];
+    iso.g.forEach((g, gi) => {
+      if (iso.key === "229Th") return;            // its alpha is derived from an assumed B(M1): no measured partial
+      const p = partialPoint(iso, gi, A2); if (!p || !p.parts.length || p.rel !== "=") return;      // limits are not drawn
+      const lx = Math.log10(g.E), lt = Math.log10(p.t);
+      if (lx < 0 || lx > 4 || lt > 18 || lt < -18) return;
+      const k = multKey(g);
+      // filled: the dot's A is the chart's A, so the vertical gap to its curve is the hindrance; hollow: another A
+      dot(ctx, ax.X(lx), ax.Y(lt), S.iso === ii ? 4 : 3, MC[k] || MC["?"], A2 === S.A);
+      HIT.pw.push([ax.X(lx), ax.Y(lt), ii]);
+    });
+  });
+  if (S.sel) {
+    const sc = SCH[S.nuc], lev = sc.levels[S.sel.levIdx], g = lev.g[S.sel.gi], p = partialPoint(lev, S.sel.gi, sc.A);
+    if (p && p.parts.length && p.rel === "=") { const lx = Math.log10(g.E), lt = Math.log10(p.t); if (lt <= 18 && lt >= -18) { dot(ctx, ax.X(lx), ax.Y(lt), 3, "#ffffff", sc.A === S.A); dot(ctx, ax.X(lx), ax.Y(lt), 6.5, "#ffffff", false); } }
+  }
+}
+// isomer list
+// isomer notes: every number in them is read from the data or computed from it (B from levelStrengths)
+const bOf = (iso, A, E) => { const r = GAMMA.levelStrengths(iso, A), i = iso.g.findIndex((g) => g.E === E); return r.rows && i >= 0 && r.rows[i].parts[0] ? r.rows[i].parts[0].Bwu : null; };
+const ccOf = (iso, E) => { const g = iso.g.find((q) => q.E === E); return g ? g.CC : null; };
+const ISO_TXT = {
+  "99Tc": (iso) => `A 1/2<sup>−</sup> level just above 7/2<sup>+</sup> and 9/2<sup>+</sup>: every way down changes J by 3 or 4 and the parity, so only E3 (${keV(iso.g[0].E)}) and M4 (${keV(iso.g[1].E)}) are open. A spin trap.`,
+  "93Mo": (iso, A) => `21/2<sup>+</sup> above 13/2<sup>+</sup>: the only way down is E4. B(E4) = ${fmtNum(bOf(iso, A, iso.g[0].E), 2)} W.u., close to the single-particle estimate: the long half-life comes from L = 4 alone.`,
+  "178Hf1147.416": (iso, A) => `K<sup>π</sup> = ${Jh(iso.K)} band head, decaying by E1 into the ${Jh(iso.g[0].Jf)} member of the K = ${(iso.g[0].Kf || "").replace(/[+-]$/, "")} ground band. An E1 is normally fast; here B(E1) = ${fmtNum(bOf(iso, A, iso.g[0].E), 2)} W.u., because the photon (L = 1) cannot carry the change of K by 8: K-forbidden, ν = ΔK − L = 7.`,
+  "178Hf2446.09": (iso) => `K<sup>π</sup> = ${Jh(iso.K)}: every transition must change K by 8 into the K = ${(iso.g[0].Kf || "").replace(/[+-]$/, "")} band, with L at most 5. Hindered by spin and by K together.`,
+  "242Am": (iso, A) => `5<sup>−</sup> (K = 5) over a 1<sup>−</sup> ground state of a K = ${(iso.Kgs || "").replace(/[+-]$/, "")} band: E4, B(E4) = ${fmtNum(bOf(iso, A, iso.g[0].E), 2)} W.u. With α = ${fmtNum(ccOf(iso, iso.g[0].E), 2)} nearly every decay emits a conversion electron, not a photon.`,
+  "180Ta": (iso) => `9<sup>−</sup> (K = 9) over a ${Jh(iso.Jgs)} ground state (K = ${(iso.Kgs || "").replace(/[+-]$/, "")}): ΔJ = 8. No decay of any kind has been observed; it occurs in nature (abundance above, NUBASE2020), while the ground state lives ${fmtT(iso.Tgs)}.`,
+  "229Th": (iso, A) => `An excitation of ${keV(iso.E)} above the 5/2<sup>+</sup> ground state, ENSDF multipolarity ${iso.g[0].M} (in brackets: assumed). ENSDF cites its laser excitation in a CaF<sub>2</sub> crystal (2024Ti04). In the neutral atom it converts in ${fmtT(iso.T)}; held as Th<sup>4+</sup> in a crystal it can only radiate: ${(iso.notes[0].match(/(\d+) s \{I(\d+)\}/) || ["", "?", "?"]).slice(1, 3).join("(")}) s (2024Ti04, as quoted by ENSDF).`,
+};
+function drawIsos() {
+  const el = document.getElementById("isos");
+  el.innerHTML = D.isomers.map((iso, i) => {
+    const A = +iso.key.match(/\d+/)[0];
+    const tf = ISO_TXT[iso.key + iso.E] || ISO_TXT[iso.key], txt = tf ? tf(iso, A) : "";
+    const r = GAMMA.levelStrengths(iso, A);
+    let num = "";
+    if (iso.key === "180Ta") num = `${keV(iso.E)} · T<sub>½</sub> &gt; ${fmtT(iso.T)} (ENSDF), ${iso.nubase.dT.replace(">", "&gt; ").replace("Py", "Py")} (NUBASE2020, 1 Py = 10<sup>15</sup> y) · abundance ${iso.nubase.IS}%`;
+    else if (iso.key === "229Th") num = `${keV(iso.E)} ${iso.g[0].M} (assumed) · ${fmtT(iso.T)} (neutral atom) · Weisskopf M1: ${fmtT(GAMMA.weisskopfT("M", 1, iso.E / 1000, A))}`;
+    else if (r.rows) {
+      num = `${keV(iso.E)} · T<sub>½</sub> ${fmtT(iso.T)} · ` + iso.g.map((g, gi) => {
+        const row = r.rows[gi], p = row.parts;
+        return `${keV(g.E)} ${g.M}: ${p.filter((q) => !q.deltaDependent).map((q) => `B(${q.sig}${q.L}) ${REL[q.rel] || (q.rel === "=" ? "= " : "")}${fmtNum(q.Bwu, 2)} W.u.`).join(", ")}`;
+      }).join("; ");
+    }
+    return `<button data-i="${i}" aria-pressed="${S.iso === i}"><b>${nucHTML(iso.key)}<sup>m</sup></b> ${Jh(iso.J)}${iso.K ? ` K = ${iso.K.replace(/[+-]$/, "")}` : ""}<br><span class="n">${num}</span><br>${txt}</button>`;
+  }).join("");
+}
+// angular correlation plot
+function drawCorr() {
+  const c = document.getElementById("pc"), { x: ctx, w, h } = setupCanvas(c);
+  const cs = CASCS[S.casc], A = GAMMA.correlation(cs[1], cs[2], cs[3], cs[4], cs[5]), w90 = GAMMA.corrW(A, Math.PI / 2);
+  let lo = 1, hi = 1;
+  for (let i = 0; i <= 180; i++) { const v = GAMMA.corrW(A, i * Math.PI / 180) / w90; lo = Math.min(lo, v); hi = Math.max(hi, v); }
+  const yr = [Math.floor(Math.min(0.8, lo) * 10) / 10, Math.ceil(Math.max(1.2, hi) * 10) / 10];
+  const ax = axes(ctx, w, h, [0, 180], yr, 30, (yr[1] - yr[0]) > 1.2 ? 0.5 : 0.1, "θ (deg)", "");
+  ctx.strokeStyle = "#c9d6ea55"; ctx.setLineDash([3, 3]); ctx.beginPath(); ctx.moveTo(ax.X(0), ax.Y(1)); ctx.lineTo(ax.X(180), ax.Y(1)); ctx.stroke(); ctx.setLineDash([]);
+  ctx.strokeStyle = CORR_C; ctx.lineWidth = 2; ctx.beginPath();
+  for (let i = 0; i <= 180; i++) { const v = GAMMA.corrW(A, i * Math.PI / 180) / w90; if (i) ctx.lineTo(ax.X(i), ax.Y(v)); else ctx.moveTo(ax.X(i), ax.Y(v)); }
+  ctx.stroke();
+  const v = GAMMA.corrW(A, S.th * Math.PI / 180) / w90;
+  dot(ctx, ax.X(S.th), ax.Y(v), 6, "#ffffff", false);
+}
+// B(E2) systematics vs N
+const BE2 = D.be2.map((r) => ({ Z: r[0], N: r[1], sym: r[2], E2: r[3], up: r[4], dup: r[5], wu: GAMMA.be2UpToWu(r[4], r[0] + r[1]), tab: r[6], src: r[8], ul: r[9] }));
+function zCol(Z, a = 1) { const t = Math.min(1, Z / 100); return `hsla(${210 - 190 * t}, 70%, ${60 + 8 * t}%, ${a})`; }
+function drawB() {
+  const c = document.getElementById("pb"), { x: ctx, w, h } = setupCanvas(c);
+  const ax = axes(ctx, w, h, [0, 160], [-1, 3], 20, 1, "N", "", null, (v) => (v === 0 ? "1" : v === 1 ? "10" : v === 2 ? "100" : v === 3 ? "1000" : "0.1"));
+  for (const n of [8, 20, 28, 50, 82, 126]) {
+    ctx.strokeStyle = "#f2c14e40"; ctx.setLineDash([2, 3]); ctx.beginPath(); ctx.moveTo(ax.X(n), ax.Y(3)); ctx.lineTo(ax.X(n), ax.Y(-1)); ctx.stroke(); ctx.setLineDash([]);
+    ctx.fillStyle = "#f2c14e"; ctx.textAlign = "center"; ctx.fillText(n, ax.X(n), ax.Y(3) + 9);
+  }
+  HIT.pb = [];
+  for (const b of BE2) {
+    const px = ax.X(b.N), py = ax.Y(Math.log10(b.wu));
+    const isSel = b.Z === SCH[S.nuc].Z && b.Z + b.N === SCH[S.nuc].A;
+    ctx.globalAlpha = 0.85;
+    dot(ctx, px, py, 2, zCol(b.Z), !b.ul);
+    ctx.globalAlpha = 1;
+    if (isSel) dot(ctx, px, py, 6, "#ffffff", false);
+    HIT.pb.push([px, py, b]);
+  }
+  const f = (Z, A) => BE2.find((b) => b.Z === Z && b.Z + b.N === A);
+  const pb = f(82, 208), sn = f(50, 132), er = f(68, 166), u = f(92, 238);
+  document.getElementById("bNote").innerHTML = `Colour: Z, blue light to red heavy; hollow: upper limit. Near closed shells a few W.u.: <sup>208</sup>Pb ${pb ? pb.wu.toFixed(1) : "n/a"}, <sup>132</sup>Sn ${sn ? sn.wu.toFixed(1) : "n/a"}. In the deformed rare earths and actinides the whole nucleus rotates and the 2<sup>+</sup> → 0<sup>+</sup> transition is hundreds of single-particle units: <sup>166</sup>Er ${er ? er.wu.toFixed(0) : "n/a"}, <sup>238</sup>U ${u ? u.wu.toFixed(0) : "n/a"}. Converted here from the table's B(E2; 0<sup>+</sup> → 2<sup>+</sup>) in e²b² (÷5 for the downward transition, ÷ B<sub>W</sub>(E2)); ${BE2.filter((b) => b.src).length} of ${BE2.length} nuclei from the 2016 evaluation, the rest from Raman et al. 2001.`;
+}
+function pickNear(list, x, y, r2 = 49) {
+  let best = null, bd = r2;
+  for (const it of list) { const d2 = (it[0] - x) ** 2 + (it[1] - y) ** 2; if (d2 < bd) { bd = d2; best = it; } }
+  return best;
+}
+{
+  const pl = document.getElementById("pl");
+  const hitArrow = (ev) => {
+    const b = pl.getBoundingClientRect(), x = ev.clientX - b.left, y = ev.clientY - b.top;
+    let best = null, bd = 6;
+    for (const a of HIT.pl) { const d = Math.abs(a[0] - x); if (d < bd && y >= a[1] - 4 && y <= a[2] + 4) { bd = d; best = a; } }
+    return best;
+  };
+  pl.addEventListener("click", (ev) => { const a = hitArrow(ev); if (a) selectGamma(a[3], a[4]); });
+  pl.addEventListener("mousemove", (ev) => {
+    const a = hitArrow(ev);
+    if (!a) { pl.title = ""; return; }
+    const lv = SCH[S.nuc].levels[a[3]], g = lv.g[a[4]];
+    pl.title = `${g.E} keV ${g.M || "(no multipolarity)"}, from ${lv.E} keV ${lv.J}`;
+  });
+  const pb = document.getElementById("pb");
+  pb.addEventListener("mousemove", (ev) => {
+    const r = pb.getBoundingClientRect(), it = pickNear(HIT.pb, ev.clientX - r.left, ev.clientY - r.top);
+    pb.title = it ? `${it[2].Z + it[2].N}${it[2].sym}: B(E2; 0+ → 2+) = ${it[2].up}${it[2].ul ? " (upper limit)" : ""} e²b², 2+ → 0+ ${it[2].wu.toFixed(1)} W.u.${it[2].E2 ? `, E(2+) ${it[2].E2} keV` : ""}` : "";
+  });
+  pb.addEventListener("click", (ev) => {
+    const r = pb.getBoundingClientRect(), it = pickNear(HIT.pb, ev.clientX - r.left, ev.clientY - r.top);
+    if (!it) return;
+    const k = `${it[2].Z + it[2].N}${it[2].sym}`;
+    if (SCH[k]) setNucleus(k);
+    else { S.A = it[2].Z + it[2].N; document.getElementById("be2a").value = (it[2].up * 1e4 / 5).toPrecision(4); syncSliders(); }
+  });
+  const pw = document.getElementById("pw");
+  pw.addEventListener("click", (ev) => { const r = pw.getBoundingClientRect(), it = pickNear(HIT.pw, ev.clientX - r.left, ev.clientY - r.top); if (it) selectIsomer(it[2]); });
+  const pc = document.getElementById("pc");
+  pc.addEventListener("click", (ev) => { const r = pc.getBoundingClientRect(), x = ev.clientX - r.left; const t = Math.round((x - 34) / (r.width - 40) * 180); if (t >= 0 && t <= 180) { S.th = t; document.getElementById("th").value = t; drawCorr(); drawCorrInfo(); placeDetectors(); } });
+}
+
+// ---------- UI wiring
+document.getElementById("nucs").innerHTML = NUCS.map((k) => `<button data-n="${k}">${nucHTML(k)}</button>`).join("");
+document.getElementById("cascs").innerHTML = CASCS.map((c, i) => `<button data-i="${i}">${c[0]}</button>`).join("");
+document.getElementById("nucs").addEventListener("click", (e) => { const b = e.target.closest("button"); if (b) setNucleus(b.dataset.n); });
+document.getElementById("cascs").addEventListener("click", (e) => { const b = e.target.closest("button"); if (b) setCascade(+b.dataset.i); });
+document.getElementById("isos").addEventListener("click", (e) => { const b = e.target.closest("button"); if (b) selectIsomer(+b.dataset.i); });
+document.getElementById("mode").addEventListener("click", (e) => { const b = e.target.closest("button"); if (b) setMode(b.dataset.v); });
+document.getElementById("sig").addEventListener("click", (e) => { const b = e.target.closest("button"); if (b) setPattern(b.dataset.v, S.L, S.M); });
+document.getElementById("Ls").addEventListener("click", (e) => { const b = e.target.closest("button"); if (b) setPattern(S.sig, +b.dataset.v, S.M); });
+document.getElementById("Ms").addEventListener("click", (e) => { const b = e.target.closest("button"); if (b) setPattern(S.sig, S.L, +b.dataset.v, true); });
+function syncButtons() {
+  const set = (id, v) => { for (const b of document.querySelectorAll(`#${id} button`)) b.setAttribute("aria-pressed", b.dataset.v === String(v) ? "true" : "false"); };
+  set("mode", S.mode); set("sig", S.sig); set("Ls", S.L);
+  const ms = document.getElementById("Ms");
+  if (ms.childElementCount !== S.L + 1) ms.innerHTML = Array.from({ length: S.L + 1 }, (_, m) => `<button data-v="${m}">M = ${m === 0 ? "0" : "±" + m}</button>`).join("");
+  set("Ms", S.M);
+  for (const b of document.querySelectorAll("#cascs button")) b.setAttribute("aria-pressed", +b.dataset.i === S.casc && S.mode === "corr" ? "true" : "false");
+  document.getElementById("patNote").innerHTML = `${S.sig}${S.L}: parity change ${(S.sig === "E" ? S.L : S.L + 1) % 2 ? "yes" : "no"}. ${S.M === 0 ? "M = 0: no intensity along z" + (S.L === 1 ? " (a dipole along z radiates sideways)." : S.L % 2 === 0 ? ", and none in the equatorial plane (L even)." : ".") : `|M| = ${S.M}: ${S.M === 1 ? "the only M with intensity along z, where the photon spin ±1 points along its motion." : "no intensity along z."}`} −M gives the same pattern with the field turning the other way.`;
+}
+let pend = false;
+document.getElementById("es").addEventListener("input", (e) => { S.Eg = Math.pow(10, +e.target.value); if (!pend) { pend = true; requestAnimationFrame(() => { pend = false; drawWtable(); }); } });
+document.getElementById("as").addEventListener("input", (e) => { S.A = +e.target.value; if (!pend) { pend = true; requestAnimationFrame(() => { pend = false; drawWtable(); }); } });
+document.getElementById("be2a").addEventListener("input", () => convertBE2("a"));
+document.getElementById("be2b").addEventListener("input", () => convertBE2("b"));
+document.getElementById("th").addEventListener("input", (e) => { S.th = +e.target.value; drawCorr(); drawCorrInfo(); placeDetectors(); });
+addEventListener("hashchange", () => readHash(location.hash));
+addEventListener("resize", () => {
+  camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight);
+  composer.setSize(innerWidth, innerHeight);
+  drawLevels(); drawWeiss(); drawCorr(); drawB();
+});
+let quality = innerWidth < 700 ? "low" : "high";
+function applyQuality() {
+  const g = quality === "high" ? GROUND_PRE_ACES : GROUND;
+  scene.background.copy(g); scene.fog.color.copy(g);
+  renderer.shadowMap.enabled = quality === "high";
+  RIG.key.castShadow = quality === "high";
+  for (const b of document.querySelectorAll("#qmode button")) b.setAttribute("aria-pressed", b.dataset.v === quality ? "true" : "false");
+}
+document.getElementById("qmode").addEventListener("click", (e) => { const b = e.target.closest("button"); if (!b) return; quality = b.dataset.v; applyQuality(); });
+applyQuality();
+document.getElementById("srcs").innerHTML = `Levels, gammas, half-lives, intensities, multipolarities, mixing ratios, conversion coefficients and the W.u. values compared: ${D.src.ensdf}. B(E2): ${D.src.be2}. <sup>180</sup>Ta<sup>m</sup> limit and abundance: NUBASE2020, Kondev et al., Chin. Phys. C 45, 030001 (2021). Angular correlation coefficients: H. Frauenfelder and R. M. Steffen, in Alpha-, Beta- and Gamma-Ray Spectroscopy, ed. K. Siegbahn (1965). Weisskopf estimate: V. F. Weisskopf, Phys. Rev. 83, 1073 (1951).`;
+
+// detectors and the angle in the correlation view
+function placeDetectors() {
+  const th = S.th * Math.PI / 180;
+  det1.position.set(0, RD + 1.3, 0); det1.rotation.set(0, 0, 0);
+  // the second detector in the x-z (world x-y) plane, its face towards the nucleus
+  det2.position.set((RD + 1.3) * Math.sin(th), (RD + 1.3) * Math.cos(th), 0);
+  det2.rotation.set(0, 0, -th);
+  const pts = [];
+  for (let i = 0; i <= 48; i++) { const t = th * i / 48; pts.push(new THREE.Vector3(6 * Math.sin(t), 6 * Math.cos(t), 0)); }
+  arc.geometry.dispose(); arc.geometry = new THREE.BufferGeometry().setFromPoints(pts);
+  ray2.geometry.dispose(); ray2.geometry = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, 0, 0), new THREE.Vector3(RD * Math.sin(th), RD * Math.cos(th), 0)]);
+  ray2.computeLineDistances();
+}
+
+// ---------- start
+setMode("pattern");
+syncButtons();
+if (!readHash(location.hash)) {
+  setNucleus("60Ni");
+  const sc = SCH["60Ni"], li = sc.levels.findIndex((l) => Math.abs(l.E - 1332.514) < 0.01);
+  if (li >= 0) selectGamma(li, 0);
+}
+drawCorr(); drawCorrInfo(); placeDetectors(); drawIsos();
+camera.position.set(0.95, 0.42, 1.0).setLength(56);
+controls.target.set(0, -0.5, 0);
+
+// ---------- labels
+const labs = { lZ: document.getElementById("lZ"), lD: document.getElementById("lD"), lG: document.getElementById("lG") };
+const tmp = new THREE.Vector3();
+function place(el, x, y, z) {
+  tmp.set(x, y, z).project(camera);
+  const vis = tmp.z < 1 && Math.abs(tmp.x) < 1 && Math.abs(tmp.y) < 1;
+  el.hidden = !vis;
+  if (vis) { el.style.left = (tmp.x * 0.5 + 0.5) * innerWidth + "px"; el.style.top = (-tmp.y * 0.5 + 0.5) * innerHeight + "px"; }
+}
+function drawLabels() {
+  place(labs.lZ, 0, 20, 0);
+  if (S.mode === "corr") {
+    const th = S.th * Math.PI / 180;
+    labs.lD.textContent = `θ = ${S.th}°, W/W(90°) = ${(GAMMA.corrW(CUR.A, th) / GAMMA.corrW(CUR.A, Math.PI / 2)).toFixed(3)}`;
+    place(labs.lD, 8 * Math.sin(th / 2) + 1, 8 * Math.cos(th / 2), 0);
+    place(labs.lG, 1.6, RD - 3, 0);
+  } else { labs.lD.hidden = true; labs.lG.hidden = true; }
+}
+
+// ---------- loop
+let last = performance.now();
+function animate(now) {
+  requestAnimationFrame(animate);
+  const dt = Math.min(0.1, Math.max(0, (now - last) / 1000)); last = now;
+  if (!reduce) tAnim += dt;
+  controls.update();
+  NUCU.uWt.value = 2 * Math.PI * tAnim / 1.6;
+  updateShells();
+  if (S.mode === "pattern") updateStrokes();
+  updatePhotons(reduce ? 0 : dt);
+  if (quality === "high") composer.render(); else renderer.render(scene, camera);
+  drawLabels();
+}
+requestAnimationFrame(animate);
+</script>
+<script src="assets/glass.js"></script>
+</body>
+</html>

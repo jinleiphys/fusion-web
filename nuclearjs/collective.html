@@ -1,0 +1,1045 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Collective motion · nuclearjs</title>
+<link rel="stylesheet" href="assets/glass.css">
+<style>
+body{margin:0}
+:root{
+  color-scheme:dark;
+  --ground:#0b0d12; --line:#262c3a;
+  --ink:#e6e8ee; --muted:#8a92a6; --accent:#f2c14e; --rot:#ffb26b; --vib:#7fd6c2; --soft:#b9a6ff;
+  --sans:"Avenir Next","Futura","Helvetica Neue","PingFang SC","Noto Sans SC",system-ui,sans-serif;
+  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+}
+html,body{height:100%}
+body{background:var(--ground);color:var(--ink);font-family:var(--sans);overflow:hidden}
+#stage{position:fixed;inset:0}
+#stage canvas{display:block;touch-action:none}
+.panel{position:fixed;border-radius:18px;padding:16px 18px;display:flex;flex-direction:column;gap:12px;overflow:auto;box-sizing:border-box;z-index:2}
+.panel>*{flex-shrink:0}
+#ctl{left:16px;top:calc(16px + env(safe-area-inset-top,0px));width:min(340px,calc(100% - 32px));max-height:calc(100% - 32px)}
+#side{right:16px;top:calc(16px + env(safe-area-inset-top,0px));width:390px;max-height:calc(100% - 32px);gap:8px}
+h1{margin:0;font-size:22px;font-weight:600;letter-spacing:.01em}
+.sub{margin:2px 0 0;color:var(--muted);font-size:13px;line-height:1.45}
+.sub sup,.src sup,.cap sup,.kv sup{font-size:.7em}
+.grp{display:flex;flex-direction:column;gap:6px}
+[hidden]{display:none !important}
+.lab{font-size:11px;text-transform:uppercase;letter-spacing:.12em;color:var(--muted)}
+.seg{display:flex;border:1px solid var(--line);border-radius:4px;overflow:hidden}
+.seg button{flex:1;background:none;border:0;color:var(--muted);font:500 12px var(--mono);padding:6px 4px;cursor:pointer}
+.seg button+button{border-left:1px solid var(--line)}
+.seg button[aria-pressed="true"]{background:#1f2533;color:var(--ink)}
+button:focus-visible,input:focus-visible,summary:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+input[type=text]{background:#0f121a;border:1px solid var(--line);border-radius:4px;color:var(--ink);font:13px var(--mono);padding:6px 8px;width:100%;box-sizing:border-box}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chips button{background:#161a24;border:1px solid var(--line);border-radius:4px;color:var(--ink);font:12px var(--mono);padding:5px 8px;cursor:pointer}
+.chips button:hover{border-color:var(--muted)}
+.chips button[aria-pressed="true"]{border-color:var(--accent);color:var(--accent)}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:3px 10px;font:12px var(--mono);font-variant-numeric:tabular-nums}
+.kv dt{color:var(--muted)}.kv dd{margin:0}
+.kv .hi{color:var(--accent)}
+.t{color:var(--soft)}
+.row{display:flex;gap:8px;align-items:center;font:12px var(--mono);color:var(--muted)}
+.row input[type=range]{flex:1;accent-color:var(--accent);min-width:0}
+.row output{min-width:86px;text-align:right;color:var(--ink);font-variant-numeric:tabular-nums}
+details summary{cursor:pointer;font-size:11px;text-transform:uppercase;letter-spacing:.12em;color:var(--muted);list-style:none}
+details summary::before{content:"▸ ";}
+details[open] summary::before{content:"▾ ";}
+details .grp{margin-top:8px}
+.home{font:12px var(--mono);color:var(--muted);text-decoration:none}.home:hover{color:var(--ink)}
+.src{font-size:11px;color:var(--muted);line-height:1.45}
+.src a{color:var(--muted)}
+.warn{font-size:12px;color:var(--accent);line-height:1.4}
+.plot{width:100%;height:170px;display:block;cursor:crosshair}
+.cap{display:flex;justify-content:space-between;align-items:baseline;font:11px var(--mono);color:var(--muted);gap:8px}
+.cap b{font:600 13px var(--sans);color:var(--ink)}
+.leg{display:flex;flex-wrap:wrap;gap:4px 10px;font:11px var(--mono);color:var(--muted)}
+.leg .ln{display:inline-block;width:14px;border-top:1.5px dashed;margin-right:4px;vertical-align:3px}
+.leg i{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:4px;vertical-align:-1px}
+.ramp{height:9px;border-radius:2px;background:linear-gradient(90deg,#2a3f78,#2f86b5 30%,#55c7b2 47%,#a9e07a 62%,#f2d36b 80%,#fff3d8)}
+.rampl{position:relative;height:13px;font:10px var(--mono);color:var(--muted)}
+.rampl span{position:absolute;top:0;transform:translateX(-50%);white-space:nowrap}
+.rampl span:first-child{transform:none}.rampl span:last-child{transform:translateX(-100%)}
+.axlab{position:fixed;font:500 11px var(--mono);color:var(--accent);pointer-events:none;transform:translate(-50%,-50%);opacity:.9;white-space:nowrap;text-shadow:0 0 6px #0b0d12}
+.mag{position:fixed;font:500 11px var(--mono);color:var(--accent);pointer-events:none;transform:translate(-50%,-50%);opacity:.8;white-space:nowrap}
+.mag.ref{color:#c9d6ea}
+#stamp{position:fixed;left:50%;bottom:calc(26px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);text-align:center;pointer-events:none}
+#stamp b{display:block;font:600 clamp(30px,4.6vw,54px)/1 var(--sans);letter-spacing:-.01em}
+#stamp b sup{font-size:.55em}
+#stamp small{display:block;font:500 12px var(--mono);color:var(--muted);margin-top:6px}
+.hint{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(6px + env(safe-area-inset-bottom,0px));font:11px var(--mono);color:var(--muted)}
+#selTag{position:fixed;z-index:1;pointer-events:none;transform:translate(-50%,-100%);text-align:center;border:1px solid #f2c14e66;border-radius:8px;background:#0b0d12dd;padding:5px 8px;font:11px var(--mono);color:var(--accent);white-space:nowrap;line-height:1.45;display:none}
+#selTag b{font:600 14px var(--sans);color:var(--ink)}
+@media (max-width:1180px){#stamp{display:none}}
+@media (max-width:900px){
+  #ctl{max-height:42vh}
+  #side{left:16px;right:16px;width:auto;top:auto;bottom:calc(12px + env(safe-area-inset-bottom,0px));max-height:44vh}
+  #stamp,.hint,.axlab,.mag,#selTag{display:none !important}
+}
+@media (max-width:560px){.panel{padding:10px 12px;gap:9px}h1{font-size:18px}}
+</style>
+<script data-goatcounter="https://jinleiphys.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
+</head>
+<body>
+
+<div id="stage"></div>
+
+<aside id="ctl" class="panel glass glass-deep" data-glass data-glass-bevel="22" data-glass-scale="42">
+  <div>
+    <a class="home" href="index.html">← nuclearjs</a> &nbsp; <a class="home" id="toDef" href="deformed.html#166Er">Nilsson →</a> &nbsp; <a class="home" href="https://vibeinscience.com/nuclides.html">chart</a>
+    <h1>Collective rotation and vibration</h1>
+    <p class="sub">Many nucleons can move together. A deformed nucleus rotates, and its lowest states form a band with energies close to I(I+1). A spherical one vibrates about its shape, and its states come in near-equal steps of one phonon. The ratio R<sub>4/2</sub> = E(4<sup>+</sup><sub>1</sub>)/E(2<sup>+</sup><sub>1</sub>) tells the two apart: 10/3 for a rigid rotor, 2 for a harmonic vibrator, 5/2 for a γ-soft (Wilets-Jean) rotor.</p>
+  </div>
+  <div class="grp">
+    <div class="lab">Scene</div>
+    <div class="seg" id="mode">
+      <button data-v="rot">rotation</button>
+      <button data-v="vib">vibration</button>
+      <button data-v="land">R<sub>4/2</sub> landscape</button>
+    </div>
+  </div>
+  <div class="grp" id="gRot">
+    <div class="lab">Yrast state, rotational frequency from E(I)</div>
+    <div class="row"><span>I</span><input id="spin" type="range" min="0" max="10" step="1" value="1"><output id="spinOut"></output></div>
+    <dl class="kv" id="rotInfo"></dl>
+  </div>
+  <div class="grp" id="gVib" hidden>
+    <div class="lab">Surface mode</div>
+    <div class="seg" id="lam"><button data-v="2">quadrupole Y<sub>2μ</sub></button><button data-v="3">octupole Y<sub>3μ</sub></button></div>
+    <div class="seg" id="nph"><button data-v="1">one phonon</button><button data-v="2">two phonons</button></div>
+    <div class="row"><span>drawn amplitude ×</span><input id="amp" type="range" min="1" max="3" step="0.1" value="1"><output id="ampOut"></output></div>
+    <dl class="kv" id="vibInfo"></dl>
+  </div>
+  <div class="grp" id="gLand" hidden>
+    <div class="lab">Height</div>
+    <div class="seg" id="hmode"><button data-v="r">R<sub>4/2</sub></button><button data-v="e2">E(2<sup>+</sup><sub>1</sub>), log</button></div>
+    <div class="ramp"></div><div class="rampl" id="rampl"></div>
+    <p class="src" id="landNote"></p>
+  </div>
+  <div class="grp">
+    <label class="lab" for="find">Nucleus (even-even)</label>
+    <input id="find" type="text" placeholder="166Er, 110Cd, 238U" autocomplete="off" spellcheck="false">
+    <div class="chips" id="nucs"></div>
+  </div>
+  <div class="grp">
+    <div class="lab" id="selLab">Selected</div>
+    <dl class="kv" id="info"></dl>
+    <p class="warn" id="warn" hidden></p>
+  </div>
+  <div class="grp">
+    <div class="lab">Rendering</div>
+    <div class="seg" id="qmode">
+      <button data-v="high" title="bloom, shadows">cinematic</button>
+      <button data-v="low">fast</button>
+    </div>
+    <p class="src" id="drawn"></p>
+  </div>
+  <details>
+    <summary>Model, exactly</summary>
+    <div class="grp src">
+      <span>Data: the ENSDF adopted levels of every even-even nucleus. E(2<sup>+</sup><sub>1</sub>) is the lowest level whose J<sup>π</sup> field reads 2+ (firm) or reads 2+ once its parentheses are removed, as in (2+) or (2)+ (tentative, marked <span class="t">t</span> and drawn narrow); likewise for 4<sup>+</sup>, 6<sup>+</sup>, 3<sup>−</sup> and the second 0<sup>+</sup>, 2<sup>+</sup>. A level with an unresolved J<sup>π</sup> (a list such as (1,2+), a range such as (0+:4+), a bound such as GE 1, a value from systematics in square brackets such as [2+], a spin without parity, or none) is never taken; when one that could be the state lies lower, the value is flagged. Levels whose energy is an unconnected offset (X, 0+X, …) are skipped, and so are levels ENSDF marks as questionable (? in column 80), expected but not observed (S), or with an energy from systematics (SY) or calculation (CA): they are never taken, a questionable level with the J<sup>π</sup> sought lying lower is flagged, and the level panel shows them dashed. The yrast sequence is the lowest positive-parity level of each even spin, up to the first even spin that has none, so it can switch from one band to another; the level energies, not the gamma energies, give E<sub>γ</sub> (a dashed segment where ENSDF lists no gamma between the two).</span>
+      <span>Rigid rotor: E(I) = (ħ²/2𝓘) I(I+1), with ħ²/2𝓘 fitted to E(2<sup>+</sup><sub>1</sub>): E(I) = E(2<sup>+</sup>) I(I+1)/6, 𝓘 = 3ħ²/E(2<sup>+</sup>), R<sub>4/2</sub> = 20/6. Harmonic quadrupole vibrator: E = n ħω with ħω = E(2<sup>+</sup><sub>1</sub>); n = 2 is the triplet 0<sup>+</sup>, 2<sup>+</sup>, 4<sup>+</sup> at 2ħω, R<sub>4/2</sub> = 2. γ-soft rotor (Wilets-Jean): E ∝ τ(τ+3), 2<sup>+</sup><sub>1</sub> at τ = 1, 4<sup>+</sup><sub>1</sub> at τ = 2, R<sub>4/2</sub> = 10/4.</span>
+      <span>Deformation from B(E2; 0<sup>+</sup> → 2<sup>+</sup><sub>1</sub>)↑: β<sub>2</sub> = (4π/3ZR<sub>0</sub>²)[B(E2)↑/e²]<sup>½</sup>, R<sub>0</sub> = 1.2 A<sup>1/3</sup> fm, the convention of Pritychenko et al. 2016, Eq. (2); the β<sub>2</sub> column of the NNDC B(E2) web table is shown beside the computed value, and a 2016 (ADNDT 107) row whose β<sub>2</sub> does not follow from its own B(E2) (outside the printed rounding and by more than 0.5 %) is flagged. B(E2) gives |β|, the size of the E2 matrix element: a static deformation for a rotor, the rms of the vibration for a vibrator; it fixes neither the sign of β nor axial symmetry. A B(E2) row whose 2<sup>+</sup> energy differs from the ENSDF 2<sup>+</sup><sub>1</sub> by more than 2 keV and 0.5 % is flagged.</span>
+      <span>Moments of inertia of the sharp surface R(θ) = R<sub>0</sub>(1 + β Y<sub>20</sub>(θ)), uniform density, mass A u, about an axis perpendicular to the symmetry axis, to leading order in β: rigid body 𝓘<sub>rig</sub> = (2/5) A u R<sub>0</sub>² (1 + √(5/16π) β); irrotational flow 𝓘<sub>irr</sub> = (9/8π) A u R<sub>0</sub>² β² (the flow that keeps the surface moving with the rotating shape and has no vorticity). Both are checked against quadratures in tests/check_collective.py.</span>
+      <span>Yrast band, transition I → I−2 with E<sub>γ</sub> = E(I) − E(I−2): ħω = E<sub>γ</sub>/2, the slope dE/dI at the mid spin I−1 (exact for a rotor); kinematic 𝓘<sup>(1)</sup> = ħ²(2I−1)/E<sub>γ</sub> = ħ²(I−½)/ħω; dynamic 𝓘<sup>(2)</sup> = ħ² dI/d(ħω) = 4ħ²/(E<sub>γ</sub>(I+2) − E<sub>γ</sub>(I)), placed at ħω = (E<sub>γ</sub>(I) + E<sub>γ</sub>(I+2))/4. For a rigid rotor both equal 3ħ²/E(2<sup>+</sup>) at every spin. A backbend is where ħω falls while I rises: 𝓘<sup>(1)</sup> plotted against ħω turns back, 𝓘<sup>(2)</sup> changes sign. It is counted only where both gammas are in ENSDF; elsewhere the yrast sequence may pass to another band with no linking gamma. E<sub>γ</sub>/I against I: which falls as E(2<sup>+</sup>)/I for a vibrator and rises to 4ħ²/2𝓘 for a rotor.</span>
+      <span>Rotation scene: the frequency of yrast state I is the central difference (E(I+2) − E(I−2))/4 (the last state uses E<sub>γ</sub>/2), ω = ħω/ħ, slowed down by the factor shown. A 0<sup>+</sup> state has no orientation in space; the spheroid at I = 0 is the intrinsic shape, not a picture of the state.</span>
+    </div>
+  </details>
+  <div class="src" id="srcs"></div>
+</aside>
+
+<aside id="side" class="panel glass glass-deep" data-glass data-glass-bevel="22" data-glass-scale="42">
+  <div class="cap"><b id="lsTitle">Levels</b><span>rotor · measured · vibrator</span></div>
+  <canvas id="pl" class="plot" style="height:250px" aria-label="level scheme against rotor and vibrator"></canvas>
+  <div class="src" id="lsNote"></div>
+  <div class="cap"><b>Moments of inertia, yrast band</b><span class="seg" id="bx" style="min-width:150px"><button data-v="w">vs ħω</button><button data-v="w2">vs (ħω)²</button></span></div>
+  <canvas id="pbend" class="plot" style="height:190px" aria-label="kinematic and dynamic moments of inertia"></canvas>
+  <div class="leg"><span><i style="background:#ffb26b"></i>𝓘<sup>(1)</sup> kinematic</span><span><i style="background:transparent;border:1.5px solid #7fd6c2;box-sizing:border-box"></i>𝓘<sup>(2)</sup> dynamic</span><span style="color:#c9d6ea"><b class="ln" style="border-color:#c9d6ea"></b>3ħ²/E(2<sup>+</sup>)</span><span style="color:#b9a6ff"><b class="ln" style="border-color:#b9a6ff"></b>rigid</span><span style="color:#6b7385"><b class="ln" style="border-color:#6b7385"></b>irrotational</span></div>
+  <div class="src" id="bendNote"></div>
+  <div class="cap"><b>E<sub>γ</sub>/I over spin</b><span>E<sub>γ</sub>(I → I−2)/I, keV</span></div>
+  <canvas id="pg" class="plot" style="height:150px" aria-label="gamma energy over spin"></canvas>
+  <div class="cap"><b id="chTitle">R<sub>4/2</sub> along the isotopes</b><span>click a point</span></div>
+  <canvas id="pc" class="plot" style="height:150px" aria-label="R42 along the isotope chain"></canvas>
+  <div class="src" id="chNote"></div>
+</aside>
+
+<div id="mags"></div>
+<div id="lAx" class="axlab" hidden>rotation axis</div>
+<div id="lSym" class="axlab" hidden style="color:#c9d6ea">symmetry axis</div>
+<div id="selTag"></div>
+<div id="stamp"></div>
+<div class="hint">drag to orbit · scroll to zoom · click a column or a point</div>
+
+<script src="assets/three-bundle.js"></script>
+<script src="assets/three-post.js"></script>
+<script src="assets/hw-studio.js"></script>
+<script src="assets/collective-data.js"></script>
+<script src="assets/collective.js"></script>
+<script>
+"use strict";
+// ---------- data
+const D = window.COLLECTIVE_DATA, NU = D.nuc;
+const KEYS = Object.keys(NU);
+const ELEM = {}, SYM = {};
+for (const k of KEYS) { const m = k.match(/^(\d+)([A-Za-z]+)$/); ELEM[NU[k].Z] = m[2]; SYM[m[2].toLowerCase()] = NU[k].Z; }
+const keyOf = (Z, N) => `${Z + N}${ELEM[Z]}`;
+const sup = (A) => `<sup>${A}</sup>`;
+const nucHTML = (k) => { const m = k.match(/^(\d+)([A-Za-z]+)$/); return m ? `${sup(m[1])}${m[2]}` : k; };
+const Jh = (J) => (J ? J.replace(/([+-])/g, (s) => `<sup>${s === "-" ? "−" : "+"}</sup>`) : "?");
+const MAGIC = [8, 20, 28, 50, 82, 126];
+const REF = { vib: 2, gsoft: 10 / 4, rot: 20 / 6 };          // E(4)/E(2) of the three limits, from their formulas
+const ROT_C = "#ffb26b", VIB_C = "#7fd6c2", SOFT_C = "#b9a6ff";
+const CHIPS = ["166Er", "238U", "158Er", "152Sm", "196Pt", "110Cd", "120Te", "208Pb"];
+function f(x, d) { return x == null || !isFinite(x) ? "n/a" : (+x.toFixed(d)).toFixed(d).replace("-", "−"); }
+function keV(e) { return e == null ? "n/a" : `${+e.toFixed(e < 100 ? 3 : e < 1000 ? 2 : 1)} keV`; }
+const tt = (lv) => (lv && lv[1] ? ' <span class="t">t</span>' : "");
+const fmtB = (v, d) => (v == null ? "" : d == null ? String(v) : v.toFixed(d));     // B(E2) to the decimals printed in the table
+function parseNucleus(s) {
+  s = String(s).trim().toLowerCase().replace(/^#/, "").replace(/[-\s]/g, "");
+  const m = s.match(/^(\d+)([a-z]+)$/) || s.match(/^([a-z]+)(\d+)$/);
+  if (!m) return null;
+  let A, el;
+  if (/^\d/.test(m[1])) { A = +m[1]; el = m[2]; } else { el = m[1]; A = +m[2]; }
+  const Z = SYM[el];
+  if (Z == null || !Number.isSafeInteger(A)) return null;
+  const k = keyOf(Z, A - Z);
+  return NU[k] ? k : null;
+}
+// derived per nucleus
+function derived(k) {
+  const r = NU[k], A = r.Z + r.N;
+  const o = { r, A, R: r.e2 && r.e4 ? COLL.r42(r.e2[0], r.e4[0]) : null };
+  if (r.e2) o.Jexp = COLL.inertiaExp(r.e2[0]);
+  if (r.be2 && !r.be2[4]) {
+    o.beta = COLL.beta2(r.Z, A, r.be2[0]);
+    o.Jrig = COLL.inertiaRigid(A, o.beta); o.Jirr = COLL.inertiaIrrot(A, o.beta);
+  }
+  o.bb = COLL.backbend(r.y);
+  return o;
+}
+
+// the 2016 table's beta2 against the value its B(E2) gives by its stated convention: outside the printed rounding
+// (half a unit of the last beta2 digit plus the effect of rounding B(E2)) and by more than 0.5 %
+function betaFlag(k) {
+  const r = NU[k], b = r.be2;
+  if (!b || b[4] || !b[5] || b[2] == null || b[7] == null) return false;
+  const beta = COLL.beta2(r.Z, r.Z + r.N, b[0]), tol = 0.5 * 10 ** -b[7] + beta * 0.25 * 10 ** -b[6] / b[0];
+  return Math.abs(beta - b[2]) > tol && Math.abs(beta / b[2] - 1) > 0.005;
+}
+
+// the B(E2) row's 2+ energy against the ENSDF 2+1: off by more than 2 keV and more than 0.5 %
+function e2Mismatch(k) {
+  const r = NU[k], b = r.be2;
+  if (!b || !r.e2 || b[8] == null) return false;
+  const d = Math.abs(b[8] - r.e2[0]);
+  return d > 2 && d > 0.005 * r.e2[0];
+}
+
+// ---------- state
+const S = { mode: "rot", nuc: "166Er", yi: 1, lam: 2, nph: 1, amp: 1, h: "r", bx: "w" };
+let CUR = derived(S.nuc);
+
+// ---------- scene
+const stage = document.getElementById("stage");
+const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance", preserveDrawingBuffer: false });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.setSize(innerWidth, innerHeight);
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.05;
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+stage.appendChild(renderer.domElement);
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(36, innerWidth / innerHeight, 0.3, 1400);
+function applyOffset() {
+  const a = document.getElementById("ctl").getBoundingClientRect(), b = document.getElementById("side").getBoundingClientRect();
+  const free = innerWidth > 900 ? (a.right + b.left) / 2 : innerWidth / 2;
+  const dx = innerWidth / 2 - free;
+  if (Math.abs(dx) > 1) camera.setViewOffset(innerWidth, innerHeight, dx, 0, innerWidth, innerHeight); else camera.clearViewOffset();
+}
+applyOffset();
+const POST = HW.post(renderer, scene, camera, { bloom: [0.55, 0.5, 0.86], ao: { radius: 0.9, thickness: 1.5, scale: 1, distanceExponent: 1.5 }, aoIntensity: 0.8 });
+const composer = POST.composer;
+scene.environment = HW.studioEnv(renderer, { intensity: 1.0 });
+scene.fog = new THREE.Fog("#0b0d12", 260, 700);
+// the ground colour: drawn as is on the direct path; on the bloom path the linear colour that ACES (exposure 1.05) maps back to #0b0d12
+const GROUND = new THREE.Color("#0b0d12");
+const GROUND_PRE_ACES = new THREE.Color().setRGB(0.0115476, 0.0131218, 0.0174740, THREE.LinearSRGBColorSpace);
+scene.background = GROUND.clone();
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true; controls.dampingFactor = 0.08;
+controls.minDistance = 8; controls.maxDistance = 600;
+const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+scene.add(new THREE.HemisphereLight("#cfd8ff", "#1a1410", 0.7));
+const sun = new THREE.DirectionalLight("#fff3e0", 2.4);
+sun.position.set(-40, 90, 50);
+sun.shadow.mapSize.set(2048, 2048);
+sun.shadow.bias = -0.0004; sun.shadow.normalBias = 0.04;
+scene.add(sun, sun.target);
+const rimL = new THREE.DirectionalLight("#7fa6ff", 0.9);
+rimL.position.set(60, 30, -80);
+scene.add(rimL);
+const rnd = HW.rng(1975);
+
+// ===== the nucleus (rotation and vibration) =====
+const NUC = new THREE.Group();
+scene.add(NUC);
+const RW = 5.2;                 // world radius of R0
+const YF = -RW * 1.75;          // floor height under the nucleus
+// surface: a dimpled sphere (dimples are decoration), deformed on the CPU from the unit directions
+const SPH = new THREE.SphereGeometry(1, 192, 144);
+const NV = SPH.attributes.position.count;
+const DIR = new Float32Array(SPH.attributes.position.array);       // unit directions (y up = the symmetry axis in the body frame)
+const TH = new Float32Array(NV), PH = new Float32Array(NV);
+for (let i = 0; i < NV; i++) {
+  const x = DIR[3 * i], y = DIR[3 * i + 1], z = DIR[3 * i + 2];
+  TH[i] = Math.acos(Math.max(-1, Math.min(1, y))); PH[i] = Math.atan2(-z, x);
+}
+// basis functions on the vertices: Y20, Y22, Y30, Y32 (the modes the scene uses)
+const BASIS = { "2,0": new Float32Array(NV), "2,2": new Float32Array(NV), "3,0": new Float32Array(NV), "3,2": new Float32Array(NV) };
+for (const k in BASIS) { const [l, m] = k.split(",").map(Number); for (let i = 0; i < NV; i++) BASIS[k][i] = COLL.Yreal(l, m, TH[i], PH[i]); }
+const nucMat = new THREE.MeshPhysicalMaterial({
+  color: "#ffe8cc", roughness: 0.12, metalness: 0.0, transmission: 0.82, thickness: 3.0, ior: 1.33,
+  attenuationColor: new THREE.Color("#ffb878"), attenuationDistance: 9, clearcoat: 1.0, clearcoatRoughness: 0.06,
+  iridescence: 0.35, iridescenceIOR: 1.25, sheen: 0.4, sheenColor: new THREE.Color("#ffd9b0"), envMapIntensity: 1.25,
+  specularIntensity: 1, transparent: false,
+});
+const nucleus = new THREE.Mesh(SPH, nucMat);
+nucleus.castShadow = true;
+const BODY = new THREE.Group();      // body frame: rotates with the nucleus; its local y is the symmetry axis
+BODY.add(nucleus);
+const TILT = new THREE.Group();      // lays the symmetry axis horizontal, perpendicular to the rotation axis (world y)
+TILT.rotation.z = Math.PI / 2;
+const SPIN = new THREE.Group();      // turns about world y
+TILT.add(BODY); SPIN.add(TILT); NUC.add(SPIN);
+// a cloud of glowing points inside the surface, one per nucleon (decoration: their positions are random, warm and cool in the ratio Z : N)
+const NPT = 260;
+const ptPos = new Float32Array(NPT * 3), ptCol = new Float32Array(NPT * 3), ptU = [];
+const ptGeo = new THREE.BufferGeometry();
+ptGeo.setAttribute("position", new THREE.BufferAttribute(ptPos, 3));
+ptGeo.setAttribute("color", new THREE.BufferAttribute(ptCol, 3));
+const cloud = new THREE.Points(ptGeo, new THREE.ShaderMaterial({
+  uniforms: { uPx: { value: renderer.getPixelRatio() } },
+  vertexShader: `attribute vec3 color; uniform float uPx; varying vec3 vC; void main(){ vC = color; vec4 mv = modelViewMatrix * vec4(position, 1.0); gl_PointSize = uPx * 700.0 / -mv.z; gl_Position = projectionMatrix * mv; }`,
+  fragmentShader: `varying vec3 vC; void main(){ vec2 q = gl_PointCoord - 0.5; float r2 = dot(q, q) * 4.0; if (r2 > 1.0) discard; float core = exp(-r2 * 9.0), halo = exp(-r2 * 2.5); vec3 c = vC * (core * 1.25 + halo * 0.35); gl_FragColor = vec4(c, core + 0.3 * halo);
+    #include <tonemapping_fragment>
+    #include <colorspace_fragment>
+  }`,
+  transparent: true, depthWrite: false, depthTest: false, blending: THREE.AdditiveBlending,
+}));
+cloud.frustumCulled = false; cloud.renderOrder = 6;
+BODY.add(cloud);
+for (let i = 0; i < NPT; i++) {
+  // uniform in the unit ball: radius u^(1/3), isotropic direction
+  const z = 2 * rnd() - 1, ph = 2 * Math.PI * rnd(), s = Math.sqrt(1 - z * z), u = Math.cbrt(rnd()) * 0.86;
+  const th = Math.acos(z);
+  ptU.push({ d: new THREE.Vector3(s * Math.cos(ph), z, -s * Math.sin(ph)), u, th, ph, w: 0.6 + 0.8 * rnd(), p0: 2 * Math.PI * rnd() });
+}
+function writeCloud(t) {
+  const NP = CUR.r.N, ZP = CUR.r.Z, pf = ZP / (ZP + NP);
+  const cw = new THREE.Color("#ffb06a"), cc = new THREE.Color("#8fc4ff");
+  for (let i = 0; i < NPT; i++) {
+    const q = ptU[i];
+    const r = RW * (1 + COEF["2,0"] * COLL.Yreal(2, 0, q.th, q.ph) + COEF["2,2"] * COLL.Yreal(2, 2, q.th, q.ph) + COEF["3,0"] * COLL.Yreal(3, 0, q.th, q.ph) + COEF["3,2"] * COLL.Yreal(3, 2, q.th, q.ph));
+    const jit = reduce ? 1 : 1 + 0.035 * Math.sin(q.w * 3.1 * t + q.p0);
+    ptPos[3 * i] = q.d.x * q.u * r * jit; ptPos[3 * i + 1] = q.d.y * q.u * r * jit; ptPos[3 * i + 2] = q.d.z * q.u * r * jit;
+    const c = (i + 0.5) / NPT < pf ? cw : cc, g = 0.55 + 0.45 * (1 - q.u);
+    ptCol[3 * i] = c.r * g; ptCol[3 * i + 1] = c.g * g; ptCol[3 * i + 2] = c.b * g;
+  }
+  ptGeo.attributes.position.needsUpdate = ptGeo.attributes.color.needsUpdate = true;
+}
+// the equilibrium sphere of the vibration, as a faint cage
+const cage = (() => {
+  const p = [];
+  const ring = (fn) => { for (let i = 0; i < 128; i++) { p.push(fn(2 * Math.PI * i / 128), fn(2 * Math.PI * (i + 1) / 128)); } };
+  for (const th of [30, 60, 90, 120, 150]) { const t = th * Math.PI / 180; ring((u) => new THREE.Vector3(Math.sin(t) * Math.cos(u), Math.cos(t), Math.sin(t) * Math.sin(u)).multiplyScalar(RW)); }
+  for (let k = 0; k < 6; k++) { const ph = k * Math.PI / 6; ring((u) => new THREE.Vector3(Math.sin(u) * Math.cos(ph), Math.cos(u), Math.sin(u) * Math.sin(ph)).multiplyScalar(RW)); }
+  return new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints(p), new THREE.LineBasicMaterial({ color: "#c9d6ea", transparent: true, opacity: 0.16, depthWrite: false }));
+})();
+NUC.add(cage);
+// rotation axis (world y) with an arrowhead for the angular momentum, and the symmetry axis in the body frame
+const axisMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(ROT_C).multiplyScalar(1.6), toneMapped: false });
+const rotAxis = new THREE.Group();
+{
+  const sh = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, RW * 3.4, 12), axisMat);
+  const tip = new THREE.Mesh(new THREE.ConeGeometry(0.28, 0.9, 24), axisMat); tip.position.y = RW * 1.7 + 0.4;
+  rotAxis.add(sh, tip); rotAxis.position.y = 0.0;
+}
+NUC.add(rotAxis);
+const symAxis = (() => {
+  const g = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, -RW * 2.0, 0), new THREE.Vector3(0, RW * 2.0, 0)]);
+  const l = new THREE.Line(g, new THREE.LineDashedMaterial({ color: "#c9d6ea", transparent: true, opacity: 0.7, dashSize: 0.35, gapSize: 0.25 }));
+  l.computeLineDistances(); return l;
+})();
+BODY.add(symAxis);
+// comet trails of the two tips of the long axis
+const NTR = 260;
+const trPos = new Float32Array(NTR * 2 * 3), trCol = new Float32Array(NTR * 2 * 3);
+const trGeo = new THREE.BufferGeometry();
+trGeo.setAttribute("position", new THREE.BufferAttribute(trPos, 3));
+trGeo.setAttribute("color", new THREE.BufferAttribute(trCol, 3));
+const trails = new THREE.Points(trGeo, new THREE.ShaderMaterial({
+  uniforms: { uPx: { value: renderer.getPixelRatio() } },
+  vertexShader: `attribute vec3 color; uniform float uPx; varying vec3 vC; void main(){ vC = color; vec4 mv = modelViewMatrix * vec4(position, 1.0); gl_PointSize = uPx * 260.0 / -mv.z; gl_Position = projectionMatrix * mv; }`,
+  fragmentShader: `varying vec3 vC; void main(){ vec2 q = gl_PointCoord - 0.5; float r2 = dot(q, q) * 4.0; if (r2 > 1.0) discard; float a = exp(-r2 * 4.0); gl_FragColor = vec4(vC * a, a);
+    #include <tonemapping_fragment>
+    #include <colorspace_fragment>
+  }`,
+  transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
+}));
+trails.frustumCulled = false;
+NUC.add(trails);
+// floor under the nucleus: a dark disc with rings, and the shadow
+const floorTex = HW.canvasTex(1024, 1024, (x, w, h) => {
+  const g = x.createRadialGradient(w / 2, h / 2, 0, w / 2, h / 2, w / 2);
+  g.addColorStop(0, "#1a2030"); g.addColorStop(0.6, "#121621"); g.addColorStop(1, "#0b0d12");
+  x.fillStyle = g; x.fillRect(0, 0, w, h);
+  x.strokeStyle = "rgba(120,140,180,0.10)"; x.lineWidth = 2;
+  for (let r = 1; r <= 9; r++) { x.beginPath(); x.arc(w / 2, h / 2, r * w / 20, 0, 2 * Math.PI); x.stroke(); }
+  for (let k = 0; k < 24; k++) { const a = k * Math.PI / 12; x.beginPath(); x.moveTo(w / 2 + Math.cos(a) * w / 20, h / 2 + Math.sin(a) * w / 20); x.lineTo(w / 2 + Math.cos(a) * w * 0.45, h / 2 + Math.sin(a) * w * 0.45); x.stroke(); }
+}, null, true);
+const nFloor = new THREE.Mesh(new THREE.CircleGeometry(60, 96), new THREE.MeshStandardMaterial({ map: floorTex, roughness: 0.6, metalness: 0.2, envMapIntensity: 0.25 }));
+nFloor.rotation.x = -Math.PI / 2; nFloor.position.y = YF; nFloor.receiveShadow = true;
+NUC.add(nFloor);
+
+// current surface: coefficients of the four basis functions; the vertex radius is RW (1 + sum c Y)
+const COEF = { "2,0": 0, "2,2": 0, "3,0": 0, "3,2": 0 };
+let shapeKey = "";
+function writeSurface() {
+  const p = SPH.attributes.position.array, b20 = BASIS["2,0"], b22 = BASIS["2,2"], b30 = BASIS["3,0"], b32 = BASIS["3,2"];
+  const c20 = COEF["2,0"], c22 = COEF["2,2"], c30 = COEF["3,0"], c32 = COEF["3,2"];
+  for (let i = 0; i < NV; i++) {
+    const r = RW * (1 + c20 * b20[i] + c22 * b22[i] + c30 * b30[i] + c32 * b32[i]);
+    p[3 * i] = DIR[3 * i] * r; p[3 * i + 1] = DIR[3 * i + 1] * r; p[3 * i + 2] = DIR[3 * i + 2] * r;
+  }
+  SPH.attributes.position.needsUpdate = true;
+  SPH.computeVertexNormals();
+  SPH.computeBoundingSphere();
+}
+
+// ===== the R4/2 landscape =====
+const LAND = new THREE.Group();
+scene.add(LAND);
+const X = (N) => N, Zc = (Z) => -Z;
+const HK = 3.0;                 // world units per unit of R4/2
+const COLS = KEYS.filter((k) => NU[k].e2).map((k) => k);
+const nC = COLS.length;
+const CIDX = new Map(COLS.map((k, i) => [k, i]));
+{
+  const fm = HW.canvasTex(1024, 1024, (x, w, h) => {
+    x.fillStyle = "#151a26"; x.fillRect(0, 0, w, h);
+    for (let i = 0; i < 6000; i++) { const v = rnd() * 10 | 0; x.fillStyle = `rgba(${30 + v},${36 + v},${50 + v},0.35)`; x.fillRect(rnd() * w, rnd() * h, 2, 2); }
+    const c = w / 10;
+    x.strokeStyle = "#252c3d"; x.lineWidth = 2.2;
+    for (let k = 0; k <= 10; k++) { x.beginPath(); x.moveTo(k * c, 0); x.lineTo(k * c, h); x.stroke(); x.beginPath(); x.moveTo(0, k * c); x.lineTo(w, k * c); x.stroke(); }
+  }, [140, 140], true);
+  fm.offset.set(0.05, 0.05);
+  const fl = new THREE.Mesh(new THREE.PlaneGeometry(1400, 1400), new THREE.MeshStandardMaterial({ map: fm, roughness: 0.85, metalness: 0.05, envMapIntensity: 0.3 }));
+  fl.rotation.x = -Math.PI / 2; fl.position.y = -0.02; fl.receiveShadow = true;
+  LAND.add(fl);
+}
+// magic-number lanes painted on the floor
+const magLabels = [];
+{
+  const laneMat = new THREE.MeshBasicMaterial({ color: new THREE.Color("#151a26").lerp(new THREE.Color("#f2c14e"), 0.42) });
+  const gs = [];
+  const strip = (x0, z0, x1, z1) => {
+    const L = Math.hypot(x1 - x0, z1 - z0), g = new THREE.PlaneGeometry(L, 0.1);
+    g.rotateX(-Math.PI / 2); g.rotateY(-Math.atan2(z1 - z0, x1 - x0)); g.translate((x0 + x1) / 2, 0.01, (z0 + z1) / 2); gs.push(g);
+  };
+  for (const m of MAGIC) {
+    const zs = COLS.filter((k) => NU[k].N === m).map((k) => NU[k].Z);
+    if (zs.length) { const lo = Math.min(...zs) - 2, hi = Math.max(...zs) + 2; for (const s of [-0.5, 0.5]) strip(X(m) + s, Zc(lo), X(m) + s, Zc(hi)); magLabels.push({ txt: "N=" + m, p: new THREE.Vector3(X(m), 0, Zc(lo) + 3) }); }
+    const ns = COLS.filter((k) => NU[k].Z === m).map((k) => NU[k].N);
+    if (ns.length) { const lo = Math.min(...ns) - 2, hi = Math.max(...ns) + 2; for (const s of [-0.5, 0.5]) strip(X(lo), Zc(m) + s, X(hi), Zc(m) + s); magLabels.push({ txt: "Z=" + m, p: new THREE.Vector3(X(lo) - 4, 0, Zc(m)) }); }
+  }
+  const o = new THREE.Mesh(BufferGeometryUtils.mergeGeometries(gs), laneMat); o.userData.noAO = true; LAND.add(o);
+}
+// reference heights: thin glowing frames at R4/2 = 2, 5/2 and 10/3 around the occupied chart
+const refFrames = [];
+{
+  let n0 = 1e9, n1 = -1e9, z0 = 1e9, z1 = -1e9;
+  for (const k of COLS) { n0 = Math.min(n0, NU[k].N); n1 = Math.max(n1, NU[k].N); z0 = Math.min(z0, NU[k].Z); z1 = Math.max(z1, NU[k].Z); }
+  for (const [v, c, lab] of [[REF.vib, VIB_C, "2.00 vibrator"], [REF.gsoft, SOFT_C, "2.50 γ-soft"], [REF.rot, ROT_C, "3.33 rotor"]]) {
+    const y = v * HK, a = X(n0 - 2), b = X(n1 + 2), za = Zc(z0 - 2), zb = Zc(z1 + 2);
+    const g = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(a, y, za), new THREE.Vector3(b, y, za), new THREE.Vector3(b, y, za), new THREE.Vector3(b, y, zb), new THREE.Vector3(b, y, zb), new THREE.Vector3(a, y, zb), new THREE.Vector3(a, y, zb), new THREE.Vector3(a, y, za)]);
+    const l = new THREE.LineSegments(g, new THREE.LineBasicMaterial({ color: new THREE.Color(c).multiplyScalar(1.3), transparent: true, opacity: 0.75, toneMapped: false }));
+    const pl = new THREE.Mesh(new THREE.PlaneGeometry(b - a, za - zb), new THREE.MeshBasicMaterial({ color: c, transparent: true, opacity: 0.035, side: THREE.DoubleSide, depthWrite: false }));
+    pl.rotation.x = -Math.PI / 2; pl.position.set((a + b) / 2, y, (za + zb) / 2);
+    LAND.add(l);
+    refFrames.push({ l, pl, v });
+    magLabels.push({ txt: lab, p: new THREE.Vector3(X(100), y, za), cls: "ref" });
+  }
+}
+const colGeo = new RoundedBoxGeometry(0.92, 1, 0.92, 3, 0.14); colGeo.translate(0, 0.5, 0);
+const colMat = new THREE.MeshPhysicalMaterial({ transmission: 0.4, thickness: 0.9, ior: 1.46, roughness: 0.14, metalness: 0, clearcoat: 1, clearcoatRoughness: 0.1, envMapIntensity: 0.8 });
+const cols = new THREE.InstancedMesh(colGeo, colMat, nC);
+cols.castShadow = cols.receiveShadow = true;
+LAND.add(cols);
+const coreGeo = new RoundedBoxGeometry(0.42, 1, 0.42, 2, 0.1); coreGeo.translate(0, 0.5, 0);
+const cores = new THREE.InstancedMesh(coreGeo, new THREE.MeshBasicMaterial({ color: "#ffffff", toneMapped: false }), nC);
+LAND.add(cores);
+const ring = new THREE.Mesh(new THREE.RingGeometry(0.72, 0.92, 40), new THREE.MeshBasicMaterial({ color: "#f2c14e", transparent: true, opacity: 0.95, side: THREE.DoubleSide, toneMapped: false }));
+ring.rotation.x = -Math.PI / 2;
+LAND.add(ring);
+const selBox = (() => { const g = new THREE.BoxGeometry(1, 1, 1); g.translate(0, 0.5, 0); const e = new THREE.LineSegments(new THREE.EdgesGeometry(g), new THREE.LineBasicMaterial({ color: "#f2c14e", toneMapped: false })); g.dispose(); return e; })();
+LAND.add(selBox);
+// colour ramp over R4/2 from 1 to 3.4 (same stops as the CSS legend)
+const STOPS = [[0, "#2a3f78"], [0.3, "#2f86b5"], [0.47, "#55c7b2"], [0.62, "#a9e07a"], [0.8, "#f2d36b"], [1, "#fff3d8"]].map(([t, c]) => [t, new THREE.Color(c)]);
+function ramp(t, out) {
+  t = Math.max(0, Math.min(1, t));
+  for (let i = 0; i + 1 < STOPS.length; i++) if (t <= STOPS[i + 1][0]) return out.copy(STOPS[i][1]).lerp(STOPS[i + 1][1], (t - STOPS[i][0]) / (STOPS[i + 1][0] - STOPS[i][0]));
+  return out.copy(STOPS[STOPS.length - 1][1]);
+}
+const RLO = 1, RHI = 3.4, ELO = Math.log10(40), EHI = Math.log10(5000);
+const H = new Float32Array(nC), Hto = new Float32Array(nC), CC = COLS.map(() => new THREE.Color()), CCto = COLS.map(() => new THREE.Color());
+function colTarget(first) {
+  for (let i = 0; i < nC; i++) {
+    const r = NU[COLS[i]];
+    let h = 0, t = 0;
+    if (S.h === "r") { if (r.e4) { const R = r.e4[0] / r.e2[0]; h = R * HK; t = (R - RLO) / (RHI - RLO); } }
+    else { const lg = Math.log10(r.e2[0]); t = (EHI - lg) / (EHI - ELO); h = 2 + Math.max(0, t) * 17; }
+    Hto[i] = h; ramp(t, CCto[i]);
+    if (first) { H[i] = h; CC[i].copy(CCto[i]); }
+  }
+  settling = true;
+}
+const tent = (r) => (S.h === "r" ? (r.e2[1] || (r.e4 && r.e4[1])) : r.e2[1]);
+const dummy = new THREE.Object3D(), WHITE = new THREE.Color("#ffffff"), tmpC = new THREE.Color();
+let settling = true;
+function writeCols() {
+  const sel = CIDX.get(S.nuc);
+  for (let i = 0; i < nC; i++) {
+    const r = NU[COLS[i]], h = H[i], fp = h < 1e-3 ? 0 : tent(r) ? 0.5 : 1;
+    dummy.position.set(X(r.N), 0, Zc(r.Z)); dummy.scale.set(fp, Math.max(1e-4, h), fp); dummy.updateMatrix();
+    cols.setMatrixAt(i, dummy.matrix);
+    cols.setColorAt(i, i === sel ? WHITE : CC[i]);
+    // lit core for the well-deformed rotors (R4/2 above 3.2), so the rare-earth and actinide plateaus glow
+    const glow = S.h === "r" && r.e4 && r.e4[0] / r.e2[0] > 3.2 && !tent(r);
+    if (glow && h > 0.3) { dummy.scale.set(1, h - 0.16, 1); dummy.position.y = 0.04; dummy.updateMatrix(); cores.setMatrixAt(i, dummy.matrix); tmpC.copy(CC[i]).multiplyScalar(1.15); cores.setColorAt(i, tmpC); }
+    else { dummy.matrix.makeScale(0, 0, 0); cores.setMatrixAt(i, dummy.matrix); cores.setColorAt(i, CC[i]); }
+  }
+  cols.instanceMatrix.needsUpdate = true; cols.instanceColor.needsUpdate = true;
+  cores.instanceMatrix.needsUpdate = true; cores.instanceColor.needsUpdate = true;
+  if (sel != null) {
+    const r = NU[S.nuc], h = H[sel], fp = tent(r) ? 0.5 : 1;
+    ring.visible = true; ring.position.set(X(r.N), 0.03, Zc(r.Z));
+    selBox.visible = h > 1e-3; selBox.position.set(X(r.N), 0, Zc(r.Z)); selBox.scale.set(fp, h + 0.08, fp);
+  } else { ring.visible = selBox.visible = false; }
+}
+function settle(dt) {
+  const k = reduce ? 1 : 1 - Math.exp(-dt / 0.13);
+  let moving = false;
+  for (let i = 0; i < nC; i++) {
+    const d = Hto[i] - H[i];
+    if (Math.abs(d) > 1e-3) { H[i] += d * k; moving = true; } else H[i] = Hto[i];
+    const c = CC[i], t = CCto[i];
+    if (Math.abs(c.r - t.r) + Math.abs(c.g - t.g) + Math.abs(c.b - t.b) > 2e-3) { c.lerp(t, k); moving = true; } else c.copy(t);
+  }
+  writeCols(); settling = moving;
+}
+const magDiv = document.getElementById("mags");
+for (const l of magLabels) { l.el = document.createElement("div"); l.el.className = "mag" + (l.cls ? " " + l.cls : ""); l.el.textContent = l.txt; magDiv.appendChild(l.el); }
+
+// ---------- camera
+const camTo = { t: null, p: null };
+function flyTo(t, p) { camTo.t = t; camTo.p = p; if (reduce) { controls.target.copy(t); camera.position.copy(p); camTo.t = null; } }
+const LAND_DIR = new THREE.Vector3(-0.3, 0.78, 1.0).normalize();
+function viewLand(k, d) {
+  const r = NU[k] || { N: 90, Z: 60 };
+  const t = new THREE.Vector3(X(r.N), 6, Zc(r.Z));
+  flyTo(t, t.clone().addScaledVector(LAND_DIR, innerWidth < 700 ? d * 1.5 : d));
+}
+function viewNucleus() {
+  const t = new THREE.Vector3(0, -0.5, 0);
+  flyTo(t, new THREE.Vector3(9, 9.5, 41).multiplyScalar(innerWidth < 700 ? 1.45 : 1));
+}
+
+// ---------- the nucleus scene, per state
+const HBAR = 6.582119569e-22;        // MeV s, CODATA 2018
+const VIS = Math.PI / 0.3;           // drawn angular speed per MeV of hbar omega (rad/s): 0.3 MeV turns once in 2 s
+let rotOmega = 0, vibOmega = 0, phase = 0;
+const SPINS = () => CUR.r.y;
+// drawn surfaces stay above RMIN R0: a coefficient c on a mode whose largest |Y| is ymax can lower the radius by c ymax at most
+const RMIN = 0.3, YMAX = {};
+for (const k in BASIS) { let m = 0; for (const v of BASIS[k]) m = Math.max(m, Math.abs(v)); YMAX[k] = m; }
+function betaDrawn() {
+  const b = CUR.beta != null ? CUR.beta : 0.25, cap = (1 - RMIN) / YMAX["2,0"];
+  return { b: Math.min(b, cap), ill: CUR.beta == null, capped: b > cap };
+}
+function setupNucleus() {
+  const vib = S.mode === "vib";
+  COEF["2,0"] = COEF["2,2"] = COEF["3,0"] = COEF["3,2"] = 0;
+  if (!vib) {
+    const { b } = betaDrawn();
+    COEF["2,0"] = b;
+    writeSurface();
+    const y = SPINS(), i = Math.min(S.yi, y.length - 1);
+    rotOmega = i >= 0 && y.length ? COLL.omegaState(y, i) : 0;
+  } else writeSurface();
+  rotAxis.visible = symAxis.visible = trails.visible = !vib;
+  cage.visible = vib;
+  TILT.rotation.z = vib ? 0 : Math.PI / 2;
+  if (vib) SPIN.rotation.y = 0;
+  for (let i = 0; i < trPos.length; i++) { trPos[i] = 0; trCol[i] = 0; }
+  trGeo.attributes.position.needsUpdate = trGeo.attributes.color.needsUpdate = true;
+}
+function vibAmp() {
+  if (S.lam === 2) return CUR.beta != null ? { a: CUR.beta, ill: false } : { a: 0.12, ill: true };
+  return { a: 0.1, ill: true };
+}
+function vibE() { return S.lam === 2 ? (CUR.r.e2 ? CUR.r.e2[0] : null) : (CUR.r.e3 ? CUR.r.e3[0] : null); }
+function vibCap() { const l = S.lam; return (1 - RMIN) / (YMAX[`${l},0`] + (S.nph === 2 ? YMAX[`${l},2`] : 0)); }
+function stepVibration(t) {
+  const E = vibE() || 1000, w = (E / 1000) * VIS, { a } = vibAmp(), A = Math.min(a * S.amp, vibCap());
+  const l = S.lam;
+  if (S.nph === 1) { COEF[`${l},0`] = A * Math.cos(w * t); COEF[`${l},2`] = 0; }
+  else { COEF[`${l},0`] = A * Math.cos(w * t); COEF[`${l},2`] = A * Math.cos(w * t + Math.PI / 2); }
+  COEF[`${l === 2 ? 3 : 2},0`] = COEF[`${l === 2 ? 3 : 2},2`] = 0;
+  writeSurface();
+}
+// trails: the two ends of the long axis sweep a horizontal circle; the arc behind each is drawn from the current angle
+// (independent of the frame rate), its length growing with the drawn angular speed
+function stepRotation(dt) {
+  if (!reduce) SPIN.rotation.y += rotOmega * VIS * dt;
+  const { b } = betaDrawn(), rTip = RW * (1 + b * COLL.Yreal(2, 0, 0, 0)) + 0.15;
+  const arc = Math.min(2.6, rotOmega * VIS * 0.55), c = new THREE.Color(ROT_C), phi = SPIN.rotation.y;
+  for (let k = 0; k < NTR; k++) {
+    const f = k / (NTR - 1), ang = phi - f * arc, a = rotOmega > 0 ? Math.pow(1 - f, 1.6) * 1.3 : 0;
+    for (let s = 0; s < 2; s++) {
+      // body y -> world -x (TILT turns by +90 deg about z), then the SPIN turn about y
+      const x0 = (s ? 1 : -1) * rTip, j = (k * 2 + s) * 3;
+      trPos[j] = x0 * Math.cos(ang); trPos[j + 1] = 0; trPos[j + 2] = -x0 * Math.sin(ang);
+      trCol[j] = c.r * a; trCol[j + 1] = c.g * a; trCol[j + 2] = c.b * a;
+    }
+  }
+  trGeo.attributes.position.needsUpdate = trGeo.attributes.color.needsUpdate = true;
+}
+
+// ---------- panels
+const $ = (id) => document.getElementById(id);
+function nearestLimit(R) {
+  const L = [["vibrator", REF.vib], ["γ-soft", REF.gsoft], ["rotor", REF.rot]];
+  return L.reduce((a, b) => (Math.abs(b[1] - R) < Math.abs(a[1] - R) ? b : a));
+}
+function drawInfo() {
+  const o = CUR, r = o.r, k = S.nuc;
+  $("selLab").innerHTML = `Selected: ${nucHTML(k)} (Z = ${r.Z}, N = ${r.N})`;
+  const rows = [];
+  rows.push(["E(2<sup>+</sup><sub>1</sub>)", r.e2 ? keV(r.e2[0]) + tt(r.e2) : "not in ENSDF"]);
+  rows.push(["E(4<sup>+</sup><sub>1</sub>)", r.e4 ? keV(r.e4[0]) + tt(r.e4) : "not in ENSDF"]);
+  if (o.R != null) { const nl = nearestLimit(o.R); rows.push(["R<sub>4/2</sub>", `<span class="hi">${f(o.R, 3)}</span> (nearest limit: ${nl[0]}, ${f(nl[1], 2)})`]); }
+  if (r.be2) rows.push(["B(E2)↑", `${r.be2[4] ? "&lt; " : ""}${fmtB(r.be2[0], r.be2[6])}${r.be2[1] != null ? " ± " + fmtB(r.be2[1], r.be2[6]) : ""} e²b² (${r.be2[5] ? "2016" : "2001"} row)`]);
+  if (o.beta != null) rows.push(["β<sub>2</sub>", `${f(o.beta, 4)} (table: ${r.be2[2] != null ? r.be2[2] : "none"})`]);
+  if (o.Jexp != null) rows.push(["𝓘 = 3ħ²/E(2<sup>+</sup>)", `${f(o.Jexp, 1)} ħ²/MeV`]);
+  if (o.Jrig != null) rows.push(["𝓘<sub>rig</sub>, 𝓘<sub>irr</sub> at β<sub>2</sub>", `${f(o.Jrig, 1)}, ${f(o.Jirr, 1)} ħ²/MeV`]);
+  if (o.Jrig != null && o.Jexp != null) rows.push(["𝓘/𝓘<sub>rig</sub>, 𝓘/𝓘<sub>irr</sub>", `${f(o.Jexp / o.Jrig, 2)}, ${f(o.Jexp / o.Jirr, 1)}`]);
+  $("info").innerHTML = rows.map(([a, b]) => `<dt>${a}</dt><dd>${b}</dd>`).join("");
+  const w = [];
+  if (r.e2 && r.e2[2]) w.push("A level with an unresolved J<sup>π</sup> that could be 2<sup>+</sup> lies below the 2<sup>+</sup><sub>1</sub> taken.");
+  if (r.e4 && r.e4[2]) w.push("A level with an unresolved J<sup>π</sup> that could be 4<sup>+</sup> lies below the 4<sup>+</sup><sub>1</sub> taken.");
+  if (o.R != null && (r.e2[1] || r.e4[1])) w.push("Tentative J<sup>π</sup> (in parentheses in ENSDF): the ratio rests on an assignment that is not firm.");
+  else if (r.e2 && r.e2[1]) w.push("Tentative J<sup>π</sup> of the 2<sup>+</sup><sub>1</sub> (in parentheses in ENSDF).");
+  if (r.e2 && r.e2[3]) w.push("A questionable level (marked ? in ENSDF) reading 2<sup>+</sup> lies below the 2<sup>+</sup><sub>1</sub> taken; it is not used.");
+  if (r.e4 && r.e4[3]) w.push("A questionable level (marked ? in ENSDF) reading 4<sup>+</sup> lies below the 4<sup>+</sup><sub>1</sub> taken; it is not used.");
+  if (r.gs && r.gs !== "0+") w.push(`ENSDF ground state J<sup>π</sup>: ${Jh(r.gs)}.`);
+  if (!r.be2) w.push("No adopted B(E2) for this nucleus: no β<sub>2</sub> and no 𝓘<sub>rig</sub>, 𝓘<sub>irr</sub>.");
+  else if (r.be2[4]) w.push("The adopted B(E2) is an upper limit: no β<sub>2</sub> is drawn from it.");
+  if (betaFlag(k)) w.push(`The β<sub>2</sub> of this 2016 (ADNDT 107) row of the NNDC B(E2) web table (${r.be2[2]}) does not follow from the row's B(E2) through the convention of Pritychenko et al. 2016, Eq. (2) (${(100 * (o.beta / r.be2[2] - 1)).toFixed(1).replace("-", "−")} %); the page uses the value computed from B(E2).`);
+  if (e2Mismatch(k)) w.push(`The B(E2) row is tied to a 2<sup>+</sup> at ${r.be2[8]} keV, not the ENSDF 2<sup>+</sup><sub>1</sub> at ${keV(r.e2[0])}: the B(E2), and the β<sub>2</sub> and 𝓘<sub>rig</sub>, 𝓘<sub>irr</sub> from it, may not belong to this state.`);
+  $("warn").hidden = !w.length; $("warn").innerHTML = w.join(" ");
+  $("toDef").href = `deformed.html#${k}`;
+  for (const b of document.querySelectorAll("#nucs button")) b.setAttribute("aria-pressed", b.dataset.k === k ? "true" : "false");
+}
+function drawSceneInfo() {
+  const y = SPINS();
+  const sp = $("spin");
+  sp.max = Math.max(0, y.length - 1); if (S.yi > y.length - 1) S.yi = Math.max(0, y.length - 1); sp.value = S.yi;
+  const i = S.yi, st = y[i];
+  if (S.mode === "rot") {
+    const hw = st ? COLL.omegaState(y, i) : 0, bd = betaDrawn();
+    $("spinOut").innerHTML = st ? `${st[0]}<sup>+</sup>${st[2] ? " (t)" : ""} ${keV(st[1])}` : "none";
+    const rows = [];
+    rows.push(["ħω", st ? `${f(hw, 4)} MeV` : "n/a"]);
+    if (hw > 0) {
+      const w = hw / HBAR;
+      rows.push(["ω", `${(w / 10 ** Math.floor(Math.log10(w))).toFixed(2)}×10<sup>${Math.floor(Math.log10(w))}</sup> rad/s`]);
+      rows.push(["one turn", `${(2 * Math.PI / w / 10 ** Math.floor(Math.log10(2 * Math.PI / w))).toFixed(2)}×10<sup>${Math.floor(Math.log10(2 * Math.PI / w))}</sup> s`]);
+      rows.push(["drawn slower by", `${(w / (hw * VIS) / 1e20).toFixed(2)}×10<sup>20</sup>`]);
+    }
+    rows.push(["β drawn", `${f(bd.b, 3)}${bd.ill ? " (illustrative: no B(E2))" : " (|β| from B(E2))"}${bd.capped ? ", capped so the surface stays above 0.3 R<sub>0</sub>" : ""}`]);
+    rows.push(["shape", "prolate and axial, an assumption: B(E2) gives neither the sign of β nor axial symmetry"]);
+    $("rotInfo").innerHTML = rows.map(([a, b]) => `<dt>${a}</dt><dd>${b}</dd>`).join("");
+    $("stamp").innerHTML = `<b>${nucHTML(S.nuc)}</b><small>${st ? `I = ${st[0]}<sup>+</sup>, ħω = ${f(hw, 3)} MeV` : ""}</small>`;
+  } else if (S.mode === "vib") {
+    const E = vibE(), am = vibAmp();
+    const rows = [];
+    rows.push([S.lam === 2 ? "ħω = E(2<sup>+</sup><sub>1</sub>)" : "ħω = E(3<sup>−</sup><sub>1</sub>)", E ? keV(E) + tt(S.lam === 2 ? CUR.r.e2 : CUR.r.e3) : "not in ENSDF"]);
+    if (E) rows.push([S.nph === 1 ? "one phonon" : "two phonons", `${keV(S.nph * E)} (harmonic)`]);
+    if (S.lam === 2 && S.nph === 2 && E) {
+      const m = [["0<sup>+</sup><sub>2</sub>", CUR.r.e02], ["2<sup>+</sup><sub>2</sub>", CUR.r.e22], ["4<sup>+</sup><sub>1</sub>", CUR.r.e4]];
+      rows.push(["measured triplet", m.map(([l, v]) => `${l} ${v ? (v[0] / E).toFixed(2) + "ħω" + (v[1] ? " t" : "") : "n/a"}`).join(", ")]);
+    }
+    rows.push(["amplitude", `${f(am.a, 3)}${am.ill ? (S.lam === 3 ? " (illustrative: no B(E3) source on the page)" : " (illustrative: no B(E2))") : " = β<sub>2</sub> from B(E2)"}${S.amp !== 1 ? `, drawn ×${S.amp}` : ""}${am.a * S.amp > vibCap() ? `, capped at ${f(vibCap(), 3)} so the surface stays above 0.3 R<sub>0</sub>` : ""}`]);
+    $("vibInfo").innerHTML = rows.map(([a, b]) => `<dt>${a}</dt><dd>${b}</dd>`).join("");
+    $("ampOut").textContent = `×${(+S.amp).toFixed(1)}`;
+    $("stamp").innerHTML = `<b>${nucHTML(S.nuc)}</b><small>${S.lam === 2 ? "quadrupole" : "octupole"} ${S.nph === 1 ? "one phonon" : "two phonons"}${E ? `, ħω = ${f(E / 1000, 3)} MeV` : ""}</small>`;
+  } else {
+    $("stamp").innerHTML = `<b>R<sub>4/2</sub></b><small>${COLS.filter((k) => NU[k].e4).length} even-even nuclei with both levels in ENSDF</small>`;
+  }
+  const dn = {
+    rot: "What is drawn: the sharp surface R(θ) = R<sub>0</sub>(1 + β Y<sub>20</sub>) with |β| from B(E2) (to scale), prolate and axially symmetric by assumption (B(E2) fixes neither the sign of β nor axial symmetry), spinning about an axis perpendicular to its symmetry axis (the vertical arrow, the direction of the collective angular momentum) at the frequency of the chosen yrast state, slowed down by the factor given above; the comet trails follow the two ends of the long axis. The dimples and their two tints, the gloss and the floor are decoration, not nucleons.",
+    vib: "What is drawn: the surface R = R<sub>0</sub>(1 + Σ α<sub>λμ</sub>(t) Y<sub>λμ</sub>) of a classical surface oscillation at frequency E/ħ, slowed down by the same factor as the rotation; one phonon moves the μ = 0 mode; for two phonons the μ = 2 mode is added a quarter period apart, a superposition cartoon, not the two-phonon states. A phonon state is a quantum state with no definite phase, so this is the classical picture of the mode, not of the state. The amplitude is capped where the surface would come within 0.3 R<sub>0</sub> of the centre. The cage is the equilibrium sphere. The dimples, tints and gloss are decoration.",
+    land: "What is drawn: one glass column per even-even nucleus at (N, Z), height R<sub>4/2</sub> (or E(2<sup>+</sup><sub>1</sub>) on a falling log scale), colour on the legend's scale; narrow columns rest on a tentative J<sup>π</sup>. The three frames are the heights of the vibrator, γ-soft and rotor limits; amber lanes mark the magic numbers. Lit cores: R<sub>4/2</sub> above 3.2 on firm assignments. Glass and glow are illustration.",
+  };
+  $("drawn").innerHTML = dn[S.mode];
+}
+function drawLandInfo() {
+  const nR = COLS.filter((k) => NU[k].e4).length, nE = COLS.length, nT = COLS.filter((k) => NU[k].e4 && (NU[k].e2[1] || NU[k].e4[1])).length;
+  // labels at their own positions on the ramp
+  const at = S.h === "r" ? [[RLO, String(RLO)], [REF.vib, "2"], [REF.gsoft, "2.5"], [REF.rot, "3.33"]].map(([v, l]) => [(v - RLO) / (RHI - RLO), l])
+    : [5000, 500, 100, 40].map((e) => [(EHI - Math.log10(e)) / (EHI - ELO), e >= 1000 ? `${e / 1000} MeV` : `${e} keV`]);
+  $("rampl").innerHTML = at.map(([t, l]) => `<span style="left:${(100 * t).toFixed(1)}%">${l}</span>`).join("");
+  $("landNote").innerHTML = S.h === "r"
+    ? `${nR} of the ${KEYS.length} even-even nuclei in the ENSDF file have both a 2<sup>+</sup> and a 4<sup>+</sup> level; ${nT} of them rest on at least one tentative assignment (narrow columns).`
+    : `${nE} even-even nuclei have a 2<sup>+</sup> level in ENSDF. Height and colour grow as E(2<sup>+</sup><sub>1</sub>) falls, from 5 MeV to 40 keV (log scale).`;
+}
+
+// ---------- plots
+function setupCanvas(c) {
+  const d = Math.min(devicePixelRatio, 2), w = c.clientWidth, h = c.clientHeight;
+  c.width = Math.max(1, w * d); c.height = Math.max(1, h * d);
+  const x = c.getContext("2d"); x.setTransform(d, 0, 0, d, 0, 0);
+  return { x, w, h };
+}
+const NICE = [0.01, 0.02, 0.05, 0.1, 0.2, 0.25, 0.5, 1, 2, 2.5, 5, 10, 20, 25, 50, 100, 200, 250, 500, 1000, 2000];
+function axes(ctx, w, h, P) {
+  const { L, R, T, B, x0, x1, y0, y1 } = P;
+  const Xp = (v) => L + (v - x0) / (x1 - x0) * (w - L - R), Yp = (v) => T + (y1 - v) / (y1 - y0) * (h - T - B);
+  ctx.font = "10px ui-monospace,Menlo,monospace"; ctx.lineWidth = 1;
+  const ys = NICE.find((s) => (y1 - y0) / s <= 5) || 5000;
+  for (let v = Math.ceil(y0 / ys) * ys; v <= y1 + 1e-9; v += ys) {
+    ctx.strokeStyle = "#1e2432"; ctx.beginPath(); ctx.moveTo(L, Yp(v)); ctx.lineTo(w - R, Yp(v)); ctx.stroke();
+    ctx.fillStyle = "#8a92a6"; ctx.textAlign = "right"; ctx.fillText(String(+v.toFixed(3)), L - 4, Yp(v) + 3);
+  }
+  const xs = NICE.find((s) => (x1 - x0) / s <= 7) || 5000;
+  ctx.textAlign = "center";
+  for (let v = Math.ceil(x0 / xs) * xs; v <= x1 + 1e-9; v += xs) if (Xp(v) < w - R - 9 * P.xl.length - 8) ctx.fillText(String(+v.toFixed(3)), Xp(v), h - 5);
+  ctx.textAlign = "right"; ctx.fillText(P.xl, w - R, h - 5);
+  ctx.textAlign = "left"; ctx.fillText(P.yl, L + 3, T + 9);
+  return { Xp, Yp };
+}
+// level scheme: rotor | measured | vibrator
+function drawLevels() {
+  const c = $("pl"), { x: ctx, w, h } = setupCanvas(c), r = CUR.r;
+  $("lsTitle").innerHTML = `Levels of ${nucHTML(S.nuc)}`;
+  if (!r.e2) { ctx.fillStyle = "#8a92a6"; ctx.font = "12px ui-monospace,Menlo,monospace"; ctx.fillText("no 2+ level in ENSDF", 20, 40); $("lsNote").innerHTML = ""; return; }
+  const E2 = r.e2[0];
+  const yr = r.y.filter((s) => s[0] <= 10);
+  const top = Math.max(Math.min(3600, Math.max(3.3 * E2, ...yr.filter((s) => s[0] <= 8).map((s) => s[1])) * 1.08), 2.3 * E2);
+  const L = 44, T = 10, B = 16, Yp = (E) => T + (1 - E / top) * (h - T - B);
+  const cols = [[L + 4, (w - L) * 0.28], [L + (w - L) * 0.36, (w - L) * 0.30], [L + (w - L) * 0.72, (w - L) * 0.26]];
+  ctx.font = "10px ui-monospace,Menlo,monospace";
+  const ys = NICE.find((s) => top / s <= 6);
+  for (let v = 0; v <= top; v += ys) { ctx.strokeStyle = "#1a1f2b"; ctx.beginPath(); ctx.moveTo(L, Yp(v)); ctx.lineTo(w, Yp(v)); ctx.stroke(); ctx.fillStyle = "#6b7385"; ctx.textAlign = "right"; ctx.fillText(v >= 1000 ? `${+(v / 1000).toFixed(2)} MeV` : `${v}`, L - 4, Yp(v) + 3); }
+  ctx.textAlign = "center"; ctx.fillStyle = "#8a92a6";
+  ctx.fillText("rotor", cols[0][0] + cols[0][1] / 2, h - 3); ctx.fillText("measured", cols[1][0] + cols[1][1] / 2, h - 3); ctx.fillText("vibrator", cols[2][0] + cols[2][1] / 2, h - 3);
+  const lastY = [1e9, 1e9, 1e9, 1e9];
+  const lvl = (col, E, lab, color, dash, right) => {
+    if (E > top) return;
+    const [x0, ww] = cols[col], y = Yp(E), slot = col === 1 && right ? 3 : col;
+    if (Math.abs(lastY[slot] - y) < 9) lab = ""; else lastY[slot] = y;
+    ctx.strokeStyle = color; ctx.lineWidth = 1.6; ctx.setLineDash(dash ? [3, 2] : []);
+    ctx.beginPath(); ctx.moveTo(x0, y); ctx.lineTo(x0 + ww, y); ctx.stroke(); ctx.setLineDash([]);
+    ctx.fillStyle = color; ctx.textAlign = right ? "right" : "left"; ctx.fillText(lab, right ? x0 + ww : x0, y - 2);
+  };
+  for (let I = 0; I <= 10; I += 2) lvl(0, COLL.rotorE(I, E2), `${I}+`, ROT_C);
+  // measured: yrast (accent) and the other levels below the window (grey), labels as printed
+  const used = new Set();
+  for (const s of yr) { lvl(1, s[1], `${s[0]}+${s[2] ? " t" : ""}`, "#f2c14e", s[2]); used.add(Math.round(s[1] * 100)); }
+  for (const [E, J, fl] of r.lv) if (!used.has(Math.round(E * 100)) && E > 0) lvl(1, E, (J.replace(/\s/g, "") || "J?") + (fl ? ` ${fl}` : ""), fl ? "#4d5466" : "#7d869b", !!fl, true);
+  const vib = [[0, ["0+"]], [1, ["2+"]], [2, ["0+", "2+", "4+"]], [3, ["0+", "2+", "3+", "4+", "6+"]]];
+  for (const [n, js] of vib) lvl(2, COLL.vibE(n, E2), n ? `${js.join(",")}  ${n}ħω` : "0+", VIB_C);
+  const R = CUR.R;
+  $("lsNote").innerHTML = `Rotor and vibrator take only E(2<sup>+</sup><sub>1</sub>) = ${keV(E2)} from the data. Measured: yrast levels in amber (dashed: tentative), other levels below ${f(top / 1000, 2)} MeV in grey with J<sup>π</sup> as printed in ENSDF (the panel keeps the 16 lowest below 3.5 MeV); dark and dashed: questionable (?), not observed (S), or with an energy from systematics (SY) or calculation (CA), never taken.` + (R != null ? ` E(4<sup>+</sup>) is ${f(R, 2)} E(2<sup>+</sup>) here; the rotor puts it at ${f(REF.rot, 2)}, the vibrator at ${f(REF.vib, 2)}.` : "");
+}
+let BH = [], CH = [];
+function drawBend() {
+  const c = $("pbend"), { x: ctx, w, h } = setupCanvas(c);
+  const { tr, dyn } = CUR.bb, o = CUR;
+  BH = [];
+  if (tr.length < 2) { ctx.fillStyle = "#8a92a6"; ctx.font = "12px ui-monospace,Menlo,monospace"; ctx.fillText("fewer than two yrast transitions in ENSDF", 14, 40); $("bendNote").innerHTML = ""; return; }
+  const sq = S.bx === "w2", xv = (hw) => (sq ? hw * hw : hw);
+  const ysV = tr.map((t) => t.J1);
+  if (o.Jexp) ysV.push(o.Jexp);
+  if (o.Jrig) ysV.push(o.Jrig);
+  if (o.Jirr) ysV.push(o.Jirr);
+  const xs = tr.map((t) => xv(t.hw));
+  const yTop = Math.max(...ysV) * 1.3, yBot = -0.3 * yTop;
+  const out = dyn.filter((d) => d.J2 != null && (d.J2 > yTop || d.J2 < yBot)), neg = dyn.filter((d) => d.J2 != null && d.J2 < 0);
+  const P = { L: 34, R: 8, T: 8, B: 18, x0: 0, x1: Math.max(...xs) * 1.06, y0: yBot, y1: yTop, xl: sq ? "(ħω)² MeV²" : "ħω MeV", yl: "ħ²/MeV" };
+  const { Xp, Yp } = axes(ctx, w, h, P);
+  const hline = (v, col) => { if (v == null || v > P.y1) return; ctx.strokeStyle = col; ctx.setLineDash([5, 3]); ctx.beginPath(); ctx.moveTo(P.L, Yp(v)); ctx.lineTo(w - P.R, Yp(v)); ctx.stroke(); ctx.setLineDash([]); };
+  hline(o.Jexp, "#c9d6ea"); hline(o.Jrig, SOFT_C); hline(o.Jirr, "#6b7385");
+  ctx.save(); ctx.beginPath(); ctx.rect(P.L, P.T, w - P.L - P.R, h - P.T - P.B); ctx.clip();
+  // J2: hollow, joined thinly
+
+  ctx.fillStyle = "rgba(255,111,145,0.06)"; ctx.fillRect(P.L, Yp(0), w - P.L - P.R, Yp(P.y0) - Yp(0));
+  ctx.strokeStyle = "#3a4256"; ctx.beginPath(); ctx.moveTo(P.L, Yp(0)); ctx.lineTo(w - P.R, Yp(0)); ctx.stroke();
+  const edgeLab = {};
+  for (const d of [...dyn].sort((p, q) => p.hw - q.hw)) {
+    if (d.J2 == null) continue;
+    const X0 = Xp(xv(d.hw));
+    ctx.strokeStyle = d.J2 < 0 ? "#ff6f91" : VIB_C; ctx.fillStyle = ctx.strokeStyle; ctx.lineWidth = 1.4;
+    if (d.J2 >= P.y0 && d.J2 <= P.y1) { ctx.beginPath(); ctx.arc(X0, Yp(d.J2), 3, 0, 2 * Math.PI); ctx.stroke(); continue; }
+    // outside the frame: a triangle at the edge pointing out, with the value
+    const up = d.J2 > P.y1, Y0 = up ? P.T + 1 : h - P.B - 1;
+    ctx.beginPath(); ctx.moveTo(X0, Y0); ctx.lineTo(X0 - 4, Y0 + (up ? 7 : -7)); ctx.lineTo(X0 + 4, Y0 + (up ? 7 : -7)); ctx.closePath(); ctx.fill();
+    const key = up ? "u" : "d", near = edgeLab[key] && X0 - edgeLab[key].x < 30;
+    const st = near ? edgeLab[key].n + 1 : 0;
+    edgeLab[key] = { x: near ? edgeLab[key].x : X0, n: st };
+    ctx.font = "9px ui-monospace,Menlo,monospace"; ctx.textAlign = "left"; ctx.fillText(String(Math.round(d.J2)).replace("-", "−"), X0 + 5, Y0 + (up ? 9 + 10 * st : -3 - 10 * st));
+  }
+  // J1: joined, filled (hollow for tentative), dashed where ENSDF lists no gamma
+  ctx.lineWidth = 1.5;
+  for (let i = 1; i < tr.length; i++) { ctx.strokeStyle = ROT_C; ctx.setLineDash(tr[i].g ? [] : [3, 3]); ctx.beginPath(); ctx.moveTo(Xp(xv(tr[i - 1].hw)), Yp(tr[i - 1].J1)); ctx.lineTo(Xp(xv(tr[i].hw)), Yp(tr[i].J1)); ctx.stroke(); }
+  ctx.setLineDash([]);
+  const cur = S.yi;
+  for (const t of tr) {
+    const X0 = Xp(xv(t.hw)), Y0 = Yp(t.J1);
+    ctx.beginPath(); ctx.arc(X0, Y0, t.I / 2 === cur ? 5 : 3.2, 0, 2 * Math.PI);
+    if (t.t) { ctx.strokeStyle = ROT_C; ctx.stroke(); } else { ctx.fillStyle = ROT_C; ctx.fill(); }
+    if (t.I / 2 === cur) { ctx.strokeStyle = "#ffffff"; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.arc(X0, Y0, 7, 0, 2 * Math.PI); ctx.stroke(); ctx.lineWidth = 1.5; }
+    BH.push({ x: X0, y: Y0, i: t.I / 2 });
+  }
+  ctx.fillStyle = "#c9cdd8"; ctx.font = "9px ui-monospace,Menlo,monospace"; ctx.textAlign = "left";
+  for (const t of tr) if (t.I % 4 === 0 || tr.length < 10) ctx.fillText(String(t.I), Xp(xv(t.hw)) + 4, Yp(t.J1) - 4);
+  ctx.restore();
+  const bl = CUR.bb.bends.filter((b) => b.linked).map((b) => `${b.I - 2}→${b.I}`), bu = CUR.bb.bends.filter((b) => !b.linked).map((b) => `${b.I - 2}→${b.I}`);
+  $("bendNote").innerHTML = `Yrast band of ${nucHTML(S.nuc)} to I = ${tr[tr.length - 1].I}. ` +
+    (bl.length ? `ħω falls while I rises, with both gammas in ENSDF, at I = ${bl.join(", ")}: a backbend.` : "No backbend with linking gammas in the levels on file.") +
+    (bu.length ? ` ħω also falls at I = ${bu.join(", ")}, where ENSDF lists no gamma between the yrast levels: the yrast line passes to another band (no linking γ), not counted as a backbend.` : "") +
+    ` Labels: I of the upper level. Click a point to spin the nucleus at that state.` +
+    (neg.length ? ` 𝓘<sup>(2)</sup> is negative at ${neg.length} point${neg.length > 1 ? "s" : ""} (red: ħω falls), the signature of a backbend.` : "") +
+    (out.length ? ` ${out.length} value${out.length > 1 ? "s" : ""} of 𝓘<sup>(2)</sup> lie outside the frame: triangles at its edge carry them.` : "") + (o.Jrig == null ? " No B(E2): rigid and irrotational lines are left out." : "");
+}
+function drawEgos() {
+  const c = $("pg"), { x: ctx, w, h } = setupCanvas(c), tr = CUR.bb.tr, r = CUR.r;
+  if (!tr.length || !r.e2) { ctx.fillStyle = "#8a92a6"; ctx.font = "12px ui-monospace,Menlo,monospace"; ctx.fillText("no yrast transitions", 14, 40); return; }
+  const E2 = r.e2[0], Imax = Math.max(10, tr[tr.length - 1].I);
+  const rot = (I) => (E2 / 6) * (4 * I - 2) / I, vib = (I) => E2 / I;
+  const vals = [...tr.map((t) => t.egos), rot(Imax), E2];
+  const P = { L: 34, R: 8, T: 8, B: 18, x0: 0, x1: Imax + 1, y0: 0, y1: Math.max(...vals) * 1.08, xl: "I", yl: "keV" };
+  const { Xp, Yp } = axes(ctx, w, h, P);
+  ctx.save(); ctx.beginPath(); ctx.rect(P.L, P.T, w - P.L - P.R, h - P.T - P.B); ctx.clip();
+  for (const [fn, col] of [[rot, ROT_C], [vib, VIB_C]]) { ctx.strokeStyle = col; ctx.globalAlpha = 0.55; ctx.setLineDash([5, 3]); ctx.beginPath(); for (let I = 2; I <= Imax; I += 0.25) { const v = fn(I); if (I === 2) ctx.moveTo(Xp(I), Yp(v)); else ctx.lineTo(Xp(I), Yp(v)); } ctx.stroke(); }
+  ctx.setLineDash([]); ctx.globalAlpha = 1;
+  ctx.strokeStyle = "#f2c14e"; ctx.lineWidth = 1.4; ctx.beginPath(); tr.forEach((t, i) => (i ? ctx.lineTo(Xp(t.I), Yp(t.egos)) : ctx.moveTo(Xp(t.I), Yp(t.egos)))); ctx.stroke();
+  for (const t of tr) { ctx.beginPath(); ctx.arc(Xp(t.I), Yp(t.egos), 3, 0, 2 * Math.PI); if (t.t) { ctx.strokeStyle = "#f2c14e"; ctx.stroke(); } else { ctx.fillStyle = "#f2c14e"; ctx.fill(); } }
+  ctx.restore();
+  ctx.font = "10px ui-monospace,Menlo,monospace"; ctx.textAlign = "right";
+  ctx.fillStyle = ROT_C; ctx.fillText("rotor", w - 10, Yp(rot(Imax)) - 4); ctx.fillStyle = VIB_C; ctx.fillText("vibrator", w - 10, Math.min(h - 22, Yp(vib(Imax)) - 4));
+}
+function drawChain() {
+  const c = $("pc"), { x: ctx, w, h } = setupCanvas(c), Z = CUR.r.Z;
+  $("chTitle").innerHTML = `R<sub>4/2</sub> along the ${ELEM[Z]} isotopes`;
+  const pts = KEYS.filter((k) => NU[k].Z === Z && NU[k].e2 && NU[k].e4).map((k) => ({ k, N: NU[k].N, R: NU[k].e4[0] / NU[k].e2[0], t: NU[k].e2[1] || NU[k].e4[1] })).sort((a, b) => a.N - b.N);
+  CH = [];
+  if (!pts.length) { ctx.fillStyle = "#8a92a6"; ctx.font = "12px ui-monospace,Menlo,monospace"; ctx.fillText("no isotope with both levels", 14, 40); $("chNote").innerHTML = ""; return; }
+  const n0 = pts[0].N - 2, n1 = pts[pts.length - 1].N + 2;
+  const P = { L: 30, R: 8, T: 8, B: 18, x0: n0, x1: n1, y0: 1, y1: Math.max(3.5, ...pts.map((p) => p.R)) + 0.1, xl: "N", yl: "" };
+  const { Xp, Yp } = axes(ctx, w, h, P);
+  for (const [v, col] of [[REF.vib, VIB_C], [REF.gsoft, SOFT_C], [REF.rot, ROT_C]]) { ctx.strokeStyle = col; ctx.globalAlpha = 0.6; ctx.setLineDash([5, 3]); ctx.beginPath(); ctx.moveTo(P.L, Yp(v)); ctx.lineTo(w - P.R, Yp(v)); ctx.stroke(); }
+  ctx.setLineDash([]); ctx.globalAlpha = 1;
+  for (const m of MAGIC) if (m > n0 && m < n1) { ctx.strokeStyle = "rgba(242,193,78,.4)"; ctx.setLineDash([2, 3]); ctx.beginPath(); ctx.moveTo(Xp(m), P.T); ctx.lineTo(Xp(m), h - P.B); ctx.stroke(); ctx.setLineDash([]); ctx.fillStyle = "#f2c14e"; ctx.font = "9px ui-monospace,Menlo,monospace"; ctx.textAlign = "left"; ctx.fillText(m, Xp(m) + 2, P.T + 9); }
+  ctx.strokeStyle = "#e6e8ee"; ctx.globalAlpha = 0.5; ctx.lineWidth = 1; ctx.beginPath();
+  pts.forEach((p, i) => { if (i && p.N - pts[i - 1].N <= 2) ctx.lineTo(Xp(p.N), Yp(p.R)); else ctx.moveTo(Xp(p.N), Yp(p.R)); });
+  ctx.stroke(); ctx.globalAlpha = 1;
+  const tc = new THREE.Color();
+  for (const p of pts) {
+    ramp((p.R - RLO) / (RHI - RLO), tc); const col = `#${tc.getHexString()}`;
+    const X0 = Xp(p.N), Y0 = Yp(p.R);
+    ctx.beginPath(); ctx.arc(X0, Y0, p.k === S.nuc ? 5 : 3.2, 0, 2 * Math.PI);
+    if (p.t) { ctx.strokeStyle = col; ctx.lineWidth = 1.4; ctx.stroke(); } else { ctx.fillStyle = col; ctx.fill(); }
+    if (p.k === S.nuc) { ctx.strokeStyle = "#fff"; ctx.beginPath(); ctx.arc(X0, Y0, 7, 0, 2 * Math.PI); ctx.stroke(); }
+    CH.push({ x: X0, y: Y0, k: p.k });
+  }
+  $("chNote").innerHTML = `Dashed: 2 (vibrator), 2.5 (γ-soft), 3.33 (rotor); amber: magic N. Hollow points rest on a tentative J<sup>π</sup>.`;
+}
+function drawPlots() { drawLevels(); drawBend(); drawEgos(); drawChain(); }
+function hit(list, e, c) { const b = c.getBoundingClientRect(), x = e.clientX - b.left, y = e.clientY - b.top; let best = null, bd = 12; for (const p of list) { const d = Math.hypot(p.x - x, p.y - y); if (d < bd) { bd = d; best = p; } } return best; }
+$("pbend").addEventListener("click", (e) => { const p = hit(BH, e, $("pbend")); if (p) { S.yi = p.i; if (S.mode !== "rot") setMode("rot"); else { setupNucleus(); drawSceneInfo(); drawBend(); writeHash(); } } });
+$("pc").addEventListener("click", (e) => { const p = hit(CH, e, $("pc")); if (p) select(p.k, true); });
+
+// ---------- actions
+function writeHash() {
+  const suf = S.mode === "land" ? "~land" : S.mode === "vib" ? (S.lam === 3 ? "~oct" : "~vib") : (S.bend ? "~bend" : "");
+  const h = `#${S.nuc}${suf}`;
+  if (location.hash !== h) history.replaceState(null, "", h);
+}
+function defaultMode(k) { const o = derived(k); return o.R != null && o.R >= 2.9 ? "rot" : "vib"; }
+function select(k, fly) {
+  if (!NU[k]) return;
+  S.nuc = k; CUR = derived(k);
+  S.yi = Math.min(Math.max(1, S.yi), Math.max(0, CUR.r.y.length - 1));
+  if (CUR.r.y.length < 2) S.yi = 0;
+  if (S.mode === "vib" && S.lam === 3 && !CUR.r.e3) S.lam = 2;
+  setupNucleus(); drawInfo(); drawSceneInfo(); drawPlots(); writeCols();
+  if (fly && S.mode === "land") viewLand(k, 70);
+  writeHash();
+}
+function setMode(m) {
+  S.mode = m;
+  for (const b of document.querySelectorAll("#mode button")) b.setAttribute("aria-pressed", b.dataset.v === m ? "true" : "false");
+  $("gRot").hidden = m !== "rot"; $("gVib").hidden = m !== "vib"; $("gLand").hidden = m !== "land";
+  NUC.visible = m !== "land"; LAND.visible = m === "land";
+  for (const l of magLabels) l.el.style.display = "none";
+  controls.maxPolarAngle = m === "land" ? Math.PI * 0.47 : Math.PI * 0.62;
+  sun.shadow.camera.left = m === "land" ? -150 : -20; sun.shadow.camera.right = m === "land" ? 150 : 20;
+  sun.shadow.camera.top = m === "land" ? 130 : 20; sun.shadow.camera.bottom = m === "land" ? -130 : -20;
+  sun.shadow.camera.far = 420; sun.shadow.camera.updateProjectionMatrix();
+  if (m === "land") { sun.position.set(30, 120, 40); sun.target.position.set(90, 0, -55); if (S.overview) { flyTo(new THREE.Vector3(84, 2, -52), new THREE.Vector3(84, 2, -52).addScaledVector(LAND_DIR, innerWidth < 700 ? 280 : 178)); S.overview = false; } else viewLand(S.nuc, 120); drawLandInfo(); }
+  else { sun.position.set(-20, 40, 25); sun.target.position.set(0, 0, 0); viewNucleus(); }
+  for (const b of document.querySelectorAll("#lam button")) b.setAttribute("aria-pressed", +b.dataset.v === S.lam ? "true" : "false");
+  for (const b of document.querySelectorAll("#nph button")) b.setAttribute("aria-pressed", +b.dataset.v === S.nph ? "true" : "false");
+  setupNucleus(); drawSceneInfo(); drawBend(); writeHash();
+}
+// hash: #166Er, #110Cd~vib, #208Pb~oct, #158Er~bend, #166Er~land, #land
+function readHash(h, first) {
+  let s = ""; try { s = decodeURIComponent(String(h || "").replace(/^#/, "")); } catch (e) { return false; }
+  const parts = s.split("~"), k = parseNucleus(parts[0]), mod = (parts[1] || "").toLowerCase();
+  if (parts[0].toLowerCase() === "land") { S.mode = "land"; S.overview = true; select(S.nuc, false); setMode("land"); return true; }
+  if (!k) return false;
+  if (mod === "land") S.overview = true;
+  let m = mod === "land" ? "land" : mod === "vib" ? "vib" : mod === "oct" ? "vib" : mod === "rot" || mod === "bend" ? "rot" : defaultMode(k);
+  if (mod === "oct") S.lam = 3; else if (mod === "vib") S.lam = 2;
+  S.bend = mod === "bend";
+  S.mode = m;
+  select(k, false); setMode(m);
+  if (S.bend) { const c = $("pbend"); c.scrollIntoView({ block: "center" }); }
+  return true;
+}
+
+// ---------- UI wiring
+$("mode").addEventListener("click", (e) => { const b = e.target.closest("button"); if (!b) return; S.bend = false; if (b.dataset.v === "land" && S.mode !== "land") S.overview = true; setMode(b.dataset.v); });
+$("lam").addEventListener("click", (e) => { const b = e.target.closest("button"); if (!b) return; S.lam = +b.dataset.v; setMode("vib"); });
+$("nph").addEventListener("click", (e) => { const b = e.target.closest("button"); if (!b) return; S.nph = +b.dataset.v; setMode("vib"); });
+$("hmode").addEventListener("click", (e) => { const b = e.target.closest("button"); if (!b) return; S.h = b.dataset.v; for (const x of document.querySelectorAll("#hmode button")) x.setAttribute("aria-pressed", x === b ? "true" : "false"); colTarget(false); drawLandInfo(); });
+$("bx").addEventListener("click", (e) => { const b = e.target.closest("button"); if (!b) return; S.bx = b.dataset.v; for (const x of document.querySelectorAll("#bx button")) x.setAttribute("aria-pressed", x === b ? "true" : "false"); drawBend(); });
+$("spin").addEventListener("input", (e) => { S.yi = +e.target.value; setupNucleus(); drawSceneInfo(); drawBend(); });
+$("amp").addEventListener("input", (e) => { S.amp = +e.target.value; drawSceneInfo(); });
+$("nucs").innerHTML = CHIPS.filter((k) => NU[k]).map((k) => `<button data-k="${k}">${nucHTML(k)}</button>`).join("");
+$("nucs").addEventListener("click", (e) => { const b = e.target.closest("button"); if (!b) return; S.bend = false; const m = S.mode === "land" ? "land" : defaultMode(b.dataset.k); if (m === "rot") S.yi = 1; S.mode = m; select(b.dataset.k, true); setMode(m); });
+const find = $("find");
+find.addEventListener("keydown", (e) => {
+  if (e.key !== "Enter") return;
+  const k = parseNucleus(find.value);
+  if (!k) { find.setCustomValidity("an even-even nucleus in the ENSDF file, e.g. 166Er"); find.reportValidity(); return; }
+  find.setCustomValidity(""); S.bend = false;
+  const m = S.mode === "land" ? "land" : defaultMode(k); S.mode = m; select(k, true); setMode(m);
+});
+find.addEventListener("input", () => find.setCustomValidity(""));
+for (const b of document.querySelectorAll("#hmode button")) b.setAttribute("aria-pressed", b.dataset.v === S.h ? "true" : "false");
+for (const b of document.querySelectorAll("#bx button")) b.setAttribute("aria-pressed", b.dataset.v === S.bx ? "true" : "false");
+// click a column in the landscape: box footprint and height
+const ray = new THREE.Raycaster(), ndc = new THREE.Vector2();
+let down = null;
+renderer.domElement.addEventListener("pointerdown", (e) => { down = e.button === 0 && e.isPrimary ? [e.clientX, e.clientY, e.pointerId] : null; });
+renderer.domElement.addEventListener("pointercancel", () => { down = null; });
+renderer.domElement.addEventListener("pointerup", (e) => {
+  const st = down; down = null;
+  if (S.mode !== "land" || !st || e.pointerId !== st[2] || Math.hypot(e.clientX - st[0], e.clientY - st[1]) > 5) return;
+  ndc.set((e.clientX / innerWidth) * 2 - 1, -(e.clientY / innerHeight) * 2 + 1);
+  ray.setFromCamera(ndc, camera);
+  const o = ray.ray.origin, d = ray.ray.direction;
+  let best = -1, bt = Infinity;
+  for (let i = 0; i < nC; i++) {
+    const hh = H[i]; if (hh < 1e-3) continue;
+    const r = NU[COLS[i]], hw = tent(r) ? 0.23 : 0.46, lo = [X(r.N) - hw, 0, Zc(r.Z) - hw], hi = [X(r.N) + hw, hh, Zc(r.Z) + hw], oo = [o.x, o.y, o.z], dd = [d.x, d.y, d.z];
+    let t0 = 0, t1 = bt, ok = true;
+    for (let a = 0; a < 3; a++) {
+      if (Math.abs(dd[a]) < 1e-12) { if (oo[a] < lo[a] || oo[a] > hi[a]) { ok = false; break; } continue; }
+      let ta = (lo[a] - oo[a]) / dd[a], tb = (hi[a] - oo[a]) / dd[a]; if (ta > tb) [ta, tb] = [tb, ta];
+      t0 = Math.max(t0, ta); t1 = Math.min(t1, tb); if (t0 > t1) { ok = false; break; }
+    }
+    if (ok && t0 < bt) { bt = t0; best = i; }
+  }
+  if (best >= 0) select(COLS[best], false);
+});
+controls.addEventListener("start", () => (camTo.t = null));
+
+// rendering quality
+let quality = innerWidth < 700 ? "low" : "high";
+function applyQuality() {
+  const q = quality === "high";
+  renderer.shadowMap.enabled = q; sun.castShadow = q;
+  colMat.transmission = q ? 0.4 : 0; colMat.roughness = q ? 0.14 : 0.45; colMat.needsUpdate = true;
+  nucMat.transmission = q ? 0.82 : 0; nucMat.transparent = !q; nucMat.opacity = q ? 1 : 0.42; nucMat.depthWrite = q; nucMat.needsUpdate = true;
+  const g = q ? GROUND_PRE_ACES : GROUND; scene.background.copy(g); scene.fog.color.copy(g);
+  for (const b of document.querySelectorAll("#qmode button")) b.setAttribute("aria-pressed", b.dataset.v === quality ? "true" : "false");
+}
+$("qmode").addEventListener("click", (e) => { const b = e.target.closest("button"); if (!b) return; quality = b.dataset.v; applyQuality(); });
+applyQuality();
+addEventListener("resize", () => { camera.aspect = innerWidth / innerHeight; applyOffset(); camera.updateProjectionMatrix(); renderer.setSize(innerWidth, innerHeight); composer.setSize(innerWidth, innerHeight); drawPlots(); });
+addEventListener("hashchange", () => readHash(location.hash));
+$("srcs").innerHTML = `Levels: ${D.src.ensdf}; ${KEYS.length} even-even adopted datasets. B(E2) and its β<sub>2</sub> column: ${D.src.be2}; the β<sub>2</sub> flag concerns the web table's 2016 (ADNDT 107) rows. β<sub>2</sub> convention: B. Pritychenko, M. Birch, B. Singh, M. Horoi, At. Data Nucl. Data Tables 107, 1 (2016), arXiv:1312.5975, Eq. (2). Constants: CODATA 2018 (ħc, u, ħ).`;
+
+// ---------- start
+colTarget(true);
+if (!readHash(location.hash, true)) { select("166Er", false); setMode("rot"); }
+controls.target.copy(camTo.t || controls.target); if (camTo.p) camera.position.copy(camTo.p); camTo.t = null;
+writeCols();
+
+// ---------- loop
+const tmp = new THREE.Vector3();
+let last = performance.now(), T0 = performance.now();
+function label(el, p, show) {
+  if (!show) { el.hidden = true; return; }
+  tmp.copy(p).project(camera);
+  const ok = tmp.z < 1 && Math.abs(tmp.x) < 1 && Math.abs(tmp.y) < 1;
+  el.hidden = !ok; if (ok) { el.style.left = (tmp.x * 0.5 + 0.5) * innerWidth + "px"; el.style.top = (-tmp.y * 0.5 + 0.5) * innerHeight + "px"; }
+}
+const symTip = new THREE.Vector3();
+function animate(now) {
+  requestAnimationFrame(animate);
+  const dt = Math.min(0.1, Math.max(0, (now - last) / 1000)); last = now;
+  const t = reduce ? 0 : (now - T0) / 1000;
+  if (settling && S.mode === "land") settle(dt);
+  if (camTo.t) { const k = 1 - Math.exp(-dt / 0.35); controls.target.lerp(camTo.t, k); camera.position.lerp(camTo.p, k); if (camera.position.distanceTo(camTo.p) < 0.05) camTo.t = null; }
+  if (S.mode === "rot") stepRotation(dt);
+  else if (S.mode === "vib") stepVibration(t);
+  if (S.mode !== "land") writeCloud(t);
+  controls.update();
+  ring.material.opacity = 0.95 * (reduce ? 1 : 0.8 + 0.2 * Math.sin(now / 300));
+  if (quality === "high") composer.render(); else renderer.render(scene, camera);
+  // labels
+  label($("lAx"), tmp.set(0, RW * 1.9, 0), S.mode === "rot");
+  symTip.set(0, RW * 1.9, 0); BODY.localToWorld(symTip);
+  label($("lSym"), symTip, S.mode === "rot");
+  for (const l of magLabels) {
+    if (S.mode !== "land") { l.el.style.display = "none"; continue; }
+    tmp.copy(l.p).project(camera);
+    const vis = tmp.z < 1 && Math.abs(tmp.x) < 1 && Math.abs(tmp.y) < 1;
+    l.el.style.display = vis ? "" : "none";
+    if (vis) { l.el.style.left = (tmp.x * 0.5 + 0.5) * innerWidth + "px"; l.el.style.top = (-tmp.y * 0.5 + 0.5) * innerHeight + "px"; }
+  }
+  const tag = $("selTag"), ci = CIDX.get(S.nuc);
+  if (S.mode === "land" && ci != null) {
+    const r = NU[S.nuc]; tmp.set(X(r.N), H[ci] + 1.8, Zc(r.Z)).project(camera);
+    const x = (tmp.x * 0.5 + 0.5) * innerWidth, y = (-tmp.y * 0.5 + 0.5) * innerHeight;
+    const a = $("ctl").getBoundingClientRect(), b = $("side").getBoundingClientRect();
+    const covered = [a, b].some((q) => x > q.left - 90 && x < q.right + 90 && y > q.top && y < q.bottom + 35);
+    tag.style.display = !covered && tmp.z > -1 && tmp.z < 1 ? "block" : "none";
+    tag.style.left = x + "px"; tag.style.top = y + "px";
+    tag.innerHTML = `<b>${nucHTML(S.nuc)}</b><br>${CUR.R != null ? "R<sub>4/2</sub> = " + f(CUR.R, 2) : "E(2<sup>+</sup>) = " + keV(r.e2[0])}`;
+  } else tag.style.display = "none";
+}
+requestAnimationFrame(animate);
+</script>
+<script src="assets/glass.js"></script>
+</body>
+</html>

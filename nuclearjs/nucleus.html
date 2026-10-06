@@ -1,0 +1,965 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Nucleus · nuclearjs</title>
+<link rel="stylesheet" href="assets/glass.css">
+<style>
+body{margin:0}
+:root{
+  color-scheme:dark;
+  --ground:#0b0d12; --line:#262c3a;
+  --ink:#e6e8ee; --muted:#8a92a6; --accent:#f2c14e;
+  --neu:#a8cdf2; --pro:#ff9656;
+  --sans:"Avenir Next","Futura","Helvetica Neue","PingFang SC","Noto Sans SC",system-ui,sans-serif;
+  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+}
+html,body{height:100%}
+body{background:var(--ground);color:var(--ink);font-family:var(--sans);overflow:hidden}
+#stage{position:fixed;inset:0}
+#stage canvas{display:block;touch-action:none}
+.panel{position:fixed;border-radius:18px;padding:16px 18px;display:flex;flex-direction:column;gap:12px;overflow:auto;box-sizing:border-box}
+.panel{z-index:2}
+.panel>*{flex-shrink:0}
+#ctl{left:16px;top:calc(16px + env(safe-area-inset-top,0px));width:min(300px,calc(100% - 32px));max-height:calc(100% - 32px)}
+#side{right:16px;top:calc(16px + env(safe-area-inset-top,0px));width:360px;max-height:calc(100% - 32px);gap:10px}
+h1{margin:0;font-size:22px;font-weight:600;letter-spacing:.01em}
+h1 sup{font-size:.6em}
+.sub{margin:2px 0 0;color:var(--muted);font-size:13px;line-height:1.45}
+.sub sup,.src sup{font-size:.7em}
+.grp{display:flex;flex-direction:column;gap:6px}
+.lab{font-size:11px;text-transform:uppercase;letter-spacing:.12em;color:var(--muted)}
+.seg{display:flex;border:1px solid var(--line);border-radius:4px;overflow:hidden}
+.seg button{flex:1;background:none;border:0;color:var(--muted);font:500 12px var(--mono);padding:6px 4px;cursor:pointer}
+.seg button+button{border-left:1px solid var(--line)}
+.seg button[aria-pressed="true"]{background:#1f2533;color:var(--ink)}
+button:focus-visible,input:focus-visible,summary:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+input[type=text]{background:#0f121a;border:1px solid var(--line);border-radius:4px;color:var(--ink);font:13px var(--mono);padding:6px 8px;width:100%;box-sizing:border-box}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chips button{background:#161a24;border:1px solid var(--line);border-radius:4px;color:var(--ink);font:12px var(--mono);padding:5px 8px;cursor:pointer}
+.chips button:hover{border-color:var(--muted)}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:3px 10px;font:12px var(--mono);font-variant-numeric:tabular-nums}
+.kv dt{color:var(--muted)}.kv dd{margin:0}
+.kv .n{color:var(--neu)}.kv .p{color:var(--pro)}
+.row{display:flex;gap:8px;align-items:center;font:12px var(--mono);color:var(--muted)}
+.row input[type=range]{flex:1;accent-color:var(--accent);min-width:0}
+.row output{min-width:64px;text-align:right;color:var(--ink);font-variant-numeric:tabular-nums}
+.row span{min-width:44px}
+details summary{cursor:pointer;font-size:11px;text-transform:uppercase;letter-spacing:.12em;color:var(--muted);list-style:none}
+details summary::before{content:"▸ ";}
+details[open] summary::before{content:"▾ ";}
+details .grp{margin-top:8px}
+.linkbtn{background:none;border:0;color:var(--muted);font:12px var(--mono);padding:0;cursor:pointer;text-decoration:underline;align-self:flex-start}
+.home{font:12px var(--mono);color:var(--muted);text-decoration:none}.home:hover{color:var(--ink)}
+.src{font-size:11px;color:var(--muted);line-height:1.45}
+.src a{color:var(--muted)}
+.warn{font-size:12px;color:var(--accent);line-height:1.4}
+#levels{width:100%;display:block;user-select:none}
+#levels .lv{cursor:pointer}
+#levels text{font:11px var(--mono);fill:var(--ink)}
+#levels .ax text{fill:var(--muted);font-size:10px}
+.plot{width:100%;height:150px;display:block}
+.cap{display:flex;justify-content:space-between;align-items:baseline;font:11px var(--mono);color:var(--muted)}
+.cap b{font:600 13px var(--sans);color:var(--ink)}
+.axlab{position:fixed;font:500 11px var(--mono);color:var(--accent);pointer-events:none;transform:translate(-50%,-50%);opacity:.8;white-space:nowrap}
+#stamp{position:fixed;left:50%;bottom:calc(26px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);text-align:center;pointer-events:none}
+#stamp b{display:block;font:600 clamp(30px,4.6vw,54px)/1 var(--sans);letter-spacing:-.01em}
+#stamp b sup{font-size:.55em}
+#stamp small{display:block;font:500 12px var(--mono);color:var(--muted);margin-top:6px}
+.hint{position:fixed;left:16px;bottom:calc(14px + env(safe-area-inset-bottom,0px));font:11px var(--mono);color:var(--muted)}
+@media (max-width:900px){
+  #ctl{max-height:42vh}
+  #side{left:16px;right:16px;width:auto;top:auto;bottom:calc(12px + env(safe-area-inset-bottom,0px));max-height:44vh}
+  #stamp,.hint,.axlab{display:none}
+}
+@media (max-width:560px){.panel{padding:10px 12px;gap:9px}h1{font-size:18px}}
+</style>
+<script data-goatcounter="https://jinleiphys.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
+</head>
+<body>
+
+<div id="stage"></div>
+
+<aside id="ctl" class="panel glass glass-deep" data-glass data-glass-bevel="22" data-glass-scale="42">
+  <div>
+    <a class="home" id="back" href="https://vibeinscience.com/nuclides.html">← nuclide chart</a> &nbsp; <a class="home" id="toScatter" href="scatter.html">scatter a nucleon off it →</a>
+    <h1 id="title">Nucleus</h1>
+    <p class="sub">The spherical shell model: one nucleon moving in the average field of all the others. Pick a level on the right to see where that nucleon is.</p>
+  </div>
+  <div class="grp">
+    <label class="lab" for="find">Nucleus</label>
+    <input id="find" type="text" placeholder="208Pb, 40Ca, 132Sn" autocomplete="off" spellcheck="false">
+    <div class="chips" id="chips">
+      <button data-n="16O">16O</button><button data-n="40Ca">40Ca</button><button data-n="48Ca">48Ca</button>
+      <button data-n="90Zr">90Zr</button><button data-n="132Sn">132Sn</button><button data-n="208Pb">208Pb</button>
+      <button data-n="209Bi">209Bi</button>
+    </div>
+  </div>
+  <div class="grp">
+    <div class="lab">Show</div>
+    <div class="seg" id="vmode">
+      <button data-v="orbital" aria-pressed="true">one orbital</button>
+      <button data-v="all" aria-pressed="false">all nucleons</button>
+    </div>
+    <div class="seg" id="qsel" title="the last filled level of each species; any level can also be picked in the level scheme">
+      <button data-q="n" aria-pressed="true">last neutron</button>
+      <button data-q="p" aria-pressed="false">last proton</button>
+    </div>
+    <div class="row" id="mrow"><span>|m|</span><input id="m" type="range" min="1" max="1" step="2" value="1"><output id="mout">1/2</output></div>
+    <div class="seg" id="slab">
+      <button data-v="0" aria-pressed="false">whole</button>
+      <button data-v="2" aria-pressed="true" title="remove the wedge that faces you: the two cut faces show the density in a plane through the axis">cut-away</button>
+      <button data-v="1" aria-pressed="false">2 fm slice</button>
+    </div>
+    <p class="sub" id="vnote"></p>
+  </div>
+  <div class="grp">
+    <div class="lab">Rendering</div>
+    <div class="seg" id="qmode">
+      <button data-v="high" title="ray-marched volume, glass surface, soft bloom">cinematic</button>
+      <button data-v="low" title="point cloud, for phones">fast</button>
+    </div>
+    <p class="sub" id="rnote"></p>
+  </div>
+  <div class="grp">
+    <div class="lab">Mean field vs. masses</div>
+    <dl class="kv" id="info"></dl>
+    <p class="warn" id="warn" hidden></p>
+  </div>
+  <details>
+    <summary>Potential</summary>
+    <div class="grp">
+      <div class="row"><span>r<sub>0</sub></span><input id="p-r0" type="range" min="1.10" max="1.40" step="0.01"><output></output></div>
+      <div class="row"><span>a</span><input id="p-a" type="range" min="0.40" max="0.90" step="0.01"><output></output></div>
+      <div class="row"><span>depth</span><input id="p-dep" type="range" min="0.80" max="1.20" step="0.01"><output></output></div>
+      <div class="row"><span>l·s</span><input id="p-ls" type="range" min="0" max="2" step="0.05"><output></output></div>
+      <button class="linkbtn" id="reset" type="button">reset to Bohr–Mottelson</button>
+      <p class="sub">Turn l·s to zero and the large gaps in <sup>208</sup>Pb move to 2, 8, 20, 40, 58, 92, 138. Only 2, 8 and 20 survive: the spin-orbit force is what makes 28, 50, 82 and 126.</p>
+    </div>
+  </details>
+  <div class="src">
+    V(r) = V<sub>0</sub> f(r) + V<sub>ls</sub> r<sub>0</sub><sup>2</sup> r<sup>−1</sup> f′(r) ⟨l·s⟩ + V<sub>C</sub>(r), f = [1 + e<sup>(r−R)/a</sup>]<sup>−1</sup>, R = r<sub>0</sub>A<sup>1/3</sup>; V<sub>0</sub> = −51 ± 33(N−Z)/A MeV (+ neutrons), V<sub>ls</sub> = −0.44V<sub>0</sub>, r<sub>0</sub> = 1.27 fm, a = 0.67 fm, uniform-sphere Coulomb. Bohr &amp; Mottelson, Nuclear Structure Vol. I, Eqs. (2-182, 2-183). Solved live by Numerov in a box that grows with the least-bound level (R + 12/κ, so the tails of weakly bound orbitals are not squeezed); agrees with an independent finite-difference solver to 10<sup>−7</sup> MeV.<br>
+    Separation energies from AME2020 mass excesses, Wang et al., Chin. Phys. C 45, 030003 (2021); spins from NUBASE2020, Kondev et al., Chin. Phys. C 45, 030001 (2021).
+  </div>
+</aside>
+
+<aside id="side" class="panel glass glass-deep" data-glass data-glass-bevel="22" data-glass-scale="42">
+  <div class="cap"><b>Single-particle levels</b><span>MeV</span></div>
+  <svg id="levels" role="img" aria-label="single-particle level scheme"></svg>
+  <div class="src"><span style="color:var(--accent)">◂</span> amber marks: −S(A) and −S(A+1) from AME2020 masses. At a closed shell they bracket the gap between the last filled and first empty level.</div>
+  <div class="cap"><b id="ptitle">Potential and orbital</b><span>r (fm)</span></div>
+  <canvas id="pot" class="plot"></canvas>
+  <div class="cap"><b>Point densities</b><span id="rmsl"></span></div>
+  <canvas id="rho" class="plot"></canvas>
+</aside>
+
+<div id="axlab" class="axlab" hidden>m axis</div>
+<div id="stamp"></div>
+<div class="hint">drag to orbit · scroll to zoom · click a level</div>
+
+<script src="assets/three-bundle.js"></script>
+<script src="assets/three-post.js"></script>
+<script src="assets/vol.js"></script>
+<script src="assets/nubase.js"></script>
+<script src="assets/shells-data.js"></script>
+<script src="assets/ws.js"></script>
+<script src="assets/halo.js"></script>
+<script>
+"use strict";
+// ---------- data
+const NUC = window.NUC;                    // [Z, N, sym, log10 T1/2, mode, B/A, est, J^pi, year]
+const ROW = new Map(), SYM = {}, ELEM = {};
+for (const r of NUC) { ROW.set(r[0] + "," + r[1], r); SYM[r[2].toLowerCase()] = r[0]; ELEM[r[0]] = r[2]; }
+const MASS = WS.massTable(NUC, window.AME);
+const FRAC = (j2) => j2 + "/2";
+const sup = (A) => `<sup>${A}</sup>`;
+
+function parseNucleus(s) {
+  s = s.trim();
+  let m = s.match(/^#?Z(\d+)N(\d+)$/i);
+  if (m) return { Z: +m[1], N: +m[2] };
+  s = s.toLowerCase().replace(/^#/, "").replace(/[-\s]/g, "");
+  m = s.match(/^(\d+)([a-z]+)$/) || s.match(/^([a-z]+)(\d+)$/);
+  if (!m) return null;
+  let A, el;
+  if (/^\d/.test(m[1])) { A = +m[1]; el = m[2]; } else { el = m[1]; A = +m[2]; }
+  const Z = SYM[el];
+  if (Z == null || A <= Z) return null;
+  return { Z, N: A - Z };
+}
+
+// ---------- state
+const P0 = { r0: 1.27, a: 0.67, dep: 1, ls: 1 };
+const S = { Z: 82, N: 126, view: "orbital", slab: false, cut: true, sel: null, m2: 1, P: { ...P0 }, res: null };
+
+function solve() {
+  const d = WS.defaults(S.Z, S.N);
+  const o = { r0: S.P.r0, rc: S.P.r0, a: S.P.a, V0n: d.V0n * S.P.dep, V0p: d.V0p * S.P.dep, kls: 0.44 * S.P.ls };
+  S.res = WS.solve(S.Z, S.N, o);
+  S.alt = measuredOrbital();
+  // a weakly bound measured orbital needs a box that holds its tail (12 decay lengths, as ws.js does)
+  if (S.alt && S.alt.sol.ok) {
+    const want = Math.min(400, Math.ceil(12 / S.alt.sol.kappa) + 4);
+    if (want > S.res.P.rpad) S.res = WS.solve(S.Z, S.N, { ...o, rpad: want });
+    S.alt.lv = altLevel(S.alt);
+  }
+}
+
+/* Measured ground state against the shell-model filling. For an odd-A nucleus whose firmly assigned
+   ground-state J^pi differs from the one the filling predicts (11Be: 1/2+ measured, 1/2- predicted),
+   the last odd nucleon is put in the orbital with the measured (l, j) (the lowest one the filling
+   leaves open) and the well depth for that orbital alone is adjusted until it is bound by the measured
+   separation energy (AME2020), the same calculation as the halo page (assets/halo.js): core + nucleon,
+   Woods-Saxon with this page's radius and diffuseness, spin-orbit 22 MeV fm^2, exact tail. */
+function measuredOrbital() {
+  const A = S.Z + S.N;
+  if ((S.Z % 2) + (S.N % 2) !== 1) return null;
+  const r = ROW.get(S.Z + "," + S.N), J = r && r[7];
+  const m = J && /^(\d+)(?:\/(2))?([+-])$/.exec(J.trim());          // firm assignments only
+  if (!m) return null;
+  const j2 = m[2] ? +m[1] : 2 * +m[1], par = m[3] === "+" ? 0 : 1;
+  const Jth = predictedJ();
+  if (!Jth || Jth.replace("−", "-") === J.trim()) return null;
+  const l = ((j2 - 1) / 2) % 2 === par ? (j2 - 1) / 2 : (j2 + 1) / 2;
+  const q = S.Z % 2 ? "p" : "n";
+  const sep = q === "n" ? MASS.Sn(S.Z, S.N) : MASS.Sp(S.Z, S.N);
+  if (!sep || !(sep.S > 0)) return null;
+  const nr = S.res.species[q].levels.filter((v) => v.l === l && v.j2 === j2 && v.occ === v.j2 + 1).length;
+  const base = HALO.fromTable(NUC, { Z: S.Z, N: S.N, q, l, j2, nr });
+  if (base.Bc == null) return null;
+  const sol = HALO.solve({ ...base, S: sep.S, r0: S.P.r0, a: S.P.a });
+  return { q, l, j2, nr, S: sep.S, est: sep.est, J: J.trim(), Jth, sol, name: (nr + 1) + "spdfghijk"[l] + j2 + "/2" };
+}
+// the fitted orbital on this page's grid, in the shape of a ws.js level
+function altLevel(a) {
+  const G = S.res.G, sol = a.sol, g = sol.G, n = G.n;
+  const u = new Float64Array(n + 1), U = new Float64Array(n + 1);
+  const tr = sol.tail.r, td = sol.tail.d, j = a.j2 / 2, ls = 0.5 * (j * (j + 1) - a.l * (a.l + 1) - 0.75);
+  const zz = a.q === "p" ? g.c.Zc : 0, E2 = HALO.E2;
+  let k = 0;
+  for (let i = 0; i <= n; i++) {
+    const x = G.r[i];
+    if (x <= g.rout) { const f = x / g.h, i0 = Math.min(g.n - 1, Math.floor(f)), t = f - i0; u[i] = sol.u[i0] * (1 - t) + sol.u[i0 + 1] * t; }
+    else if (x <= tr[tr.length - 1]) { while (tr[k + 1] < x) k++; const t = (x - tr[k]) / (tr[k + 1] - tr[k]); u[i] = td[k] * (1 - t) + td[k + 1] * t; }
+    const e = Math.exp((x - g.R) / g.a), fr = 1 / (1 + e), dfr = x > 0 ? -e / (g.a * (1 + e) * (1 + e)) / x : 0;
+    const vc = zz ? (x < g.Rc ? zz * E2 / (2 * g.Rc) * (3 - x * x / (g.Rc * g.Rc)) : zz * E2 / x) : 0;
+    U[i] = -sol.D * fr + g.Vls * g.r0 * g.r0 * dfr * ls + vc;
+  }
+  return { q: a.q, l: a.l, j2: a.j2, n: a.nr, E: -a.S, u, U, C: g.C, rms: sol.rms, occ: 1, name: a.name, fitted: true };
+}
+function curLv() {
+  if (S.altOn && S.alt && S.alt.lv) return S.alt.lv;
+  return S.sel ? S.res.species[S.sel.q].levels[S.sel.i] : null;
+}
+// default selection: the valence orbital of the odd species, else the last filled neutron level
+function valence() {
+  const pick = (q) => {
+    const L = S.res.species[q].levels;
+    let k = -1;
+    for (let i = 0; i < L.length; i++) if (L[i].occ > 0) k = i;
+    return k >= 0 ? { q, i: k } : null;
+  };
+  if (S.Z % 2 && !(S.N % 2)) return pick("p") || pick("n");
+  return pick("n") || pick("p");
+}
+
+// ---------- scene
+const stage = document.getElementById("stage");
+const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.setSize(innerWidth, innerHeight);
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.05;
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+stage.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(38, innerWidth / innerHeight, 0.1, 500);
+// post-processing: the scene renders into a half-float target, so dense regions of the additive
+// cloud exceed 1 and only those bloom; OutputPass then applies ACES and sRGB once
+const composer = new EffectComposer(renderer);
+composer.addPass(new RenderPass(scene, camera));
+const bloom = new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), 0.2, 0.6, 0.95);
+composer.addPass(bloom);
+composer.addPass(new OutputPass());
+const smaa = new SMAAPass(innerWidth * renderer.getPixelRatio(), innerHeight * renderer.getPixelRatio());
+composer.addPass(smaa);
+// image-based light from a soft procedural studio (panels with feathered edges, no files)
+scene.environment = VOL.studioEnv(renderer);
+renderer.localClippingEnabled = true;
+scene.fog = new THREE.Fog("#0b0d12", 60, 180);
+// The ground colour #0b0d12 is drawn untouched on the direct path, but OutputPass runs it through
+// ACES, whose toe crushes it to black. On the bloom path the background and fog therefore take the
+// linear colour that ACES (exposure 1.05) maps back to exactly #0b0d12: found by Newton on the r160
+// shader formula, residual 1e-11, sRGB out (11, 13, 18).
+const GROUND = new THREE.Color("#0b0d12");
+const GROUND_PRE_ACES = new THREE.Color().setRGB(0.0115476, 0.0131218, 0.0174740, THREE.LinearSRGBColorSpace);
+scene.background = GROUND.clone();
+
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+controls.dampingFactor = 0.08;
+controls.minDistance = 4;
+controls.maxDistance = 140;
+const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+controls.autoRotate = !reduce;
+controls.autoRotateSpeed = 0.35;
+// any user drag or wheel stops the auto-rotation and any camera fit still in progress
+controls.addEventListener("start", () => { controls.autoRotate = false; fitTo = 0; });
+
+// key (overhead, warm) and rim (behind) lights, fill from the environment: they light the floor, the scale bar and the glass
+VOL.lightRig(scene);
+
+// stage: matte floor, contact shadow (blurred attenuation of an overhead light through the volume), scale bar in fm
+const stage3 = new VOL.Stage(scene);
+// floor grid, 1 fm cells, so the size of the nucleus is legible. Drawn in the opaque list (custom
+// blending keeps its alpha), so the volume composites over it rather than under it.
+const grid = new THREE.GridHelper(200, 200, "#2a3245", "#1d2333");
+grid.material.opacity = 0.55;
+stage3.fadeGrid(grid);
+scene.add(grid);
+
+// cut-away wedge facing the camera, shared by the volume, the glass and the point cloud
+const cut = new VOL.Cut();
+// the density as a volume (cinematic): ray-marched emission and absorption
+const vol = new VOL.Volume({ steps: 150, coarse: 1.15 }).useCut(cut);
+// one orbital: the glow is dimmed so the lit iso shells carry the form; the cut faces keep the full
+// brightness (emission scales, presentation; set in buildField)
+vol.u.uFaceB.value = 0.75;
+const gov = new VOL.Governor(vol);
+scene.add(vol.mesh);
+
+// half-density surface R. Only its rim is drawn: a lit body would lay a veil over the cloud
+// inside, and environment reflections of the studio light boxes read as windows, not as a nucleus
+const shell = new THREE.Group();
+scene.add(shell);
+// a sphere reads as glass by its rim: Fresnel-weighted edge, cool above and warm below like the panel bevels
+const rimShell = new THREE.Mesh(
+  new THREE.SphereGeometry(1, 96, 64),
+  new THREE.ShaderMaterial({
+    vertexShader: `
+      varying vec3 vN; varying vec3 vV; varying float vY;
+      void main(){
+        vec4 mv = modelViewMatrix * vec4(position, 1.0);
+        vN = normalize(normalMatrix * normal); vV = normalize(-mv.xyz); vY = normal.y;
+        gl_Position = projectionMatrix * mv;
+      }`,
+    fragmentShader: `
+      varying vec3 vN; varying vec3 vV; varying float vY;
+      void main(){
+        float f = pow(1.0 - abs(dot(normalize(vN), normalize(vV))), 3.2);
+        vec3 c = mix(vec3(1.0, 0.80, 0.58), vec3(0.72, 0.86, 1.0), smoothstep(-0.6, 0.6, vY));
+        gl_FragColor = vec4(c * f * 0.7, f * 0.7);
+      }`,
+    transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
+  })
+);
+rimShell.renderOrder = 3;
+shell.add(rimShell);
+// cinematic: the same surface as physically based glass (transmission, thin wall, ior 1.45,
+// clearcoat), lit by the studio environment; clipped by the cut-away like the volume inside it
+const glass = new THREE.Mesh(new THREE.SphereGeometry(1, 128, 96),
+  VOL.glassMaterial({ clippingPlanes: cut.planes, clipIntersection: true }));
+glass.renderOrder = 20;
+shell.add(glass);
+
+// quantization axis
+const axisMat = new THREE.LineDashedMaterial({ color: "#f2c14e", transparent: true, opacity: 0.5, dashSize: 0.4, gapSize: 0.3 });
+const axis = new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, -1, 0), new THREE.Vector3(0, 1, 0)]), axisMat);
+scene.add(axis);
+
+// point cloud: each point is one draw from |psi|^2 (or from the total density)
+const NPTS = innerWidth < 700 ? 45000 : 110000;
+const pos = new Float32Array(NPTS * 3), from = new Float32Array(NPTS * 3);
+const col = new Float32Array(NPTS * 3), colFrom = new Float32Array(NPTS * 3);
+const cloudGeo = new THREE.BufferGeometry();
+cloudGeo.setAttribute("position", new THREE.BufferAttribute(pos, 3));
+cloudGeo.setAttribute("aFrom", new THREE.BufferAttribute(from, 3));
+cloudGeo.setAttribute("color", new THREE.BufferAttribute(col, 3));
+cloudGeo.setAttribute("aColFrom", new THREE.BufferAttribute(colFrom, 3));
+cloudGeo.setDrawRange(0, NPTS);
+const cloudMat = new THREE.ShaderMaterial({
+  uniforms: {
+    uMix: { value: 1 }, uSize: { value: 0.16 }, uPix: { value: 600 }, uAlpha: { value: 0.5 },
+    uSlab: { value: 0 }, uCz: { value: 0 }, uFocus: { value: 40 }, uAperture: { value: 0 },
+    uCut: { value: 0 }, uCutA: { value: cut.A }, uCutB: { value: cut.B },
+  },
+  vertexShader: `
+    attribute vec3 aFrom; attribute vec3 color; attribute vec3 aColFrom;
+    uniform float uMix, uSize, uPix, uSlab, uCz, uFocus, uAperture, uCut;
+    uniform vec3 uCutA, uCutB;
+    varying vec3 vC; varying float vKeep;
+    void main(){
+      vec3 p = mix(aFrom, position, uMix);
+      vC = mix(aColFrom, color, uMix);
+      vec4 mv = modelViewMatrix * vec4(p, 1.0);
+      vKeep = (uSlab > 0.0 && abs(mv.z - uCz) > uSlab) ? 0.0 : 1.0;
+      if (uCut > 0.5 && dot(p, uCutA) > 0.0 && dot(p, uCutB) > 0.0) vKeep = 0.0;
+      gl_Position = projectionMatrix * mv;
+      // depth of field: a point off the focal plane spreads into its circle of confusion
+      // (thin lens, size in fm at the point) and dims by the area ratio, so its total light is kept
+      float coc = uAperture * abs(-mv.z - uFocus) / max(uFocus, 1e-3);
+      float s = min(uSize + coc, 10.0 * uSize);
+      vC *= (uSize * uSize) / (s * s);
+      gl_PointSize = max(1.0, s * uPix / -mv.z);
+    }`,
+  fragmentShader: `
+    uniform float uAlpha;
+    varying vec3 vC; varying float vKeep;
+    void main(){
+      if (vKeep < 0.5) discard;
+      vec2 d = gl_PointCoord - 0.5;
+      float r2 = dot(d, d);
+      if (r2 > 0.25) discard;
+      float a = exp(-r2 * 14.0) * uAlpha;
+      gl_FragColor = vec4(vC * a, a);
+      // same output transform as the built-in materials: on screen ACES + sRGB here,
+      // into the composer's linear target nothing (OutputPass applies them once at the end)
+      #include <tonemapping_fragment>
+      #include <colorspace_fragment>
+    }`,
+  transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
+});
+const cloud = new THREE.Points(cloudGeo, cloudMat);
+cloud.frustumCulled = false;
+scene.add(cloud);
+
+const CN = new THREE.Color("#a8cdf2"), CP = new THREE.Color("#ff9656");
+
+// ---------- sampling
+function cdf(w) {
+  const c = new Float64Array(w.length);
+  let s = 0;
+  for (let i = 1; i < w.length; i++) { s += 0.5 * (w[i] + w[i - 1]); c[i] = s; }
+  for (let i = 0; i < w.length; i++) c[i] /= s;
+  return c;
+}
+function drawR(c, h) {
+  const x = Math.random();
+  let lo = 0, hi = c.length - 1;
+  while (hi - lo > 1) { const m = (lo + hi) >> 1; if (c[m] < x) lo = m; else hi = m; }
+  const t = c[hi] > c[lo] ? (x - c[lo]) / (c[hi] - c[lo]) : 0;
+  return (lo + t) * h;
+}
+function put(k, r, ct, color) {
+  const st = Math.sqrt(Math.max(0, 1 - ct * ct)), ph = 2 * Math.PI * Math.random();
+  pos[3 * k] = r * st * Math.cos(ph);
+  pos[3 * k + 1] = r * ct;
+  pos[3 * k + 2] = r * st * Math.sin(ph);
+  col[3 * k] = color.r; col[3 * k + 1] = color.g; col[3 * k + 2] = color.b;
+}
+let mix = 1, baseAlpha = 0.16, quality = innerWidth < 700 ? "low" : "high";
+// a 2 fm slice keeps roughly a fifth of the points, so each one is drawn brighter and larger
+// The composer path sums the additive points in linear light and tone-maps once at the end; the
+// fast path tone-maps each point before blending. At these per-point intensities ACES is nearly
+// linear, so one brightness serves both paths.
+function setAlpha() {
+  cloudMat.uniforms.uAlpha.value = baseAlpha * (S.slab ? 2.6 : 1);
+  cloudMat.uniforms.uSize.value = S.slab ? 0.24 : 0.16;
+}
+function resample() {
+  // freeze the current on-screen state as the start of the morph
+  for (let i = 0; i < pos.length; i++) {
+    from[i] = from[i] + (pos[i] - from[i]) * mix;
+    colFrom[i] = colFrom[i] + (col[i] - colFrom[i]) * mix;
+  }
+  const G = S.res.G, h = G.h;
+  if (S.view === "orbital" && S.sel) {
+    const lv = curLv();
+    const w = new Float64Array(lv.u.length);
+    for (let i = 0; i < w.length; i++) w[i] = lv.u[i] * lv.u[i];
+    const c = cdf(w);
+    // angular density on a cos(theta) grid; rejection sampling against its maximum
+    let amax = 0;
+    for (let i = 0; i <= 400; i++) amax = Math.max(amax, WS.angular(lv.l, lv.j2, S.m2, -1 + i / 200));
+    amax *= 1.02;
+    const color = lv.q === "n" ? CN : CP;
+    for (let k = 0; k < NPTS; k++) {
+      let x;
+      do { x = 2 * Math.random() - 1; } while (Math.random() * amax > WS.angular(lv.l, lv.j2, S.m2, x));
+      put(k, drawR(c, h), x, color);
+    }
+    baseAlpha = 0.24;
+  } else {
+    const sn = S.res.species.n, sp = S.res.species.p;
+    const wn = new Float64Array(G.n + 1), wp = new Float64Array(G.n + 1);
+    for (let i = 0; i <= G.n; i++) { const r2 = G.r[i] * G.r[i]; wn[i] = r2 * sn.rho[i]; wp[i] = r2 * sp.rho[i]; }
+    const cn = cdf(wn), cp = cdf(wp);
+    const fn = sn.count / (sn.count + sp.count);
+    for (let k = 0; k < NPTS; k++) {
+      const isN = Math.random() < fn;
+      put(k, drawR(isN ? cn : cp, h), 2 * Math.random() - 1, isN ? CN : CP);
+    }
+    baseAlpha = 0.16;
+  }
+  setAlpha();
+  cloudGeo.attributes.position.needsUpdate = true;
+  cloudGeo.attributes.aFrom.needsUpdate = true;
+  cloudGeo.attributes.color.needsUpdate = true;
+  cloudGeo.attributes.aColFrom.needsUpdate = true;
+  mix = 0;
+  buildField();
+}
+
+// ---------- the same density as a volume (cinematic)
+// Transfer functions, stated on the page: one orbital, x = |psi|/|psi|max (the square root of the
+// density, so the weak outer lobes read and the nodes between them stay empty); all nucleons,
+// x = rho/rho_max with neutrons and protons on one scale. Opacity scales with x, emission with
+// x (0.12 + 0.88 x) (vol.js, uEm0).
+// iso shells, stated on the page: one orbital, lit surfaces at x = 0.5 and (fainter) x = 0.2 (the stored x
+// is after the 0.05 floor, hence the remap); all nucleons, the half-density surface rho_n + rho_p =
+// max(rho_n + rho_p)/2
+const ISO_ORB = [{ w: [1, 0, 0], level: (0.5 - 0.05) / 0.95, alpha: 0.75 }, { w: [1, 0, 0], level: (0.2 - 0.05) / 0.95, alpha: 0.4, rim: 1 }];
+const ISO_ALL = [{ w: [1, 1, 0], level: 0.5, alpha: 0.35 }];
+function buildField() {
+  const G = S.res.G, h = G.h;
+  const at = (a, r) => { const f = r / h, i = Math.min(G.n - 1, Math.floor(f)), t = f - i; return a[i] * (1 - t) + a[i + 1] * t; };
+  let F;
+  if (S.view === "orbital" && S.sel) {
+    const lv = curLv();
+    const R2 = (r) => { const rr = Math.max(r, h); const v = at(lv.u, rr) / rr; return v * v; };
+    let m = 0, rlast = 0;
+    for (let i = 1; i < G.n; i++) m = Math.max(m, R2(G.r[i]));
+    for (let i = 1; i < G.n; i++) if (R2(G.r[i]) > 1e-4 * m) rlast = G.r[i];   // |psi| above 1% of its peak
+    const rmax = Math.min(G.r[G.n - 1], rlast + 1.5);
+    const NU = 128, ang = new Float64Array(NU);
+    for (let j = 0; j < NU; j++) ang[j] = WS.angular(lv.l, lv.j2, S.m2, -1 + (j + 0.5) * 2 / NU);
+    const aj = (u) => ang[Math.min(NU - 1, Math.max(0, Math.round((u + 1) * NU / 2 - 0.5)))];
+    F = VOL.field({ rmax, NR: 224, NU, tau: 3, iso: ISO_ORB,
+      channels: [{ f: (r, u) => R2(r) * aj(u), tf: { type: "pow", g: 0.5, floor: 0.05 }, color: lv.q === "n" ? CN : CP }] });
+  } else {
+    const sn = S.res.species.n, sp = S.res.species.p;
+    let m = 0, rlast = 0;
+    for (let i = 0; i < G.n; i++) m = Math.max(m, sn.rho[i], sp.rho[i]);
+    for (let i = 0; i < G.n; i++) if (Math.max(sn.rho[i], sp.rho[i]) > 2e-3 * m) rlast = G.r[i];
+    F = VOL.field({ rmax: rlast + 1, NR: 224, NU: 1, tau: 3.2, iso: ISO_ALL,
+      channels: [
+        { f: (r) => at(sn.rho, r), group: 0, color: CN },
+        { f: (r) => at(sp.rho, r), group: 0, color: CP },
+      ] });
+  }
+  vol.setField(F, true);
+  vol.setExposure(S.view === "orbital" && S.sel ? 0.3 : 0.75);
+  vol.u.uFace.value = S.view === "orbital" && S.sel ? 6 : 14;
+  // all nucleons, cut open: the stained layer of the left cut face takes the neutron density alone, of the
+  // right face the protons; behind that layer the volume shows both
+  vol.u.uFaceSplit.value = S.view === "orbital" && S.sel ? 0 : 1;
+  stage3.setShadow(F, 5);
+}
+
+// ---------- level scheme
+const svg = document.getElementById("levels");
+const NS = "http://www.w3.org/2000/svg";
+function el(tag, attrs, parent) {
+  const e = document.createElementNS(NS, tag);
+  for (const k in attrs) e.setAttribute(k, attrs[k]);
+  if (parent) parent.appendChild(e);
+  return e;
+}
+function drawLevels() {
+  const W = 324, H = Math.max(320, Math.min(600, innerHeight * 0.56));
+  svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+  svg.style.height = H + "px";
+  svg.innerHTML = "";
+  const all = [...S.res.species.n.levels, ...S.res.species.p.levels];
+  const emin = Math.min(...all.map((l) => l.E));
+  const lo = Math.floor((emin - 2) / 10) * 10, hi = 2;
+  const top = 24, bot = H - 8;
+  const y = (E) => top + (hi - E) / (hi - lo) * (bot - top);
+  // axis
+  const ax = el("g", { class: "ax" }, svg);
+  for (let e = lo; e <= 0; e += 10) {
+    el("line", { x1: 26, x2: W, y1: y(e), y2: y(e), stroke: "#1e2432", "stroke-width": 1 }, ax);
+    el("text", { x: 22, y: y(e) + 3, "text-anchor": "end" }, ax).textContent = e;
+  }
+  el("rect", { x: 26, y: top, width: W - 26, height: y(0) - top, fill: "#ffffff", opacity: 0.025 }, ax);
+  el("text", { x: W - 2, y: y(0) - 4, "text-anchor": "end" }, ax).textContent = "unbound";
+  const cols = { n: { x0: 34, x1: 84, name: "neutrons", c: "#a8cdf2" }, p: { x0: 184, x1: 234, name: "protons", c: "#ff9656" } };
+  for (const q of ["n", "p"]) {
+    const C = cols[q], L = S.res.species[q].levels;
+    el("text", { x: C.x0, y: 11, fill: C.c, style: `fill:${C.c}` }, svg).textContent = `${C.name} (${q === "n" ? S.N : S.Z})`;
+    // labels pushed apart, bottom to top, with leader lines
+    const ly = L.map((l) => y(l.E));
+    const lab = ly.slice();
+    for (let i = 1; i < lab.length; i++) if (lab[i] > lab[i - 1] - 11) lab[i] = lab[i - 1] - 11;
+    // pushed past the header: pin the top label and push back down
+    if (lab.length && lab[lab.length - 1] < top + 4) {
+      lab[lab.length - 1] = top + 4;
+      for (let i = lab.length - 2; i >= 0; i--) if (lab[i] < lab[i + 1] + 11) lab[i] = lab[i + 1] + 11;
+    }
+    const g = el("g", {}, svg);
+    L.forEach((lv, i) => {
+      const sel = S.sel && S.sel.q === q && S.sel.i === i;
+      const full = lv.occ === lv.j2 + 1, part = lv.occ > 0 && !full;
+      const gg = el("g", { class: "lv", "data-q": q, "data-i": i }, g);
+      el("rect", { x: C.x0 - 4, y: Math.min(ly[i], lab[i] + 3) - 6, width: 140, height: Math.abs(ly[i] - lab[i] - 3) + 12, fill: "transparent" }, gg);
+      el("line", {
+        x1: C.x0, x2: C.x1, y1: ly[i], y2: ly[i],
+        stroke: sel ? "#ffffff" : C.c, "stroke-width": sel ? 3 : full ? 2.2 : 1.6,
+        opacity: lv.occ > 0 || sel ? 1 : 0.42, "stroke-dasharray": part ? "4 3" : "none",
+      }, gg);
+      el("polyline", { points: `${C.x1},${ly[i]} ${C.x1 + 6},${lab[i]} ${C.x1 + 9},${lab[i]}`, fill: "none", stroke: "#3a4256", "stroke-width": 0.8 }, gg);
+      const t = el("text", { x: C.x1 + 11, y: lab[i] + 3.5, opacity: lv.occ > 0 || sel ? 1 : 0.55 }, gg);
+      t.textContent = lv.name + (part ? ` ${lv.occ}/${lv.j2 + 1}` : "");
+      if (sel) t.setAttribute("style", "font-weight:700");
+      el("title", {}, gg).textContent = `${q === "n" ? "neutron" : "proton"} ${lv.name}: ${lv.E.toFixed(3)} MeV, ${lv.occ} of ${lv.j2 + 1} filled, rms ${lv.rms.toFixed(2)} fm`;
+    });
+    // measured separation energies
+    const sepf = q === "n" ? MASS.Sn : MASS.Sp;
+    const a = sepf(S.Z, S.N), b = q === "n" ? sepf(S.Z, S.N + 1) : sepf(S.Z + 1, S.N);
+    [[a, "A"], [b, "A+1"]].forEach(([s, tag]) => {
+      if (!s) return;
+      const yy = y(-s.S);
+      if (yy < top || yy > bot) return;
+      el("path", { d: `M${C.x0 - 3} ${yy} l-6 -4 v8 z`, fill: "#f2c14e", opacity: s.est ? 0.5 : 0.95 }, svg);
+      el("title", {}, svg).textContent = `−S${q}(${tag}) = ${(-s.S).toFixed(3)} MeV`;
+    });
+  }
+  // the measured ground-state orbital, fitted to the separation energy (not part of the filling above)
+  if (S.alt && S.alt.lv) {
+    const a = S.alt, C = cols[a.q], yy = y(a.lv.E), on = S.altOn;
+    const gg = el("g", { class: "lv", "data-alt": "1" }, svg);
+    el("rect", { x: C.x0 - 4, y: yy - 7, width: 150, height: 14, fill: "transparent" }, gg);
+    el("line", { x1: C.x0, x2: C.x1, y1: yy, y2: yy, stroke: "#f2c14e", "stroke-width": on ? 3 : 1.8, "stroke-dasharray": "5 3" }, gg);
+    const t = el("text", { x: C.x1 + 11, y: yy - 4, fill: "#f2c14e", style: "fill:#f2c14e" + (on ? ";font-weight:700" : "") }, gg);
+    t.textContent = `${a.name} fitted, J\u03c0 ${a.J.replace("-", "\u2212")}`;
+    el("title", {}, gg).textContent = `measured ground state ${a.J}: ${a.name} with the depth fitted to S = ${a.S.toFixed(3)} MeV, rms ${a.lv.rms.toFixed(2)} fm`;
+  }
+}
+svg.addEventListener("click", (e) => {
+  const g = e.target.closest(".lv");
+  if (!g) return;
+  if (g.dataset.alt) S.altOn = true;
+  else { S.sel = { q: g.dataset.q, i: +g.dataset.i }; S.altOn = false; }
+  S.view = "orbital";
+  syncSel(true);
+});
+
+// ---------- radial plots
+function setupCanvas(c) {
+  const d = Math.min(devicePixelRatio, 2), w = c.clientWidth, h = c.clientHeight;
+  c.width = w * d; c.height = h * d;
+  const x = c.getContext("2d");
+  x.setTransform(d, 0, 0, d, 0, 0);
+  return { x, w, h };
+}
+function frame(ctx, w, h, xmax, ylo, yhi, ystep, fmt) {
+  const L = 34, R = 6, T = 6, B = 16;
+  const X = (r) => L + (r / xmax) * (w - L - R);
+  const Y = (v) => T + (yhi - v) / (yhi - ylo) * (h - T - B);
+  ctx.font = "10px ui-monospace,Menlo,monospace";
+  ctx.fillStyle = "#8a92a6"; ctx.strokeStyle = "#1e2432"; ctx.lineWidth = 1;
+  for (let v = Math.ceil(ylo / ystep) * ystep; v <= yhi + 1e-9; v += ystep) {
+    ctx.beginPath(); ctx.moveTo(L, Y(v)); ctx.lineTo(w - R, Y(v)); ctx.stroke();
+    ctx.textAlign = "right"; ctx.fillText(fmt(v), L - 4, Y(v) + 3);
+  }
+  ctx.textAlign = "center";
+  for (let r = 0; r <= xmax; r += 5) ctx.fillText(r, X(r), h - 4);
+  return { X, Y };
+}
+function line(ctx, G, f, X, Y, n0, n1, color, w, dash) {
+  ctx.beginPath(); ctx.strokeStyle = color; ctx.lineWidth = w; ctx.setLineDash(dash || []);
+  for (let i = n0; i <= n1; i++) { const v = f(i); if (i === n0) ctx.moveTo(X(G.r[i]), Y(v)); else ctx.lineTo(X(G.r[i]), Y(v)); }
+  ctx.stroke(); ctx.setLineDash([]);
+}
+function drawRadial() {
+  const G = S.res.G, xmax = Math.ceil((G.R + 7) / 5) * 5, n1 = Math.min(G.n, Math.round(xmax / G.h));
+  // potential + orbital, the textbook picture: u(r) drawn on its own energy line
+  {
+    const { x: ctx, w, h } = setupCanvas(document.getElementById("pot"));
+    const lv = curLv();
+    const q = lv ? lv.q : "n";
+    const V0 = q === "n" ? S.res.P.V0n : S.res.P.V0p;
+    const ylo = Math.floor((Math.min(V0, lv && lv.fitted ? Math.min(...lv.U) : 0) - 6) / 10) * 10, yhi = q === "p" ? 20 : 10;
+    const { X, Y } = frame(ctx, w, h, xmax, ylo, yhi, 10, (v) => v);
+    const c = q === "n" ? "#a8cdf2" : "#ff9656";
+    if (lv) {
+      const ll = lv.l * (lv.l + 1) * lv.C;
+      line(ctx, G, (i) => Math.min(yhi, lv.U[i] + (i ? ll / (G.r[i] * G.r[i]) : 1e9)), X, Y, 1, n1, "#4a5266", 1, [3, 3]);
+      line(ctx, G, (i) => lv.U[i], X, Y, 1, n1, c, 1.6);
+      ctx.strokeStyle = "#f2c14e"; ctx.lineWidth = 1; ctx.setLineDash([2, 3]);
+      ctx.beginPath(); ctx.moveTo(X(0), Y(lv.E)); ctx.lineTo(X(xmax), Y(lv.E)); ctx.stroke(); ctx.setLineDash([]);
+      let umax = 0;
+      for (let i = 0; i <= n1; i++) umax = Math.max(umax, Math.abs(lv.u[i]));
+      const sc = 0.18 * (yhi - ylo) / umax;
+      ctx.beginPath(); ctx.fillStyle = c + "33";
+      ctx.moveTo(X(0), Y(lv.E));
+      for (let i = 0; i <= n1; i++) ctx.lineTo(X(G.r[i]), Y(lv.E + sc * lv.u[i]));
+      ctx.lineTo(X(xmax), Y(lv.E)); ctx.fill();
+      line(ctx, G, (i) => lv.E + sc * lv.u[i], X, Y, 0, n1, "#ffffff", 1.4);
+      document.getElementById("ptitle").innerHTML = `${q === "n" ? "Neutron" : "Proton"} ${lv.name} &nbsp;<span style="font:11px var(--mono);color:var(--muted)">ε = ${lv.E.toFixed(2)} MeV</span>`;
+    }
+  }
+  // densities
+  {
+    const { x: ctx, w, h } = setupCanvas(document.getElementById("rho"));
+    const sn = S.res.species.n, sp = S.res.species.p;
+    let m = 0;
+    for (let i = 0; i <= n1; i++) m = Math.max(m, sn.rho[i], sp.rho[i]);
+    const yhi = Math.ceil(m / 0.02) * 0.02;
+    const { X, Y } = frame(ctx, w, h, xmax, 0, yhi, 0.02, (v) => v.toFixed(2));
+    line(ctx, G, (i) => sn.rho[i], X, Y, 0, n1, "#a8cdf2", 1.8);
+    line(ctx, G, (i) => sp.rho[i], X, Y, 0, n1, "#ff9656", 1.8);
+    ctx.strokeStyle = "#f2c14e"; ctx.setLineDash([2, 3]); ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(X(G.R), Y(0)); ctx.lineTo(X(G.R), Y(yhi)); ctx.stroke(); ctx.setLineDash([]);
+    ctx.fillStyle = "#f2c14e"; ctx.textAlign = "left"; ctx.fillText("R", X(G.R) + 3, Y(yhi) + 10);
+    document.getElementById("rmsl").textContent = "fm⁻³";
+  }
+}
+
+// ---------- info panel
+function predictedJ() {
+  const odd = (S.Z % 2) + (S.N % 2);
+  if (odd === 0) return "0+";
+  if (odd === 2) return null;
+  const q = S.Z % 2 ? "p" : "n";
+  const L = S.res.species[q].levels;
+  for (let i = L.length - 1; i >= 0; i--) if (L[i].occ > 0) return FRAC(L[i].j2) + (L[i].l % 2 ? "−" : "+");
+  return null;
+}
+function drawInfo() {
+  const r = ROW.get(S.Z + "," + S.N), A = S.Z + S.N, sn = S.res.species.n, sp = S.res.species.p;
+  const lastE = (q) => { const L = S.res.species[q].levels; let e = null; for (const l of L) if (l.occ > 0) e = l; return e; };
+  const ln = lastE("n"), lp = lastE("p");
+  const Sn = MASS.Sn(S.Z, S.N), Sp = MASS.Sp(S.Z, S.N);
+  const f = (x, d = 2) => (x == null ? "n/a" : x.toFixed(d));
+  const Jexp = r && r[7] ? r[7].replace(/-/g, "−") : "n/a";
+  const Jth = predictedJ();
+  document.getElementById("info").innerHTML = `
+    <dt>Z, N</dt><dd>${S.Z}, ${S.N}</dd>
+    <dt>J<sup>π</sup></dt><dd>${Jth ? `shell model ${Jth} · measured ${Jexp}` : `measured ${Jexp} (odd-odd)`}</dd>
+    <dt class="n">last n</dt><dd>${ln ? `${ln.name} ${f(ln.E)}` : "none"} · −S<sub>n</sub> ${Sn ? f(-Sn.S) : "n/a"}</dd>
+    <dt class="p">last p</dt><dd>${lp ? `${lp.name} ${f(lp.E)}` : "none"} · −S<sub>p</sub> ${Sp ? f(-Sp.S) : "n/a"}</dd>
+    <dt>rms radius</dt><dd><span style="color:var(--neu)">n ${f(sn.rms, 3)}</span> · <span style="color:var(--pro)">p ${f(sp.rms, 3)}</span> fm</dd>
+    <dt>skin</dt><dd>r<sub>n</sub> − r<sub>p</sub> = ${f(sn.rms - sp.rms, 3)} fm</dd>`;
+  const w = [];
+  if (sn.unbound > 0) w.push(`${sn.unbound} neutron${sn.unbound > 1 ? "s" : ""} find no bound level: beyond the neutron drip line of this potential.`);
+  if (sp.unbound > 0) w.push(`${sp.unbound} proton${sp.unbound > 1 ? "s" : ""} find no bound level.`);
+  if (S.alt) {
+    const a = S.alt, who = a.q === "n" ? "neutron" : "proton", fill = a.Jth.replace("-", "−"), Jm = a.J.replace("-", "−");
+    const last = (a.q === "n" ? ln : lp);
+    w.push(a.sol.ok
+      ? `Measured ground state ${Jm}, not the ${fill} of this filling: the last ${who} sits in ${a.name}${last ? `, not ${last.name}` : ""}. With the depth fitted to the measured S${a.q} = ${a.S.toFixed(3)} MeV${a.est ? " (estimated mass)" : ""} it has rms ${a.sol.rms.toFixed(2)} fm${last ? ` (the ${last.name} of the global well: ${last.rms.toFixed(2)} fm)` : ""}; it is drawn by default (amber dashed level).${HALO.CASES.some((c) => c.id === `${A}${ELEM[S.Z]}` && c.kind === "halo") ? ` This is a one-${who} halo: see <a href="halo.html#${A}${ELEM[S.Z]}" style="color:inherit">the halo page</a>.` : ""}`
+      : `Measured ground state ${Jm}, not the ${fill} of this filling; no ${a.name} depth reproduces S${a.q} = ${a.S.toFixed(3)} MeV (${a.sol.why}).`);
+  }
+  if (A < 16) w.push("Below A ≈ 16 a static mean field is a poor picture; read these levels as a cartoon.");
+  if (!r) w.push("Not in NUBASE2020.");
+  if (S.res.boxLimited) w.push(`${S.res.boxLimited} level${S.res.boxLimited > 1 ? "s lie" : " lies"} so close to threshold that ${S.res.boxLimited > 1 ? "their tails do" : "its tail does"} not fit in the largest box (R + ${S.res.P.rpad} fm): ${S.res.boxLimited > 1 ? "their" : "its"} energy is slightly too high and radius too small.`);
+  const W = document.getElementById("warn");
+  W.hidden = !w.length; W.innerHTML = w.join(" ");
+  const el = ELEM[S.Z] || "?";
+  document.getElementById("title").innerHTML = `${sup(A)}${el}`;
+  document.title = `${A}${el} · nuclearjs`;
+  document.getElementById("back").href = `https://vibeinscience.com/nuclides.html`;
+  const ts = document.getElementById("toScatter");
+  ts.href = `scatter.html#p${A}${el}@30`; ts.style.display = S.Z < 2 ? "none" : "";   // scatter.html takes targets from Z = 2
+}
+
+// ---------- view text + stamp
+function drawStamp() {
+  const st = document.getElementById("stamp"), vn = document.getElementById("vnote");
+  const lv = curLv();
+  if (S.view === "orbital" && lv) {
+    st.innerHTML = `<b>${lv.q === "n" ? "ν" : "π"} ${lv.name.replace(/(\d+)\/2$/, "<sub>$1/2</sub>")}</b><small>${lv.fitted ? `measured J<sup>π</sup>, depth fitted to S = ${(-lv.E).toFixed(3)} MeV · ` : ""}|m| = ${FRAC(S.m2)} · ${lv.n} radial node${lv.n === 1 ? "" : "s"} · ⟨r²⟩<sup>1/2</sup> = ${lv.rms.toFixed(2)} fm</small>`;
+    vn.textContent = "The cloud is |ψ|² summed over spin (in fast mode each dot is one draw from it). The density is symmetric about the m axis; ±m give the same picture." +
+      (lv.j2 === 1 ? " A j = 1/2 orbital (s1/2, p1/2, ...) is spherical once summed over spin: |m| changes nothing." : " High |m| pushes the nucleon toward the equator, |m| = 1/2 toward the poles.");
+  } else {
+    const A = S.Z + S.N;
+    st.innerHTML = `<b>${sup(A)}${ELEM[S.Z]}</b><small>${S.N} neutrons · ${S.Z} protons · dots drawn from ρ<sub>n</sub> and ρ<sub>p</sub></small>`;
+    vn.textContent = "The summed point densities ρn and ρp, in proportion to N and Z (in fast mode, dots drawn from them). Cut it open or take a slice: in a neutron-rich nucleus the outer rim is blue, the neutron skin.";
+  }
+  document.getElementById("mrow").style.display = S.view === "orbital" ? "" : "none";
+  document.getElementById("qsel").style.display = S.view === "orbital" ? "" : "none";
+  syncCut();
+  for (const b of document.querySelectorAll("#qsel button")) b.setAttribute("aria-pressed", lv && b.dataset.q === lv.q ? "true" : "false");
+  for (const b of document.querySelectorAll("#vmode button")) b.setAttribute("aria-pressed", b.dataset.v === S.view ? "true" : "false");
+}
+
+// ---------- updates
+function syncSel(resampleToo) {
+  const lv = curLv();
+  const m = document.getElementById("m");
+  m.max = lv.j2;
+  if (S.m2 > lv.j2) S.m2 = 1;
+  m.value = S.m2;
+  document.getElementById("mout").textContent = FRAC(S.m2);
+  drawLevels(); drawRadial(); drawStamp();
+  if (resampleToo) resample();
+}
+let fitTo = 0;
+function load(Z, N, keepSel) {
+  // a potential change keeps the selected orbital by name, if it is still bound
+  const keep = keepSel && S.sel ? { q: S.sel.q, name: S.res.species[S.sel.q].levels[S.sel.i].name } : null;
+  S.Z = Z; S.N = N;
+  solve();
+  const i = keep ? S.res.species[keep.q].levels.findIndex((l) => l.name === keep.name) : -1;
+  S.sel = i >= 0 ? { q: keep.q, i } : valence();
+  if (!keepSel) S.altOn = !!(S.alt && S.alt.lv);
+  const R = S.res.G.R;
+  shell.scale.setScalar(R);
+  vol.u.uSkip.value.setScalar(R * 0.995);
+  axis.geometry.setFromPoints([new THREE.Vector3(0, -1.7 * R, 0), new THREE.Vector3(0, 1.7 * R, 0)]);
+  axis.computeLineDistances();
+  grid.position.y = -R - 5 + 0.01;
+  stage3.layout(-R - 5, R + 2);
+  vol.u.uFloorY.value = -R - 5;
+  fitTo = 4.2 * R + 16;
+  drawInfo();
+  if (S.sel) syncSel(true); else { drawLevels(); drawRadial(); drawStamp(); resample(); }
+  const A = Z + N, hash = `#${A}${ELEM[Z]}`;
+  if (location.hash !== hash) history.replaceState(null, "", hash);
+}
+
+// ---------- UI wiring
+const find = document.getElementById("find");
+find.addEventListener("keydown", (e) => {
+  if (e.key !== "Enter") return;
+  const p = parseNucleus(find.value);
+  if (!p || !ROW.get(p.Z + "," + p.N)) { find.setCustomValidity("no such nucleus in NUBASE2020"); find.reportValidity(); return; }
+  find.setCustomValidity(""); load(p.Z, p.N);
+});
+find.addEventListener("input", () => find.setCustomValidity(""));
+document.getElementById("chips").addEventListener("click", (e) => {
+  const b = e.target.closest("button"); if (!b) return;
+  const p = parseNucleus(b.dataset.n); load(p.Z, p.N);
+});
+document.getElementById("qsel").addEventListener("click", (e) => {
+  const b = e.target.closest("button"); if (!b) return;
+  const q = b.dataset.q, L = S.res.species[q].levels;
+  let k = -1;
+  for (let i = 0; i < L.length; i++) if (L[i].occ > 0) k = i;
+  // the odd species of a nucleus whose measured ground state differs from the filling: its fitted orbital
+  S.altOn = !!(S.alt && S.alt.lv && S.alt.q === q);
+  if (k >= 0) S.sel = { q, i: k }; else if (!S.altOn) return;
+  S.view = "orbital";
+  syncSel(true);
+});
+document.getElementById("vmode").addEventListener("click", (e) => {
+  const b = e.target.closest("button"); if (!b) return;
+  S.view = b.dataset.v; drawStamp(); resample();
+});
+document.getElementById("slab").addEventListener("click", (e) => {
+  const b = e.target.closest("button"); if (!b) return;
+  S.slab = b.dataset.v === "1";
+  S.cut = b.dataset.v === "2";
+  syncCut();
+});
+document.getElementById("m").addEventListener("input", (e) => {
+  S.m2 = +e.target.value; document.getElementById("mout").textContent = FRAC(S.m2);
+  drawStamp(); resample();
+});
+// potential sliders: solve on the next frame, at most once per frame
+const PS = { "p-r0": "r0", "p-a": "a", "p-dep": "dep", "p-ls": "ls" };
+const PF = { r0: (v) => v.toFixed(2) + " fm", a: (v) => v.toFixed(2) + " fm", dep: (v) => "×" + v.toFixed(2), ls: (v) => "×" + v.toFixed(2) };
+let pending = false;
+function syncSliders() {
+  for (const id in PS) {
+    const k = PS[id], inp = document.getElementById(id);
+    inp.value = S.P[k]; inp.nextElementSibling.textContent = PF[k](S.P[k]);
+  }
+}
+for (const id in PS) {
+  document.getElementById(id).addEventListener("input", (e) => {
+    const k = PS[id]; S.P[k] = +e.target.value; e.target.nextElementSibling.textContent = PF[k](S.P[k]);
+    if (!pending) { pending = true; requestAnimationFrame(() => { pending = false; load(S.Z, S.N, true); }); }
+  });
+}
+document.getElementById("reset").addEventListener("click", () => { S.P = { ...P0 }; syncSliders(); load(S.Z, S.N, true); });
+syncSliders();
+
+addEventListener("hashchange", () => { const p = parseNucleus(location.hash); if (p && ROW.get(p.Z + "," + p.N) && (p.Z !== S.Z || p.N !== S.N)) load(p.Z, p.N); });
+addEventListener("resize", () => {
+  camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight);
+  composer.setSize(innerWidth, innerHeight);
+  smaa.setSize(innerWidth * renderer.getPixelRatio(), innerHeight * renderer.getPixelRatio());
+  drawLevels(); drawRadial();
+});
+
+function syncCut() {
+  for (const x of document.querySelectorAll("#slab button")) x.setAttribute("aria-pressed", x.dataset.v === (S.slab ? "1" : S.cut ? "2" : "0") ? "true" : "false");
+  cloudMat.uniforms.uSlab.value = S.slab ? 1.0 : 0;
+  cloudMat.uniforms.uCut.value = S.cut ? 1 : 0;
+  vol.u.uSlab.value = S.slab ? 1.0 : 0;
+  vol.u.uCut.value = S.cut ? 1 : 0;
+  // the glass is cut with the volume; a 2 fm slice drops it (it would only veil the slice)
+  glass.material.clippingPlanes = S.cut ? cut.planes : [];
+  // one orbital: no glass, so the orbital itself is the object (the half-density radius stays as the thin ring)
+  glass.visible = quality === "high" && !S.slab && S.view !== "orbital";
+  vol.u.uSkipOn.value = glass.visible ? 1 : 0;
+  setAlpha();
+}
+syncCut();
+function applyQuality() {
+  const hi = quality === "high";
+  cloudMat.uniforms.uAperture.value = hi ? 0.35 : 0;
+  const g = hi ? GROUND_PRE_ACES : GROUND;
+  scene.background.copy(g); scene.fog.color.copy(g);
+  // the transmission pass of the glass sees the clear colour, not the scene background
+  renderer.setClearColor(g);
+  cloud.visible = !hi; rimShell.visible = !hi;
+  vol.mesh.visible = hi; glass.visible = hi && !S.slab;
+  vol.u.uSkipOn.value = glass.visible ? 1 : 0;
+  document.getElementById("rnote").textContent = hi
+    ? "The density is ray-marched as a glowing, absorbing volume: opacity is proportional to x and emission to x(0.12 + 0.88x), so dense regions glow and thin tails stay dim, with x = |ψ|/|ψ|max for one orbital (the square root of the density, so weak lobes read and nodes stay empty; x below 0.05 is left empty so the far tail does not fog the view) and x = ρ/ρmax for all nucleons. Inside the volume, lit contour surfaces of the same x are drawn as thin shells: for one orbital at x = 0.5 (|ψ|² at a quarter of its peak) and at x = 0.2 (4% of the peak density) as an outline, drawn mostly where it is seen edge-on, with the glow between them dimmed so the shells carry the form; for all nucleons at the half-density surface, where ρn + ρp falls to half its maximum. A shell is shaded as a surface: its normal is the density gradient, it takes a key light from above with the self-shadowing below, a fill light, a soft highlight and an occlusion term from the density just outside it. The volume is lit from straight above, with self-shadowing computed from the same density; the floor shadow is the attenuation 1 − exp(−∫σ dy) of that overhead light through the volume, blurred into a penumbra. Each cut face is stained as a thin layer of the density at the face, drawn as if it were 14 fm thick (6 fm for one orbital) so that the plane reads; with all nucleons the left face's layer shows ρn alone and the right face's ρp alone, while the volume behind each face shows both. With all nucleons a glass sphere marks the radius R of the well, drawn as a thin glass wall; for one orbital only its thin ring is drawn, so the orbital is not seen through glass; colours, brightness, the shell shading and the glass are presentation, not physics."
+    : "Point cloud: each dot one draw from the density.";
+  setAlpha();
+  for (const b of document.querySelectorAll("#qmode button")) b.setAttribute("aria-pressed", b.dataset.v === quality ? "true" : "false");
+}
+document.getElementById("qmode").addEventListener("click", (e) => {
+  const b = e.target.closest("button"); if (!b) return;
+  quality = b.dataset.v; applyQuality();
+});
+applyQuality();
+
+// ---------- start
+{
+  const p = parseNucleus(location.hash || "208Pb");
+  const ok = p && ROW.get(p.Z + "," + p.N);
+  load(ok ? p.Z : 82, ok ? p.N : 126);
+  mix = 1;                                  // no morph on first paint
+  from.set(pos); colFrom.set(col);
+  cloudGeo.attributes.aFrom.needsUpdate = true; cloudGeo.attributes.aColFrom.needsUpdate = true;
+  const d = fitTo;
+  camera.position.set(0.62, 0.38, 0.68).setLength(d);
+  controls.target.set(0, 0, 0);
+}
+
+// ---------- loop
+const axl = document.getElementById("axlab"), tmp = new THREE.Vector3(), cz = new THREE.Vector3();
+let last = performance.now();
+function animate(now) {
+  requestAnimationFrame(animate);
+  // the first rAF timestamp can predate the performance.now() taken at start: never let dt go negative
+  const dt = Math.min(0.1, Math.max(0, (now - last) / 1000)); last = now;
+  if (mix < 1) mix = reduce ? 1 : Math.min(1, mix + dt / 0.7);
+  cloudMat.uniforms.uMix.value = 1 - Math.pow(1 - mix, 3);
+  vol.setMix(1 - Math.pow(1 - mix, 3));
+  if (quality === "high") gov.tick(dt);
+  // ease the camera distance toward the size of the current nucleus
+  const dist = camera.position.distanceTo(controls.target);
+  if (fitTo && Math.abs(dist - fitTo) > 0.05) {
+    const k = reduce ? 1 : 1 - Math.exp(-dt / 0.35);
+    camera.position.sub(controls.target).multiplyScalar((dist + (fitTo - dist) * k) / dist).add(controls.target);
+  } else fitTo = 0;
+  controls.update();
+  cut.update(camera, controls.target);
+  stage3.update(camera);
+  camera.getWorldDirection(vol.u.uFwd.value);
+  cloudMat.uniforms.uPix.value = renderer.domElement.height / (2 * Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2));
+  cz.set(0, 0, 0).applyMatrix4(camera.matrixWorldInverse);
+  cloudMat.uniforms.uCz.value = cz.z;
+  axis.visible = S.view === "orbital";
+  cloudMat.uniforms.uFocus.value = camera.position.distanceTo(controls.target);
+  if (quality === "high") composer.render(); else renderer.render(scene, camera);
+  tmp.set(0, 1.75 * S.res.G.R, 0).project(camera);
+  const vis = axis.visible && tmp.z < 1 && Math.abs(tmp.x) < 1 && Math.abs(tmp.y) < 1;
+  axl.hidden = !vis;
+  if (vis) { axl.style.left = (tmp.x * 0.5 + 0.5) * innerWidth + "px"; axl.style.top = (-tmp.y * 0.5 + 0.5) * innerHeight + "px"; }
+}
+requestAnimationFrame(animate);
+</script>
+<script src="assets/glass.js"></script>
+</body>
+</html>
