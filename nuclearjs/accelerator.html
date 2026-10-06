@@ -2287,7 +2287,9 @@ function focusSection(g, tab) {
   S.tab = tab || u.tab; drawTab();
   const off = camera.position.clone().sub(controls.target).normalize();
   if (off.y < 0.35) { off.y = 0.55; off.normalize(); }
-  camGoal = { t: u.center.clone(), p: u.center.clone().addScaledVector(off, u.radius * 2.4 + 25) };
+  camGoal = u.focusView
+    ? { t: u.focusView.target.clone(), p: u.focusView.pos.clone() }
+    : { t: u.center.clone(), p: u.center.clone().addScaledVector(off, u.radius * 2.4 + 25) };
   controls.autoRotate = false;
 }
 

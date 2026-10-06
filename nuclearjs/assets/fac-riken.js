@@ -344,38 +344,113 @@
       const gSAM = A.section("SAMURAI", "end", [TS.at(26), TS.at(58)], 5);
       const samC = TS.at(39.6 - 11.3 + 2.2), samPit = [samC.x - 14.5, samC.z - 6.5, samC.x + 7.5, samC.z + 5];
       PITS.push([samPit[0], samPit[1], samPit[2], samPit[3], -2.55]);
+      const samRoutes = [];
       {
         stq(TS.at(5.0), TS.d, gSAM); stq(TS.at(10.0), TS.d, gSAM);
         fchamber(TS.at(24.7 - 11.3), TS.d, gSAM);                             // F12
         stq(samC.clone().addScaledVector(TS.d, -6.45), TS.d, gSAM);           // STQ25
         const F13 = TS.at(39.6 - 11.3); fchamber(F13, TS.d, gSAM);
         A.pipe([TS.p.clone(), F13], gSAM, 0.09);
-        const base = A.cyl(4.6, 0.2, K.base, 64); base.position.set(samC.x, -2.45, samC.z); gSAM.add(base);
-        const rail = new THREE.Mesh(new THREE.TorusGeometry(4.6, 0.06, 6, 64), M.steelDark); rail.rotation.x = PI / 2; rail.position.set(samC.x, -2.34, samC.z); gSAM.add(rail);
-        const mag = new THREE.Group(), rot = 30 * D2R;                         // set at 30 degrees (one of its settings)
-        mag.add(A.box(6.7, 1.5, 3.5, K.samurai, 0, 1.57, 0)); mag.add(A.box(6.7, 1.5, 3.5, K.samurai, 0, -1.57, 0));
-        for (const s of [-1, 1]) mag.add(A.box(1.3, 1.64, 3.5, K.samurai, s * 2.7, 0, 0));
-        for (const y of [0.62, -0.62]) { const p = A.cyl(1.0, 0.36, M.steelDark, 40); p.position.y = y; mag.add(p);
-          const co = new THREE.Mesh(new THREE.TorusGeometry(1.3, 0.16, 10, 40), M.copper); co.rotation.x = PI / 2; co.position.y = y * 1.15; mag.add(co); }
-        mag.add(A.box(1.4, 0.7, 1.0, M.steel, 1.6, 2.7, -0.6));                // cryostat turret
-        const ct = A.cyl(0.2, 0.8, M.steelDark, 12); ct.position.set(1.6, 3.4, -0.6); mag.add(ct);
+        // Open the near half of the upper assembly, as in the official overview cutaway [14].
+        // The lower yoke and both return legs retain the measured envelope; lifted parts are illustrative.
+        const base = A.cyl(4.6, 0.2, K.base, 96); base.position.set(samC.x, -2.45, samC.z); gSAM.add(base);
+        for (const r of [4.25, 4.6]) {
+          const rail = new THREE.Mesh(new THREE.TorusGeometry(r, 0.055, 8, 96), M.steelDark);
+          rail.rotation.x = PI / 2; rail.position.set(samC.x, -2.31, samC.z); gSAM.add(rail);
+        }
+        const mag = new THREE.Group(), rot = 30 * D2R;
+        mag.add(A.rbox(6.7, 1.5, 3.5, 0.06, K.samurai, 0, -1.57, 0));
+        mag.add(A.rbox(6.7, 1.5, 1.75, 0.06, K.samurai, 0, 3.87, 0.875));
+        for (const x of [-2.7, 2.7]) for (const z of [0.35, 1.4]) {
+          const tie = A.cyl(0.045, 2.3, M.steel, 12); tie.position.set(x, 1.97, z); mag.add(tie);
+        }
+        for (const side of [-1, 1]) {
+          mag.add(A.rbox(1.3, 1.64, 3.5, 0.04, K.samurai, side * 2.7, 0, 0));
+          mag.add(A.box(1.45, 0.14, 3.65, M.steelDark, side * 2.7, -2.23, 0));
+          for (const z of [-1.5, -0.75, 0, 0.75, 1.5]) {
+            const bolt = A.cyl(0.055, 0.045, M.steel, 8); bolt.position.set(side * 2.7, 4.65, z); mag.add(bolt);
+          }
+        }
+        // A 2 m pole diameter and an 0.8 m clear vertical gap. Coils are enclosed by cryostats.
+        mag.add(prism(ann(0, 0, 0, 1, 0, 2 * PI, 64), -0.8, -0.4, K.iron));
+        mag.add(prism(ann(0, 0, 0, 1, 0, PI, 32), 2.7, 3.1, K.iron));
+        for (const [y, end] of [[-0.65, 2 * PI], [2.95, PI]]) {
+          mag.add(prism(ann(0, 0, 1.45, 1.56, 0, end, 64), y - 0.22, y + 0.22, K.rf));
+          // Exposed winding edge of the cutaway, not bare copper on the real superconducting magnet.
+          mag.add(prism(ann(0, 0, 1.08, 1.45, 0, end, 64), y - 0.12, y + 0.12, M.copper));
+          for (let i = 0; i < 12; i++) {
+            const angle = end * (i + 0.5) / 12;
+            mag.add(A.box(0.065, 0.49, 0.065, M.steelDark, 1.52 * Math.cos(angle), y, 1.52 * Math.sin(angle)));
+          }
+        }
+        // Fan-shaped vacuum chamber, open roof to reveal the different exit trajectories.
+        const chamber = [[-0.35, -1.7], [0.35, -1.7], [2.05, 1.6], [-2.05, 1.6]];
+        mag.add(prism(chamber, -0.3, -0.24, M.yellow));
+        for (const x of [-1.98, 1.98]) mag.add(A.box(0.09, 0.48, 0.45, M.yellow, x, 0, 1.4));
+        for (let i = 0; i < 13; i++) mag.add(A.box(0.045, 0.045, 0.1, M.steel, -1.9 + i * 0.31, -0.21, 1.63));
+        mag.add(A.rbox(1.25, 0.5, 0.85, 0.06, K.rf, 1.6, 4.87, 0.6));
+        for (const x of [1.3, 1.9]) {
+          const turret = A.cyl(0.13, 0.8, K.rf, 20); turret.position.set(x, 5.42, 0.6); mag.add(turret);
+          const cap = A.cyl(0.2, 0.08, M.steelDark, 20); cap.position.set(x, 5.85, 0.6); mag.add(cap);
+        }
+        A.pipe([V3(1.3, 5.7, 0.6), V3(1.3, 6.2, 0.6), V3(2.45, 6.2, 0.6), V3(2.45, 5.0, 1.35)], mag, 0.045, K.rf);
+        // Rotation marks and bogies around the circular platform.
+        for (let i = 0; i < 24; i++) {
+          const a = i * PI / 12, mark = A.box(0.035, 0.025, i % 3 ? 0.18 : 0.32, M.yellow, 0, -2.33, 0);
+          mark.position.x = 4.4 * Math.cos(a); mark.position.z = 4.4 * Math.sin(a); mark.rotation.y = PI / 2 - a; mag.add(mark);
+        }
+        for (const x of [-2.7, 2.7]) for (const z of [-1.3, 1.3]) {
+          const wheel = A.cyl(0.15, 0.18, K.iron, 16); wheel.rotation.z = PI / 2; wheel.position.set(x, -2.25, z); mag.add(wheel);
+        }
         mag.position.copy(samC); mag.rotation.y = -Math.atan2(TS.d.z, TS.d.x) + PI / 2 + rot; gSAM.add(A.shadowy(mag));
-        // fragment arm (drift chambers and a hodoscope wall) along the bent direction, generic
-        const fd = dirv(Math.atan2(TS.d.z, TS.d.x) / D2R + 55);
-        const fp = samC.clone().addScaledVector(fd, 5.0);
-        gSAM.add(at(A.box(2.2, 1.2, 0.5, M.steel, 0, 0, 0), fp, fd)); gSAM.add(at(A.box(2.8, 1.4, 0.25, K.bar, 0, 0, 0), samC.clone().addScaledVector(fd, 7.2), fd));
-        standTo(gSAM, fp, -0.6, 1.0);
-        // NEBULA: two walls, each two layers of 30 bars of 12 x 12 x 180 cm, at zero degrees
-        for (const k of [0, 1]) for (const l of [0, 1]) {
-          const c = samC.clone().addScaledVector(TS.d, 10.5 + k * 1.3 + l * 0.14);
-          const wl = new THREE.Group();
-          for (let i = 0; i < 30; i++) wl.add(A.box(0.115, 1.8, 0.12, i % 2 ? K.bar : M.cable, -1.8 + 0.06 + i * 0.12, 0, 0));
-          at(wl, c, TS.d); gSAM.add(wl);
-          gSAM.add(at(A.box(3.7, -FLOOR - 0.9 - (floorAt(c.x, c.z) - FLOOR), 0.3, M.steelDark, 0, 0, 0), c.clone().setY((floorAt(c.x, c.z) - 0.9) / 2), TS.d));
+        // Three illustrative reaction-product paths. These are not a field-map tracking calculation.
+        const neutronMat = new THREE.MeshBasicMaterial({ color: "#78d9ff" });
+        const protonMat = new THREE.MeshBasicMaterial({ color: "#ff776f" });
+        const fragmentMat = new THREE.MeshBasicMaterial({ color: "#95df8d" });
+        const target = F13.clone().addScaledVector(TS.d, -0.5);
+        const foil = A.box(0.4, 0.6, 0.025, M.yellow); gSAM.add(at(foil, target, TS.d));
+        for (const [bend, material, reach] of [[0, neutronMat, 11.94], [55, fragmentMat, 7.8], [78, protonMat, 5.9]]) {
+          const fd = dirv(Math.atan2(TS.d.z, TS.d.x) / D2R + bend);
+          const end = samC.clone().addScaledVector(fd, reach);
+          const curve = new THREE.CubicBezierCurve3(target, samC.clone().addScaledVector(TS.d, -0.7), samC.clone().addScaledVector(fd, 2.5), end);
+          const pts = curve.getPoints(64); samRoutes.push({ pts, color: material.color.toArray() });
+          gSAM.add(new THREE.Mesh(new THREE.TubeGeometry(curve, 64, 0.025, 6, false), material));
+          if (!bend) continue;
+          // Open chamber frames, sensitive windows and individual scintillator paddles.
+          for (const [dist, width, height] of [[4.4, bend === 55 ? 2.2 : 1.4, 1.2], [reach, bend === 55 ? 2.8 : 1.8, 1.4]]) {
+            const det = new THREE.Group();
+            for (const x of [-width / 2, width / 2]) det.add(A.box(0.07, height + 0.14, 0.22, K.rf, x, 0, 0));
+            for (const y of [-height / 2, height / 2]) det.add(A.box(width, 0.07, 0.22, K.rf, 0, y, 0));
+            if (dist === reach) for (let i = 0; i < 16; i++) {
+              det.add(A.box(width / 16 - 0.012, height - 0.08, 0.09, i % 2 ? K.bar : K.iron, -width / 2 + (i + 0.5) * width / 16, 0, 0));
+              det.add(A.box(0.05, 0.16, 0.08, K.bar, -width / 2 + (i + 0.5) * width / 16, height / 2 + 0.1, 0));
+            }
+            else det.add(A.box(width - 0.1, height - 0.1, 0.015, M.glass));
+            for (const x of [-width / 2, width / 2]) det.add(A.box(0.09, 1.65, 0.15, M.steelDark, x, -1.45, 0));
+            at(det, samC.clone().addScaledVector(fd, dist), fd); gSAM.add(det);
+          }
+        }
+        // NEBULA: two walls, each two 30-bar layers (12 x 12 x 180 cm), with PMTs and veto planes.
+        for (const k of [0, 1]) {
+          const wall = new THREE.Group();
+          for (const l of [0, 1]) for (let i = 0; i < 30; i++) {
+            const x = -1.8 + 0.06 + i * 0.12, z = l * 0.14;
+            wall.add(A.box(0.115, 1.8, 0.12, i % 2 ? K.bar : K.iron, x, 0, z));
+            for (const sign of [-1, 1]) {
+              const pmt = A.cyl(0.04, 0.22, M.steelDark, 10); pmt.position.set(x, sign * 1.03, z); wall.add(pmt);
+              wall.add(A.box(0.05, 0.09, 0.07, K.rf, x, sign * 1.19, z));
+            }
+          }
+          for (let i = 0; i < 12; i++) wall.add(A.box(0.295, 1.9, 0.01, K.base, -1.65 + i * 0.3, 0, -0.18));
+          for (const y of [-1.3, 1.3]) wall.add(A.box(3.95, 0.09, 0.65, M.steelDark, 0, y, 0.06));
+          for (const x of [-1.94, 1.94]) wall.add(A.box(0.1, 2.75, 0.65, M.steelDark, x, 0, 0.06));
+          wall.add(A.box(4.0, 0.15, 0.9, K.base, 0, -1.38, 0.06));
+          at(wall, samC.clone().addScaledVector(TS.d, 10.5 + k * 1.3), TS.d); gSAM.add(wall);
         }
         people(gSAM, [[samC.x + 5, samC.z + 4.5, 2.2], [samC.x - 3, samC.z - 5, -0.4]]);
         // label on the magnet and its detectors (F12 to NEBULA), not on the floor beyond
         refit(gSAM, [TS.at(24.7 - 11.3), samC.clone().addScaledVector(TS.d, 12)], 3);
+        gSAM.userData.focusView = { target: samC.clone().add(V3(0, 1, 0)), pos: samC.clone().add(V3(20, 23, -12)) };
       }
 
       // ---- SHARAQ: high-resolution beam line from BigRIPS F6 [8], spectrometer SDQ-D1-Q3-D2 with D1 30 deg
@@ -629,13 +704,14 @@
       for (const [g, p] of [[gRRC, spRRC], [gFRC, spFRC], [gIRC, spIRC], [gSRC, spSRC]]) g.userData.orbit = p;
       const cascade = A.join([r2src], r2Line, [rrcIn], spRRC, [rrcOut], toFrc.slice(1), spFRC, transfer, spIRC, ircToSrc, spSRC, srcToF0);
       const riPath = A.join(bigripsPts, zdPts.slice(1));
-      const samPath = A.join([T.p.clone()], [TS.at(39.6 - 11.3 + 2.2), TS.at(39.6 - 11.3 + 12)]);
+      const samPath = [T.p.clone(), TS.at(39.6 - 11.3 - 0.5)];
       const r3Path = A.join(sharaqPts, injPts, ringPts, ringPts.slice(1));
       const shePath = A.join([V3(121, 0, ZL - 2.2), V3(117.5, 0, ZL), V3(66, 0, ZL)], tG.pts);
       const beams = [
         { pts: cascade, n: 72, speed: 0.022, color: U, size: 0.95 },
         { pts: riPath, n: 34, speed: 0.07, color: RI, size: 0.9 },
-        { pts: samPath, n: 10, speed: 0.09, color: RI, size: 0.85 },
+        { pts: samPath, n: 7, speed: 0.09, color: RI, size: 0.85 },
+        ...samRoutes.map((r) => ({ ...r, n: 3, speed: 0.14, size: 0.65 })),
         { pts: r3Path, n: 26, speed: 0.06, color: RI, size: 0.85 },
         { pts: shePath, n: 16, speed: 0.08, color: U, size: 0.9 },
       ];
@@ -664,7 +740,13 @@
         all transport-line quadrupoles are generic. Machine colours follow the facility's own chain diagram, not the paint.
         RIPS, GARIS-II, KISS, CRIB and GARIS-III are generic shapes at the right place in the chain (GARIS-III: two
         dipoles and three quadrupoles [10], order and angles not verified). The SAMURAI magnet is shown at a 30 degree
-        setting; the NEBULA walls (two walls of two 30-bar layers) and the fragment detectors are generic. The SHARAQ
+        setting, with the near half of the upper yoke, pole and cryostat cut away to expose the 0.8 m gap,
+        windings and fan-shaped vacuum chamber, following the official overview [14]. The upper assembly is
+        lifted by 2.3 m for visibility; this display separation is not part of the assembled magnet height. The copper winding edge is an
+        illustrative cutaway. Three coloured paths show neutrons (blue, straight), heavy fragments (green) and protons
+        (red); their curvatures and detector positions are illustrative, not field-map tracking or a fixed experiment
+        configuration. NEBULA has two walls of two 30-bar layers, with schematic photomultipliers, veto planes and frames.
+        Cryogenic services, fasteners and the rotation rail are schematic. The SHARAQ
         branch leaves BigRIPS at D6 [8, 1]; its branch dipoles are schematic. The Rare RI Ring is fed through SHARAQ and
         an injection line of five quadrupole doublets and one dipole [9]. The ZD MRTOF with its cryogenic gas cell
         (SLOWRI) sits behind F11 of ZeroDegree [11]. Not drawn: SCRIT (separate electron facility), PALIS at BigRIPS F2,
@@ -683,7 +765,8 @@
         [11] M. Rosenbusch et al., The new MRTOF mass spectrograph following the ZeroDegree spectrometer at RIKEN's RIBF
         facility, arXiv:2110.11507, Nucl. Instrum. Methods A 1047, 167824 (2023).
         [12] Y. Hirayama et al., Development of KEK isotope separation system, RIKEN Accel. Prog. Rep. 47 (2014).
-        [13] P. Craddock, Cyclotrons and FFAGs: from Nishina's pioneering work to RI-Beam Factory (RIKEN, 2010).</p>`;
+        [13] P. Craddock, Cyclotrons and FFAGs: from Nishina's pioneering work to RI-Beam Factory (RIKEN, 2010).
+        [14] <a href="https://www.nishina.riken.jp/ribf/SAMURAI/overview.html" target="_blank" rel="noopener">RIKEN, SAMURAI overview</a>, magnet cutaway and beam-line layout.</p>`;
 
       return { view: { target: [18, 0, 8], pos: [-95, 165, 175] }, beams, note, fog: [330, 1100] };
     },
