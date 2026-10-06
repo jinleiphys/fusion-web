@@ -127,6 +127,8 @@ table.fac sup{font-size:.7em}
 #sceneTools button:hover,#sceneTools button[aria-pressed="true"]{color:#f2c14e;background:#f2c14e12}
 body.scene-only .panel,body.scene-only .hint{visibility:hidden;pointer-events:none}
 body.scene-only #stamp{opacity:.65}
+body.apparatus-view #ctl,body.apparatus-view #side,body.apparatus-view #stamp,body.apparatus-view .hint,body.apparatus-view #sceneOnly{display:none}
+body.apparatus-view #sceneTools{top:calc(18px + env(safe-area-inset-top,0px));left:50%;right:auto;transform:translateX(-50%)}
 #hoverNote{position:fixed;z-index:3;pointer-events:none;padding:8px 11px;background:#101621ed;border:1px solid #f2c14e55;border-radius:8px;font:11px var(--mono);color:#f2c14e;max-width:240px;box-shadow:0 8px 24px #0005}
 @media (prefers-reduced-motion:reduce){.chips button,.seg button,.axlab{transition:none}}
 @media (max-width:900px){
@@ -359,6 +361,8 @@ body.scene-only #stamp{opacity:.65}
 
 <div id="sceneTools" role="group" aria-label="Scene display">
   <button id="sceneOnly" aria-pressed="false" title="Hide panels (H)">◫ hide panels</button>
+  <button id="sceneApparatus" hidden>SAMURAI</button>
+  <button id="sceneFacility" hidden>← facility</button>
   <button id="sceneLabels" aria-pressed="true" title="Toggle section labels">labels</button>
 </div>
 <div id="hoverNote" hidden></div>
@@ -1218,7 +1222,7 @@ const BLD = {};
   // yellow safety line on the floor along the inner walls
   for (const z of [z1 - 1.6, z0 + 1.6]) { const s = box(x1 - x0 - 4, 0.012, 0.1, M.yellow, (x0 + x1) / 2, FLOOR + 0.006, z); s.receiveShadow = true; gBld.add(s); }
   // ground around the building
-  const gr = new THREE.Mesh(new THREE.PlaneGeometry(3000, 3000), M.earth); gr.rotation.x = -Math.PI / 2; gr.position.y = FLOOR - 0.41; gr.receiveShadow = true; scene.add(gr);
+  const gr = new THREE.Mesh(new THREE.PlaneGeometry(3000, 3000), M.earth); gr.rotation.x = -Math.PI / 2; gr.position.y = FLOOR - 0.41; gr.receiveShadow = true; gr.name = "facility-ground"; scene.add(gr);
   // the key light follows the linac footprint
   const cx = (x0 + x1) / 2, cz = (z0 + z1) / 2, span = Math.max(x1 - x0, z1 - z0) * 0.62;
   sun.position.set(cx - 90, 160, cz + 120); sun.target.position.set(cx, 0, cz);
@@ -2278,9 +2282,26 @@ function drawTab() {
 }
 
 // ---------- camera focus on a section
-let camGoal = null;
+let camGoal = null, detailSection = null, detailVisibility = [];
+function setDetailSection(g) {
+  for (const [part, visible] of detailVisibility) part.visible = visible;
+  detailSection = g;
+  detailVisibility = g ? g.parent.children.map(part => [part, part.visible]) : [];
+  if (g) for (const [part] of detailVisibility) part.visible = part === g;
+  for (const section of SECTIONS) for (const label of section.userData.detailLabels || []) label.visible = section === g && showLabels;
+  bunches.visible = !g;
+  // The normal pass of GTAO treats the annotation sprites as opaque rectangles.
+  gtao.enabled = !g;
+  scene.getObjectByName("facility-ground").visible = !g;
+  document.body.classList.toggle("apparatus-view", !!g);
+  document.getElementById("sceneFacility").hidden = !g;
+  document.getElementById("sceneApparatus").hidden = !!g || CUR_FAC !== "riken";
+}
+document.getElementById("sceneApparatus").addEventListener("click", () => focusSection(SECTIONS.find(g => g.userData.fac === "riken" && g.userData.name === "SAMURAI")));
+document.getElementById("sceneFacility").addEventListener("click", () => setFacility(CUR_FAC));
 function focusSection(g, tab) {
   const u = g.userData;
+  setDetailSection(u.focusView?.isolate ? g : null);
   if (u.key) S.endKey = u.key;
   if (u.cyc) { const i = CYCS.findIndex((c) => c.id === u.cyc); if (i >= 0) S.cyc = i; }
   if (u.fac !== "frib") S.area = u.name;
@@ -2290,6 +2311,10 @@ function focusSection(g, tab) {
   camGoal = u.focusView
     ? { t: u.focusView.target.clone(), p: u.focusView.pos.clone() }
     : { t: u.center.clone(), p: u.center.clone().addScaledVector(off, u.radius * 2.4 + 25) };
+  if (u.focusView?.isolate) {
+    const scale = Math.max(1, 1.35 / camera.aspect);
+    camGoal.p.sub(camGoal.t).multiplyScalar(scale).add(camGoal.t);
+  }
   controls.autoRotate = false;
 }
 
@@ -2359,7 +2384,7 @@ renderer.domElement.addEventListener("pointerup", (e) => {
   if (!start || Math.hypot(e.clientX - start[0], e.clientY - start[1]) > 5) return;
   mouse.set(e.clientX / innerWidth * 2 - 1, -e.clientY / innerHeight * 2 + 1);
   ray.setFromCamera(mouse, camera);
-  const hit = ray.intersectObjects(pickables.filter((p) => p.userData.fac === CUR_FAC), false)[0];
+  const hit = ray.intersectObjects(pickables.filter((p) => p.userData.fac === CUR_FAC && p.parent.visible), false)[0];
   if (hit) focusSection(SECTIONS.find((g) => g.userData === hit.object.userData));
 });
 
@@ -2447,7 +2472,9 @@ function togglePanels() {
   sceneOnlyButton.textContent = hidden ? "◫ show panels" : "◫ hide panels";
 }
 sceneOnlyButton.addEventListener("click", togglePanels);
-sceneLabelsButton.addEventListener("click", () => { showLabels = !showLabels; sceneLabelsButton.setAttribute("aria-pressed", String(showLabels)); });
+sceneLabelsButton.addEventListener("click", () => { showLabels = !showLabels; sceneLabelsButton.setAttribute("aria-pressed", String(showLabels));
+  if (detailSection) for (const label of detailSection.userData.detailLabels || []) label.visible = showLabels;
+});
 addEventListener("keydown", (e) => {
   if (typing(e.target) || e.metaKey || e.ctrlKey || e.altKey) return;
   const k = /^Key[WASDQEH]$/.test(e.code) ? e.code.slice(3).toLowerCase() : e.key.toLowerCase();
@@ -2487,7 +2514,9 @@ function navigateCamera(dt) {
 const FRIB_NOTE = document.getElementById("facNote").innerHTML;
 function setFacility(key, keepTab) {          // keepTab: a tab named in the hash wins over the facility's default
   if (!FACS[key] && !buildFacility(key)) key = "frib";
+  setDetailSection(null);
   CUR_FAC = key; S.area = null;
+  document.getElementById("sceneApparatus").hidden = key !== "riken";
   for (const k in FACS) FACS[k].root.visible = k === key;
   if (key === "frib") { sun.position.copy(FRIB_SUN.p); sun.target.position.copy(FRIB_SUN.t); const sp = FRIB_SUN.s; Object.assign(sun.shadow.camera, { left: -sp, right: sp, top: sp, bottom: -sp }); sun.shadow.camera.updateProjectionMatrix(); }
   else if (FACS[key].sun) shadowArea(...FACS[key].sun);
@@ -2577,7 +2606,7 @@ function animate(now) {
     const candidates = [];
     for (const L of LAB) {
       L.d.style.display = "none";
-      if (!showLabels || innerWidth <= 900 || L.g.userData.fac !== CUR_FAC) continue;
+      if (!showLabels || detailSection || innerWidth <= 900 || !L.g.visible || L.g.userData.fac !== CUR_FAC) continue;
       tmp2.copy(L.g.userData.center); tmp2.y += 7;
       const distance = camera.position.distanceToSquared(tmp2); tmp2.project(camera);
       if (tmp2.z < -1 || tmp2.z > 1 || Math.abs(tmp2.x) > 1 || Math.abs(tmp2.y) > 1) continue;
@@ -2593,7 +2622,7 @@ function animate(now) {
     }
     if (pointerAt && !downAt && !walk && !navKeys.size) {
       mouse.set(pointerAt.x / innerWidth * 2 - 1, -pointerAt.y / innerHeight * 2 + 1); ray.setFromCamera(mouse, camera);
-      const hit = ray.intersectObjects(pickables.filter((p) => p.userData.fac === CUR_FAC), false)[0];
+      const hit = ray.intersectObjects(pickables.filter((p) => p.userData.fac === CUR_FAC && p.parent.visible), false)[0];
       renderer.domElement.style.cursor = hit ? "pointer" : "grab"; hoverNote.hidden = !hit;
       if (hit) {
         hoverNote.textContent = hit.object.userData.name;
