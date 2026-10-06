@@ -253,7 +253,7 @@ const SKY = WaveStage.skyGLSL(new THREE.Vector3(-0.4, 0.85, 0.45));
 scene.environment = WaveStage.environment(renderer, SKY);
 const GROUND = new THREE.Color("#05080e");
 scene.background = GROUND.clone();
-scene.fog = new THREE.Fog("#05080e", 700, 1500);
+scene.fog = new THREE.Fog("#04101f", 420, 1500);
 const controls = new OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true; controls.dampingFactor = 0.08;
 controls.minDistance = 60; controls.maxDistance = 1200;
@@ -317,24 +317,87 @@ hits.count = 0; hits.instanceMatrix.setUsage(THREE.DynamicDrawUsage); hits.userD
 }
 // ice surface, IceTop tanks (two per station, 10 m apart, on the first 81 positions), the dust layer, the rock
 const RX = 95;
+let ICE_MAT = null, SPECKS = null;
 {
-  const surf = new THREE.Mesh(new THREE.CircleGeometry(RX * 1.15, 96).rotateX(-Math.PI / 2), new THREE.MeshStandardMaterial({ color: "#c9d4e2", roughness: 0.9, metalness: 0, transparent: true, opacity: 0.16, depthWrite: false }));
-  surf.position.y = yOfDepth(0); scene.add(surf);
+  // the ice: a column from the surface to the rock, drawn as a volume. Each pixel marches its view ray through the
+  // column (analytic ray-cylinder intersection) and adds the light the ice scatters towards the camera: whiter firn
+  // and bubbly ice near the top, clear blue ice below, the brown dust layer, a brighter rim where the column's wall is
+  // seen at a grazing angle. Drawn first and additively, so the sensors and the event sit inside it.
+  const RI = RX * 1.15, yTop = yOfDepth(0), yBot = yOfDepth(D.geo.iceThick * 1000);
+  ICE_MAT = new THREE.ShaderMaterial({
+    uniforms: { uR: { value: RI }, uTop: { value: yTop }, uBot: { value: yBot }, uScale: { value: U }, uD0: { value: D.geo.dust[0] }, uD1: { value: D.geo.dust[1] }, uGain: { value: 1.0 } },
+    vertexShader: `varying vec3 vW; void main() { vec4 w = modelMatrix * vec4(position, 1.0); vW = w.xyz; gl_Position = projectionMatrix * viewMatrix * w; }`,
+    fragmentShader: `
+      uniform float uR, uTop, uBot, uScale, uD0, uD1, uGain; varying vec3 vW;
+      void main() {
+        vec3 ro = cameraPosition, rd = normalize(vW - ro);
+        float a = dot(rd.xz, rd.xz), b = 2.0 * dot(ro.xz, rd.xz), c = dot(ro.xz, ro.xz) - uR * uR;
+        float disc = b * b - 4.0 * a * c;
+        if (disc < 0.0 || a < 1e-9) discard;
+        float sq = sqrt(disc), t0 = (-b - sq) / (2.0 * a), t1 = (-b + sq) / (2.0 * a);
+        float ya = (uBot - ro.y) / rd.y, yb = (uTop - ro.y) / rd.y;
+        float tn = max(max(t0, min(ya, yb)), 0.0), tf = min(t1, max(ya, yb));
+        if (tf <= tn) discard;
+        vec3 col = vec3(0.0); float T = 1.0; const int N = 28; float dt = (tf - tn) / float(N);
+        for (int i = 0; i < N; i++) {
+          vec3 p = ro + rd * (tn + (float(i) + 0.5) * dt);
+          float depth = (uTop - p.y) * uScale;
+          float bub = 1.0 - smoothstep(150.0, 1400.0, depth);             // firn and bubbly ice above about 1.4 km
+          float dust = smoothstep(uD0 - 60.0, uD0, depth) * (1.0 - smoothstep(uD1, uD1 + 60.0, depth));
+          float deep = smoothstep(2500.0, 2800.0, depth);
+          vec3 cc = mix(vec3(0.012, 0.045, 0.110), vec3(0.050, 0.120, 0.190), bub);
+          cc = mix(cc, vec3(0.020, 0.013, 0.007), 0.9 * dust);           // dust absorbs: a darker, browner band
+          cc = mix(cc, vec3(0.012, 0.030, 0.060), deep);
+          float r = length(p.xz) / uR;
+          cc *= 1.0 + 0.7 * smoothstep(0.85, 1.0, r);
+          float k = 0.0040 * (1.0 + 2.5 * bub + 7.0 * dust);
+          float w = 1.0 - exp(-k * dt);
+          col += T * w * cc; T *= 1.0 - w;
+        }
+        gl_FragColor = vec4(col * 1.6 * uGain, 1.0);
+      }`,
+    side: THREE.BackSide, blending: THREE.AdditiveBlending, depthWrite: false, transparent: false,
+  });
+  const iceVol = new THREE.Mesh(new THREE.CylinderGeometry(RI, RI, yTop - yBot, 96, 1, false), ICE_MAT);
+  iceVol.position.y = (yTop + yBot) / 2; iceVol.renderOrder = -10; iceVol.frustumCulled = false; iceVol.userData.noAO = true;
+  scene.add(iceVol);
+  // the wall of the column: a faint glassy rim where it is seen edge-on
+  const rim = new THREE.Mesh(new THREE.CylinderGeometry(RI, RI, yTop - yBot, 96, 1, true), new THREE.ShaderMaterial({
+    vertexShader: `varying vec3 vN, vV; void main() { vec4 w = modelMatrix * vec4(position, 1.0); vN = normalize(mat3(modelMatrix) * normal); vV = normalize(cameraPosition - w.xyz); gl_Position = projectionMatrix * viewMatrix * w; }`,
+    fragmentShader: `varying vec3 vN, vV; void main() { float f = pow(1.0 - abs(dot(normalize(vN), normalize(vV))), 4.0); gl_FragColor = vec4(vec3(0.35, 0.62, 0.85) * f * 0.55, 1.0); }`,
+    side: THREE.FrontSide, blending: THREE.AdditiveBlending, depthWrite: false, transparent: true }));
+  rim.position.y = iceVol.position.y; rim.userData.noAO = true; scene.add(rim);
+  // the snow surface (seen from above) and the rock below (seen from above through the ice)
+  const snowTex = WaveStage.noiseTexture(256, 24, 0.75, 1.0, 11);
+  const surf = new THREE.Mesh(new THREE.CircleGeometry(RI, 96).rotateX(-Math.PI / 2), new THREE.MeshStandardMaterial({ color: "#7d8a9b", roughness: 0.95, roughnessMap: snowTex, bumpMap: snowTex, bumpScale: 0.6, metalness: 0, envMapIntensity: 0.25 }));
+  surf.position.y = yTop; scene.add(surf);
+  const surfEdge = new THREE.Mesh(new THREE.RingGeometry(RI - 0.4, RI + 0.4, 96).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: "#5f7d99", side: THREE.DoubleSide }));
+  surfEdge.position.y = yTop + 0.02; scene.add(surfEdge);
   const tank = new THREE.CylinderGeometry(0.93, 0.93, 0.6, 20), tm = new THREE.MeshStandardMaterial({ color: "#d9dee6", roughness: 0.6 });
   const tanks = new THREE.InstancedMesh(tank, tm, D.geo.icetop.tanks), m4 = new THREE.Matrix4();
   for (let k = 0; k < D.geo.icetop.stations; k++) {
     const s = STR[k], h = D.geo.icetop.sep / U / 2;
-    m4.makeTranslation(s.x - h, yOfDepth(0) + 0.3, s.z + 1.5); tanks.setMatrixAt(2 * k, m4);
-    m4.makeTranslation(s.x + h, yOfDepth(0) + 0.3, s.z + 1.5); tanks.setMatrixAt(2 * k + 1, m4);
+    m4.makeTranslation(s.x - h, yTop + 0.3, s.z + 1.5); tanks.setMatrixAt(2 * k, m4);
+    m4.makeTranslation(s.x + h, yTop + 0.3, s.z + 1.5); tanks.setMatrixAt(2 * k + 1, m4);
   }
   scene.add(tanks);
-  const dust = new THREE.Mesh(new THREE.CylinderGeometry(RX, RX, (D.geo.dust[1] - D.geo.dust[0]) / U, 96, 1, true), new THREE.MeshBasicMaterial({ color: "#8a6a3a", transparent: true, opacity: 0.12, side: THREE.DoubleSide, depthWrite: false }));
-  dust.position.y = yOfDepth((D.geo.dust[0] + D.geo.dust[1]) / 2); scene.add(dust);
-  const rock = new THREE.Mesh(new THREE.CircleGeometry(RX * 1.15, 96).rotateX(-Math.PI / 2), new THREE.MeshStandardMaterial({ color: "#2a221d", roughness: 1, metalness: 0, transparent: true, opacity: 0.55, depthWrite: false }));
-  rock.position.y = yOfDepth(D.geo.iceThick * 1000); scene.add(rock);
-  // faint outline of the ice column
-  const edge = new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.CylinderGeometry(RX * 1.15, RX * 1.15, D.geo.iceThick * 1000 / U, 48, 1, true)), new THREE.LineBasicMaterial({ color: "#1d2a3e", transparent: true, opacity: 0.35 }));
-  edge.position.y = yOfDepth(D.geo.iceThick * 500); scene.add(edge);
+  const rock = new THREE.Mesh(new THREE.CircleGeometry(RI, 96).rotateX(-Math.PI / 2), new THREE.MeshStandardMaterial({ color: "#2b231d", roughness: 1, metalness: 0, roughnessMap: WaveStage.noiseTexture(256, 10, 0.6, 1.0, 3) }));
+  rock.position.y = yBot; scene.add(rock);
+  // specks in the ice: air bubbles near the top, dust in the dust layer, a few everywhere; they drift very slowly
+  const nB = 3500, pos = new Float32Array(nB * 3), colA = new Float32Array(nB * 3);
+  let sd = 12345; const rr = () => (sd = (sd * 16807) % 2147483647) / 2147483647;
+  for (let i = 0; i < nB; i++) {
+    const kind = rr(), ang = 2 * Math.PI * rr(), rad = RI * Math.sqrt(rr()) * 0.985;
+    let depth, c;
+    if (kind < 0.45) { depth = 1400 * Math.pow(rr(), 1.6); c = [0.75, 0.88, 1.0]; }
+    else if (kind < 0.7) { depth = D.geo.dust[0] - 30 + (D.geo.dust[1] - D.geo.dust[0] + 60) * rr(); c = [0.85, 0.62, 0.38]; }
+    else { depth = D.geo.iceThick * 1000 * rr(); c = [0.45, 0.65, 0.9]; }
+    pos.set([rad * Math.cos(ang), yOfDepth(depth), rad * Math.sin(ang)], 3 * i); colA.set(c, 3 * i);
+  }
+  const bg = new THREE.BufferGeometry(); bg.setAttribute("position", new THREE.BufferAttribute(pos, 3)); bg.setAttribute("color", new THREE.BufferAttribute(colA, 3));
+  SPECKS = new THREE.Points(bg, new THREE.PointsMaterial({ size: 0.9, sizeAttenuation: true, vertexColors: true, transparent: true, opacity: 0.55, depthWrite: false, blending: THREE.AdditiveBlending,
+    map: WaveStage.radialTexture([[0, 1], [0.35, 0.45], [1, 0]]) }));
+  SPECKS.userData.noAO = true; scene.add(SPECKS);
 }
 // event objects
 const nuLine = new THREE.Line(new THREE.BufferGeometry(), new THREE.LineDashedMaterial({ color: "#c8b8ff", dashSize: 4, gapSize: 3, transparent: true, opacity: 0.7 }));
@@ -750,7 +813,7 @@ function staticTexts() {
   const P = NO.NO;
   document.getElementById("flnote").innerHTML = `Open circles: flavour at the source; dots: at Earth after oscillations averaged over the astronomical distance, with NuFIT 6.0 best fits (sin²θ₁₂ = ${P.s12.bf}, sin²θ₂₃ = ${P.s23.bf}, sin²θ₁₃ = ${P.s13.bf}, δ<sub>CP</sub> = ${P.dcp.bf}° for normal ordering). Cloud: random points inside the one-dimensional 3σ ranges with δ<sub>CP</sub> free, a scan rather than a confidence region. A pion-decay source arrives as nearly equal flavours; a neutron-decay source keeps an electron-flavour excess. Long tracks come mainly from ν<sub>μ</sub> charged-current interactions (and τ decays to muons); everything else is a shower.`;
   document.getElementById("fxnote").innerHTML = `IceCube's 9.5-year muon-neutrino fit: Φ = ${D.astro.phi0}<sup>+${D.astro.dphi[1]}</sup><sub>−${D.astro.dphi[0]}</sub> ×10⁻¹⁸ (E/100 TeV)<sup>−${D.astro.gamma}±${D.astro.dgamma}</sup> GeV⁻¹ cm⁻² s⁻¹ sr⁻¹ per flavour (ν + ν̄), solid where the data constrain it (${fE(D.astro.E1)} to ${fE(D.astro.E2)}), band the envelope of the one-sigma box (correlations ignored). The rate assumes ν : ν̄ = 1 : 1, extends the power law up to ${sci(D.xs.E[D.xs.E.length - 1])} GeV (the end of the cross-section table) and counts interactions, not detected events.`;
-  document.getElementById("drawn").textContent = `Drawn: ${DOMS.length} sensors (enlarged ${Math.round(2 * DOM_R * U / (D.geo.domInch * 0.0254))} times; a sensor is a ${D.geo.domInch}-inch glass sphere) on ${STR.length} strings, IceTop's ${D.geo.icetop.tanks} tanks, the dust layer at ${D.geo.dust[0]} to ${D.geo.dust[1]} m and the rock at ${D.geo.iceThick} km. The footprint is a regular hexagon here; the real one is irregular. Colour of a lit sensor: arrival time, red first; size: photo-electrons.`;
+  document.getElementById("drawn").textContent = `Drawn: ${DOMS.length} sensors (enlarged ${Math.round(2 * DOM_R * U / (D.geo.domInch * 0.0254))} times; a sensor is a ${D.geo.domInch}-inch glass sphere) on ${STR.length} strings, IceTop's ${D.geo.icetop.tanks} tanks, the dust layer at ${D.geo.dust[0]} to ${D.geo.dust[1]} m and the rock at ${D.geo.iceThick} km. The ice is drawn as a glowing volume, whiter where it is full of air bubbles near the top, browner and darker in the dust layer (colours schematic). The footprint is a regular hexagon here; the real one is irregular. Colour of a lit sensor: arrival time, red first; size: photo-electrons.`;
   document.getElementById("model").innerHTML = `
     <p><b>Cross sections.</b> σ(E) interpolated in log-log in the table of Cooper-Sarkar, Mertsch and Sarkar (isoscalar target, CC and NC, ν and ν̄). Glashow resonance per electron: σ = (24π/M<sub>W</sub>²) B(W→eν) sΓ<sub>W</sub>²/[(s − M<sub>W</sub>²)² + M<sub>W</sub>²Γ<sub>W</sub>²] (ħc)², s = 2m<sub>e</sub>E + m<sub>e</sub>²; 24π = 16π(2J+1)/[(2s<sub>ν</sub>+1)(2s<sub>e</sub>+1)] with one neutrino helicity. PDG 2024: M<sub>W</sub> = ${D.W.M} GeV, Γ<sub>W</sub> = ${D.W.G} GeV, B(W→eν) = ${(100 * D.W.Bev).toFixed(2)}%.</p>
     <p><b>Earth.</b> PREM density (TauP node file, linear between nodes, no ocean) below ${D.geo.iceThick} km of ice of ${D.ice.rho} g cm⁻³; detector at ${D.det.toFixed(2)} km depth. Column X(cos z) = ∫ρ dl by Simpson's rule (4000 steps), tabulated at ${XG.c.length} values of cos z (uniform, denser near the horizon and around every direction whose chord grazes a density jump; within 0.3% of the direct integral). Survival exp(−N<sub>A</sub> X σ<sub>tot</sub>); for ν̄<sub>e</sub> the resonance adds N<sub>A</sub> X ⟨Z/A⟩ σ<sub>W</sub> with ⟨Z/A⟩ = ${D.ZA} assumed.</p>
@@ -796,6 +859,7 @@ function animate(now) {
   requestAnimationFrame(animate);
   const dt = Math.min(0.1, Math.max(0, (now - last) / 1000)); last = now;
   controls.update(); updateEvent(dt);
+  if (SPECKS) SPECKS.rotation.y += dt * 0.004;
   if (AN.ev && AN.t > AN.IN + AN.PLAY + 3.5) newEvent(true);
   if (quality === "high") composer.render(); else renderer.render(scene, camera);
   drawLabels();
