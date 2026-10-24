@@ -24,7 +24,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>FUSION · 核物理科研智能体平台 · Nuclear-Physics Research Agent Platform</title>
-<meta name="description" content="FUSION: Framework for Unified Scientific Intelligence in Open Nuclear physics. 内置 26 个技能和 61,167 页离线核物理文献知识库，覆盖反应、结构、裂变、核天体与重离子输运。">
+<meta name="description" content="FUSION: Framework for Unified Scientific Intelligence in Open Nuclear physics. 以插件形式装进你常用的 agent，带 28 个技能和 61,167 页离线核物理文献知识库，覆盖反应、结构、裂变、核天体与重离子输运。">
 <link rel="icon" href="assets/logo-nav.png">
 <style>
 /* ================= tokens ================= */
@@ -751,7 +751,7 @@ footer { border-top: 1px solid var(--hairline); padding: 44px 0 60px; }
 <canvas id="sky" aria-hidden="true"></canvas>
 
 <div class="beta-bar">
-  <span class="zh"><b>测试版 v0.1.0</b> · 作者已用于日常研究，尚无外部用户完成测试 · <a href="https://github.com/jinleiphys/FUSION/issues" target="_blank" rel="noopener">报告问题</a></span><span class="en"><b>Beta v0.1.0</b> · used daily by its author, but not yet tested by other users · <a href="https://github.com/jinleiphys/FUSION/issues" target="_blank" rel="noopener">Report an issue</a></span>
+  <span class="zh"><b>测试版 v0.3.0</b> · 作者已用于日常研究，尚无外部用户完成测试 · <a href="https://github.com/jinleiphys/FUSION/issues" target="_blank" rel="noopener">报告问题</a></span><span class="en"><b>Beta v0.3.0</b> · used daily by its author, but not yet tested by other users · <a href="https://github.com/jinleiphys/FUSION/issues" target="_blank" rel="noopener">Report an issue</a></span>
 </div>
 <nav class="glass glass-bar" data-glass data-glass-bevel="16" data-glass-scale="30">
   <div class="nav-in">
@@ -804,7 +804,7 @@ footer { border-top: 1px solid var(--hairline); padding: 44px 0 60px; }
             <span class="zh">了解三层知识库</span><span class="en">See the knowledge base</span> →
           </a>
           <a class="cta cta-ghost glass" href="#bench">
-            <span class="zh">26 个技能</span><span class="en">26 skills</span>
+            <span class="zh">28 个技能</span><span class="en">28 skills</span>
           </a>
           <a class="cta cta-ghost glass" href="https://github.com/jinleiphys/FUSION" target="_blank" rel="noopener">
             <span class="zh">查看源码</span><span class="en">View source</span>
@@ -835,8 +835,8 @@ footer { border-top: 1px solid var(--hairline); padding: 44px 0 60px; }
         <span class="en">One platform, three layers</span>
       </h2>
       <p class="sec-lede">
-        <span class="zh">底层是 <a href="https://github.com/anomalyco/opencode" target="_blank" rel="noopener">opencode</a> 的品牌分叉（MIT，每周由 CI 重基上游），中间放核物理技能和知识库，最上层挂载用户自己的文献笔记、研究档案与密钥。</span>
-        <span class="en">The base is a rebrand fork of <a href="https://github.com/anomalyco/opencode" target="_blank" rel="noopener">opencode</a> (MIT, rebased onto upstream by weekly CI). Nuclear-physics skills and the corpus form the middle layer. Users mount their own notes, research profiles, and credentials on top.</span>
+        <span class="zh">FUSION 不自带 agent。底层就是你已经在用的 agent（Claude Code、Codex、Antigravity、Gemini CLI 或 opencode），FUSION 作为插件装进去；中间放核物理技能和知识库，最上层挂载你自己的文献笔记、研究档案与密钥。</span>
+        <span class="en">FUSION brings no agent of its own. The base is the agent you already use (Claude Code, Codex, Antigravity, Gemini CLI or opencode), and FUSION installs into it as a plugin. Nuclear-physics skills and the corpus form the middle layer. Users mount their own notes, research profiles, and credentials on top.</span>
       </p>
     </div>
     <div class="def-grid">
@@ -857,12 +857,12 @@ footer { border-top: 1px solid var(--hairline); padding: 44px 0 60px; }
         <div class="layer layer-core glass" data-glass data-glass-bevel="27" data-glass-scale="54">
           <span class="tag"><span class="zh">核物理定制层</span><span class="en">Nuclear-physics layer</span></span>
           <h3><span class="zh">程序技能 + 领域知识库 + 科研工作流</span><span class="en">Code skills + domain knowledge base + research workflows</span></h3>
-          <p><span class="zh">仓库内共有 26 个技能：20 个负责具体程序，SFRESCO 用于拟合，EXFOR 获取实验数据，<code>kb-search</code> 检索离线知识库，<code>literature-wiki</code> 和 <code>research-profile</code> 维护个人研究 wiki，<code>fusion-setup</code> 负责首次配置。知识库的 61,167 个页面都能离线浏览。</span><span class="en">The repository ships 26 skills: 20 for specific codes, plus SFRESCO fitting, EXFOR data retrieval, offline knowledge-base search, two personal research-wiki tools, and first-run setup. All 61,167 knowledge-base pages can be browsed offline.</span></p>
+          <p><span class="zh">插件共有 28 个技能：20 个负责具体程序，<code>band</code> 驱动 BAND 贝叶斯不确定度框架（rose、surmise、Taweret），SFRESCO 用于拟合，EXFOR 获取实验数据，<code>kb-search</code> 检索离线知识库，<code>literature-search</code> 联网核对引用，<code>literature-wiki</code> 和 <code>research-profile</code> 维护个人研究 wiki，<code>fusion-setup</code> 负责首次配置。知识库共 61,167 页，第一次用到时下载一次，之后离线浏览。</span><span class="en">The plugin carries 28 skills: 20 for specific codes, the BAND Bayesian-UQ framework (rose, surmise, Taweret), SFRESCO fitting, EXFOR data retrieval, offline knowledge-base search, live citation checking, two personal research-wiki tools, and first-run setup. The 61,167-page knowledge base is downloaded once, on first use, and then read offline.</span></p>
         </div>
         <div class="layer glass" data-glass data-glass-bevel="27" data-glass-scale="54">
-          <span class="tag"><span class="zh">引擎 · opencode 品牌分叉</span><span class="en">Engine · opencode rebrand fork</span></span>
-          <h3><span class="zh">只改品牌，不碰功能代码</span><span class="en">Brand patch only, functional code untouched</span></h3>
-          <p><span class="zh">CI 每周自动重基上游，可接入 DeepSeek、Qwen、GLM、Claude 和 GPT。</span><span class="en">Weekly CI rebases the fork onto upstream. DeepSeek, Qwen, GLM, Claude, and GPT are supported.</span></p>
+          <span class="tag"><span class="zh">你的 agent · 不属于 FUSION</span><span class="en">Your agent · not part of FUSION</span></span>
+          <h3><span class="zh">Claude Code、Codex、Antigravity、Gemini CLI、opencode</span><span class="en">Claude Code, Codex, Antigravity, Gemini CLI, opencode</span></h3>
+          <p><span class="zh">FUSION 以插件形式装进去；模型由 agent 自己接入，DeepSeek、Qwen、GLM、Claude、GPT 都可以。</span><span class="en">FUSION installs into it as a plugin; the agent brings the model, whether DeepSeek, Qwen, GLM, Claude or GPT.</span></p>
         </div>
         <p class="layer-note">↑ <span class="zh">上层依赖下层，越往上越私密</span><span class="en">each layer builds on the one below; privacy increases upward</span></p>
       </div>
@@ -1503,33 +1503,31 @@ decides from these lines whether to read on.</span></span>
     <div class="rv" style="text-align:center">
       <p class="eyebrow"><span class="zh">开始使用 · Get started</span><span class="en">Get started</span></p>
       <h2>
-        <span class="zh">三步，大约五分钟</span>
-        <span class="en">Three steps, about five minutes</span>
+        <span class="zh">两条命令，装进你的 agent</span>
+        <span class="en">Two commands, into the agent you already use</span>
       </h2>
       <p class="sec-lede" style="margin-left:auto;margin-right:auto">
-        <span class="zh">不用提前安装核物理程序。第一次调用时，FUSION 会自行下载并编译。下面的命令已经在 macOS 和 Linux 上跑过。</span>
-        <span class="en">No nuclear-physics code needs to be installed in advance. FUSION downloads and builds a code when it is first used. The commands below have been run on macOS and Linux.</span>
+        <span class="zh">FUSION 是插件，不是新程序。不用提前安装核物理程序，第一次调用时 FUSION 会自行下载并编译；文献库也是第一次用到时才下载。</span>
+        <span class="en">FUSION is a plugin, not a new program. No nuclear-physics code needs to be installed in advance: FUSION downloads and builds a code when it is first used, and fetches the literature base the first time it is needed.</span>
       </p>
     </div>
 
     <div class="gs-grid rv">
       <div class="gs-step glass glass-deep" data-glass data-glass-bevel="24" data-glass-scale="46">
-        <h3><span class="gs-num">1</span><span class="zh">下载 FUSION 仓库</span><span class="en">Clone FUSION</span></h3>
-        <p><span class="zh">仓库约 229 MB，主要内容是 61,167 页离线文献库。</span><span class="en">The repository is about 229 MB, mostly the 61,167-page offline literature base.</span></p>
-        <div class="gs-code">git clone https://github.com/jinleiphys/FUSION.git<br><span class="p">cd</span> FUSION</div>
+        <h3><span class="gs-num">1</span><span class="zh">Claude Code</span><span class="en">Claude Code</span></h3>
+        <p><span class="zh">在终端里执行，或在会话里用 <code>/plugin</code> 命令做同样两步。</span><span class="en">Run in a terminal, or do the same two steps inside a session with <code>/plugin</code>.</span></p>
+        <div class="gs-code">claude plugin marketplace add jinleiphys/FUSION<br>claude plugin install fusion@fusion</div>
       </div>
 
       <div class="gs-step glass glass-deep" data-glass data-glass-bevel="24" data-glass-scale="46">
-        <h3><span class="gs-num">2</span><span class="zh">下载 fusion 命令行程序</span><span class="en">Download the fusion CLI</span></h3>
-        <p><span class="zh">把命令行程序放进刚才的目录。下面下载的是 Apple 芯片 Mac 版本；Intel Mac 请改用 <code>darwin-x64</code>，Linux 请改用 <code>linux-x64</code>。其他平台可在 releases 页找到。</span><span class="en">Download the command-line program into the same directory. The command below uses the Apple-silicon package; use <code>darwin-x64</code> for Intel Macs and <code>linux-x64</code> for Linux. Other builds are listed on the releases page.</span></p>
-        <div class="gs-code">curl -fsSL https://github.com/jinleiphys/FUSION/releases/latest/download/fusion-darwin-arm64.tar.gz | tar -xz<br><span class="c"># macOS <span class="zh">才需要这一行</span><span class="en">only</span></span><br>xattr -d com.apple.quarantine fusion</div>
-        <p class="gs-note"><span class="zh">当前二进制文件没有 Apple 开发者签名，macOS 默认会拦截。第二条命令用来清除隔离标记。</span><span class="en">The current binary has no Apple developer signature, so macOS blocks it by default. The second command clears the quarantine flag.</span></p>
+        <h3><span class="gs-num">2</span><span class="zh">其他 agent</span><span class="en">Other agents</span></h3>
+        <p><span class="zh">Codex、Antigravity、Gemini CLI、opencode 各有一段安装说明，写在仓库 README 里。最省事的办法：把 README 链接发给你的 agent，让它自己装。</span><span class="en">Codex, Antigravity, Gemini CLI and opencode each have their own recipe in the repository README. Easiest: give your agent the README link and let it install itself.</span></p>
+        <div class="gs-code">Install FUSION by following<br>github.com/jinleiphys/FUSION#install</div>
       </div>
 
       <div class="gs-step glass glass-deep" data-glass data-glass-bevel="24" data-glass-scale="46">
-        <h3><span class="gs-num">3</span><span class="zh">运行 FUSION</span><span class="en">Open it</span></h3>
-        <div class="gs-code">./fusion</div>
-        <p class="gs-note"><span class="zh">发出第一条消息后，FUSION 会询问是否配置模型、研究方向、配色和私人研究档案。研究档案会从你的论文中提取课题词、合作者和语料内引用关系。这一步不会打断当前任务，也只会出现一次；输入“跳过”即可关闭。</span><span class="en">After the first message, FUSION offers to configure a model, research areas, colours, and a private research profile. The profile extracts topics, co-authors, and in-corpus citations from your papers. Setup does not block the current task and appears only once; enter “skip” to decline.</span></p>
+        <h3><span class="gs-num">3</span><span class="zh">重启 agent，直接提问</span><span class="en">Restart the agent and ask</span></h3>
+        <p class="gs-note"><span class="zh">发出第一条消息后，FUSION 会问两个问题：你做哪个方向，要不要用你的论文建一份私人研究档案（课题词、合作者、语料内引用关系）。这一步不会打断当前任务，只出现一次；输入“跳过”即可关闭。</span><span class="en">After the first message, FUSION asks two questions: what you work on, and whether to build a private research profile from your papers (topics, co-authors, in-corpus citations). Setup does not block the current task and appears only once; enter “skip” to decline.</span></p>
       </div>
     </div>
 
@@ -1538,12 +1536,12 @@ decides from these lines whether to read on.</span></span>
 
       <div class="gs-q">
         <b><span class="zh">需要 API key 吗？去哪里申请？</span><span class="en">Do I need an API key, and where from?</span></b>
-        <span class="a"><span class="zh">需要。FUSION 本身不包含大模型，请向 DeepSeek、Qwen、GLM、Claude 或 GPT 的服务商申请 key。首次配置会运行 <code>fusion auth login</code>，按提示粘贴即可。</span><span class="en">Yes. FUSION does not include a model. Obtain a key from DeepSeek, Qwen, GLM, Claude, or GPT, then paste it when setup runs <code>fusion auth login</code>.</span></span>
+        <span class="a"><span class="zh">不需要单独的 key。FUSION 不包含模型，用的是你的 agent 已经接好的模型。</span><span class="en">Not a separate one. FUSION contains no model; it uses whatever model your agent is already connected to.</span></span>
       </div>
 
       <div class="gs-q">
-        <b><span class="zh">提示 command not found: fusion</span><span class="en">command not found: fusion</span></b>
-        <span class="a"><span class="zh">请使用 <code>./fusion</code>。开头的点和斜杠表示运行当前目录中的程序。如果希望在任意目录直接输入 <code>fusion</code>，可执行 <code>mkdir -p ~/.local/bin && mv fusion ~/.local/bin/</code>。仍然找不到时，再执行 <code>echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.zshrc</code>，然后重新打开终端。</span><span class="en">Use <code>./fusion</code>; the leading dot-slash selects the program in the current directory. To run <code>fusion</code> from any directory, use <code>mkdir -p ~/.local/bin &amp;&amp; mv fusion ~/.local/bin/</code>. If the command is still unavailable, run <code>echo 'export PATH="$HOME/.local/bin:$PATH"' &gt;&gt; ~/.zshrc</code> and open a new terminal.</span></span>
+        <b><span class="zh">我用的 agent 不在列表里</span><span class="en">My agent is not on the list</span></b>
+        <span class="a"><span class="zh">FUSION 的技能用通行的 <code>SKILL.md</code> 格式。能从目录加载技能的 agent 都能用：把仓库浅克隆到 <code>~/.fusion/plugin</code>，让 agent 的技能目录指向其中的 <code>skills/</code>，再把 <code>AGENTS.md</code> 设为常驻指令。README 里有具体命令。</span><span class="en">FUSION skills use the common <code>SKILL.md</code> format, so any agent that loads skills from a directory can use them: shallow-clone the repository to <code>~/.fusion/plugin</code>, point the agent's skills directory at its <code>skills/</code>, and load <code>AGENTS.md</code> as standing instructions. The README has the commands.</span></span>
       </div>
 
       <div class="gs-q">
@@ -1565,25 +1563,25 @@ decides from these lines whether to read on.</span></span>
 
     <div class="beta-box rv glass glass-deep" data-glass data-glass-bevel="26" data-glass-scale="50">
       <h3><span class="zh">测试版最需要哪些反馈</span><span class="en">Feedback needed for the beta</span></h3>
-      <p><span class="zh">作者每天都在使用 v0.1.0，但还没有外部用户完成测试。目前最想知道下面这些问题。</span><span class="en">The author uses v0.1.0 daily, but no external user has completed a test. Please report these issues first.</span></p>
+      <p><span class="zh">作者每天都在使用 v0.3.0，但还没有外部用户完成测试。目前最想知道下面这些问题。</span><span class="en">The author uses v0.3.0 daily, but no external user has completed a test. Please report these issues first.</span></p>
       <ol>
         <li><b><span class="zh">看起来对、其实错的结果。</span><span class="en">A result that looked right and was wrong.</span></b>
           <span class="zh">例如，半径约定写错的 FRESCO 输入卡仍能正常运行，截面却可能偏差 20%，而且不会报错。如果遇到这类结果，请提供输入卡、计算值和参考值。</span><span class="en">For example, a FRESCO deck with the wrong radius convention can run without an error while shifting the cross section by 20%. If FUSION produces such a result, send the deck, the calculated value, and the reference value.</span></li>
         <li><b><span class="zh">装不上的程序。</span><span class="en">A code that will not install.</span></b>
-          <span class="zh">20 个程序中，目前只有 FRESCO 从空缓存开始完整测试过安装流程。请附上报错、操作系统和编译器版本。</span><span class="en">Of the 20 programs, only FRESCO has been installed in a test that began with an empty cache. Include the error, operating system, and compiler version.</span></li>
+          <span class="zh">20 个程序都在一台空白 Linux 机器上从头装过一次，但你的机器一定和它不一样。请附上报错、操作系统和编译器版本。</span><span class="en">All 20 programs have been installed once from scratch on a bare Linux machine, but yours will differ from it. Include the error, operating system, and compiler version.</span></li>
         <li><b><span class="zh">任何用着别扭的地方。</span><span class="en">Anything that felt stupid.</span></b>
           <span class="zh">首次配置目前只有作者测试过。步骤多余、提示难懂、默认值不合习惯，都请直接指出。</span><span class="en">The first-run flow has only been tested by its author. Report unnecessary steps, unclear prompts, and poor defaults.</span></li>
         <li><b><span class="zh">你还希望支持哪个程序。</span><span class="en">Which code you wish had a skill.</span></b></li>
       </ol>
-      <p><span class="zh">TALYS 需要下载约 11 GB，不建议拿它做第一次测试。macOS 首次运行若被拦截，请执行 <code>xattr -d com.apple.quarantine fusion</code>。</span><span class="en">TALYS downloads about 11 GB, so it is not a good first test. If macOS blocks the first run, use <code>xattr -d com.apple.quarantine fusion</code>.</span></p>
+      <p><span class="zh">TALYS 需要下载约 11 GB，不建议拿它做第一次测试。</span><span class="en">TALYS downloads about 11 GB, so it is not a good first test.</span></p>
     </div>
 
     <div class="cta-row rv" style="justify-content:center;margin-top:36px">
       <a class="cta cta-primary" href="https://github.com/jinleiphys/FUSION" target="_blank" rel="noopener">
         <span class="zh">打开仓库</span><span class="en">Open the repository</span> →
       </a>
-      <a class="cta cta-ghost" href="https://github.com/jinleiphys/FUSION/releases/latest" target="_blank" rel="noopener">
-        <span class="zh">下载页</span><span class="en">Downloads</span> →
+      <a class="cta cta-ghost" href="https://github.com/jinleiphys/FUSION#install" target="_blank" rel="noopener">
+        <span class="zh">安装说明</span><span class="en">Install guide</span> →
       </a>
     </div>
   </div>
@@ -1598,8 +1596,8 @@ decides from these lines whether to read on.</span></span>
         <span class="en">Current project status</span>
       </h2>
       <p class="sec-lede">
-        <span class="zh">v0.1.0 已经公开，20 个程序技能和离线知识库都已随仓库发布。现在主要补全新机器上的安装测试，并根据外部用户的实际反馈修问题。</span>
-        <span class="en">v0.1.0 is public, with 20 code skills and the offline knowledge base shipped in the repository. Current work focuses on cold-start installation tests and fixes driven by external-user feedback.</span>
+        <span class="zh">v0.3.0 起 FUSION 改成插件，不再维护单独的命令行程序。20 个程序技能、BAND 框架和离线知识库都已公开。现在最需要的是外部用户的实际反馈。</span>
+        <span class="en">Since v0.3.0 FUSION is a plugin, with no separate command-line program to maintain. The 20 code skills, the BAND framework and the offline knowledge base are public. What is needed now is feedback from people who did not build it.</span>
       </p>
     </div>
     <div class="phases rv">
@@ -1610,23 +1608,23 @@ decides from these lines whether to read on.</span></span>
       </div>
       <div class="phase now">
         <span class="ph">Phase 1 · <span class="zh">核心已完成</span><span class="en">core complete</span></span>
-        <h3><span class="zh">品牌分叉 + CI</span><span class="en">Rebrand fork + CI</span></h3>
-        <p><span class="zh">fusion-core 只保留品牌补丁，每周自动重基上游 opencode。桌面图标和完整发行流水线还在补。</span><span class="en">fusion-core keeps only the brand patch and rebases onto upstream opencode each week. Desktop icons and the complete release pipeline remain in progress.</span></p>
+        <h3><span class="zh">插件化</span><span class="en">Plugin</span></h3>
+        <p><span class="zh">2026 年 10 月起不再维护 opencode 品牌分叉。同一个仓库装进 Claude Code、Codex、Antigravity、Gemini CLI 和 opencode，每一种都实际装过、跑过。</span><span class="en">The opencode rebrand fork was retired in October 2026. The same repository installs into Claude Code, Codex, Antigravity, Gemini CLI and opencode, each installed and run for real.</span></p>
       </div>
       <div class="phase now">
         <span class="ph">Phase 2 · <span class="zh">核心已完成</span><span class="en">core complete</span></span>
         <h3><span class="zh">技能包</span><span class="en">Skill pack</span></h3>
-        <p><span class="zh">仓库已有 26 个技能，其中 20 个负责具体程序。程序技能暂停扩张，下一步先看真实用户会用什么。</span><span class="en">The repository ships 26 skills, including 20 for specific codes. Code-skill expansion is paused until real usage shows what people need next.</span></p>
+        <p><span class="zh">现有 28 个技能，其中 20 个负责具体程序，另有 BAND 贝叶斯不确定度框架。新技能按实际需要逐个加。</span><span class="en">28 skills, 20 of them for specific codes, plus the BAND Bayesian-UQ framework. New skills are added one at a time, when someone needs them.</span></p>
       </div>
       <div class="phase now">
         <span class="ph">Phase 3 · <span class="zh">核心已完成</span><span class="en">core complete</span></span>
         <h3><span class="zh">知识库</span><span class="en">Knowledge base</span></h3>
-        <p><span class="zh">kb-wiki 现有 61,167 页，包括 61,059 个论文页和 108 个主题页。引用和语义关系已经写入，今后随新增论文更新。</span><span class="en">kb-wiki contains 61,167 pages: 61,059 paper pages and 108 topic pages. Citation and semantic links are included; later releases will update them as papers are added.</span></p>
+        <p><span class="zh">kb-wiki 现有 61,167 页，包括 61,059 个论文页和 108 个主题页，809,632 条引用关系。第一次用到时下载一次，下载后按清单核对完整性。</span><span class="en">kb-wiki contains 61,167 pages: 61,059 paper pages and 108 topic pages, with 809,632 citation links. It is downloaded once, on first use, and checked against a manifest.</span></p>
       </div>
       <div class="phase now">
         <span class="ph">Phase 4 · <span class="zh">正在做</span><span class="en">in progress</span></span>
         <h3><span class="zh">公开测试</span><span class="en">Public beta</span></h3>
-        <p><span class="zh">v0.1.0 已经发布。全新机器上的安装测试还不够，目前只有 FRESCO 真正从空缓存完整跑过安装流程。</span><span class="en">v0.1.0 is released. Cold-start installation coverage is still thin; only FRESCO has completed the full install path from an empty cache.</span></p>
+        <p><span class="zh">v0.3.0 已经发布。20 个程序都在空白 Linux 机器上从头装过一次；缺的是作者以外的人真正用起来。</span><span class="en">v0.3.0 is released. All 20 programs have been installed once from scratch on a bare Linux machine; what is missing is use by someone other than the author.</span></p>
       </div>
     </div>
   </div>
@@ -1642,8 +1640,8 @@ decides from these lines whether to read on.</span></span>
       <span class="en">Available for testing now</span>
     </h2>
     <p class="sec-lede">
-      <span class="zh">作者已经在日常研究中使用这个版本，外部测试才刚开始。克隆仓库并下载命令行程序后，26 个技能和离线知识库会自动加载。最需要反馈的是安装失败，以及那些看着合理却实际有错的结果。</span>
-      <span class="en">The author uses this version in daily research; external testing has just begun. After cloning the repository and downloading the CLI, all 26 skills and the offline knowledge base load automatically. Installation failures and plausible but incorrect results are the highest-priority reports.</span>
+      <span class="zh">作者已经在日常研究中使用这个版本，外部测试才刚开始。把 FUSION 装进你的 agent 后，28 个技能会自动加载，离线知识库在第一次用到时下载。最需要反馈的是安装失败，以及那些看着合理却实际有错的结果。</span>
+      <span class="en">The author uses this version in daily research; external testing has just begun. Once FUSION is installed into your agent, all 28 skills load automatically and the offline knowledge base is fetched on first use. Installation failures and plausible but incorrect results are the highest-priority reports.</span>
     </p>
     <div class="cta-row" style="justify-content:center">
       <a class="cta cta-primary" href="https://github.com/jinleiphys/FUSION" target="_blank" rel="noopener">
@@ -1665,8 +1663,8 @@ decides from these lines whether to read on.</span></span>
       </div>
     </div>
     <div class="foot-meta">
-      <span class="zh">FUSION 使用 MIT 许可；引擎基于 <a href="https://github.com/anomalyco/opencode" target="_blank" rel="noopener">opencode</a>（MIT）的品牌分叉，与 opencode 项目无隶属关系。</span>
-      <span class="en">FUSION is MIT-licensed. Its engine is a rebrand fork of <a href="https://github.com/anomalyco/opencode" target="_blank" rel="noopener">opencode</a> (MIT), with no affiliation to the opencode project.</span><br>
+      <span class="zh">FUSION 使用 MIT 许可，以插件形式运行在用户自己的 agent 上，与这些 agent 的开发方无隶属关系。</span>
+      <span class="en">FUSION is MIT-licensed and runs as a plugin on the user's own agent, with no affiliation to the makers of those agents.</span><br>
       <span class="zh">论文版权归原作者；公开产物不再分发 arXiv 全文。</span>
       <span class="en">Papers remain © their authors and arXiv; public artifacts do not redistribute arXiv full text.</span><br>
       <span class="zh">网站与 nuclearjs 由金磊设计和制作，© 2026 Jin Lei，保留所有权利。</span>
