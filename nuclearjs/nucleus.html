@@ -103,7 +103,7 @@ details .grp{margin-top:8px}
 
 <aside id="ctl" class="panel glass glass-deep" data-glass data-glass-bevel="22" data-glass-scale="42">
   <div>
-    <a class="home" id="back" href="https://vibeinscience.com/nuclides.html">← nuclide chart</a> &nbsp; <a class="home" id="toScatter" href="scatter.html">scatter a nucleon off it →</a>
+    <a class="home" href="index.html">← nuclearjs</a> &nbsp; <a class="home" id="back" href="../nuclides.html">nuclide chart</a> &nbsp; <a class="home" id="toScatter" href="scatter.html">scatter a nucleon off it →</a>
     <h1 id="title">Nucleus</h1>
     <p class="sub">The spherical shell model: one nucleon moving in the average field of all the others. Pick a level on the right to see where that nucleon is.</p>
   </div>
@@ -771,7 +771,7 @@ function drawInfo() {
   const el = ELEM[S.Z] || "?";
   document.getElementById("title").innerHTML = `${sup(A)}${el}`;
   document.title = `${A}${el} · nuclearjs`;
-  document.getElementById("back").href = `https://vibeinscience.com/nuclides.html`;
+  document.getElementById("back").href = `../nuclides.html`;
   const ts = document.getElementById("toScatter");
   ts.href = `scatter.html#p${A}${el}@30`; ts.style.display = S.Z < 2 ? "none" : "";   // scatter.html takes targets from Z = 2
 }
