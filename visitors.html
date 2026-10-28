@@ -275,7 +275,7 @@ footer .wrap { border-top: 1px solid var(--hairline); padding-top: 26px; }
     <div class="map-stage">
       <canvas id="world" aria-label="World map of visitors"></canvas>
       <div class="stats glass glass-deep" data-glass data-glass-bevel="16" data-glass-scale="34">
-        <div class="stat"><b id="s-total">0</b><span class="zh">位访客</span><span class="en">visitors</span></div>
+        <div class="stat"><b id="s-total">0</b><span class="zh">次访问</span><span class="en">visits</span></div>
         <div class="stat"><b id="s-countries">0</b><span class="zh">个国家和地区</span><span class="en">countries &amp; regions</span></div>
         <div class="stat"><b id="s-refs">0</b><span class="zh">个来源网站</span><span class="en">referring sites</span></div>
         <div class="stat"><b id="s-days">0</b><span class="zh">天</span><span class="en">days counted</span></div>
@@ -291,10 +291,10 @@ footer .wrap { border-top: 1px solid var(--hairline); padding-top: 26px; }
 
 <section>
   <div class="wrap">
-    <h2><span class="zh">每天有多少人来</span><span class="en">Visitors per day</span></h2>
-    <p class="sub"><span class="zh">按 UTC 日期；悬停看当天人数。</span><span class="en">By UTC day; hover a bar for the count.</span></p>
+    <h2><span class="zh">每天的访问次数</span><span class="en">Visits per day</span></h2>
+    <p class="sub"><span class="zh">按 UTC 日期；悬停看当天次数。</span><span class="en">By UTC day; hover a bar for the count.</span></p>
     <div class="card glass glass-deep" data-glass data-glass-bevel="18" data-glass-scale="30">
-      <svg id="daily" role="img" aria-label="Visitors per day"></svg>
+      <svg id="daily" role="img" aria-label="Visits per day"></svg>
     </div>
   </div>
 </section>
@@ -327,8 +327,8 @@ footer .wrap { border-top: 1px solid var(--hairline); padding-top: 26px; }
 
 <footer>
   <div class="wrap">
-    <span class="zh">数据来自 <a href="https://www.goatcounter.com" target="_blank" rel="noopener">GoatCounter</a>（开源、无 cookie）。网站部署流程定时拉取汇总数字写进 <code>assets/visitors-data.js</code>，页面本身不带任何密钥，也不向外部请求统计数据。机器人和爬虫已由 GoatCounter 剔除；同一人换设备会算作两位访客。</span>
-    <span class="en">Counts from <a href="https://www.goatcounter.com" target="_blank" rel="noopener">GoatCounter</a> (open source, cookie-free). The deploy workflow pulls the aggregates on a schedule into <code>assets/visitors-data.js</code>; this page carries no key and fetches no statistics from anywhere. GoatCounter filters bots and crawlers; one person on two devices counts twice.</span>
+    <span class="zh">数据来自 <a href="https://www.goatcounter.com" target="_blank" rel="noopener">GoatCounter</a>（开源、无 cookie）。网站部署流程定时拉取汇总数字写进 <code>assets/visitors-data.js</code>，页面本身不带任何密钥，也不向外部请求统计数据。机器人和爬虫已由 GoatCounter 剔除。GoatCounter 不记录 IP，这里的数字是访问次数，不是人数：同一个人在不同的日子来、在同一天看不同的页面、换一台设备，都会再算一次。</span>
+    <span class="en">Counts from <a href="https://www.goatcounter.com" target="_blank" rel="noopener">GoatCounter</a> (open source, cookie-free). The deploy workflow pulls the aggregates on a schedule into <code>assets/visitors-data.js</code>; this page carries no key and fetches no statistics from anywhere. GoatCounter filters bots and crawlers. It keeps no IP addresses, so these numbers are visits, not people: the same person returning on another day, opening another page, or using another device counts again.</span>
     · <a href="index.html">FUSION</a>
   </div>
 </footer>
@@ -467,7 +467,7 @@ footer .wrap { border-top: 1px solid var(--hairline); padding-top: 26px; }
     if (!code) { tip.hidden = true; return; }
     var n = byCode[code] || 0;
     tip.innerHTML = esc(countryName(code)) + ' <small>' + code + '</small><br>' +
-      (n ? '<b>' + fmt(n) + '</b> ' + t('位访客', n === 1 ? 'visitor' : 'visitors') : '<small>' + t('还没有人从这里来', 'nobody from here yet') + '</small>');
+      (n ? '<b>' + fmt(n) + '</b> ' + t('次访问', n === 1 ? 'visit' : 'visits') : '<small>' + t('还没有人从这里来', 'nobody from here yet') + '</small>');
     tip.style.left = e.clientX + 'px'; tip.style.top = e.clientY + 'px'; tip.hidden = false;
   });
   cv.addEventListener('mouseleave', function () { tip.hidden = true; hoverCode = null; if (reduce) draw(0); });
