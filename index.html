@@ -24,7 +24,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>FUSION · 核物理科研智能体平台 · Nuclear-Physics Research Agent Platform</title>
-<meta name="description" content="FUSION: Framework for Unified Scientific Intelligence in Open Nuclear physics. 以插件形式装进你常用的 agent，带 28 个技能和 61,167 页离线核物理文献知识库，覆盖反应、结构、裂变、核天体与重离子输运。">
+<meta name="description" content="FUSION: Framework for Unified Scientific Intelligence in Open Nuclear physics. 以插件形式装进你常用的 agent，带 29 个技能和 61,167 页离线核物理文献知识库，覆盖反应、结构、裂变、核天体与重离子输运。">
 <link rel="icon" href="assets/logo-nav.png">
 <style>
 /* ================= tokens ================= */
@@ -751,7 +751,7 @@ footer { border-top: 1px solid var(--hairline); padding: 44px 0 60px; }
 <canvas id="sky" aria-hidden="true"></canvas>
 
 <div class="beta-bar">
-  <span class="zh"><b>测试版 v0.3.0</b> · 作者已用于日常研究，尚无外部用户完成测试 · <a href="https://github.com/jinleiphys/FUSION/issues" target="_blank" rel="noopener">报告问题</a></span><span class="en"><b>Beta v0.3.0</b> · used daily by its author, but not yet tested by other users · <a href="https://github.com/jinleiphys/FUSION/issues" target="_blank" rel="noopener">Report an issue</a></span>
+  <span class="zh"><b>测试版 v0.4.0</b> · 作者已用于日常研究，尚无外部用户完成测试 · <a href="https://github.com/jinleiphys/FUSION/issues" target="_blank" rel="noopener">报告问题</a></span><span class="en"><b>Beta v0.4.0</b> · used daily by its author, but not yet tested by other users · <a href="https://github.com/jinleiphys/FUSION/issues" target="_blank" rel="noopener">Report an issue</a></span>
 </div>
 <nav class="glass glass-bar" data-glass data-glass-bevel="16" data-glass-scale="30">
   <div class="nav-in">
@@ -785,16 +785,16 @@ footer { border-top: 1px solid var(--hairline); padding: 44px 0 60px; }
           <span class="en">Nuclear codes and papers<br>in <span class="hl">one terminal</span></span>
         </h1>
         <p class="lede">
-          <span class="zh">FUSION 的核心是<strong>三层知识库</strong>：一份随仓库发布的离线文献库，arXiv nucl-th 的
+          <span class="zh">FUSION 的核心是<strong>三层知识库</strong>：一份第一次用到时下载、之后离线使用的文献库，arXiv nucl-th 的
             61,059 篇论文每篇一页，加 108 个主题页和一张引用图；一份你读过的文献笔记；一份你自己的研究档案。
-            agent 在这三层上查文献、记结论、避开走过的弯路，再用 <strong>20 个程序技能</strong>去跑具体计算。
+            agent 在这三层上查文献、记结论、避开走过的弯路，再用 <strong>21 个程序技能</strong>去跑具体计算。
             全部是纯文本，不需要服务器或数据库；DeepSeek、Qwen、GLM、Claude 和 GPT 都能接，多步任务上差距明显。
             背景中的每个光点来自语料库里的一篇论文。</span>
           <span class="en">At the core of FUSION is a <strong>three-layer knowledge base</strong>: an offline literature
-            corpus that ships with the repository, one page for each of 61,059 arXiv nucl-th papers plus 108 topic
+            corpus downloaded on first use, one page for each of 61,059 arXiv nucl-th papers plus 108 topic
             pages and a citation graph; your own notes on the papers you have read; and your own research record.
             The agent works across the three to find literature, keep conclusions, and avoid dead ends already
-            walked, then runs calculations through <strong>20 code skills</strong>. Everything is plain text, with no
+            walked, then runs calculations through <strong>21 code skills</strong>. Everything is plain text, with no
             server or database. It runs with DeepSeek, Qwen, GLM, Claude, and GPT, though not equally well on
             multi-step work. Each point of light in the background represents one paper in the corpus.</span>
         </p>
@@ -803,7 +803,7 @@ footer { border-top: 1px solid var(--hairline); padding: 44px 0 60px; }
             <span class="zh">了解三层知识库</span><span class="en">See the knowledge base</span> →
           </a>
           <a class="cta cta-ghost glass" href="#bench">
-            <span class="zh">28 个技能</span><span class="en">28 skills</span>
+            <span class="zh">29 个技能</span><span class="en">29 skills</span>
           </a>
           <a class="cta cta-ghost glass" href="https://github.com/jinleiphys/FUSION" target="_blank" rel="noopener">
             <span class="zh">查看源码</span><span class="en">View source</span>
@@ -821,7 +821,7 @@ footer { border-top: 1px solid var(--hairline); padding: 44px 0 60px; }
   <div class="hs"><span class="v" data-count="61059" data-fmt="comma">61,059</span><span class="l"><span class="zh">arXiv nucl-th 论文页</span><span class="en">arXiv nucl-th paper pages</span></span></div>
   <div class="hs"><span class="v" data-count="61167" data-fmt="comma">61,167</span><span class="l"><span class="zh">离线 Markdown 知识库页面</span><span class="en">offline Markdown knowledge-base pages</span></span></div>
   <div class="hs"><span class="v" data-count="809632" data-fmt="comma">809,632</span><span class="l"><span class="zh">语料内引用边</span><span class="en">in-corpus citation edges</span></span></div>
-  <div class="hs"><span class="v"><em data-count="26">26</em></span><span class="l"><span class="zh">技能随仓库发布，其中 20 个负责具体程序</span><span class="en">shipped skills, including 20 for specific codes</span></span></div>
+  <div class="hs"><span class="v"><em data-count="29">29</em></span><span class="l"><span class="zh">技能随仓库发布，其中 21 个负责具体程序</span><span class="en">shipped skills, including 21 for specific codes</span></span></div>
 </div>
 
 <!-- ================= WHAT ================= -->
@@ -834,8 +834,8 @@ footer { border-top: 1px solid var(--hairline); padding: 44px 0 60px; }
         <span class="en">One platform, three layers</span>
       </h2>
       <p class="sec-lede">
-        <span class="zh">FUSION 不自带 agent。底层就是你已经在用的 agent（Claude Code、Codex、Antigravity、Gemini CLI 或 opencode），FUSION 作为插件装进去；中间放核物理技能和知识库，最上层挂载你自己的文献笔记、研究档案与密钥。</span>
-        <span class="en">FUSION brings no agent of its own. The base is the agent you already use (Claude Code, Codex, Antigravity, Gemini CLI or opencode), and FUSION installs into it as a plugin. Nuclear-physics skills and the corpus form the middle layer. Users mount their own notes, research profiles, and credentials on top.</span>
+        <span class="zh">FUSION 不自带 agent。底层就是你已经在用的 agent（Claude Code、Codex、Antigravity 或 opencode），FUSION 作为插件装进去；中间放核物理技能和知识库，最上层挂载你自己的文献笔记、研究档案与密钥。</span>
+        <span class="en">FUSION brings no agent of its own. The base is the agent you already use (Claude Code, Codex, Antigravity or opencode), and FUSION installs into it as a plugin. Nuclear-physics skills and the corpus form the middle layer. Users mount their own notes, research profiles, and credentials on top.</span>
       </p>
     </div>
     <div class="def-grid">
@@ -856,11 +856,11 @@ footer { border-top: 1px solid var(--hairline); padding: 44px 0 60px; }
         <div class="layer layer-core glass" data-glass data-glass-bevel="27" data-glass-scale="54">
           <span class="tag"><span class="zh">核物理定制层</span><span class="en">Nuclear-physics layer</span></span>
           <h3><span class="zh">程序技能 + 领域知识库 + 科研工作流</span><span class="en">Code skills + domain knowledge base + research workflows</span></h3>
-          <p><span class="zh">插件共有 28 个技能：20 个负责具体程序，<code>band</code> 驱动 BAND 贝叶斯不确定度框架（rose、surmise、Taweret），SFRESCO 用于拟合，EXFOR 获取实验数据，<code>kb-search</code> 检索离线知识库，<code>literature-search</code> 联网核对引用，<code>literature-wiki</code> 和 <code>research-profile</code> 维护个人研究 wiki，<code>fusion-setup</code> 负责首次配置。知识库共 61,167 页，第一次用到时下载一次，之后离线浏览。</span><span class="en">The plugin carries 28 skills: 20 for specific codes, the BAND Bayesian-UQ framework (rose, surmise, Taweret), SFRESCO fitting, EXFOR data retrieval, offline knowledge-base search, live citation checking, two personal research-wiki tools, and first-run setup. The 61,167-page knowledge base is downloaded once, on first use, and then read offline.</span></p>
+          <p><span class="zh">插件共有 29 个技能：21 个负责具体程序，<code>band</code> 驱动 BAND 贝叶斯不确定度框架（rose、surmise、Taweret），SFRESCO 用于拟合，EXFOR 获取实验数据，<code>kb-search</code> 检索离线知识库，<code>literature-search</code> 联网核对引用，<code>literature-wiki</code> 和 <code>research-profile</code> 维护个人研究 wiki，<code>fusion-setup</code> 负责首次配置。知识库共 61,167 页，第一次用到时下载一次，之后离线浏览。</span><span class="en">The plugin carries 29 skills: 21 for specific codes, the BAND Bayesian-UQ framework (rose, surmise, Taweret), SFRESCO fitting, EXFOR data retrieval, offline knowledge-base search, live citation checking, two personal research-wiki tools, and first-run setup. The 61,167-page knowledge base is downloaded once, on first use, and then read offline.</span></p>
         </div>
         <div class="layer glass" data-glass data-glass-bevel="27" data-glass-scale="54">
           <span class="tag"><span class="zh">你的 agent · 不属于 FUSION</span><span class="en">Your agent · not part of FUSION</span></span>
-          <h3><span class="zh">Claude Code、Codex、Antigravity、Gemini CLI、opencode</span><span class="en">Claude Code, Codex, Antigravity, Gemini CLI, opencode</span></h3>
+          <h3><span class="zh">Claude Code、Codex、Antigravity、opencode</span><span class="en">Claude Code, Codex, Antigravity, opencode</span></h3>
           <p><span class="zh">FUSION 以插件形式装进去；模型由 agent 自己接入，DeepSeek、Qwen、GLM、Claude、GPT 都可以。</span><span class="en">FUSION installs into it as a plugin; the agent brings the model, whether DeepSeek, Qwen, GLM, Claude or GPT.</span></p>
         </div>
         <p class="layer-note">↑ <span class="zh">上层依赖下层，越往上越私密</span><span class="en">each layer builds on the one below; privacy increases upward</span></p>
@@ -1126,7 +1126,7 @@ decides from these lines whether to read on.</span></span>
         <h3><span class="zh">每个程序，一个专家技能</span><span class="en">One expert skill per code</span></h3>
         <p>
           <span class="zh">20 个程序技能已经覆盖反应、裂变统计、R 矩阵与核天体、结构与从头算、TDHF、重离子输运和状态方程。每个技能都包含安装、输入、运行和结果解析，并且<b>必须写明验证等级，复现论文结果或程序自带的参考值</b>。连“TALYS 出错也返回 0”这种坑都写在里面。</span>
-          <span class="en">Twenty code skills cover reactions, fission and statistical decay, R-matrix and nuclear astrophysics, structure and ab initio theory, TDHF, heavy-ion transport, and equations of state. Each teaches installation, input authoring, execution, and parsing, and <b>must declare its validation tier and reproduce a published or code-shipped reference</b>. Even traps such as “TALYS exits 0 on fatal errors” are encoded.</span>
+          <span class="en">Twenty-one code skills cover reactions, fission and statistical decay, R-matrix and nuclear astrophysics, structure and ab initio theory, TDHF, heavy-ion transport, and equations of state. Each teaches installation, input authoring, execution, and parsing, and <b>must declare its validation tier and reproduce a published or code-shipped reference</b>. Even traps such as “TALYS exits 0 on fatal errors” are encoded.</span>
         </p>
       </div>
       <div class="why rv glass" data-glass data-glass-bevel="27" data-glass-scale="54">
@@ -1163,8 +1163,8 @@ decides from these lines whether to read on.</span></span>
     <div class="rv">
       <p class="eyebrow"><span class="zh">物理 · Physics</span><span class="en">The physics inside</span></p>
       <h2>
-        <span class="zh">二十个程序背后的原子核物理</span>
-        <span class="en">The nuclear physics behind the twenty codes</span>
+        <span class="zh">二十一个程序背后的原子核物理</span>
+        <span class="en">The nuclear physics behind the twenty-one codes</span>
       </h2>
       <p class="sec-lede">
         <span class="zh">每张图对应一类技能，选的都是基准表里真正跑过的体系或同类的标准例子。图是示意，但账是真的：原子核按实际的质子数、中子数堆成，半径取 1.2A<sup>1/3</sup> fm；裂变和俘获前后质子数、质量数守恒；壳层图的能级取自实测分离能。鼠标移上去可以转动视角。</span>
@@ -1192,7 +1192,7 @@ decides from these lines whether to read on.</span></span>
       <article class="phys glass rv" data-glass data-glass-bevel="20" data-glass-scale="36">
         <div class="phys-view" data-scene="fission" data-fallback="²⁵²Cf → ¹⁰⁸Mo + ¹⁴⁴Ba"></div>
         <div class="phys-txt">
-          <div class="codes"><span>CGMF</span><span>TALYS</span></div>
+          <div class="codes"><span>CGMF</span><span>TALYS</span><span>YAHFC</span></div>
           <h3><span class="zh">裂变：²⁵²Cf 一分为二</span><span class="en">Fission: ²⁵²Cf splits</span></h3>
           <p><span class="zh">核被拉长、出现颈部后断开。这里画的是其中一种分法：初级碎片 <b>¹⁰⁸Mo + ¹⁴⁴Ba</b>，各蒸发两个中子成为 ¹⁰⁶Mo + ¹⁴²Ba，再放出 γ 光子。²⁵²Cf 自发裂变平均放出约 3.8 个瞬发中子，CGMF 逐事件模拟这一步。</span><span class="en">The nucleus elongates, forms a neck and snaps. One of many splits is drawn: primary fragments <b>¹⁰⁸Mo + ¹⁴⁴Ba</b>, each evaporating two neutrons to become ¹⁰⁶Mo + ¹⁴²Ba, then emitting γ rays. Spontaneous fission of ²⁵²Cf releases about 3.8 prompt neutrons on average; CGMF follows this event by event.</span></p>
         </div>
@@ -1246,7 +1246,7 @@ decides from these lines whether to read on.</span></span>
       </h2>
       <p class="sec-lede">
         <span class="zh">当前 20 个程序技能覆盖反应、结构、裂变统计、核天体、重离子输运和状态方程。下表只写已经构建并跑出的结果，计划中的功能不算。</span>
-        <span class="en">The 20 current code skills cover reactions, structure, fission and statistical decay, nuclear astrophysics, heavy-ion transport, and equations of state. The table reports completed builds and runs, not planned features.</span>
+        <span class="en">The 21 current code skills cover reactions, structure, fission and statistical decay, nuclear astrophysics, heavy-ion transport, and equations of state. The table reports completed builds and runs, not planned features.</span>
       </p>
     </div>
     <div class="coverage-grid rv" aria-label="Shipped code skills by domain">
@@ -1260,8 +1260,8 @@ decides from these lines whether to read on.</span></span>
         </div>
       </div>
       <div class="coverage glass" data-glass data-glass-bevel="22" data-glass-scale="42">
-        <div class="count"><b>2</b><span><span class="zh">裂变与统计衰变</span><span class="en">Fission and statistical decay</span></span></div>
-        <div class="code-list"><span class="code-pill">TALYS</span><span class="code-pill">CGMF</span></div>
+        <div class="count"><b>3</b><span><span class="zh">裂变与统计衰变</span><span class="en">Fission and statistical decay</span></span></div>
+        <div class="code-list"><span class="code-pill">TALYS</span><span class="code-pill">CGMF</span><span class="code-pill">YAHFC</span></div>
       </div>
       <div class="coverage glass" data-glass data-glass-bevel="22" data-glass-scale="42">
         <div class="count"><b>2</b><span><span class="zh">R 矩阵与核天体</span><span class="en">R-matrix and nuclear astro</span></span></div>
@@ -1321,6 +1321,11 @@ decides from these lines whether to read on.</span></span>
             <td class="code-name">SMASH <span class="tier tier-1">T1</span></td>
             <td class="case"><span class="zh">104 项测试与 Au+Au 输运守恒律</span><span class="en">104-test suite and conservation laws in Au+Au transport</span></td>
             <td class="result"><span class="zh">Linux 104/104；两平台 B = 788、Q = 316 精确守恒</span><span class="en">104/104 on Linux; exact B = 788 and Q = 316 on both platforms</span></td>
+          </tr>
+          <tr>
+            <td class="code-name">YAHFC <span class="tier tier-2">T2</span></td>
+            <td class="case"><span class="zh">n+²³⁵U 裂变截面，用随程序发布的 LLNL 输入，不重新拟合</span><span class="en">n+²³⁵U fission cross section from the LLNL input distributed with the code, no refit</span></td>
+            <td class="result"><span class="zh">0.46 到 14 MeV 四个能量点与 EXFOR 实测值相差 4% 以内</span><span class="en">within 4% of EXFOR measurements at four energies from 0.46 to 14 MeV</span></td>
           </tr>
           <tr>
             <td class="code-name">AZURE2 <span class="tier tier-2">T2</span></td>
@@ -1495,7 +1500,7 @@ decides from these lines whether to read on.</span></span>
 
       <div class="gs-step glass glass-deep" data-glass data-glass-bevel="24" data-glass-scale="46">
         <h3><span class="gs-num">2</span><span class="zh">其他 agent</span><span class="en">Other agents</span></h3>
-        <p><span class="zh">Codex、Antigravity、Gemini CLI、opencode 各有一段安装说明，写在仓库 README 里。最省事的办法：把 README 链接发给你的 agent，让它自己装。</span><span class="en">Codex, Antigravity, Gemini CLI and opencode each have their own recipe in the repository README. Easiest: give your agent the README link and let it install itself.</span></p>
+        <p><span class="zh">Codex、Antigravity、opencode 各有一段安装说明，写在仓库 README 里。最省事的办法：把 README 链接发给你的 agent，让它自己装。</span><span class="en">Codex, Antigravity and opencode each have their own recipe in the repository README. Easiest: give your agent the README link and let it install itself.</span></p>
         <div class="gs-code">Install FUSION by following<br>github.com/jinleiphys/FUSION#install</div>
       </div>
 
@@ -1537,12 +1542,12 @@ decides from these lines whether to read on.</span></span>
 
     <div class="beta-box rv glass glass-deep" data-glass data-glass-bevel="26" data-glass-scale="50">
       <h3><span class="zh">测试版最需要哪些反馈</span><span class="en">Feedback needed for the beta</span></h3>
-      <p><span class="zh">作者每天都在使用 v0.3.0，但还没有外部用户完成测试。目前最想知道下面这些问题。</span><span class="en">The author uses v0.3.0 daily, but no external user has completed a test. Please report these issues first.</span></p>
+      <p><span class="zh">作者每天都在使用 v0.4.0，但还没有外部用户完成测试。目前最想知道下面这些问题。</span><span class="en">The author uses v0.4.0 daily, but no external user has completed a test. Please report these issues first.</span></p>
       <ol>
         <li><b><span class="zh">看起来对、其实错的结果。</span><span class="en">A result that looked right and was wrong.</span></b>
           <span class="zh">例如，半径约定写错的 FRESCO 输入卡仍能正常运行，截面却可能偏差 20%，而且不会报错。如果遇到这类结果，请提供输入卡、计算值和参考值。</span><span class="en">For example, a FRESCO deck with the wrong radius convention can run without an error while shifting the cross section by 20%. If FUSION produces such a result, send the deck, the calculated value, and the reference value.</span></li>
         <li><b><span class="zh">装不上的程序。</span><span class="en">A code that will not install.</span></b>
-          <span class="zh">20 个程序都在一台空白 Linux 机器上从头装过一次，但你的机器一定和它不一样。请附上报错、操作系统和编译器版本。</span><span class="en">All 20 programs have been installed once from scratch on a bare Linux machine, but yours will differ from it. Include the error, operating system, and compiler version.</span></li>
+          <span class="zh">最早的 20 个程序都在一台空白 Linux 机器上从头装过一次，YAHFC 和 BAND 上线前也在 Linux 上从零构建过，但你的机器一定和它不一样。请附上报错、操作系统和编译器版本。</span><span class="en">The first 20 programs have each been installed once from scratch on a bare Linux machine, and YAHFC and BAND were built from nothing on Linux before release, but yours will differ from it. Include the error, operating system, and compiler version.</span></li>
         <li><b><span class="zh">任何用着别扭的地方。</span><span class="en">Anything that felt stupid.</span></b>
           <span class="zh">首次配置目前只有作者测试过。步骤多余、提示难懂、默认值不合习惯，都请直接指出。</span><span class="en">The first-run flow has only been tested by its author. Report unnecessary steps, unclear prompts, and poor defaults.</span></li>
         <li><b><span class="zh">你还希望支持哪个程序。</span><span class="en">Which code you wish had a skill.</span></b></li>
@@ -1570,8 +1575,8 @@ decides from these lines whether to read on.</span></span>
         <span class="en">Current project status</span>
       </h2>
       <p class="sec-lede">
-        <span class="zh">v0.3.0 起 FUSION 改成插件，不再维护单独的命令行程序。20 个程序技能、BAND 框架和离线知识库都已公开。现在最需要的是外部用户的实际反馈。</span>
-        <span class="en">Since v0.3.0 FUSION is a plugin, with no separate command-line program to maintain. The 20 code skills, the BAND framework and the offline knowledge base are public. What is needed now is feedback from people who did not build it.</span>
+        <span class="zh">v0.2.0 起 FUSION 改成插件，不再维护单独的命令行程序。21 个程序技能、BAND 框架和离线知识库都已公开。现在最需要的是外部用户的实际反馈。</span>
+        <span class="en">Since v0.2.0 FUSION is a plugin, with no separate command-line program to maintain. The 21 code skills, the BAND framework and the offline knowledge base are public. What is needed now is feedback from people who did not build it.</span>
       </p>
     </div>
     <div class="phases rv">
@@ -1583,12 +1588,12 @@ decides from these lines whether to read on.</span></span>
       <div class="phase now">
         <span class="ph">Phase 1 · <span class="zh">核心已完成</span><span class="en">core complete</span></span>
         <h3><span class="zh">插件化</span><span class="en">Plugin</span></h3>
-        <p><span class="zh">2026 年 10 月起不再维护 opencode 品牌分叉。同一个仓库装进 Claude Code、Codex、Antigravity、Gemini CLI 和 opencode，每一种都实际装过、跑过。</span><span class="en">The opencode rebrand fork was retired in October 2026. The same repository installs into Claude Code, Codex, Antigravity, Gemini CLI and opencode, each installed and run for real.</span></p>
+        <p><span class="zh">2026 年 10 月起不再维护 opencode 品牌分叉。同一个仓库装进 Claude Code、Codex、Antigravity 和 opencode，每一种都实际装过、跑过。Gemini CLI 已被上游停用，10 月起不再支持。</span><span class="en">The opencode rebrand fork was retired in October 2026. The same repository installs into Claude Code, Codex, Antigravity and opencode, each installed and run for real. Gemini CLI, retired upstream, was dropped in October.</span></p>
       </div>
       <div class="phase now">
         <span class="ph">Phase 2 · <span class="zh">核心已完成</span><span class="en">core complete</span></span>
         <h3><span class="zh">技能包</span><span class="en">Skill pack</span></h3>
-        <p><span class="zh">现有 28 个技能，其中 20 个负责具体程序，另有 BAND 贝叶斯不确定度框架。新技能按实际需要逐个加。</span><span class="en">28 skills, 20 of them for specific codes, plus the BAND Bayesian-UQ framework. New skills are added one at a time, when someone needs them.</span></p>
+        <p><span class="zh">现有 29 个技能，其中 21 个负责具体程序，另有 BAND 贝叶斯不确定度框架。新技能按实际需要逐个加。</span><span class="en">29 skills, 21 of them for specific codes, plus the BAND Bayesian-UQ framework. New skills are added one at a time, when someone needs them.</span></p>
       </div>
       <div class="phase now">
         <span class="ph">Phase 3 · <span class="zh">核心已完成</span><span class="en">core complete</span></span>
@@ -1598,7 +1603,7 @@ decides from these lines whether to read on.</span></span>
       <div class="phase now">
         <span class="ph">Phase 4 · <span class="zh">正在做</span><span class="en">in progress</span></span>
         <h3><span class="zh">公开测试</span><span class="en">Public beta</span></h3>
-        <p><span class="zh">v0.3.0 已经发布。20 个程序都在空白 Linux 机器上从头装过一次；缺的是作者以外的人真正用起来。</span><span class="en">v0.3.0 is released. All 20 programs have been installed once from scratch on a bare Linux machine; what is missing is use by someone other than the author.</span></p>
+        <p><span class="zh">v0.4.0 已经发布。最早的 20 个程序都在空白 Linux 机器上从头装过一次，之后加入的 YAHFC 和 BAND 上线前也在 Linux 上从零构建过；缺的是作者以外的人真正用起来。</span><span class="en">v0.4.0 is released. The first 20 programs have each been installed once from scratch on a bare Linux machine, and YAHFC and BAND, added since, were built from nothing on Linux before release; what is missing is use by someone other than the author.</span></p>
       </div>
     </div>
   </div>
@@ -1614,8 +1619,8 @@ decides from these lines whether to read on.</span></span>
       <span class="en">Available for testing now</span>
     </h2>
     <p class="sec-lede">
-      <span class="zh">作者已经在日常研究中使用这个版本，外部测试才刚开始。把 FUSION 装进你的 agent 后，28 个技能会自动加载，离线知识库在第一次用到时下载。最需要反馈的是安装失败，以及那些看着合理却实际有错的结果。</span>
-      <span class="en">The author uses this version in daily research; external testing has just begun. Once FUSION is installed into your agent, all 28 skills load automatically and the offline knowledge base is fetched on first use. Installation failures and plausible but incorrect results are the highest-priority reports.</span>
+      <span class="zh">作者已经在日常研究中使用这个版本，外部测试才刚开始。把 FUSION 装进你的 agent 后，29 个技能会自动加载，离线知识库在第一次用到时下载。最需要反馈的是安装失败，以及那些看着合理却实际有错的结果。</span>
+      <span class="en">The author uses this version in daily research; external testing has just begun. Once FUSION is installed into your agent, all 29 skills load automatically and the offline knowledge base is fetched on first use. Installation failures and plausible but incorrect results are the highest-priority reports.</span>
     </p>
     <div class="cta-row" style="justify-content:center">
       <a class="cta cta-primary" href="https://github.com/jinleiphys/FUSION" target="_blank" rel="noopener">
